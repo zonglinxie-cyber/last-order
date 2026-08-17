@@ -1,4 +1,5 @@
 import { PointerEvent, useEffect, useMemo, useRef, useState, WheelEvent } from "react";
+import { asset } from "./sim/asset";
 import { PRODUCTS } from "./sim/cast";
 import { CounterSim, roomOf } from "./sim/engine";
 import type { Actor, ActorId, ProductId, Speed } from "./sim/types";
@@ -183,7 +184,7 @@ export default function App() {
             onWheel={onWheel}
           >
             <div className="world" style={{ transform: `translate(calc(-50% + ${cam.x}px), calc(-50% + ${cam.y}px)) scale(${cam.zoom})` }}>
-              <img className="office" src="/assets/scenes/aurora-floor.jpg" alt="绮光与维珞专柜" />
+              <img className="office" src={asset("assets/scenes/aurora-floor.jpg")} alt="绮光与维珞专柜" />
               {you && ordered ? <IntentLine from={you} to={ordered} kind="gold" /> : null}
               {luyao && hunted ? <IntentLine from={luyao} to={hunted} kind="hot" /> : null}
               {tangke && claimed ? <IntentLine from={tangke} to={claimed} kind="claim" /> : null}
@@ -217,7 +218,7 @@ export default function App() {
           <section>
             <b>OVERVIEW</b>
             <div className="minimap mall-mini">
-              <img src="/assets/scenes/aurora-floor.jpg" alt="" />
+              <img src={asset("assets/scenes/aurora-floor.jpg")} alt="" />
               {snap.actors.map(actor => (
                 <i key={actor.id} className={actor.id === snap.selectedId ? "is-on" : actor.id === "luyao" ? "is-hot" : ""} style={{ left: `${actor.x}%`, top: `${actor.y}%` }} />
               ))}

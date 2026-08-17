@@ -9,6 +9,8 @@ npm install
 npm run dev
 ```
 
-打开 `http://127.0.0.1:5173/`。
+在线打开（任意网络）：https://zonglinxie-cyber.github.io/last-order/
+
+本机：`npm install && npm run dev`，然后打开 http://127.0.0.1:5173/ 。
 
 旧近景咨询原型在 [`dynamic-counter-prototype/`](dynamic-counter-prototype/)。
