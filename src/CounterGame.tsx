@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
-  observeService, OBSERVE_MIN, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
+  observeService, OBSERVE_MIN, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
@@ -208,17 +208,13 @@ export default function CounterGame() {
   };
   // 手机上常常是从某个人的立绘上起手拖镜头：拖过一下就不算"点她"，松手不该顺手换掉选中的人。
   const pickActor = (id: Focus) => { if (!panned.current) setFocus(id); };
-  const waitLabel = (id: CustomerId) => {
-    const remaining = Math.max(0, (game.waitMeters[id] ?? CUSTOMERS[id].patience) - game.floorSeconds / 20);
-    return Math.ceil(remaining) + " 分钟耐心";
-  };
+  const waitLabel = (id: CustomerId) => Math.ceil(patienceLeft(game, id)) + " 分钟耐心";
   const customerStatus = (id: CustomerId) => game.dayServed.includes(id) ? "已接待" : game.lost.includes(id) ? "已离开" :
     session?.customerId === id ? "接待中" : (game.waitMeters[id] ?? CUSTOMERS[id].patience) <= 2 ? "开始看表" : "正在等你";
   const stageMinutes = game.shiftMinutes + game.floorSeconds / FLOOR_SECONDS_PER_ACTION;
   // 晨会念的是"到昨天为止应该做到多少"，界面上只说人话，不再挂一条进度条。
   const progressNeed = progressTarget(game.day - 1);
   const counter = counterVerdict(game);
-  const patienceLeft = (id: CustomerId) => Math.max(0, (game.waitMeters[id] ?? CUSTOMERS[id].patience) - game.floorSeconds / 20);
   const customerPose = (id: CustomerId, index: number): Pose => {
     // 每个人的门口位置按当天序号分配：走了的人、正在往外挪的人，都不会挤在同一格。
     const doorway = EXIT_SPOTS[index % EXIT_SPOTS.length];
@@ -227,11 +223,11 @@ export default function CounterGame() {
     if (session?.customerId === id) return poseOn(standing(STAGE_SPOTS.mirror), 0);
     const browse = poseOn(BROWSE_BEATS[index % BROWSE_BEATS.length], stageMinutes, wanderPhase(id));
     // 耐心在倒数，她也一点一点往自己那格门口挪。直线从维珞柜台的下方过道穿过，不必再绕等待位。
-    return { ...browse, point: blend(browse.point, doorway, 1 - patienceLeft(id) / CUSTOMERS[id].patience) };
+    return { ...browse, point: blend(browse.point, doorway, 1 - patienceLeft(game, id) / CUSTOMERS[id].patience) };
   };
   const contestedId = available.find(id => CUSTOMERS[id].rival);
   const contestedPose = contestedId ? customerPose(contestedId, todayIds.indexOf(contestedId)) : null;
-  const pressure = contestedId ? Math.max(0, Math.min(1, 1 - patienceLeft(contestedId) / CUSTOMERS[contestedId].patience)) : 0;
+  const pressure = contestedId ? Math.max(0, Math.min(1, 1 - patienceLeft(game, contestedId) / CUSTOMERS[contestedId].patience)) : 0;
   const staffPose = (id: StaffId): Pose => {
     const beat = STAFF_BEATS[STAFF[id].art];
     if (id === "player") return session ? poseOn(standing(STAGE_SPOTS.makeupStool), 0) : poseOn(beat, stageMinutes, wanderPhase(id));
@@ -359,6 +355,8 @@ export default function CounterGame() {
         {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{selectedCustomer.opening}</p></div>
           {available.includes(selectedCustomer.id) ? <div className="floor-actions">
             <button className="gold-button" disabled={(!session && game.energy < ENERGY_LOCK) || Boolean(session && session.customerId !== selectedCustomer.id)} onClick={() => beginCustomer(selectedCustomer.id)}>{session?.customerId === selectedCustomer.id ? "继续接待" + selectedCustomer.name : "接待" + selectedCustomer.name}</button>
+            {/* 她已经不在你这一头了：这一步是拿样品和离柜的两分钟，换她重新站回柜台前。 */}
+            <button disabled={!canPullOver(game, selectedCustomer.id)} onClick={() => setGame(value => pullOver(value, selectedCustomer.id))}>{pullOverLabel(game, selectedCustomer.id)}</button>
             <button disabled={game.samples <= 0 || hasFlag(game, "sample:" + selectedCustomer.id)} onClick={() => setGame(value => leaveSample(value, selectedCustomer.id))}>留小样 · {game.samples}</button>
             <button disabled={!canAddMember(game, selectedCustomer.id)} onClick={() => setGame(value => addMember(value, selectedCustomer.id))} aria-label={"加微信 " + selectedCustomer.name}>{game.members.includes(selectedCustomer.id) ? "已在名单" : "加微信 · 1 分钟"}</button>
             {canHelp && <button onClick={() => setGame(value => requestStaffHelp(value, selectedCustomer.id))}>请苏蔓帮忙留客</button>}

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
-  fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, canPullOver, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
+  fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, QUESTIONS,
   orderQuote, OBSERVE_MIN, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type Trait,
@@ -451,6 +451,10 @@ export default function Prototype() {
     ? customerBubble(focusCustomer, focusMeter, floorBeat, focusResumed)
     : focus?.kind === "staff" ? staffBubble(focus.id, contested, floorBeat) : "点现场里的人，先看她在做什么。";
   const liveFeed = partyLines(available, campaign, contested);
+  const feedLine = contested ? `陆遥 · ${staffAction("luyao", true)}` : liveFeed[0];
+  // 控制台只列顶上那行和身份块没念过的人：同一个人的状态在一屏里说两遍，面板就只剩占地方——而它正压着站在柜台前的人。
+  const focusName = focusCustomer?.name ?? focusStaff?.name ?? null;
+  const otherLines = liveFeed.filter(line => line !== feedLine && (!focusName || !line.startsWith(`${focusName} · `)));
   const poseOf = (id: string, fallback: { left: number; top: number; face: 1 | -1 }) => poses[id] ?? { ...fallback, destLeft: fallback.left, destTop: fallback.top };
   const staffOnFloor: FloorStaffId[] = ["luyao", "roman"];
   const customerPose = (id: CustomerId, index: number) => {
@@ -481,7 +485,7 @@ export default function Prototype() {
       <div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
     </header>
     <div className="floor-feed-row">
-      <p className="floor-feed">{contested ? `陆遥 · ${staffAction("luyao", true)}` : liveFeed[0]}</p>
+      <p className="floor-feed">{feedLine}</p>
       <div className="speed-rail" role="group" aria-label="现场时间">{([0, 1, 2, 4] as FloorSpeed[]).map(value => <button type="button" key={value} className={floorSpeed === value ? "is-on" : ""} onClick={() => setFloorSpeed(value)}>{value === 0 ? "停" : `${value}x`}</button>)}</div>
     </div>
     <div className="floor-stage">
@@ -514,17 +518,19 @@ export default function Prototype() {
         <CharacterFace visual={STAFF.player} className="player-chip" />
         {inspectVisual && inspectVisual.name !== STAFF.player.name ? <CharacterFace visual={inspectVisual} /> : null}
         <div>
-          <strong>{focusCustomer ? focusCustomer.descriptor : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
+          {/* 名字要在标题行里：下面那一行不再重复念她，控制台得自己说清"这是谁"。 */}
+          <strong>{focusCustomer ? `${focusCustomer.name} · ${focusCustomer.descriptor}` : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
           <b>{inspectNow}</b>
           <small>{floorNotice ?? (tired && !campaign.activeSession ? energyWord(campaign.energy) : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
         </div>
       </div>
       <blockquote className="inspect-quote">{inspectQuote}</blockquote>
-      {focusCustomer && <div className="inspect-meter" aria-hidden="true"><i style={{ width: `${Math.max(8, focusMeter / focusCustomer.patience * 100)}%` }} /></div>}
-      <ul className="party-list">{liveFeed.map(line => <li key={line}>{line}</li>)}</ul>
+      {otherLines.length > 0 && <ul className="party-list">{otherLines.map(line => <li key={line}>{line}</li>)}</ul>}
       <div className="dock-actions">
         {serveCustomer && <button className="primary-action" type="button" disabled={serveLocked} aria-label={`观察${serveCustomer.name}`} onClick={() => beginCustomer(serveCustomer.id)}>{campaign.activeSession?.customerId === serveCustomer.id ? `继续接待${serveCustomer.name}` : `观察${serveCustomer.name}`}</button>}
         {focusCustomer && <button className="member-action" type="button" disabled={!canAddMember(campaign, focusCustomer.id)} aria-label={`加微信${focusCustomer.name}`} onClick={() => setCampaign(s => addMember(s, focusCustomer.id))}>{campaign.members.includes(focusCustomer.id) ? `${focusCustomer.name}已在名单` : canAddMember(campaign, focusCustomer.id) ? "加微信 · 1 分钟" : "加微信 · 要先有接触"}</button>}
+        {/* 她已经往中庭那边走过去了：这一条整行放，按钮上直接写清楚花什么、什么时候轮得到。 */}
+        {focusCustomer && !campaign.dayServed.includes(focusCustomer.id) && !campaign.lost.includes(focusCustomer.id) && <button className="member-action pull-action" type="button" disabled={!canPullOver(campaign, focusCustomer.id)} aria-label={`迎上去 ${focusCustomer.name}`} onClick={() => setCampaign(s => pullOver(s, focusCustomer.id))}>{pullOverLabel(campaign, focusCustomer.id)}</button>}
       </div>
       <p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? energyWord(campaign.energy) : "顾客会记住你的判断，也会记住你的承诺。"}</p>
     </section>

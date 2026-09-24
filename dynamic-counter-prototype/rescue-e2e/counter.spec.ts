@@ -204,6 +204,45 @@ test("a split sale shows and persists the actual credited amount", async ({ page
   await expect(page.locator(".rail-sales")).toContainText("¥1,470");
 });
 
+// 第一晚那句"两个顾客，只能先抓住一个"终于是要按下去的一下：迎上去把已经在看表的人请回来，另一位的分钟照扣。
+test("walking out with a sample pulls the waiting one back, and the other one pays", async ({ page }) => {
+  await page.clock.install();
+  await start(page);
+  await page.getByRole("button", { name: "4×", exact: true }).click();
+  await page.clock.runFor(30_000); // 六分钟：两位都只剩两拍
+  await page.getByRole("button", { name: "暂停", exact: true }).click();
+  const chip = (name: string) => page.locator(".floor-queue button", { hasText: name }).locator("small");
+  await expect(chip("梅女士")).toHaveText("2 分钟耐心");
+  await expect(chip("沈薇")).toHaveText("2 分钟耐心");
+  await expect(page.locator(".pawn-name[aria-label='查看梅女士'] small")).toHaveText("开始看表");
+  await page.getByRole("button", { name: "查看梅女士", exact: true }).click();
+  const pull = page.getByRole("button", { name: /^迎上去/ });
+  // 按不动的理由写在按钮上，不用先翻手册才知道轮不轮得到自己。
+  await expect(pull).toHaveText("迎上去 · 1 支小样 · 2 分钟");
+  const doorBefore = await page.locator(".pawn-name[aria-label='查看梅女士']").evaluate(el => parseFloat(el.style.left));
+  await pull.click();
+  await expect(chip("梅女士")).toHaveText("8 分钟耐心");
+  await expect(page.locator(".pawn-name[aria-label='查看梅女士'] small")).toHaveText("正在等你");
+  await expect(page.locator(".rail-detail")).toHaveText("小样 7 份 · 名单 0 人");
+  await expect(page.locator(".shift-clock strong")).toHaveText("19:08");
+  await expect(page.locator(".floor-journal")).toContainText("把她从中庭那边请回柜台");
+  // 离柜的两分钟从另一头扣：沈薇不是"快走了"，是被陆遥带走了。
+  await expect(page.locator(".floor-queue button")).toHaveCount(1);
+  await expect(page.locator(".floor-journal")).toContainText("陆遥带沈薇去了维珞");
+  // 沙盘上她真的走回来：位置只由耐心决定，表停着，位移就是这一步换来的。
+  // 75.125% → 59.5% 是从"开始看表"那一步量到的实测站位，不是估的。
+  const doorAfter = await page.locator(".pawn-name[aria-label='查看梅女士']").evaluate(el => parseFloat(el.style.left));
+  console.log("PULL MEI left", doorBefore, "->", doorAfter, "delta", (doorAfter - doorBefore).toFixed(2));
+  expect(doorAfter).toBeCloseTo(59.5, 1);
+  expect(doorBefore - doorAfter).toBeGreaterThan(1);
+  // 用过之后按钮不消失，改成说人话的"为什么轮不到"，免得以为是自己漏看了一个动作。
+  const spent = page.locator(".floor-actions button", { hasText: "这一周已经迎过她一次" });
+  await expect(spent).toBeDisabled();
+  await page.screenshot({ path: "../audit/experience-v2/floor-pull-over.png" });
+  await page.reload();
+  await expect(page.locator(".rail-detail")).toHaveText("小样 7 份 · 名单 0 人");
+});
+
 test("floor acceleration consumes patience and pause freezes it", async ({ page }) => {
   await page.clock.install();
   await start(page);

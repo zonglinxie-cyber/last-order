@@ -98,8 +98,6 @@ button { -webkit-tap-highlight-color:transparent; }
 .floor-feed { flex:1; min-width:0; margin:0; padding:3px 7px; border-radius:7px; background:#120b0a9c; color:#efd6b0; font:500 11px/1.35 'Noto Serif SC'; text-shadow:0 2px 8px #000; pointer-events:none; }
 .speed-rail { flex:none; }
 .inspect-quote { margin:6px 0 5px; padding:7px 9px; border-left:2px solid #dbb56c; border-radius:0 10px 10px 0; background:#ffffff08; color:#f3e6db; font:500 12px/1.45 'Noto Serif SC'; }
-.inspect-meter { height:3px; overflow:hidden; border-radius:3px; background:#ffffff18; }
-.inspect-meter i { display:block; height:100%; background:linear-gradient(90deg,#d5b064,#ef7764); }
 .player-chip { width:36px; height:46px; }
 .map-staff i { background-image:url('/assets/game/toy-staff-walk.png'); background-size:336px 224px; background-position:0 0; }
 .map-staff-rival i { background-position:0 -112px; }
@@ -197,6 +195,8 @@ button { -webkit-tap-highlight-color:transparent; }
 .dock-actions { display:grid; grid-template-columns:1.15fr .85fr; gap:7px; margin-top:7px; }
 .member-action { min-height:44px; padding:0 6px; border:1px solid #dcbd7a55; border-radius:12px; background:#ffffff08; color:#efd39b; font:600 12px/1.35 'Noto Serif SC'; }
 .member-action:disabled { border-color:#ffffff12; color:#8b7a70; }
+/* 迎上去单独占一行：按钮上写的是"花一支小样、离柜两分钟"，挤在半列里就读不完整。 */
+.pull-action { grid-column:1 / -1; }
 .counter-verdict b { display:block; margin-bottom:4px; color:#d5b97f; }
 
 .consultation-game { background:#241917; }

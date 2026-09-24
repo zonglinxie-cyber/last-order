@@ -1,6 +1,6 @@
 // 私域加粉是手机上够得到的一步：不藏在二级页，也不免费。
 import { expect, test, type Page } from "@playwright/test";
-import { INITIAL, RECORDS_MIN, SAVE_KEY, SAVE_VERSION, complianceWord, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, INITIAL, PULL_OVER_MINUTES, RECORDS_MIN, SAVE_KEY, SAVE_VERSION, complianceWord, evidenceWord } from "../src/campaign";
 
 const seed = (page: Page, patch: Record<string, unknown>) => page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
   key: SAVE_KEY, value: { ...INITIAL, version: SAVE_VERSION, ...patch },
@@ -41,6 +41,48 @@ test("加微信要先有接触，加上以后当场付一分钟", async ({ page 
   await page.screenshot({ path: "../audit/experience-v2/mobile-dock.png" });
   // 一分钟当场付掉；她本人的耐心不动，动的只有现场时间。
   expect(await minutes()).toBe(before + 1);
+});
+
+// 她往中庭那边走过去了：这一步在手机上也是当场付的——一支小样、离柜两分钟，另一位的耐心照扣。
+test("迎上去把已经在看表的人请回柜台，花掉的那两支各有各的账", async ({ page }) => {
+  await page.goto("/");
+  const saved = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    samples: number; shiftMinutes: number; waitMeters: Record<string, number>; flags: string[];
+  }, SAVE_KEY);
+  await seed(page, { day: 4, sales: 12_000, daySales: 0, eventDoneDays: [1, 2, 3], flags: ["served:zhou:good"], waitMeters: { anjie: 3, zhou2: 2 } });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 4 天" }).click();
+  await page.getByRole("button", { name: "开始营业" }).click();
+  await page.getByRole("button", { name: "停", exact: true }).click();
+  const pull = page.getByRole("button", { name: /^迎上去/ });
+  // 场控默认落在最急的那位身上（周姐只剩两拍）；按不动的理由直接写在按钮上，不用翻手册。
+  await expect(pull).toHaveText(`迎上去 · 1 支小样 · ${PULL_OVER_MINUTES} 分钟`);
+  await expect(pull).toBeEnabled();
+  await page.getByRole("button", { name: "查看安姐", exact: true }).click();
+  await expect(pull).toHaveText("迎上去 · 她还没开始看表");
+  await expect(pull).toBeDisabled();
+  await page.getByRole("button", { name: "查看周姐", exact: true }).click();
+  const before = await saved();
+  await pull.click();
+  // 先等界面落定再去读存档：写盘是渲染之后的一步。
+  await expect(pull).toHaveText("这一周已经迎过她一次");
+  const after = await saved();
+  expect(after.samples).toBe(before.samples - 1);
+  expect(after.shiftMinutes).toBe(before.shiftMinutes + PULL_OVER_MINUTES);
+  expect(after.waitMeters.zhou2).toBe(CUSTOMERS.zhou2.patience);
+  expect(after.waitMeters.anjie).toBe(1);
+  expect(after.flags).toContain("pulled:zhou2");
+  //  dock 上那句话跟着变：她重新站回柜台前，另一位到了门口。
+  await expect(page.locator(".player-identity small")).toContainText("还会再等 9 拍");
+  await expect(page.locator(".player-identity strong")).toContainText("周姐 · ");
+  // 同一句只在一个槽里念一次：选中的那位由控制台身份块说，另一位交给顶部现场行（实测安姐这一句在 .floor-feed）。
+  await expect(page.locator(".floor-feed")).toHaveText("安姐 · 在往商场通道挪");
+  // 尺寸底线：新加的那一行不能把主操作挤成半高，也不能撑出横向滚动。
+  for (const button of await page.locator(".dock-actions button").all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await page.locator(".pull-action").evaluate(el => Math.round(el.getBoundingClientRect().width)))
+    .toBe(await page.locator(".dock-actions").evaluate(el => Math.round(el.getBoundingClientRect().width)));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await page.screenshot({ path: "../audit/experience-v2/mobile-pull-over.png" });
 });
 
 test("今日账单把台账和记录本都念成一句话，不是第三个数字", async ({ page }) => {

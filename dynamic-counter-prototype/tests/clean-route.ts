@@ -2,8 +2,8 @@
 // rule functions only, so the balance numbers are measured instead of hand-written.
 import assert from "node:assert/strict";
 import {
-  addMember, applyTouch, askService, availableCustomers, canAddMember, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
-  leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS,
+  addMember, applyTouch, askService, availableCustomers, canAddMember, canPullOver, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
+  leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS, pullOver,
   selectServiceProduct, settleDayEvent, startNextDay, startService, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
   fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
 } from "../src/campaign.ts";
@@ -70,20 +70,28 @@ export function playCustomer(
   return { campaign: parseCampaign(JSON.stringify(closed.campaign))!, outcome: closed.outcome };
 }
 
-export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[] };
+export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[]; pulled: number };
 
 // 每天按现场顺序接完所有还能接的顾客，然后处理闭店事件。
 // roster=true 走的是"把私域也做掉"的那条线：现场先留小样、再要微信（各占一分钟），
 // 闭店事件之后按当晚顺序跟两句。加粉烧掉的是别人的耐心，所以这条线要拿柜台上的人换。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false): RouteResult {
+// pull=true 是"只要有人开始看表就迎上去"：一支小样加离柜两分钟，救回一个的同时把另一个推向门口。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false): RouteResult {
   let s = openFloorState(INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
   let served = 0;
+  let pulled = 0;
   for (let day = 1; day <= 5; day += 1) {
     assert.equal(s.day, day);
     for (const id of [...availableCustomers(s)]) {
       // 接待别人期间她可能已经走了； greedy 路线就是在赌这个。
+      if (!availableCustomers(s).includes(id)) continue;
+      if (pull) for (const waiting of [...availableCustomers(s)]) {
+        if (!canPullOver(s, waiting)) continue;
+        s = pullOver(s, waiting);
+        pulled += 1;
+      }
       if (!availableCustomers(s).includes(id)) continue;
       if (roster && s.samples > 0 && !s.members.includes(id)) {
         s = leaveSample(s, id);
@@ -102,5 +110,5 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
     s = startNextDay(s);
   }
   assert.equal(s.finished, true);
-  return { final: s, dayTotals, served, lost };
+  return { final: s, dayTotals, served, lost, pulled };
 }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, chooseBundle, closeService, consultationRecord, CUSTOMERS, dayEvent, endingTitle,
-  FACE_TRIAL_MINUTES, faceTrialService, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, QUESTIONS,
-  releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent,
+  advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, canPullOver, chooseBundle, closeService, consultationRecord, CUSTOMERS, dayEvent, endingTitle,
+  FACE_TRIAL_MINUTES, faceTrialService, hasFlag, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, pullOver, pullOverLabel, patienceLeft, PULL_OVER_MINUTES, PULL_OVER_WINDOW, QUESTIONS,
+  releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent, spendAttention,
   startNextDay, startService, TARGET, trialService, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
@@ -115,6 +115,24 @@ test("每个人都上脸，队伍后面就会少两个人", () => {
   assert.equal(everyTrial.final.standing, 44, "少了两位顾客，柜位那句话就贴着风险线");
 });
 
+// 一次杠杆值多少钱，要拿一整周量：只要有人看表就迎，救回一个的同时把另一个推向门口。
+test("迎上去是保险不是收入：三条整周路线的钱和走的人一个都没变，只少了小样", () => {
+  const greedy = runRoute("matched", false, false, true);
+  assert.equal(greedy.pulled, 2);
+  assert.deepEqual(greedy.lost, []);
+  assert.equal(greedy.final.sales, 25_590, "不动这一行的清洁路线一分不差：这一步不能拿来刷营业额");
+  assert.equal(greedy.final.samples, 6, "迎出去的两支，是从柜台那两支里出的");
+  const trials = runRoute("matched", true, false, true);
+  assert.equal(trials.pulled, 3);
+  assert.deepEqual(trials.lost, ["mei", "zhou2"], "上脸那条线该走的两位，窗口开在别人身上就救不到她");
+  assert.equal(trials.final.sales, 22_230);
+  assert.equal(trials.final.standing, 44);
+  const roster = runRoute("matched", false, true, true);
+  assert.equal(roster.pulled, 2);
+  assert.equal(roster.final.sales, 29_510);
+  assert.equal(roster.final.samples, 0, "私域那条线小样本来就不够分，迎完就没有了");
+});
+
 test("rival decisions are required and idempotent; split risk refunds only the recorded share", () => {
 
   const pending = consult(INITIAL, "shen", "glow");
@@ -159,6 +177,42 @@ test("staff favors require a relationship and can only be used once per shift", 
   assert.equal(helped.waitMeters.shen, INITIAL.waitMeters.shen + 2);
   assert.equal(helped.energy, 94);
   assert.equal(requestStaffHelp(helped, "mei"), helped);
+});
+
+test("迎上去：一支小样加离柜两分钟，只能请回一个", () => {
+  // 第 4 天那两位耐心不一样（10 / 9），才看得出"从另一头扣"扣掉了谁。
+  const day4: Campaign = { ...INITIAL, day: 4, flags: ["served:zhou:good"], waitMeters: {}, eventDoneDays: [1, 2, 3] };
+  const drifting = spendAttention(day4, null, 7);
+  assert.equal(patienceLeft(drifting, "zhou2"), PULL_OVER_WINDOW, "她已经在看表了");
+  assert.equal(canPullOver(drifting, "anjie"), false, "她还在三分钟往上，迎上去没有意义");
+  assert.equal(canPullOver(drifting, "zhou2"), true);
+  assert.equal(pullOverLabel(drifting, "anjie"), "迎上去 · 她还没开始看表");
+  assert.equal(pullOverLabel(drifting, "zhou2"), `迎上去 · 1 支小样 · ${PULL_OVER_MINUTES} 分钟`);
+
+  const greeted = pullOver(drifting, "zhou2");
+  assert.equal(greeted.samples, day4.samples - 1, "样品从中庭那一支走");
+  assert.equal(patienceLeft(greeted, "zhou2"), CUSTOMERS.zhou2.patience, "她重新站回柜台前");
+  assert.equal(patienceLeft(greeted, "anjie"), 1, "离柜的两分钟照扣另一头");
+  assert.equal(greeted.shiftMinutes, drifting.shiftMinutes + PULL_OVER_MINUTES);
+  assert.ok(!hasFlag(greeted, "sample:zhou2"), "中庭那一支换的是她肯走过来，不是她明天回来（那要留在柜台那一支）");
+  assert.ok(greeted.history.some(row => row.text.includes("把她从中庭那边请回柜台")));
+  assert.equal(canPullOver(greeted, "zhou2"), false, "同一个人整周只迎一次");
+  assert.equal(pullOver(greeted, "zhou2"), greeted, "按不动的时候一个数都不该变");
+
+  const serving = startService(drifting, "anjie");
+  assert.ok(availableCustomers(serving).includes("zhou2"), "她还站在场里——下面那条拒的是「你在接待」，不是「她已经走了」");
+  assert.equal(canPullOver(serving, "zhou2"), false, "人还在你手上，走不开");
+  assert.match(pullOverLabel(serving, "zhou2"), /你还在接待安姐/);
+  assert.equal(canPullOver({ ...drifting, samples: 0 }, "zhou2"), false, "柜后空了就没有这一步");
+
+  // 两个都到了门口：请回这个，那个就走掉——第一晚那句"只能先抓住一个"第一次落在玩家手上。
+  const bothLate = spendAttention(day4, null, 8);
+  assert.deepEqual(availableCustomers(bothLate), ["anjie", "zhou2"]);
+  const savedOne = pullOver(bothLate, "anjie");
+  assert.deepEqual(savedOne.lost, ["zhou2"]);
+  assert.equal(patienceLeft(savedOne, "anjie"), CUSTOMERS.anjie.patience);
+  // 手不伸出去的那一支：再走两分钟两位都没了。这一步买的是"至少留住一个"，不是多一位客流。
+  assert.deepEqual(spendAttention(bothLate, null, 2).lost.slice().sort(), ["anjie", "zhou2"]);
 });
 
 test("every displayed quote adds up to its complete order and actual share", () => {

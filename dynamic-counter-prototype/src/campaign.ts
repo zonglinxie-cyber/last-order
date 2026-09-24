@@ -111,6 +111,10 @@ export const ENERGY_LOCK = 18;
 export const RIVAL_IDS: CustomerId[] = ["shen", "returning", "zhou"];
 export const SAMPLE_RETURN_SALE = 620;
 export const FLOOR_SECONDS_PER_ACTION = 20;
+// 迎上去（柜台的"截流"）：她已经在往中庭小样台那边挪了，端一支试用装过去才请得动。
+// 窗口按"开始看表"那一档给，早了没意义；离柜两分钟从队列另一头扣。
+export const PULL_OVER_WINDOW = 2;
+export const PULL_OVER_MINUTES = 2;
 // 晨会念的是同一个数：五日目标拆成每天的进度，不另开一块记分牌。
 export const DAY_TARGETS = [2800, 3200, 3600, 4400, 7000];
 // 柜位评分低于这条线，区域就开始写"评估是否保留"。
@@ -933,6 +937,38 @@ export function spendAttention(s: Campaign, servingId: CustomerId | null, cost: 
 
 export function availableCustomers(s: Campaign) {
   return floorCustomers(s).filter(id => !s.dayServed.includes(id) && !s.lost.includes(id));
+}
+
+// 她还剩多少分钟：现场那截没走满一分钟的零头也算进去，界面上念的和她走到的是同一个数。
+export function patienceLeft(s: Campaign, id: CustomerId) {
+  return Math.max(0, (s.waitMeters[id] ?? CUSTOMERS[id].patience) - s.floorSeconds / FLOOR_SECONDS_PER_ACTION);
+}
+
+// 柜台里叫这一步"迎上去"：人已经不在你这一头了，得拿着东西走过去把她请回来。
+// 只有正往中庭小样台那边走的人才请得动，所以你手里的样品和另一头的耐心，同一时刻只能花在一个人的身上。
+export function canPullOver(s: Campaign, id: CustomerId) {
+  return !s.activeSession && !s.eventDoneDays.includes(s.day) && !hasFlag(s, `pulled:${id}`) && s.samples > 0
+    && availableCustomers(s).includes(id) && patienceLeft(s, id) <= PULL_OVER_WINDOW;
+}
+
+export function pullOverLabel(s: Campaign, id: CustomerId) {
+  if (hasFlag(s, `pulled:${id}`)) return "这一周已经迎过她一次";
+  if (s.activeSession) return `迎上去 · 你还在接待${CUSTOMERS[s.activeSession.customerId].name}`;
+  if (s.samples <= 0) return "迎上去 · 柜后没有小样了";
+  if (patienceLeft(s, id) > PULL_OVER_WINDOW) return "迎上去 · 她还没开始看表";
+  return `迎上去 · 1 支小样 · ${PULL_OVER_MINUTES} 分钟`;
+}
+
+export function pullOver(s: Campaign, id: CustomerId): Campaign {
+  if (!canPullOver(s, id)) return s;
+  const customer = CUSTOMERS[id];
+  // 中庭递出去的那一支换的是"她肯走过来"，不是"她明天回来"——那是留在柜台上那一支的账（`sample:` 才兑现回柜）。
+  const stayed = {
+    ...s, samples: s.samples - 1, flags: flag(s, `pulled:${id}`),
+    waitMeters: { ...s.waitMeters, [id]: customer.patience },
+    history: history(s, `你端着试用装走向${customer.name}，把她从中庭那边请回柜台`),
+  };
+  return spendAttention(stayed, id, PULL_OVER_MINUTES);
 }
 
 // The floor clock and customer pressure consume the same action units. Reading a

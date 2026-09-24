@@ -60,6 +60,39 @@ async function seedFloor(page: Page, day: number) {
   await page.getByRole("button", { name: "开始营业", exact: true }).click();
 }
 
+// 现场 dock 多了一整行「迎上去」：真机上它不能把主操作推出可视区，也不能压住下面那句计时提示。
+test("the extra floor action row stays reachable on a real phone", async ({ page }) => {
+  await seedFloor(page, 4);
+  await page.getByRole("button", { name: "停", exact: true }).click();
+  const rows = await page.locator(".dock-actions button").evaluateAll(nodes => nodes.map(node => {
+    const r = node.getBoundingClientRect();
+    return { text: (node.textContent ?? "").trim().slice(0, 12), bottom: Math.round(r.bottom), height: Math.round(r.height), width: Math.round(r.width) };
+  }));
+  console.log("PULL DOCK ROWS", JSON.stringify(rows));
+  expect(rows).toHaveLength(3);
+  const dockWidth = await page.locator(".dock-actions").evaluate(el => Math.round(el.getBoundingClientRect().width));
+  // 整行占满：半列放不下「迎上去 · 1 支小样 · 2 分钟」这串要念完的理由。
+  expect(rows[2].width).toBe(dockWidth);
+  expect(rows[2].text.startsWith("迎上去")).toBe(true);
+  for (const row of rows) expect(row.height).toBeGreaterThanOrEqual(44);
+  const hint = await page.locator(".player-console > p").boundingBox();
+  console.log("PULL HINT", JSON.stringify(hint));
+  // 控制台整块吃掉了地面多深：站着的人名牌不能被它盖住。
+  const band = await page.evaluate(() => {
+    const out = { consoleTop: 0, tagBottom: 0 };
+    document.querySelectorAll(".player-console").forEach(el => { out.consoleTop = el.getBoundingClientRect().top; });
+    document.querySelectorAll(".actor-tag").forEach(el => { out.tagBottom = Math.max(out.tagBottom, el.getBoundingClientRect().bottom); });
+    return out;
+  });
+  console.log("PULL BAND", JSON.stringify(band), "stage", JSON.stringify(await page.locator(".floor-stage").boundingBox()));
+  expect(rows[0].bottom).toBeLessThanOrEqual(844);
+  // 那句"每次观察、提问、试用都会让另一位客人继续流失"讲的正是这一行花掉的东西，不能藏在要滚动才看得见的位置。
+  expect(hint!.y).toBeGreaterThan(rows[2].bottom);
+  expect(Math.round(hint!.y + hint!.height)).toBeLessThanOrEqual(844);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await page.screenshot({ path: "../audit/experience-v2/floor-pull-row-phone.png" });
+});
+
 test("the floor keeps one speaker at a time and never drops a bubble on a person", async ({ page }) => {
   test.setTimeout(90_000);
   for (const day of [1, 4]) {
