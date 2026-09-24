@@ -1,0 +1,54 @@
+{
+  "format": "WebP",
+  "quality": 88,
+  "thumbnailWidth": 148,
+  "records": [
+    {
+      "source": "customer-anjie-consultation.png",
+      "originalBytes": 2126234,
+      "webpBytes": 169082,
+      "thumbnailBytes": 10196
+    },
+    {
+      "source": "customer-duan-consultation.png",
+      "originalBytes": 2428684,
+      "webpBytes": 206582,
+      "thumbnailBytes": 8832
+    },
+    {
+      "source": "customer-mei-consultation.png",
+      "originalBytes": 2136469,
+      "webpBytes": 176894,
+      "thumbnailBytes": 10378
+    },
+    {
+      "source": "customer-shen-consultation.png",
+      "originalBytes": 2147615,
+      "webpBytes": 181372,
+      "thumbnailBytes": 11202
+    },
+    {
+      "source": "customer-xiaoyu-consultation.png",
+      "originalBytes": 2075721,
+      "webpBytes": 159656,
+      "thumbnailBytes": 10690
+    },
+    {
+      "source": "customer-zhao-consultation.png",
+      "originalBytes": 2248467,
+      "webpBytes": 196342,
+      "thumbnailBytes": 10346
+    },
+    {
+      "source": "customer-zhou-consultation.png",
+      "originalBytes": 2317279,
+      "webpBytes": 154628,
+      "thumbnailBytes": 8600
+    },
+    {
+      "source": "product-trio.png",
+      "originalBytes": 1082113,
+      "webpBytes": 115684
+    }
+  ]
+}

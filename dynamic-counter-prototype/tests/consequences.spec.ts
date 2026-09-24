@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { SAVE_VERSION } from "../src/campaign";
 
 const baseSave = {
-  version: 2, sales: 12000, daySales: 0, trust: 60, compliance: 55, energy: 100, samples: 4, evidence: 1,
+  version: SAVE_VERSION, sales: 12000, daySales: 0, trust: 60, compliance: 55, energy: 100, samples: 4, evidence: 1, standing: 50,
   relations: { suman: 50, tangke: 40, luyao: 35, roman: 45 },
   history: [] as Array<{ day: number; text: string }>, dayServed: [] as string[], lost: [] as string[], eventDoneDays: [] as number[],
   waitMeters: {}, activeSession: null,
@@ -72,7 +73,8 @@ test("forcing Anjie comes back as a wedding-week chargeback", async ({ page }) =
   await page.reload();
   await page.getByRole("button", { name: "继续第 5 天" }).click();
   await expect(page.getByText("婚礼前双颊爆红", { exact: false })).toBeVisible();
-  await expect(page.getByText("¥2,800")).toBeVisible();
+  // 旧存档没有逐笔记账：按报价模型里她那一支方向不对的产品退一件。
+  await expect(page.getByText("¥10,720")).toBeVisible();
 });
 
 test("a sample left after a refusal returns as a repurchase", async ({ page }) => {

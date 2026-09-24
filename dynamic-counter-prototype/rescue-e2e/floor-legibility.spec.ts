@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { DAYS, INITIAL, SAVE_KEY, type CustomerId } from "../src/campaign";
+import { DAYS, floorCustomers, INITIAL, SAVE_KEY, type CustomerId } from "../src/campaign";
 
 // 现场只有一层文字：名牌、开口那句、选客条、时间按钮。站位间距是按像素校准的（floor-stage.ts），
 // 沙盘缩到容不下名牌时路人牌子会收起来。这里两头都锁住：文字不许互相盖，人还得点得到。
@@ -49,14 +49,14 @@ function overlaps(items: Rect[]) {
 }
 
 /**
- * 沙盘上的取货位和门口位是按"一天最多两位顾客在场"排的：`advanceDay` 每天清空 dayServed 和 lost，
- * `floorCustomers` 最多给两位（第 4 天接住周姐才多一位同事）。这里把上界钉住，超过就得先加位置。
+ * 沙盘上的取货位和门口位是按"一天最多两位顾客在场"排的：`advanceDay` 每天清空 dayServed 和 lost。
+ * 上界从规则本身量出来（把跨天回来的条件全部当成已满足），再加人就会先在这里失败，而不是在某个视口里悄悄叠字。
  */
-const ON_FLOOR_MAX = Math.max(...DAYS.map(d => d.customers.length + (d.day === 4 ? 1 : 0)));
+const ON_FLOOR_MAX = Math.max(...DAYS.map(d => floorCustomers({ ...INITIAL, day: d.day, flags: ["served:zhou:good", "served:anjie:good"] }).length));
 // 沙盘上同时在演的人数：你 + 四位员工 + 当天最多在场的顾客。
 const CAST = 5 + ON_FLOOR_MAX;
 test("一天同时在场的顾客不会超出沙盘留的取货位和门口位", async () => {
-  expect(ON_FLOOR_MAX).toBeLessThanOrEqual(2);
+  expect(ON_FLOOR_MAX, "再加一位同时在场的顾客，就得先在沙盘上加一个位置").toBeLessThanOrEqual(2);
 });
 
 type SeedState = { day: number, dayServed: CustomerId[], lost: CustomerId[] };

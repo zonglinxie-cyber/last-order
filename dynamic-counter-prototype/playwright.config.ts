@@ -12,7 +12,8 @@ export default defineConfig({
     viewport: { width: 1100, height: 1100 },
   },
   webServer: {
-    command: `npm run dev -- --port ${testPort}`,
+    command: `npm exec vite -- --host 127.0.0.1 --port ${testPort} --strictPort`,
+    env: { VITE_CONSULT_MODE: "scripted" },
     url: `http://127.0.0.1:${testPort}/`,
     reuseExistingServer: process.env.MOBILE_RUNTIME_TEST_PORT == null,
   },

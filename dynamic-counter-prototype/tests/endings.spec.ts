@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { SAVE_VERSION } from "../src/campaign";
 
 const riskySave = {
-  version: 2, day: 5, sales: 22000, daySales: 0, trust: 37, compliance: 22, energy: 100, samples: 1, evidence: 0,
+  version: SAVE_VERSION, day: 5, sales: 22000, daySales: 0, trust: 37, compliance: 22, energy: 100, samples: 1, evidence: 0, standing: 50,
   relations: { suman: 72, tangke: 24, luyao: 18, roman: 55 },
   flags: ["covered-suman", "gave-anjie-gifts"], history: [{ day: 1, text: "你替苏蔓掩盖了赠品缺口" }],
   dayServed: ["returning"], lost: [], eventDoneDays: [1,2,3,4,5], waitMeters: {},

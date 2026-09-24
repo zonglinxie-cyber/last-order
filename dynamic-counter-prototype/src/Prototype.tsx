@@ -1,12 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import { MobileScroll } from "./mobile";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  applyFinale, applyQuestion, applyRival, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
-  floorCustomers, hasFlag, historyByDay, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
-  REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, spendAttention, startNextDay,
-  TARGET, todayHistory, type Campaign, type CueId, type Customer, type CustomerId, type CustomerSession,
-  type ProductId, type RivalChoice, type SaleOutcome, type StaffKey,
+  addMember, advanceFloorTime, applyQuestion, applyRival, BUNDLES, canAddMember, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
+  fitOf, fitPreview, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
+  orderQuote, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
+  TARGET, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+  type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type Trait,
 } from "./campaign";
+import { requestConsultReply } from "./consultChat";
+import {
+  customerAction, customerBubble, customerHome, customerMood, defaultFocus, formatClock,
+  isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffBubble,
+  staffMood, staffRelation, stepPose, waitCopy, WAYPOINTS, type ActorPose, type FloorFocus,
+  type FloorSpeed, type FloorStaffId,
+} from "./floorLife";
 
 type Screen = "intro" | "brief" | "floor" | "consultation" | "result" | "event" | "summary" | "finale";
 type CharacterVisual = { name: string; role: string; sheet: "player" | "rival" | "manager"; portrait?: string };
@@ -36,6 +43,10 @@ function CustomerMapFigure({ customer }: { customer: Customer }) {
   return <span className={`map-character map-character-${customer.mapVariant}`}><i /><img src={customer.portrait} alt="" aria-hidden="true" /></span>;
 }
 
+function StaffMapFigure({ visual }: { visual: CharacterVisual }) {
+  return <span className={`map-character map-staff map-staff-${visual.sheet}`}><i /></span>;
+}
+
 export default function Prototype() {
   const saved = useMemo(loadCampaign, []);
   const [campaign, setCampaign] = useState<Campaign>(saved ?? INITIAL);
@@ -49,13 +60,28 @@ export default function Prototype() {
   const [interruption, setInterruption] = useState(false);
   const [interruptionHandled, setInterruptionHandled] = useState(false);
   const [askedQuestion, setAskedQuestion] = useState<number | null>(null);
-  const [reaction, setReaction] = useState<"positive" | "negative" | null>(null);
+  const [reaction, setReaction] = useState<"positive" | "mixed" | "negative" | null>(null);
+  const [bundle, setBundle] = useState<BundleId>("single");
+  const [revealed, setRevealed] = useState<Trait[]>([]);
   const [revisions, setRevisions] = useState(0);
   const [rivalChoice, setRivalChoice] = useState<RivalChoice | null>(null);
   const [serviceMotion, setServiceMotion] = useState<"inspect" | "trial" | "scan" | null>(null);
   const [outcome, setOutcome] = useState<SaleOutcome | null>(null);
   const [eventChoiceId, setEventChoiceId] = useState<string | null>(null);
   const [floorNotice, setFloorNotice] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatLine[]>([]);
+  const [draft, setDraft] = useState("");
+  const [talking, setTalking] = useState(false);
+  const [floorFocus, setFloorFocus] = useState<FloorFocus | null>(null);
+  const [floorBeat, setFloorBeat] = useState(0);
+  const [floorSpeed, setFloorSpeed] = useState<FloorSpeed>(1);
+  const floorClock = SHIFT_START + campaign.shiftMinutes;
+  const floorElapsed = campaign.shiftMinutes + campaign.floorSeconds / 20;
+  const [poses, setPoses] = useState<Record<string, ActorPose>>({});
+  const keyboard = useKeyboard();
+  const { bottomInset } = useKeyboardInsets();
+  const { device } = useMobileDevice();
+  const floorSim = useRef({ available: [] as CustomerId[], waitMeters: INITIAL.waitMeters, contested: false, elapsed: 0 });
 
   const story = DAYS[campaign.day - 1];
   const customer = customerId ? CUSTOMERS[customerId] : null;
@@ -63,8 +89,8 @@ export default function Prototype() {
   const available = dayCustomerIds.filter(id => !campaign.dayServed.includes(id) && !campaign.lost.includes(id));
   const remaining = Math.max(0, TARGET - campaign.sales);
   const event = dayEvent(campaign);
-  const visibleChoices = event.choices.filter(choice => !choice.visible || choice.visible(campaign));
-  const chosenEvent = visibleChoices.find(choice => choice.id === eventChoiceId) ?? null;
+  const shownChoices = visibleChoices(campaign, event);
+  const chosenEvent = shownChoices.find(choice => choice.id === eventChoiceId) ?? null;
   const tired = campaign.energy < ENERGY_LOCK;
   const waitingOther = available.find(id => id !== customerId);
   const notices = dawnNotices(campaign);
@@ -73,6 +99,67 @@ export default function Prototype() {
 
   useEffect(() => { if (screen !== "intro") window.localStorage.setItem(SAVE_KEY, JSON.stringify(campaign)); }, [campaign, screen]);
   useEffect(() => { requestAnimationFrame(() => { const frame = document.querySelector<HTMLElement>(".device-screen"); if (frame) frame.scrollTop = 0; }); }, [screen]);
+  useEffect(() => {
+    setFloorBeat(0);
+    setPoses({});
+    setFloorSpeed(1);
+    setFloorFocus(null);
+  }, [campaign.day]);
+  useEffect(() => {
+    const pause = () => { if (document.hidden) setFloorSpeed(0); };
+    document.addEventListener("visibilitychange", pause);
+    return () => document.removeEventListener("visibilitychange", pause);
+  }, []);
+  useEffect(() => {
+    if (screen === "floor" && available.length === 0) setScreen("event");
+  }, [screen, available.length]);
+  useEffect(() => {
+    if (screen !== "floor") return;
+    setFloorFocus(current => current ?? defaultFocus(available, campaign.waitMeters));
+  }, [screen, campaign.day, campaign.dayServed.join("|"), campaign.lost.join("|")]);
+  floorSim.current = { available, waitMeters: campaign.waitMeters, contested: available.some(id => CUSTOMERS[id].rival), elapsed: floorElapsed };
+  useEffect(() => {
+    if (screen !== "floor") return;
+    setPoses(current => {
+      const next = { ...current };
+      available.forEach((id, index) => {
+        if (next[id]) return;
+        const home = customerHome(index, campaign.waitMeters[id] ?? CUSTOMERS[id].patience, CUSTOMERS[id].patience);
+        next[id] = poseAt(home);
+      });
+      if (!next.luyao) next.luyao = poseAt(rivalHome(0), WAYPOINTS.rivalHold);
+      if (!next.roman) next.roman = poseAt(WAYPOINTS.checkout, { left: 72, top: 61 });
+      return next;
+    });
+  }, [screen, available.join("|")]);
+  useEffect(() => {
+    if (screen !== "floor" || floorSpeed === 0) return;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      const { available: ids, waitMeters, contested: hot, elapsed } = floorSim.current;
+      setCampaign(value => advanceFloorTime(value, .38 * floorSpeed));
+      setFloorBeat(value => {
+        const beat = value + 1;
+        setPoses(current => {
+          const next = { ...current };
+          ids.forEach((id, index) => {
+            const meter = waitMeters[id] ?? CUSTOMERS[id].patience;
+            const home = customerHome(index, meter, CUSTOMERS[id].patience);
+            const pose = next[id] ?? poseAt(home);
+            const dest = beat % 8 === 0 && meter > 2 ? (index === 0 ? WAYPOINTS.testerSide : WAYPOINTS.openLow) : home;
+            next[id] = stepPose({ ...pose, destLeft: dest.left, destTop: dest.top }, floorSpeed);
+          });
+          const luyaoDest = hot ? rivalHome(rivalApproach(ids, waitMeters, elapsed)) : WAYPOINTS.rivalHold;
+          const romanDest = beat % 12 < 7 ? WAYPOINTS.checkout : { left: 66, top: 63 };
+          next.luyao = stepPose({ ...(next.luyao ?? poseAt(luyaoDest)), destLeft: luyaoDest.left, destTop: luyaoDest.top }, floorSpeed);
+          next.roman = stepPose({ ...(next.roman ?? poseAt(romanDest)), destLeft: romanDest.left, destTop: romanDest.top }, floorSpeed);
+          return next;
+        });
+        return beat;
+      });
+    }, 380);
+    return () => window.clearInterval(timer);
+  }, [screen, floorSpeed]);
 
   const beginNew = () => { window.localStorage.removeItem(SAVE_KEY); setCampaign(INITIAL); setEventChoiceId(null); setFloorNotice(null); setScreen("brief"); };
   const continueGame = () => {
@@ -80,7 +167,8 @@ export default function Prototype() {
     if (current !== campaign) setCampaign(current);
     const ids = floorCustomers(current);
     const dayResolved = ids.every(id => current.dayServed.includes(id) || current.lost.includes(id));
-    if (current.eventDoneDays.includes(current.day)) setScreen("summary");
+    if (current.finished) setScreen("finale");
+    else if (current.eventDoneDays.includes(current.day)) setScreen("summary");
     else if (dayResolved) setScreen("event");
     else setScreen("brief");
   };
@@ -92,13 +180,23 @@ export default function Prototype() {
     setSelectedProduct(session.selectedProduct);
     setTested(session.tested);
     setReaction(session.reaction);
+    setBundle(session.bundle);
+    setRevealed(session.revealed);
     setRevisions(session.revisions);
     setClaimed(session.claimed);
     setRivalChoice(session.rivalChoice);
+    setChat(session.chat ?? []);
+    setDraft("");
+    setTalking(false);
     setInterruption(session.tested && RIVAL_IDS.includes(session.customerId) && !session.rivalChoice);
     setInterruptionHandled(Boolean(session.rivalChoice));
   };
   const beginCustomer = (id: CustomerId) => {
+    if (campaign.activeSession && campaign.activeSession.customerId !== id) {
+      setFloorNotice(`你还在接待${CUSTOMERS[campaign.activeSession.customerId].name}，先完成这一笔。`);
+      setFloorFocus({ kind: "customer", id: campaign.activeSession.customerId });
+      return;
+    }
     const existing = campaign.activeSession?.customerId === id ? campaign.activeSession : null;
     if (!existing && tired) {
       setFloorNotice("你站得发黑。先把手头的接待做完，或结束今天。");
@@ -107,14 +205,17 @@ export default function Prototype() {
     setFloorNotice(null);
     if (existing) restoreSession(existing);
     else {
+      setCampaign(s => startService(s, id));
       setCustomerId(id); setSelectedCue(null); setDiscovered([]); setAskedQuestion(null); setSelectedProduct(null);
-      setTested(false); setReaction(null); setRevisions(0); setClaimed(false); setRivalChoice(null);
+      setTested(false); setReaction(null); setRevisions(0); setClaimed(false); setRivalChoice(null); setChat([]);
+      setBundle("single"); setRevealed([]);
+      setDraft(""); setTalking(false);
       setInterruption(false); setInterruptionHandled(false);
     }
     setScreen("consultation");
   };
   const saveSession = (patch: Partial<CustomerSession>) => setCampaign(s => {
-    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, tested: false, reaction: null, revisions: 0, claimed: false, rivalChoice: null };
+    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, bundle: "single" as BundleId, revealed: [] as Trait[], tested: false, reaction: null, revisions: 0, claimed: false, rivalChoice: null, chat: [] };
     return { ...s, activeSession: { ...base, ...patch } };
   });
   const advanceFloor = (cost: number) => {
@@ -124,14 +225,54 @@ export default function Prototype() {
   const inspect = (cue: CueId) => {
     setServiceMotion("inspect"); window.setTimeout(() => setServiceMotion(null), 360);
     setSelectedCue(cue); if (discovered.includes(cue)) return;
-    const next = [...discovered, cue]; setDiscovered(next); advanceFloor(1); saveSession({ discovered: next });
+    const next = [...discovered, cue]; setDiscovered(next); advanceFloor(1);
+    const nextRevealed = [...new Set([...revealed, ...(customer?.cues[cue].reveals ?? [])])]; setRevealed(nextRevealed);
+    saveSession({ discovered: next, revealed: nextRevealed });
   };
   const ask = (index: number) => {
-    if (askedQuestion !== null || !customer) return;
-    setAskedQuestion(index); advanceFloor(1); saveSession({ askedQuestion: index });
-    setCampaign(s => applyQuestion(s, customer.id, index));
+    if (!customer || talking) return;
+    void speak(QUESTIONS[customer.id][index].label, index);
+  };
+  const speak = async (text: string, chipIndex: number | null = null) => {
+    if (!customer || talking) return;
+    const message = text.trim();
+    if (!message) return;
+    const firstAsk = askedQuestion === null;
+    const useful = chipIndex != null ? Boolean(QUESTIONS[customer.id][chipIndex].useful) : inferUseful(customer.id, message);
+    const index = chipIndex ?? (useful ? 0 : 1);
+    const canned = chipIndex != null ? QUESTIONS[customer.id][chipIndex].response : (useful ? QUESTIONS[customer.id].find(question => question.useful)?.response : "你要是只想完成任务，我现在就可以走。") ?? customer.opening;
+    const playerLine: ChatLine = { role: "player", text: message };
+    const customerLine: ChatLine = { role: "customer", text: canned };
+    const nextChat = [...chat, playerLine, customerLine].slice(-8);
+    setChat(nextChat);
+    setDraft("");
+    keyboard.hide();
+    const nextRevealed = [...new Set([...revealed, ...(QUESTIONS[customer.id][index]?.reveals ?? [])])];
+    setRevealed(nextRevealed);
+    if (firstAsk) {
+      setAskedQuestion(index);
+      advanceFloor(1);
+      saveSession({ askedQuestion: index, chat: nextChat, revealed: nextRevealed });
+      setCampaign(s => applyQuestion(s, customer.id, index));
+    } else {
+      advanceFloor(1);
+      saveSession({ chat: nextChat, revealed: nextRevealed });
+      setCampaign(s => ({ ...s, energy: Math.max(0, s.energy - 3) }));
+    }
+    setTalking(true);
+    try {
+      const result = await requestConsultReply({ customerId: customer.id, playerMessage: message, discovered, chat: nextChat, day: campaign.day });
+      if (result.reply && result.source === "model") {
+        const updated = [...nextChat.slice(0, -1), { role: "customer" as const, text: result.reply }];
+        setChat(updated);
+        saveSession({ chat: updated, askedQuestion: firstAsk ? index : askedQuestion });
+      }
+    } finally {
+      setTalking(false);
+    }
   };
   const selectProduct = (id: ProductId) => {
+    if (id === selectedProduct) return;
     setSelectedProduct(id);
     if (tested && id !== selectedProduct) {
       setRevisions(v => v + 1); setTested(false); setReaction(null);
@@ -142,13 +283,15 @@ export default function Prototype() {
     }
   };
   const tryProduct = () => {
-    if (!selectedProduct || !customer) return;
+    if (!selectedProduct || !customer || tested || discovered.length < 2 || askedQuestion === null) return;
+    setSelectedCue(null);
     advanceFloor(1); setServiceMotion("trial"); window.setTimeout(() => setServiceMotion(null), 650);
-    const nextReaction = selectedProduct === customer.bestProduct ? "positive" : "negative";
+    const nextReaction = fitOf(customer, selectedProduct).tier;
     setTested(true); setReaction(nextReaction); saveSession({ tested: true, reaction: nextReaction, selectedProduct });
     if (RIVAL_IDS.includes(customer.id)) setInterruption(true);
   };
   const handleRival = (choice: RivalChoice) => {
+    if (interruptionHandled) return;
     setRivalChoice(choice); setInterruptionHandled(true); setClaimed(choice === "record" ? true : claimed);
     saveSession({ rivalChoice: choice, claimed: choice === "record" ? true : claimed });
     setCampaign(s => applyRival(s, choice));
@@ -160,7 +303,7 @@ export default function Prototype() {
   const closeSale = (force = false) => {
     if (!customer || !selectedProduct || !tested) return;
     setServiceMotion("scan"); window.setTimeout(() => setServiceMotion(null), 520);
-    const resolved = resolveSale(campaign, { customerId: customer.id, selectedProduct, tested, askedQuestion, claimed, interruption, interruptionHandled, force });
+    const resolved = resolveSale(campaign, { customerId: customer.id, selectedProduct, bundle, revealed, tested, askedQuestion, claimed, interruption, interruptionHandled, force, rivalChoice });
     if (!resolved) return;
     setCampaign(resolved.campaign);
     setOutcome(resolved.outcome);
@@ -168,18 +311,15 @@ export default function Prototype() {
   };
   const afterResult = () => { if (available.filter(id => id !== customerId).length > 0) { setCustomerId(null); setScreen("floor"); } else setScreen("event"); };
   const chooseEvent = (id: string) => {
-    const choice = visibleChoices.find(item => item.id === id);
+    const choice = shownChoices.find(item => item.id === id);
     if (!choice) return;
     setEventChoiceId(id);
-    setCampaign(s => {
-      const applied = choice.apply(s);
-      return { ...applied, eventDoneDays: applied.eventDoneDays.includes(applied.day) ? applied.eventDoneDays : [...applied.eventDoneDays, applied.day] };
-    });
+    setCampaign(s => settleDayEvent(s, id));
   };
   const finishDay = () => setScreen("summary");
   const nextDay = () => {
     if (campaign.day >= 5) {
-      setCampaign(s => applyFinale(s));
+      setCampaign(s => startNextDay(s));
       setScreen("finale");
       return;
     }
@@ -202,7 +342,7 @@ export default function Prototype() {
     <header><span>DAY {campaign.day} / 5</span><b>¥{campaign.sales.toLocaleString("zh-CN")} <small>/ ¥{TARGET.toLocaleString("zh-CN")}</small></b></header>
     <section className="brief-hero"><p>{story.subtitle}</p><h1>{story.title}</h1><div className="day-track">{DAYS.map(d => <i key={d.day} className={d.day < campaign.day ? "done" : d.day === campaign.day ? "now" : ""} />)}</div></section>
     <section className="brief-card"><b>今日现场</b><p>{story.brief}</p><em>{story.threat}</em></section>
-    <section className="brief-orders"><span><small>今天必须守住</small><b>{dayCustomerIds.map(id => CUSTOMERS[id].name).join(" / ")}</b></span><span><small>可用小样</small><b>{campaign.samples}</b></span></section>
+    <section className="brief-orders"><span><small>今天必须守住</small><b>{dayCustomerIds.map(id => CUSTOMERS[id].name).join(" / ")}</b></span><span><small>小样 / 私域名单</small><b>{campaign.samples} 份 · {campaign.members.length} 人</b></span></section>
     {notices.map(note => <section className="message-preview" key={`${note.speaker}-${note.body}`}><b>{note.speaker}</b><p>{note.body}</p></section>)}
     <section className="message-preview"><b>罗曼 · 08:52</b><p>{story.threat}</p></section>
     <button className="primary-action" type="button" onClick={() => { openFloor(); setScreen("floor"); }}>开始营业</button>
@@ -212,23 +352,35 @@ export default function Prototype() {
     const canTest = discovered.length >= 2 && askedQuestion !== null && selectedProduct;
     const currentReaction = reaction && selectedProduct ? REACTIONS[selectedProduct][reaction] : null;
     const otherMeter = waitingOther ? campaign.waitMeters[waitingOther] ?? CUSTOMERS[waitingOther].patience : null;
-    return <MobileScroll className="app-screen consultation-scroll"><main className={`consultation-game ${selectedCue ? "is-focusing" : ""} reaction-${reaction ?? "none"}`} aria-label={`接待${customer.name}`}>
+    const pendingRival = interruption && !interruptionHandled;
+    const quote = selectedProduct ? orderQuote(customer.id, selectedProduct, bundle, rivalChoice === "yield") : null;
+    const preview = fitPreview(customer, revealed);
+    return <div className="app-screen consultation-shell"><main className={`consultation-game ${selectedCue ? "is-focusing" : ""} reaction-${reaction ?? "none"}`} aria-label={`接待${customer.name}`}>
       <img className="customer-portrait" src={customer.portrait} alt={`${customer.name}面部近景`} /><div className="portrait-grade" />
-      <header className="consultation-hud"><button className="icon-button" type="button" onClick={() => { saveSession({ discovered, askedQuestion, selectedProduct, tested, reaction, revisions, claimed, rivalChoice }); setScreen("floor"); }} aria-label="返回现场">‹</button><div><strong>{customer.name}</strong><span>{customer.descriptor}</span></div><time>{waitingOther && otherMeter != null ? `${CUSTOMERS[waitingOther].name} ${otherMeter}/${CUSTOMERS[waitingOther].patience}` : `DAY ${campaign.day}`}</time></header>
-      <div className="customer-speech"><span>{customer.opening}</span></div>
-      <button type="button" className={`face-cue cue-eyes ${discovered.includes("eyes") ? "found" : ""}`} onClick={() => inspect("eyes")} aria-label="观察眼下"><i /></button>
-      <button type="button" className={`face-cue cue-cheek ${discovered.includes("cheek") ? "found" : ""}`} onClick={() => inspect("cheek")} aria-label="观察脸颊"><i /></button>
-      <button type="button" className={`face-cue cue-nose ${discovered.includes("nose") ? "found" : ""}`} onClick={() => inspect("nose")} aria-label="观察鼻翼"><i /></button>
-      {selectedCue && <aside className="finding-card"><b>{customer.cues[selectedCue].label}</b><span>{customer.cues[selectedCue].finding}</span></aside>}
+      <header className="consultation-hud" style={{ paddingTop: device.geometry.safeArea.top + 7, paddingBottom: 8 }}><button className="icon-button" type="button" onClick={() => { keyboard.hide(); saveSession({ discovered, askedQuestion, selectedProduct, bundle, revealed, tested, reaction, revisions, claimed, rivalChoice, chat }); setScreen("floor"); }} aria-label="返回现场">‹</button><div><strong>{customer.name}</strong><span>{customer.descriptor}</span></div><time>{waitingOther && otherMeter != null ? `${CUSTOMERS[waitingOther].name} ${otherMeter}/${CUSTOMERS[waitingOther].patience}` : `DAY ${campaign.day}`}</time></header>
+      <div className="customer-speech" style={{ top: device.geometry.safeArea.top + 72 }}><span>{chat.at(-1)?.role === "customer" ? chat.at(-1)?.text : customer.opening}</span></div>
+      {/* 点位按脸的位置摆，名字用她自己给的那句：观察按钮说「灯光」时，读到的也是灯光。 */}
+      {(["eyes", "cheek", "nose"] as const).map(cue => <button key={cue} type="button" className={`face-cue cue-${cue} ${discovered.includes(cue) ? "found" : ""}`} onClick={() => inspect(cue)} aria-label={`观察${customer.cues[cue].label}`}><i /></button>)}
+      {selectedCue && discovered.length < 2 && <aside className="finding-card"><b>{customer.cues[selectedCue].label}</b><span>{customer.cues[selectedCue].finding}</span></aside>}
       {serviceMotion && <div className={`service-hand ${serviceMotion}`} aria-hidden="true"><i /><span>{serviceMotion === "inspect" ? "观察" : serviceMotion === "trial" ? "试妆" : "登记"}</span></div>}
-      {interruption && !interruptionHandled && rival && <div className="rival-interruption multi"><div className="event-character-inline"><CharacterFace visual={STAFF.luyao} /><div><b>{rival.headline}</b><span>“{rival.quote}”</span></div></div><div className="rival-actions"><button type="button" onClick={() => handleRival("record")}>先登记接待</button><button type="button" onClick={() => handleRival("clarify")}>让顾客确认需求</button><button type="button" onClick={() => handleRival("yield")}>让她演示</button></div></div>}
-      <section className="consultation-dock"><div className="consult-steps"><i className="done">观察</i><i className={askedQuestion !== null ? "done" : ""}>询问</i><i className={tested ? "done" : ""}>试用</i><i>成交</i></div><div className="insight-strip"><span>{discovered.length}/3 线索</span><b>{currentReaction ?? (discovered.length >= 2 ? customer.need : "点按面部线索，先看再问")}</b></div>
-        {discovered.length >= 2 && askedQuestion === null ? <div className="question-options">{QUESTIONS[customer.id].map((q, index) => <button type="button" key={q.label} onClick={() => ask(index)}>{q.label}</button>)}</div> : askedQuestion !== null && !tested ? <div className="question-answer"><b>{QUESTIONS[customer.id][askedQuestion].response}</b></div> : null}
-        <div className="product-options">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button type="button" key={id} className={selectedProduct === id ? "active" : ""} onClick={() => selectProduct(id)}><i className={`product-art product-art-${id}`} /><span>{PRODUCTS[id].short}</span><small>¥{PRODUCTS[id].price}</small></button>)}</div>
-        {selectedProduct && <p className="product-note">{PRODUCTS[selectedProduct].note}</p>}
+      {pendingRival && rival && <div className="rival-interruption multi"><p className="rival-trial-result">{currentReaction}</p><div className="event-character-inline"><CharacterFace visual={STAFF.luyao} /><div><b>{rival.headline}</b><span>“{rival.quote}”</span></div></div><div className="rival-actions"><button type="button" onClick={() => handleRival("record")}>先登记接待</button><button type="button" onClick={() => handleRival("clarify")}>让顾客确认需求</button><button type="button" aria-label="让她演示" onClick={() => handleRival("yield")}>让她演示<small>业绩各半</small></button></div></div>}
+      {!pendingRival && <section className="consultation-dock" style={{ bottom: 10 + bottomInset, height: discovered.length < 2 ? "17%" : tested && reaction === "positive" ? "42%" : "46%" }}><MobileScroll className="consultation-controls"><div className="consult-steps"><i className="done">观察</i><i className={askedQuestion !== null ? "done" : ""}>询问</i><i className={tested ? "done" : ""}>试用</i><i>成交</i></div><div className="insight-strip"><span>{discovered.length}/3 线索 · 诉求 {preview.known.length}/{customer.demands.length}</span><b>{currentReaction ?? (discovered.length >= 2 ? (askedQuestion !== null ? "听她的反应，再选产品试用" : "开口问她真正在意什么") : "点按面部线索，先看再问")}</b></div>
+        {chat.length > 0 && !tested && <div className="consult-chat" aria-label="接待对话">{chat.slice(-1).map((line, index) => <p key={`${line.role}-${index}`} className={line.role}>{line.role === "player" ? "你" : customer.name}：{line.text}</p>)}</div>}
+        {discovered.length >= 2 && askedQuestion === null ? <div className="question-options">{QUESTIONS[customer.id].map((q, index) => <button type="button" key={q.label} onClick={() => ask(index)} disabled={talking}>{q.label}</button>)}</div> : null}
+        {discovered.length >= 2 && !tested && <form className="consult-composer" onSubmit={(event) => { event.preventDefault(); void speak(draft); }}>
+          <KeyboardInput aria-label="对顾客说" placeholder={askedQuestion === null ? "用你的话问她" : "继续跟她说"} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={talking} />
+          <button type="submit" disabled={talking || !draft.trim()}>{talking ? "在听" : "开口"}</button>
+        </form>}
+        {askedQuestion !== null && (!tested || reaction === "negative" || reaction === "mixed") && <div className="product-options">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button type="button" key={id} className={selectedProduct === id ? "active" : ""} onClick={() => selectProduct(id)}><i className={`product-art product-art-${id}`} /><span>{PRODUCTS[id].short}</span><small>¥{PRODUCTS[id].price}</small></button>)}</div>}
+        {selectedProduct && !tested && <p className="product-note">{PRODUCTS[selectedProduct].note}</p>}
+        {tested && quote && <section className="mobile-order-quote" aria-label="本单报价">{quote.lines.map(line => <p key={line.label}><span>{line.label}</span><span>¥{line.amount.toLocaleString("zh-CN")}</span></p>)}{quote.note && <small>{quote.note}</small>}<b>整单 ¥{quote.total.toLocaleString("zh-CN")} · 你入账 ¥{quote.amount.toLocaleString("zh-CN")}{quote.shared ? "（各半）" : ""} · 现场 {quote.minutes} 分</b></section>}
+        {selectedProduct && tested && reaction === "positive" && <div className="bundle-row" role="group" aria-label="连带件数">{(Object.keys(BUNDLES) as BundleId[]).map(id => {
+          const units = unitsWanted(customer, selectedProduct, id, "positive");
+          return <button type="button" key={id} className={bundle === id ? "active" : ""} disabled={!units} onClick={() => { setBundle(id); saveSession({ bundle: id }); }}><span>{BUNDLES[id].label}</span><small>{units ? `${units} 件 ¥${(units * PRODUCTS[selectedProduct].price).toLocaleString("zh-CN")} · ${BUNDLES[id].units} 分` : "她不会多拿"}</small></button>;
+        })}<em>预算 ¥{customer.budget.toLocaleString("zh-CN")} · 最多 {customer.maxUnits} 件 · 多要一件多占一分钟</em></div>}
         {!tested ? <button className="primary-action" type="button" disabled={!canTest} onClick={tryProduct}>{canTest ? `为${customer.name}试用` : discovered.length < 2 ? "先观察两处面部线索" : askedQuestion === null ? "再问一个关键问题" : "选择产品开始试用"}</button> : reaction === "negative" ? <div className="recovery-actions"><button type="button" onClick={sendSample} disabled={campaign.samples <= 0 || hasFlag(campaign, `sample:${customer.id}`)}>留小样 · {campaign.samples}</button><b>反应不对：换一款，或承担拒绝风险</b></div> : null}
         {tested && reaction === "negative" ? <div className="close-actions negative-close"><button type="button" onClick={() => closeSale(false)}>接受拒绝</button><button className="primary-action" type="button" onClick={() => closeSale(true)}>强推成交</button></div> : tested ? <div className="close-actions"><button className={claimed ? "claimed" : ""} type="button" onClick={() => { setClaimed(!claimed); saveSession({ claimed: !claimed }); }}>{claimed ? "已登记归属" : "登记我的接待"}</button><button className="primary-action" type="button" onClick={() => closeSale(false)}>提出成交</button></div> : null}
-      </section></main></MobileScroll>;
+      </MobileScroll></section>}</main></div>;
   }
 
   if (screen === "result" && outcome) return <MobileScroll className="app-screen result-scroll"><main className={`sale-result ${outcome.good ? "good" : "risky"}`}><div className="result-light" /><p>DAY {campaign.day} · 收银提示</p><span className="result-seal">{outcome.good ? "✓" : "!"}</span><h1>{outcome.title}</h1><strong>+ ¥{outcome.amount.toLocaleString("zh-CN")}</strong><p className="result-copy">{outcome.body}</p><div className="consequence-list"><span><b>顾客信任</b><em>{relationText(campaign.trust)}</em></span><span><b>订单留痕</b><em>{claimed ? "已登记" : "可能争议"}</em></span><span><b>剩余体力</b><em>{tired ? "几乎站不住" : campaign.energy >= 50 ? "还能再接" : "开始发沉"}</em></span></div><button className="primary-action" type="button" onClick={afterResult}>{available.filter(id => id !== customerId).length > 0 ? "回到现场" : "处理闭店事件"}</button></main></MobileScroll>;
@@ -236,7 +388,7 @@ export default function Prototype() {
   if (screen === "event") {
     const eventVisual = event.speakerStaff ? STAFF[event.speakerStaff] : null;
     const eventCustomer = event.speakerCustomer ? CUSTOMERS[event.speakerCustomer] : null;
-    return <MobileScroll className="app-screen event-scroll"><main className="event-screen"><header><span>闭店后 · {event.speaker}</span><b>DAY {campaign.day}</b></header><section className="event-speaker-portrait">{eventCustomer ? <img src={eventCustomer.portrait} alt={`${eventCustomer.name}人物形象`} /> : eventVisual ? <CharacterFace visual={eventVisual} /> : null}<div><span>{event.speaker}</span><b>{eventCustomer ? eventCustomer.descriptor : eventVisual?.role}</b></div></section><p>{event.title}</p><h1>{event.body}</h1>{chosenEvent === null ? <div className="event-choices">{visibleChoices.map(choice => <button type="button" key={choice.id} onClick={() => chooseEvent(choice.id)}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div> : <section className="event-result"><b>{chosenEvent.label}</b><p>{chosenEvent.result}</p><button className="primary-action" type="button" onClick={finishDay}>查看今日账单</button></section>}</main></MobileScroll>;
+    return <MobileScroll className="app-screen event-scroll"><main className="event-screen"><header><span>闭店后 · {event.speaker}</span><b>DAY {campaign.day}</b></header><section className="event-speaker-portrait">{eventCustomer ? <img src={eventCustomer.portrait} alt={`${eventCustomer.name}人物形象`} /> : eventVisual ? <CharacterFace visual={eventVisual} /> : null}<div><span>{event.speaker}</span><b>{eventCustomer ? eventCustomer.descriptor : eventVisual?.role}</b></div></section><p>{event.title}</p><h1>{event.body}</h1>{chosenEvent === null ? <div className="event-choices">{shownChoices.map(choice => <button type="button" key={choice.id} onClick={() => chooseEvent(choice.id)}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div> : <section className="event-result"><b>{chosenEvent.label}</b><p>{chosenEvent.result}</p><button className="primary-action" type="button" onClick={finishDay}>查看今日账单</button></section>}</main></MobileScroll>;
   }
 
   if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{TARGET.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>合规 <b>{campaign.compliance >= 50 ? "还压得住" : "已经危险"}</b></span><span>证据 <b>{campaign.evidence}</b></span></div><button className="primary-action" type="button" onClick={nextDay}>{campaign.day === 5 ? "查看活动周结局" : "进入下一天"}</button></main></MobileScroll>;
@@ -246,22 +398,111 @@ export default function Prototype() {
     const safe = campaign.compliance >= 50;
     const trusted = campaign.trust >= 55;
     const title = endingTitle(campaign);
-    return <MobileScroll className="app-screen finale-scroll"><main className="finale-screen"><p>新品活动周 · 最终档案</p><h1>{title}</h1><div className="final-score"><span>销售</span><b>¥{campaign.sales.toLocaleString("zh-CN")}</b><small>{salesWin ? "完成五日目标" : "未完成五日目标"}</small></div><section className="ending-copy"><p>{salesWin ? "你证明了自己能成交。" : "罗曼没有给你漂亮的数字评价。"}{safe ? "合规记录没有把你单独钉在缺口上。" : "但赠品与订单记录已经构成一条危险的线。"}</p><p>{trusted ? "沈薇和几位顾客仍愿意直接找你。" : "顾客记得你卖出去的东西，却未必相信你会负责到底。"}</p><p>苏蔓：{relationText(campaign.relations.suman)}；唐可：{relationText(campaign.relations.tangke)}。</p></section>
+    const counter = counterVerdict(campaign);
+    return <MobileScroll className="app-screen finale-scroll"><main className="finale-screen"><p>新品活动周 · 最终档案</p><h1>{title}</h1><div className="final-score"><span>销售</span><b>¥{campaign.sales.toLocaleString("zh-CN")}</b><small>{salesWin ? "完成五日目标" : "未完成五日目标"}</small></div><section className="ending-copy"><p>{salesWin ? "你证明了自己能成交。" : "罗曼没有给你漂亮的数字评价。"}{safe ? "合规记录没有把你单独钉在缺口上。" : "但赠品与订单记录已经构成一条危险的线。"}</p><p>{trusted ? "沈薇和几位顾客仍愿意直接找你。" : "顾客记得你卖出去的东西，却未必相信你会负责到底。"}</p><p>苏蔓：{relationText(campaign.relations.suman)}；唐可：{relationText(campaign.relations.tangke)}。</p><p className="counter-verdict"><b>柜位 · {counter.label}</b>{counter.body}</p></section>
       <section className="ledger-book" aria-label="五日因果账本"><b>五日因果账本</b>{ledger.map(group => <div className="ledger-day" key={group.day}><span>DAY {group.day} · {group.title}</span>{group.items.map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</div>)}</section>
       <blockquote>真正的最后一单，不是付款成功的那一刻，而是它回来找你的那一天。</blockquote><button className="primary-action" type="button" onClick={resetGame}>重新开始 · 换一种活法</button></main></MobileScroll>;
   }
 
   const latestLost = campaign.lost.at(-1);
-  return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}><img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" /><header className="game-hud"><div><span>DAY {campaign.day} · {story.title}</span><b>许愿在柜台后</b></div><div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div></header><div className="sales-progress"><i style={{ width: `${Math.min(100, campaign.sales / TARGET * 100)}%` }} /></div>
-    <div className={`ambient-staff staff-rival pressure-${campaign.waitMeters.shen ?? campaign.waitMeters.zhou ?? 4}`}><CharacterFace visual={STAFF.luyao} /><p><b>陆遥</b>{available.some(id => CUSTOMERS[id].rival) ? "正在判断你先接谁" : "在对面观察"}</p></div><div className="ambient-staff staff-manager"><CharacterFace visual={STAFF.roman} /><p><b>罗曼</b>今日排名已更新</p></div>
-    {available.map((id, index) => {
-      const c = CUSTOMERS[id];
-      const resumed = campaign.activeSession?.customerId === id;
-      const meter = campaign.waitMeters[id] ?? c.patience;
-      const locked = tired && !resumed;
-      return <button type="button" key={id} className={`customer-presence character-presence ${index % 2 ? "customer-mei" : "customer-shen"} ${resumed ? "is-resumable" : ""} ${locked ? "is-locked" : ""}`} onClick={() => beginCustomer(id)} aria-label={`观察${c.name}`} disabled={locked}><CustomerMapFigure customer={c} /><span className="presence-copy"><b>{c.name}</b><small>{resumed ? "继续接待" : locked ? "你需要先缓一缓" : c.descriptor.split(" · ")[1] || c.descriptor}</small></span><i className={`patience-meter ${meter <= 2 ? "is-urgent" : ""}`}><span style={{ width: `${Math.max(0, meter / c.patience) * 100}%` }} /></i></button>;
-    })}
+  const contested = available.some(id => CUSTOMERS[id].rival);
+  const focus = floorFocus ?? defaultFocus(available, campaign.waitMeters);
+  const focusCustomer = focus?.kind === "customer" ? CUSTOMERS[focus.id] : null;
+  const focusStaff = focus?.kind === "staff" ? STAFF[focus.id] : null;
+  const fallbackFocus = defaultFocus(available, campaign.waitMeters);
+  const serveId = focusCustomer?.id ?? (fallbackFocus?.kind === "customer" ? fallbackFocus.id : null);
+  const serveCustomer = serveId ? CUSTOMERS[serveId] : null;
+  const focusMeter = focusCustomer ? campaign.waitMeters[focusCustomer.id] ?? focusCustomer.patience : 0;
+  const focusResumed = focusCustomer ? campaign.activeSession?.customerId === focusCustomer.id : false;
+  const serveLocked = Boolean(serveCustomer && tired && campaign.activeSession?.customerId !== serveCustomer.id);
+  const inspectVisual = focusCustomer ? { name: focusCustomer.name, role: focusCustomer.descriptor, sheet: "player" as const, portrait: focusCustomer.portrait } : focusStaff;
+  const inspectNow = focusCustomer
+    ? customerAction(focusCustomer, focusMeter, focusResumed, contested && focusCustomer.rival)
+    : focus?.kind === "staff" ? staffAction(focus.id, contested) : story.threat;
+  const inspectMood = focusCustomer
+    ? customerMood(focusCustomer, focusMeter)
+    : focus?.kind === "staff" ? staffMood(focus.id, focus.id === "luyao" ? campaign.relations.luyao : campaign.relations.roman) : "当班";
+  const inspectQuote = focusCustomer
+    ? customerBubble(focusCustomer, focusMeter, floorBeat, focusResumed)
+    : focus?.kind === "staff" ? staffBubble(focus.id, contested, floorBeat) : "点现场里的人，先看她在做什么。";
+  const liveFeed = partyLines(available, campaign, contested);
+  const poseOf = (id: string, fallback: { left: number; top: number; face: 1 | -1 }) => poses[id] ?? { ...fallback, destLeft: fallback.left, destTop: fallback.top };
+  const staffOnFloor: FloorStaffId[] = ["luyao", "roman"];
+  const customerPose = (id: CustomerId, index: number) => {
+    const patience = campaign.waitMeters[id] ?? CUSTOMERS[id].patience;
+    const home = customerHome(index, patience, CUSTOMERS[id].patience);
+    return poseOf(id, { ...home, face: home.left < 40 ? 1 : -1 });
+  };
+  const staffPose = (id: FloorStaffId) => poseOf(id, {
+    ...(id === "luyao" ? rivalHome(rivalApproach(available, campaign.waitMeters, floorElapsed)) : WAYPOINTS.checkout),
+    face: id === "luyao" ? 1 : -1,
+  });
+  // 一次只让一个人开口，并且把这句话放在人群上方的空墙上：390 宽的柜台上，气泡压在别人身上就两败俱伤。
+  const speaker = floorBeat % (available.length + staffOnFloor.length);
+  const speaking = speaker < available.length
+    ? {
+      left: customerPose(available[speaker], speaker).left,
+      line: customerBubble(CUSTOMERS[available[speaker]], campaign.waitMeters[available[speaker]] ?? CUSTOMERS[available[speaker]].patience, floorBeat + speaker, campaign.activeSession?.customerId === available[speaker]),
+    }
+    : {
+      left: staffPose(staffOnFloor[speaker - available.length]).left,
+      line: staffBubble(staffOnFloor[speaker - available.length], contested, floorBeat),
+    };
+
+  return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}>
+    <img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" />
+    <header className="game-hud">
+      <div><span>DAY {campaign.day} · {story.title}</span><b>{formatClock(floorClock)}</b></div>
+      <div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
+    </header>
+    <div className="sales-progress"><i style={{ width: `${Math.min(100, campaign.sales / TARGET * 100)}%` }} /></div>
+    <div className="floor-feed-row">
+      <p className="floor-feed">{contested ? `陆遥 · ${staffAction("luyao", true)}` : liveFeed[0]}</p>
+      <div className="speed-rail" role="group" aria-label="现场时间">{([0, 1, 2, 4] as FloorSpeed[]).map(value => <button type="button" key={value} className={floorSpeed === value ? "is-on" : ""} onClick={() => setFloorSpeed(value)}>{value === 0 ? "停" : `${value}x`}</button>)}</div>
+    </div>
+    <div className="floor-stage">
+      {available.map((id, index) => {
+        const c = CUSTOMERS[id];
+        const pose = customerPose(id, index);
+        const resumed = campaign.activeSession?.customerId === id;
+        const meter = campaign.waitMeters[id] ?? c.patience;
+        const selected = focus?.kind === "customer" && focus.id === id;
+        const walking = isWalking(pose) || meter <= 2;
+        return <button type="button" key={id} className={`floor-actor is-customer ${walking ? "is-walking" : "is-idle"} ${meter <= 2 ? "is-urgent" : ""} ${resumed ? "is-resumable" : ""} ${selected ? "is-selected" : ""} ${speaker === index ? "is-speaking" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 32 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "customer", id })} aria-label={`查看${c.name}`}>
+          <span className="actor-body"><span className="actor-sprite" style={{ transform: `scaleX(${pose.face})` }}><CustomerMapFigure customer={c} /></span></span>
+          <span className="actor-tag">{c.name}</span>
+        </button>;
+      })}
+      {staffOnFloor.map((staffId, index) => {
+        const pose = staffPose(staffId);
+        const selected = focus?.kind === "staff" && focus.id === staffId;
+        return <button type="button" key={staffId} className={`floor-actor is-staff staff-${staffId} ${isWalking(pose) ? "is-walking" : "is-idle"} ${selected ? "is-selected" : ""} ${speaker === available.length + index ? "is-speaking" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 16 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "staff", id: staffId })} aria-label={`查看${STAFF[staffId].name}`}>
+          <span className="actor-body"><span className="actor-sprite" style={{ transform: `scaleX(${pose.face})` }}><StaffMapFigure visual={STAFF[staffId]} /></span></span>
+          <CharacterFace visual={STAFF[staffId]} className="floor-face" />
+          <span className="actor-tag">{STAFF[staffId].name}</span>
+        </button>;
+      })}
+      <span className={`actor-bubble stage-bubble ${speaking.left > 50 ? "from-right" : ""}`} style={{ left: `${Math.max(20, Math.min(80, speaking.left))}%` }}>{speaking.line}</span>
+    </div>
     {latestLost && <div className="lost-opportunity"><b>机会已消失</b><span>{CUSTOMERS[latestLost].lostLine}</span></div>}
-    <section className="player-console compact"><div className="player-identity"><CharacterFace visual={STAFF.player} /><div><strong>许愿 · 试用期柜姐</strong><b>{campaign.activeSession ? `${CUSTOMERS[campaign.activeSession.customerId].name}的接待还没结束` : tired ? "体力见底，接不了新人" : story.threat}</b><small>{floorNotice ?? (campaign.activeSession ? "返回不会清空判断；另一边仍在流失" : "点一位顾客，把注意力交给她")}</small></div></div><p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : "顾客会记住你的判断，也会记住你的承诺。"}</p></section>
+    <section className="player-console compact inspect-dock">
+      <div className="player-identity">
+        <CharacterFace visual={STAFF.player} className="player-chip" />
+        {inspectVisual && inspectVisual.name !== STAFF.player.name ? <CharacterFace visual={inspectVisual} /> : null}
+        <div>
+          <strong>{focusCustomer ? focusCustomer.descriptor : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
+          <b>{tired && !campaign.activeSession ? "体力见底，接不了新人" : inspectNow}</b>
+          <small>{floorNotice ?? (tired && !campaign.activeSession ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
+        </div>
+      </div>
+      <blockquote className="inspect-quote">{inspectQuote}</blockquote>
+      {focusCustomer && <div className="inspect-meter" aria-hidden="true"><i style={{ width: `${Math.max(8, focusMeter / focusCustomer.patience * 100)}%` }} /></div>}
+      <ul className="party-list">{liveFeed.map(line => <li key={line}>{line}</li>)}</ul>
+      <div className="dock-actions">
+        {serveCustomer && <button className="primary-action" type="button" disabled={serveLocked} aria-label={`观察${serveCustomer.name}`} onClick={() => beginCustomer(serveCustomer.id)}>{campaign.activeSession?.customerId === serveCustomer.id ? `继续接待${serveCustomer.name}` : `观察${serveCustomer.name}`}</button>}
+        {focusCustomer && <button className="member-action" type="button" disabled={!canAddMember(campaign, focusCustomer.id)} aria-label={`加微信${focusCustomer.name}`} onClick={() => setCampaign(s => addMember(s, focusCustomer.id))}>{campaign.members.includes(focusCustomer.id) ? `${focusCustomer.name}已在名单` : canAddMember(campaign, focusCustomer.id) ? "加微信 · 1 分钟" : "加微信 · 要先有接触"}</button>}
+      </div>
+      <p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : "顾客会记住你的判断，也会记住你的承诺。"}</p>
+    </section>
   </main></MobileScroll>;
 }

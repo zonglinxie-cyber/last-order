@@ -27,12 +27,13 @@ const STAFF: Record<StaffId, { name: string; role: string; art: keyof typeof STA
 };
 // 每个人错开半拍，免得整层楼同时迈步。
 const wanderPhase = (key: string) => (key.charCodeAt(0) + key.length * 7) % 11 * 0.6;
-const CUES: Array<{ id: CueId; label: string }> = [
-  { id: "eyes", label: "眼下" }, { id: "cheek", label: "脸颊" }, { id: "nose", label: "鼻翼" },
-];
+// 三个点位按脸的位置摆放，但每个顾客给它们的叫法不一样（灯光、清单、手机）：念出来要念她的那句。
+const CUES: CueId[] = ["eyes", "cheek", "nose"];
 const money = (value: number) => "¥" + value.toLocaleString("zh-CN");
 const isCustomer = (id: Focus): id is CustomerId => Object.hasOwn(CUSTOMERS, id);
-const customerArt = (id: CustomerId) => asset("assets/chibi/" + (id === "returning" ? "shen" : id === "zhou2" ? "zhou" : id) + ".png");
+// 复购角色是同一个人，不是新人物：她们共用原来的立绘和近景，只有当天要多问的东西不一样。
+const ART_ALIAS: Partial<Record<CustomerId, string>> = { returning: "shen", zhou2: "zhou", anjie2: "anjie" };
+const customerArt = (id: CustomerId) => asset("assets/chibi/" + (ART_ALIAS[id] ?? id) + ".png");
 // 名牌单独一层，永远画在所有人之上：站在前面的人挡不住后面那个人的名字。
 const LABEL_Z = 1000;
 function load() {
@@ -322,7 +323,7 @@ export default function CounterGame() {
         {screen === "consultation" && customer && session && <div className="consult-scene">
           <div className="portrait-window"><div className="portrait-plate">
             <img src={portrait(customer.id)} alt={customer.name + "面部近景"} />
-            {CUES.map(cue => <button key={cue.id} aria-label={"面部线索：" + cue.label} className={"portrait-cue cue-" + cue.id + (session.discovered.includes(cue.id) ? " found" : "")} onClick={() => setGame(value => observeService(value, cue.id))}><span>{session.discovered.includes(cue.id) ? "✓" : "+"}</span></button>)}
+            {CUES.map(cue => <button key={cue} aria-label={"面部线索：" + customer.cues[cue].label} className={"portrait-cue cue-" + cue + (session.discovered.includes(cue) ? " found" : "")} onClick={() => setGame(value => observeService(value, cue))}><span>{session.discovered.includes(cue) ? "✓" : "+"}</span></button>)}
           </div><button className="back-floor" onClick={() => setScreen("floor")}>返回现场</button></div>
           <section className="customer-reading"><span className="eyebrow">{customer.descriptor}</span><h1>{customer.name}</h1><blockquote>{session.chat.at(-1)?.text ?? customer.opening}</blockquote>
             {lastCue && <p className="reading-finding"><b>{customer.cues[lastCue].label}</b>{customer.cues[lastCue].finding}</p>}
@@ -368,7 +369,7 @@ export default function CounterGame() {
         {screen === "consultation" && customer && session && <section className="service-actions">
           <div className="action-cost"><span>阅读暂停 · 新观察 / 提问 / 试用各花 1 分钟</span><span>{available.filter(id => id !== customer.id).map(id => CUSTOMERS[id].name + "还等 " + Math.ceil(game.waitMeters[id] ?? CUSTOMERS[id].patience) + " 分钟").join(" · ") || "专心接住眼前这一位"}</span></div>
           <ol className="service-steps">{["观察", "提问", "试用", "成交"].map((step, index) => <li key={step} className={index === stage ? "current" : index < stage ? "done" : ""}>{index + 1} · {step}</li>)}</ol>
-          {stage === 0 && <><h3>先看清两处线索</h3><div className="cue-actions">{CUES.map(cue => <button key={cue.id} aria-label={"观察" + cue.label} aria-pressed={session.discovered.includes(cue.id)} onClick={() => setGame(value => observeService(value, cue.id))}>观察{customer.cues[cue.id].label}{session.discovered.includes(cue.id) ? " ✓" : ""}</button>)}</div><p className="service-feedback">{lastCue ? customer.cues[lastCue].finding : "点脸部线索，或用上面的按钮观察。另一位客人仍在等你。"}</p></>}
+          {stage === 0 && <><h3>先看清两处线索</h3><div className="cue-actions">{CUES.map(cue => <button key={cue} aria-pressed={session.discovered.includes(cue)} onClick={() => setGame(value => observeService(value, cue))}>观察{customer.cues[cue].label}{session.discovered.includes(cue) && <span aria-hidden="true"> ✓</span>}</button>)}</div><p className="service-feedback">{lastCue ? customer.cues[lastCue].finding : "点脸部线索，或用上面的按钮观察。另一位客人仍在等你。"}</p></>}
           {stage === 1 && <><h3>问清她真正介意的事</h3><div className="question-choices">{questionChoices(customer.id).map(q => <button key={q.label} onClick={() => ask(q.label, q.index)}>{q.label}</button>)}</div><form className="question-composer" onSubmit={e => { e.preventDefault(); ask(draft); }}><input aria-label="对顾客说" value={draft} onChange={e => setDraft(e.target.value)} maxLength={280} placeholder="用自己的话问 · 本地剧本回复" /><button type="submit" disabled={!draft.trim()}>开口问</button></form>{askingAgain && <button className="text-button" onClick={() => setAskingAgain(false)}>不追问了，继续选品</button>}</>}
           {showProducts && <><p className="product-guidance">根据线索选，不按价格猜。试用花 1 分钟{revising ? "；换款另花 5 体力" : ""}。</p><div className="product-choices">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button key={id} aria-label={PRODUCTS[id].short + " " + money(PRODUCTS[id].price)} aria-pressed={session.selectedProduct === id} onClick={() => { setGame(value => selectServiceProduct(value, id)); setRevising(false); }}><i className={"rescue-product-art product-" + id} /><span><b>{PRODUCTS[id].short}</b><small>{money(PRODUCTS[id].price)} / 件</small><em>{PRODUCTS[id].note}</em></span></button>)}</div><div className="trial-actions"><button className="gold-button trial-button" disabled={!session.selectedProduct || session.tested} onClick={() => setGame(trialService)}>为{customer.name}试用</button>{!session.tested && <button className="text-button" onClick={() => setAskingAgain(true)}>再问一句 · 1 分钟</button>}</div></>}
           {pendingRival && rival && <div className="rival-decision" aria-label="竞品打断"><div><img src={asset("assets/aurora/luyao.png")} alt="陆遥" /><p><b>{rival.headline}</b><span>“{rival.quote}”</span></p></div><div className="rival-choices">

@@ -1,0 +1,44 @@
+// 私域加粉是手机上够得到的一步：不藏在二级页，也不免费。
+import { expect, test, type Page } from "@playwright/test";
+import { INITIAL, SAVE_KEY, SAVE_VERSION } from "../src/campaign";
+
+const seed = (page: Page, patch: Record<string, unknown>) => page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+  key: SAVE_KEY, value: { ...INITIAL, version: SAVE_VERSION, ...patch },
+});
+
+async function openFloor(page: Page, flags: string[]) {
+  await seed(page, { flags });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 1 天" }).click();
+  await page.getByRole("button", { name: "开始营业" }).click();
+  await page.getByRole("button", { name: "停", exact: true }).click();
+  // 场控默认选中第一位顾客；下面的定位带她的名字，选错人就直接失败。
+}
+
+test("名单人数写在早上的卡上，和品牌数的那句话对得上", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await seed(page, { day: 4, sales: 10000, daySales: 0, members: ["shen", "mei"] });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 4 天" }).click();
+  await expect(page.locator(".brief-orders")).toContainText("8 份 · 2 人");
+  await expect(page.getByText("品牌在数企微名单")).toBeVisible();
+  await page.screenshot({ path: "../audit/experience-v2/mobile-brief.png" });
+});
+
+test("加微信要先有接触，加上以后当场付一分钟", async ({ page }) => {
+  await page.goto("/");
+  const minutes = () => page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { shiftMinutes?: number }).shiftMinutes ?? -1, SAVE_KEY);
+  await openFloor(page, []);
+  const member = page.getByRole("button", { name: "加微信沈薇" });
+  await expect(member).toBeDisabled();
+  await expect(member).toHaveText("加微信 · 要先有接触");
+  await openFloor(page, ["sample:shen"]);
+  await expect(member).toBeEnabled();
+  const before = await minutes();
+  await member.click();
+  await expect(member).toHaveText("沈薇已在名单");
+  await page.screenshot({ path: "../audit/experience-v2/mobile-dock.png" });
+  // 一分钟当场付掉；她本人的耐心不动，动的只有现场时间。
+  expect(await minutes()).toBe(before + 1);
+});
