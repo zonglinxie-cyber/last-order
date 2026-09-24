@@ -52,6 +52,10 @@ test("第 5 早晨会念那一句：出不掉是方敏要说明", async ({ page 
   await expect(page.locator(".message-preview").filter({ hasText: "方敏 · 合规" })).toHaveCount(1);
   await expect(page.locator(".message-preview").filter({ hasText: `¥${money(ADVANCE_SALE)} 找不到对应的客人` })).toBeVisible();
   expect(await saved(page, "sales")).toBe(AFTER);
+  // 手机版不量像素，只认这一屏 DOM 里的先后：只在这一屏出现一次的"回账"排在每天都在的那条到货前面。
+  const speakers = await page.locator(".message-preview b").allTextContents();
+  expect(speakers.indexOf("方敏 · 合规")).toBeGreaterThanOrEqual(0);
+  expect(speakers.indexOf("方敏 · 合规")).toBeLessThan(speakers.indexOf("品牌 · 到货"));
 });
 
 test("追得上进度的人看不见这一格（手机版同一个闸）", async ({ page }) => {

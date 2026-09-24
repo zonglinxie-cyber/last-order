@@ -91,7 +91,9 @@ export type RouteResult = { final: Campaign; dayTotals: number[]; served: number
 // start 换的是柜台开局的那副牌：默认是第 1 天那一批货，传一份整周配货进来就是"配货一次性给到"的反事实。
 // overAsk 量的是误读连带那一排的代价：件数已经被削到和便宜档一样时，仍然按最贵的那一档。
 // check 量的是开店前那一遍自查：两支到期小样当场下架、晚开门一分钟，换来台账上那条处理记录。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign, overAsk = false, check = false): RouteResult {
+// onEvening 拿的是"当晚全部结算完、还没滚到第二天"的那一刻：UI 探针要按「进入下一天」走进真实那一早，
+// 告示排第几、被不被钉住的脚压住，得用真跑出来的那副牌，不能手捏数字。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign, overAsk = false, check = false, onEvening?: (settled: Campaign, nextDay: number) => void): RouteResult {
   let s = openFloorState(start ?? INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
@@ -144,6 +146,7 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
     if (roster) for (const thread of touchThreads(s).slice(0, TOUCHES_PER_EVENING)) s = applyTouch(s, thread.id);
     dayTotals.push(s.sales);
     lost.push(...s.lost);
+    if (day < 5) onEvening?.(s, day + 1);
     s = startNextDay(s);
   }
   assert.equal(s.finished, true);

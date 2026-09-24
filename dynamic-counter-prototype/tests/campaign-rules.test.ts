@@ -511,3 +511,23 @@ test("没垫过的人第 5 早不该听见这一句", () => {
   assert.ok(!dawnNotices(clean).some(note => note.body.includes("自己垫") || note.body.includes("是谁买走的")));
   assert.equal(applyDawn(clean).history.filter(entry => entry.text.includes("垫")).length, 0);
 });
+
+// 晨会改成整屏滚之后，被钉住的脚压住的是表尾（P29 量的表：第 5 早 1280×800 上第 5 条整条 0px）。
+// 所以顺序本身是判据：只在这一屏出现一次的"回账"排在前面，每天都在的那两条例行数字留在表尾。
+test("晨会那一屏的表尾留给每天都在的那两条", () => {
+  const ROUTINE = ["品牌 · 到货", "日报 · 柜台"];
+  const evenings: Campaign[] = [];
+  runRoute("matched", false, false, false, null, undefined, undefined, false, false, settled => evenings.push(settled));
+  assert.equal(evenings.length, 4, "第 2 到第 5 早各对应一个前一晚");
+  for (const [index, settled] of evenings.entries()) {
+    const speakers = dawnNotices(startNextDay(settled)).map(note => note.speaker);
+    const routineAt = speakers.map((speaker, at) => (ROUTINE.includes(speaker) ? at : -1)).filter(at => at >= 0);
+    const payoffAt = speakers.map((speaker, at) => (ROUTINE.includes(speaker) ? -1 : at)).filter(at => at >= 0);
+    assert.ok(payoffAt.length && routineAt.length, `第 ${index + 2} 早两类告示都该有：${speakers.join(" | ")}`);
+    assert.ok(Math.max(...payoffAt) < Math.min(...routineAt), `第 ${index + 2} 早把例行数字排到了回账前面：${speakers.join(" | ")}`);
+  }
+  // 垫货那支的回账也要在例行前面 —— P29 就是被这一条撞出来的。
+  const held = startNextDay(campaign({ day: 4, sales: 12_000, eventDoneDays: [1, 2, 3], flags: ["advance-order", "advance-held"] }));
+  const order = dawnNotices(held).map(note => note.speaker);
+  assert.ok(order.indexOf("方敏 · 合规") >= 0 && order.indexOf("方敏 · 合规") < order.indexOf("品牌 · 到货"), order.join(" | "));
+});

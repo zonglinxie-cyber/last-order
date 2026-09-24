@@ -810,9 +810,6 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   for (const reading of [morningReview(s), counterCheck(s)]) {
     if (reading && hasFlag(s, reading.key)) notes.push({ speaker: reading.speaker, body: reading.body });
   }
-  notes.push({ speaker: "品牌 · 到货", body: deliveryWord(s.day) });
-  // 总额之外没人念结构：这一行从第 4 早起跟着你，到结局那一屏还在。
-  if (s.day >= STRUCTURE_FROM_DAY && s.orders.length) notes.push({ speaker: "日报 · 柜台", body: structureLine(s) });
   // 垫出去的那一支第二天早上一念定音：钱回没回来是玩家自己该知道的事，念一次就够（旗决定，不重复）。
   if (hasFlag(s, "advance-out")) notes.push({ speaker: "唐可 · 柜后", body: `昨天那张单是她替你开的，货她今天出给了一个真正要用的熟客：¥${money(advancePocket())} 回到你口袋里。大数字一分没多，你只是没亏。` });
   if (hasFlag(s, "advance-held")) notes.push({ speaker: "方敏 · 合规", body: `账上那 ¥${money(ADVANCE_SALE)} 找不到对应的客人。方敏要你写一份说明：这一支是谁买走的，货现在在哪里。` });
@@ -842,6 +839,12 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
     return order ? [memberRepeatLine(id, order.product)] : [];
   }) : [];
   if (repeats.length) notes.push({ speaker: "私域 · 微信", body: `${repeats.join("；")}。` });
+  // 例行的两条排最后：它们每天都在，漏看一眼不影响今天怎么接人（货数在抽屉里还有一份，结构到结局那一屏也还在）。
+  // 上面那些"因为你上一手才出现"的一条只在这一屏念一次 —— 晨会改成整屏滚之后，被脚压住的正是表尾（P29 量的那张表：
+  // 第 5 早 1280×800 上第 4 条只露 8/64px、第 5 条整条 0px），所以表尾要留给可以补看的那两条。
+  notes.push({ speaker: "品牌 · 到货", body: deliveryWord(s.day) });
+  // 总额之外没人念结构：这一行从第 4 早起跟着你，到结局那一屏还在。
+  if (s.day >= STRUCTURE_FROM_DAY && s.orders.length) notes.push({ speaker: "日报 · 柜台", body: structureLine(s) });
   return notes;
 }
 
