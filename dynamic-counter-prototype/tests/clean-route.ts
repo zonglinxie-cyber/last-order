@@ -2,10 +2,10 @@
 // rule functions only, so the balance numbers are measured instead of hand-written.
 import assert from "node:assert/strict";
 import {
-  addMember, applyTouch, askService, availableCustomers, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, offerTransfer, orderQuote,
+  addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, offerTransfer, orderQuote,
   leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS, pullOver,
   selectServiceProduct, settleDayEvent, startNextDay, startService, transferStock, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
-  fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
+  fitOf, unitsWanted, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
 } from "../src/campaign.ts";
 
 export const PRODUCT_IDS = Object.keys(PRODUCTS) as ProductId[];
@@ -88,13 +88,15 @@ export type RouteResult = { final: Campaign; dayTotals: number[]; served: number
 // transfer 是"盯着抽屉的人"：她这一单正要被削的那一刻才打电话（罗曼走系统单 3 分钟，唐可私下拿 2 分钟但台账上什么都没有）。
 // transferWhen 用来单独量"在哪些缺口上开口"这件事值多少钱，默认每个缺口都打。
 // start 换的是柜台开局的那副牌：默认是第 1 天那一批货，传一份整周配货进来就是"配货一次性给到"的反事实。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign): RouteResult {
+// overAsk 量的是误读连带那一排的代价：件数已经被削到和便宜档一样时，仍然按最贵的那一档。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign, overAsk = false): RouteResult {
   let s = openFloorState(start ?? INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
   let served = 0;
   let pulled = 0;
   const transferred: ProductId[] = [];
+  const tiers = Object.keys(BUNDLES) as BundleId[];
   for (let day = 1; day <= 5; day += 1) {
     assert.equal(s.day, day);
     for (const id of [...availableCustomers(s)]) {
@@ -111,10 +113,18 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
       }
       // 缺几件按报价单上同一个 wanted 算：这一位要几件、柜上还有几支，和玩家看到的是同一句话。
       const target = bestFit(id);
-      const quote = orderQuote(id, target, bundle === "matched" ? matchedBundle(id, target) : bundle, false, s.stock[target]);
+      const own = bundle === "matched" ? matchedBundle(id, target) : bundle;
+      let play = own;
+      if (overAsk && fitOf(CUSTOMERS[id], target).tier !== "negative") {
+        const left = s.stock[target];
+        const units = unitsWanted(CUSTOMERS[id], target, own, fitOf(CUSTOMERS[id], target).tier, left);
+        const higher = tiers.filter(t => BUNDLES[t].units > BUNDLES[own].units && unitsWanted(CUSTOMERS[id], target, t, fitOf(CUSTOMERS[id], target).tier, left) === units);
+        if (higher.length) play = higher.sort((a, b) => BUNDLES[b].units - BUNDLES[a].units)[0];
+      }
+      const quote = orderQuote(id, target, play, false, s.stock[target]);
       const clip = quote.wanted - quote.units;
       const played = playCustomer(s, id, {
-        ...(bundle === "matched" ? {} : { bundle }), faceTrial,
+        bundle: play, faceTrial,
         transfer: transfer && clip > 0 && (!transferWhen || transferWhen(day, target, clip)) ? transfer : undefined,
       });
       s = played.campaign;

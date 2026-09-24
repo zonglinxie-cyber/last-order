@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  applyDawn, applyFinale, applyTouch, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
+  applyDawn, applyFinale, applyTouch, availableCustomers, bundleHint, bundleMinutesWord, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, openFloorState, parseCampaign,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
 } from "../src/campaign.ts";
-import { bestFit, herCap, runRoute } from "./clean-route.ts";
+import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
 
 function campaign(patch: Partial<Campaign>): Campaign {
   return { ...INITIAL, ...patch, relations: { ...INITIAL.relations, ...patch.relations }, flags: patch.flags ?? [], history: patch.history ?? [] };
@@ -317,4 +317,34 @@ test("断货那张卡给的出路跟着到货排期走：还有下一批才提\"
   assert.ok(card(4).body.includes("等大仓下一批"), "第 4 天断的修护，第 5 早上还排着一支：\"等\"这时候是条真路");
   assert.ok(!card(5).body.includes("等大仓下一批"), "第 5 天之后没有下一批，不能给玩家指一条不存在的路");
   assert.ok(card(5).body.includes("只剩两条路"));
+});
+
+// P15：连带那一排的分钟买的是"开口多要一件"，不是"柜上多开一件"。这层意思原来只有手机版说一句。
+test("件数已经被削平时，按钮要把这一档开口要几件写在分钟上", () => {
+  assert.equal(bundleMinutesWord("set", 3), "占 3 分钟");
+  assert.equal(bundleMinutesWord("bulk", 3), "要 4 件 · 占 4 分钟", "她自己就到 3 件：第 4 分钟买的是开口，不是货");
+  assert.equal(bundleMinutesWord("pair", 1), "要 2 件 · 占 2 分钟", "柜上只剩 1 支时也一样，这一档是在问她要 2 件");
+  assert.equal(bundleHint(CUSTOMERS.shen), "预算 ¥3,200 · 上限 3 件 · 多要一件多占一分钟");
+});
+
+test("游戏里第一张报价单：多按一档开的还是 3 件，但当天就没有第二位顾客了", () => {
+  const first = (bundle: BundleId) => {
+    const played = playCustomer(openFloorState(INITIAL), "shen", { bundle });
+    return { ...played.outcome, meiLeft: played.campaign.waitMeters.mei, stillHere: availableCustomers(played.campaign).includes("mei") };
+  };
+  const honest = first("set");
+  const over = first("bulk");
+  assert.equal(over.units, honest.units, "件数一模一样");
+  assert.equal(over.total, honest.total, "钱也一模一样");
+  assert.equal(over.minutes, honest.minutes + 1, "多的那一分钟什么都没换来");
+  assert.equal(honest.meiLeft, 1);
+  assert.equal(over.stillHere, false, "她那一单占掉的就是梅女士剩下的最后一分钟");
+});
+
+test("把连带那一排整周都误读成\"更贵=更多\"，少 ¥3,640、走掉三位，掉到线下", () => {
+  const over = runRoute("matched", false, false, false, null, undefined, undefined, true);
+  assert.equal(over.final.sales, 19_290);
+  assert.ok(over.final.sales < TARGET, "误读一周的代价是这一周不达标");
+  assert.equal(over.served, 6);
+  assert.deepEqual([...new Set(over.lost)].sort(), ["duan", "mei", "zhou"]);
 });

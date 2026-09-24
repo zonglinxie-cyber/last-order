@@ -198,6 +198,14 @@ export const BUNDLES: Record<BundleId, { units: number; label: string; detail: s
 };
 
 export const POSITIVE_FIT = 0.78;
+// 连带那一排买的是两件事：开几支货，和"开口多要一件"多占的那一分钟。这句原来只有手机版说，沙盘没有；
+// 一路按高档误读量出来是一整周少 ¥3,640、走掉三位，只在第 1 单多按一档也会当天丢掉梅女士。一处写，两个 UI 读。
+export const bundleHint = (customer: Customer) => `预算 ¥${customer.budget.toLocaleString("zh-CN")} · 上限 ${customer.maxUnits} 件 · 多要一件多占一分钟`;
+// 这一档开不出它自己开口要的件数时，把"要几件"补回按钮上：件数那一行已经是削过的结果。
+export const bundleMinutesWord = (bundle: BundleId, units: number) => {
+  const asked = BUNDLES[bundle].units;
+  return asked > units ? `要 ${asked} 件 · 占 ${asked} 分钟` : `占 ${asked} 分钟`;
+};
 export const MIXED_FIT = 0.55;
 // 开口之前的门槛：至少在她脸上看过两处。两个 UI 的这一步判定都问这个数。
 export const OBSERVE_MIN = 2;

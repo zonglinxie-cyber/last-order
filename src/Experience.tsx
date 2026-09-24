@@ -67,7 +67,8 @@ export function DemandBoard({ game }: { game: Campaign }) {
     {preview.known.map(demand => <p key={demand.trait}><b>{TRAIT_LABELS[demand.trait]}</b><i className={"weight w" + demand.weight}>{"●".repeat(demand.weight)}</i></p>)}
     {record.blind && <p className="demand-blind">{record.blind}</p>}
     {record.veto && <p className="demand-veto"><b>底线</b>{record.veto}</p>}
-    <p className="demand-budget">预算 {customer.budget.toLocaleString("zh-CN")} 元 · 最多带走 {customer.maxUnits} 件</p>
+    {/* 同一屏两处报她的上限：这里和连带那一行得是同一句话的同一套说法，不能一个写「最多带走」、一个写「上限」。 */}
+    <p className="demand-budget">预算 ¥{customer.budget.toLocaleString("zh-CN")} · 上限 {customer.maxUnits} 件</p>
   </div>;
 }
 

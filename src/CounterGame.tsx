@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, bundleHint, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
@@ -383,11 +383,11 @@ export default function CounterGame() {
             {session.faceTrialRevealed && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[session.faceTrialRevealed]}</p>}
             {session.faceTrialled && !session.faceTrialRevealed && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
             {session.reaction === "positive" && <div className="bundle-choices" role="group" aria-label="连带件数">
-              <span className="eyebrow">她愿意带走几件 <small>预算 {customer.budget.toLocaleString("zh-CN")} · 上限 {customer.maxUnits} 件</small></span>
+              <span className="eyebrow">她愿意带走几件 <small>{bundleHint(customer)}</small></span>
               {(Object.keys(BUNDLES) as BundleId[]).map(id => {
                 // 抽屉里的支数也是一道上限：她要 4 件、柜上只剩 2 支，就得在她面前说清楚，不能等关单才变。
                 const units = unitsWanted(customer, picked, id, session.reaction ?? "negative", game.stock[picked]);
-                return <button key={id} aria-pressed={session.bundle === id} disabled={!units} onClick={() => setGame(value => chooseBundle(value, id))}><b>{BUNDLES[id].label}</b><small>{units ? <><span className="bundle-price">{units} 件 {money(units * PRODUCTS[picked].price)}</span><span className="bundle-minutes">占 {BUNDLES[id].units} 分钟</span></> : game.stock[picked] ? "她不会多拿" : "柜上这一支断了"}</small></button>;
+                return <button key={id} aria-pressed={session.bundle === id} disabled={!units} onClick={() => setGame(value => chooseBundle(value, id))}><b>{BUNDLES[id].label}</b><small>{units ? <><span className="bundle-price">{units} 件 {money(units * PRODUCTS[picked].price)}</span><span className="bundle-minutes">{bundleMinutesWord(id, units)}</span></> : game.stock[picked] ? "她不会多拿" : "柜上这一支断了"}</small></button>;
               })}
             </div>}
           </div><Quote game={game} id={customer.id} product={picked} onTransfer={channel => setGame(value => transferStock(value, picked, channel))} /></div>}

@@ -528,3 +528,42 @@ test("only the line you followed up actually repurchases on day five", async ({ 
   expect(await page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { sales: number }).sales, SAVE_KEY)).toBe(17_980);
   await page.screenshot({ path: "../audit/experience-v2/member-repeat.png" });
 });
+
+// P15：连带那一排的分钟买的是"开口多要一件"，不是"柜上多开一件"。第一张报价单就要说清楚，
+// 不然第 1 天多按一档，开出来的还是同一单 3 件，却把梅女士剩下的最后一分钟花掉。
+test("bundle minutes buy the ask, not the goods: the top tier says 要 4 件 when she caps at 3", async ({ page }) => {
+  test.setTimeout(60_000);
+  await start(page);
+  await consult(page, "沈薇", "柔焦 ¥980");
+  if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
+    await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  }
+  await expect(page.locator(".bundle-choices .eyebrow")).toContainText("预算 ¥3,200 · 上限 3 件 · 多要一件多占一分钟");
+  const tier = (label: string) => page.locator(".bundle-choices button", { hasText: label });
+  await expect(tier("三件整套")).toContainText("3 件 ¥2,940");
+  await expect(tier("三件整套")).toContainText("占 3 分钟");
+  await expect(tier("批量追加")).toContainText("3 件 ¥2,940");
+  await expect(tier("批量追加")).toContainText("要 4 件 · 占 4 分钟");
+  // 这一排在 720 高的 dock 带子里本来就在折线以下：截图之前先把它滚进视野，不然证据是空的。
+  await page.locator(".bundle-choices button").last().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "../audit/experience-v2/p15-bundle-row.png" });
+});
+
+// 被抽屉削件时同一句话也要能读出来：她要 2 件、柜上只剩 1 支，那一档是在开口问，不是多开一件。
+test("the same ask reads on a tier the drawer already clipped", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto("/");
+  await seed(page, { ...INITIAL, day: 2, sales: 4_620, daySales: 0, stock: { soft: 1, glow: 4, repair: 6 }, eventDoneDays: [1], flags: ["delivered:2"] });
+  await page.reload();
+  // 半日存档直接开在楼层上，实时钟本来就是停的：耐心不动，这一屏才是玩家开口前看到的那一屏。
+  await expect(page.locator(".shift-clock")).toContainText("现场已暂停");
+  await consult(page, "周姐", "柔焦 ¥980");
+  if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
+    await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  }
+  const tier = (label: string) => page.locator(".bundle-choices button", { hasText: label });
+  await expect(tier("两件连带")).toContainText("1 件 ¥980");
+  await expect(tier("两件连带")).toContainText("要 2 件 · 占 2 分钟");
+  await page.locator(".bundle-choices button").last().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "../audit/experience-v2/p15-bundle-row-clipped.png" });
+});
