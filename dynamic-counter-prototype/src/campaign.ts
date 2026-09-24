@@ -453,6 +453,14 @@ export const clamp = (value: number) => Math.max(0, Math.min(100, value));
 export const hasFlag = (s: Campaign, name: string) => s.flags.includes(name);
 export const flag = (s: Campaign, name: string) => hasFlag(s, name) ? s.flags : [...s.flags, name];
 export const history = (s: Campaign, item: string): HistoryEntry[] => [...s.history, { day: s.day, text: item }];
+// 账本要能对回来：凡是动了 sales 的那一条，钱就写在自己那一行的末尾。
+// 两个界面念账本都只念 history 这一份，所以数额在这一处出一次就够，不在 UI 里另算一遍。
+export const receiptLine = (text: string, amount: number) => `${text}${amount ? ` · ${amount < 0 ? "−" : ""}¥${Math.abs(amount).toLocaleString("zh-CN")}` : ""}`;
+// 反着读回去：账上写下的这些 ¥ 加起来必须等于大数字。规则动了钱却没写行，两个数就会分叉——规则测试盯的就是这一条。
+export const ledgerSum = (s: Campaign) => s.history.reduce((sum, entry) => sum + [...entry.text.matchAll(/·\s*(−?)¥([\d,.]+)/g)]
+  .reduce((part, hit) => part + (hit[1] ? -1 : 1) * Number(hit[2].replace(/,/g, "")), 0), 0);
+// 让单给同事这件事只在两处提：让她演示那颗按钮，和入账那一行。措辞只有一份。
+export const SPLIT_WORD = "与陆遥各半";
 export const servedZhou = (s: Campaign) => hasFlag(s, "served:zhou:good") || hasFlag(s, "served:zhou:risky");
 // 她回来要的是"当天的妆"，前提是第 4 天你按她的皮肤给了修护而不是硬推：被退掉的人不会再来找你要判断。
 export const anjieComesBack = (s: Campaign) => s.day === 5 && hasFlag(s, "served:anjie:good");
@@ -471,14 +479,20 @@ export function metersFor(ids: CustomerId[], previous: Campaign["waitMeters"] = 
   return next;
 }
 
+// 她这一单要退多少：小票还在就按小票，旧存档没有小票才按当前模型估。
+// 退货当天和第二天早晨念这条的人读的是同一个算式，所以两处都从这里取。
+function paybackCharge(s: Campaign, item: Payback) {
+  // Legacy v2 saves may lack orders; their transfer flags still constrain liability.
+  const legacyShare = item.id === "xiaoyu" ? hasFlag(s, "tang-owes-order") ? 0 : hasFlag(s, "split-with-tang") ? .5 : 1 : 1;
+  return s.orders.find(order => order.customerId === item.id && order.risky)?.amount ?? estimatedRiskAmount(item.id) * legacyShare;
+}
+
 function applyPayback(s: Campaign, item: Payback): Campaign {
   if (s.day < item.fromDay || !hasFlag(s, `served:${item.id}:risky`) || hasFlag(s, item.resolve)) return s;
   const relations = item.relation
     ? { ...s.relations, [item.relation.key]: s.relations[item.relation.key] + item.relation.delta }
     : s.relations;
-  // Legacy v2 saves may lack orders; their transfer flags still constrain liability.
-  const legacyShare = item.id === "xiaoyu" ? hasFlag(s, "tang-owes-order") ? 0 : hasFlag(s, "split-with-tang") ? .5 : 1 : 1;
-  const charged = s.orders.find(order => order.customerId === item.id && order.risky)?.amount ?? estimatedRiskAmount(item.id) * legacyShare;
+  const charged = paybackCharge(s, item);
   return {
     ...s,
     sales: Math.max(0, s.sales - charged),
@@ -487,7 +501,8 @@ function applyPayback(s: Campaign, item: Payback): Campaign {
     compliance: clamp(s.compliance + item.compliance),
     relations,
     flags: flag(s, item.resolve),
-    history: history(s, item.text),
+    // 退掉的是真金白银，那一行就得写下退了多少；写的是从大数字上掉下来多少，不是账面应收。
+    history: history(s, receiptLine(item.text, -Math.min(charged, s.sales))),
   };
 }
 
@@ -562,7 +577,7 @@ function applySampleReturn(s: Campaign, item: (typeof SAMPLE_RETURNS)[number]): 
     daySales: s.daySales + SAMPLE_RETURN_SALE,
     trust: clamp(s.trust + 5),
     flags: flag(s, item.resolve),
-    history: history(s, item.text),
+    history: history(s, receiptLine(item.text, SAMPLE_RETURN_SALE)),
   };
 }
 
@@ -624,7 +639,8 @@ function applyMemberRepeat(s: Campaign): Campaign {
     const amount = PRODUCTS[order.product].price;
     next = {
       ...next, sales: next.sales + amount, daySales: next.daySales + amount, trust: clamp(next.trust + 3),
-      flags: flag(next, guard), history: history(next, memberRepeatLine(id, order.product)),
+      // 晨会念她补了哪一支（不带钱），账本上这一行要把钱写下，否则累计就凭空多出来一截。
+      flags: flag(next, guard), history: history(next, receiptLine(memberRepeatLine(id, order.product), amount)),
     };
   }
   return next;
@@ -642,10 +658,13 @@ export function applyDawn(s: Campaign): Campaign {
     };
   }
   if (s.day === 4 && hasFlag(s, "tang-owes-order") && !hasFlag(s, "tang-paid-order")) {
-    next = { ...next, sales: next.sales + 2080, daySales: next.daySales + 2080, flags: flag(next, "tang-paid-order"), history: history(next, "唐可把一单伴娘妆转到你名下") };
+    // 她私下转过来这一单不进收银小票：钱只写在账本这一行上，否则累计就是一笔凭空多出来的数。
+    const booked = 2080;
+    next = { ...next, sales: next.sales + booked, daySales: next.daySales + booked, flags: flag(next, "tang-paid-order"), history: history(next, receiptLine("唐可把一单伴娘妆转到你名下", booked)) };
   }
   if (s.day === 5 && hasFlag(s, "protected-zhao") && !hasFlag(s, "zhao-daughter-order")) {
-    next = { ...next, sales: next.sales + 1680, daySales: next.daySales + 1680, trust: clamp(next.trust + 6), flags: flag(next, "zhao-daughter-order"), history: history(next, "赵青加你微信，下了一单修护") };
+    const booked = 1680;
+    next = { ...next, sales: next.sales + booked, daySales: next.daySales + booked, trust: clamp(next.trust + 6), flags: flag(next, "zhao-daughter-order"), history: history(next, receiptLine("赵青加你微信，下了一单修护", booked)) };
   }
   if (s.day === 5 && hasFlag(s, "zhao-risk-sale") && !hasFlag(s, "zhao-complaint")) {
     next = { ...next, trust: clamp(next.trust - 10), compliance: clamp(next.compliance - 8), flags: flag(next, "zhao-complaint"), history: history(next, "赵女士女儿过敏，客诉已立案") };
@@ -653,7 +672,7 @@ export function applyDawn(s: Campaign): Campaign {
   if (s.day === 5 && hasFlag(s, "promise-zhao-return") && !hasFlag(s, "zhao-returned")) {
     // A forced order is already refunded by RISKY_RETURNS below.
     const charged = hasFlag(s, "served:zhao:risky") ? 0 : s.orders.find(order => order.customerId === "zhao")?.amount ?? estimatedOrderAmount("zhao", "positive");
-    next = { ...next, sales: Math.max(0, next.sales - charged), daySales: next.daySales - charged, flags: flag(next, "zhao-returned"), history: history(next, "赵女士按承诺退了那单") };
+    next = { ...next, sales: Math.max(0, next.sales - charged), daySales: next.daySales - charged, flags: flag(next, "zhao-returned"), history: history(next, receiptLine("赵女士按承诺退了那单", -Math.min(charged, next.sales))) };
   }
   // 她回来这件事要留在因果账本里，不能只算晨会念的一句话。
   if (s.day === 5 && hasFlag(s, "served:anjie:good") && !hasFlag(s, "anjie-came-back")) {
@@ -678,12 +697,14 @@ export function applyFinale(s: Campaign): Campaign {
     trust: clamp(s.trust - 8),
     compliance: clamp(s.compliance - 4),
     flags: flag(s, "returning-chargeback"),
-    history: history(s, "沈薇团队发现效果不稳定，批量单暂扣"),
+    // 小票还在，钱却是从累计里整笔拿走的：不写下拿走的数额，结局那一屏就少一笔说不清的钱。
+    history: history(s, receiptLine("沈薇团队发现效果不稳定，批量单暂扣", -Math.min(charged, s.sales))),
   };
 }
 
 // 兑现的那一句早上念一次：认的是今天这笔流水，不是排定的天数 —— 跟进晚一天，线就会晚一天回来。
-const landedToday = (s: Campaign, text: string) => s.history.some(entry => entry.day === s.day && entry.text === text);
+// 账本上那一行末尾还跟着数额（· ¥620），所以这里认的是"这句话开头"，不是整句相等。
+const landedToday = (s: Campaign, text: string) => s.history.some(entry => entry.day === s.day && (entry.text === text || entry.text.startsWith(`${text} · `)));
 
 export function dawnNotices(s: Campaign): DawnNotice[] {
   const notes: DawnNotice[] = [];
@@ -1132,8 +1153,9 @@ export function resolveSale(s: Campaign, input: {
     evidence: s.evidence + (input.claimed ? 1 : 0) + (!missed.length && !vetoMissed && sold ? 1 : 0),
     dayServed: [...s.dayServed, customer.id], activeSession: null,
     flags: flag(s, `served:${customer.id}:${blocked ? "out-of-stock" : sold ? (tier === "negative" ? "risky" : "good") : "refused"}`),
+    // 账本这一行写的是真入账的那个数（拼单就是半份），不是小票上的整单：整单在报价单和收银记录上各念一次，够了。
     history: history(s, blocked ? `${customer.name}要的是${item.short}，柜上这一支已经断到最后` : sold
-      ? `${customer.name}带走 ${units} 件${item.short} · ¥${total.toLocaleString("zh-CN")}${tier === "negative" ? "（她并不认同这个方向）" : ""}`
+      ? receiptLine(`${customer.name}带走 ${units} 件${item.short}${tier === "negative" ? "（她并不认同这个方向）" : ""}${shared ? `（${SPLIT_WORD}）` : ""}`, amount)
       : `${customer.name}拒绝了${item.short}的推荐`),
     orders: sold ? [...s.orders, { day: s.day, customerId: customer.id, product: input.selectedProduct, units, total, amount, shared, risky: tier === "negative" }] : s.orders,
   };
@@ -1275,7 +1297,8 @@ export function settleDayEvent(s: Campaign, id: string): Campaign {
   if (!choice) return s;
   const next = choice.apply(s);
   const change = next.sales - s.sales;
-  if (change) next.history = history(next, `闭店调整 · ${choice.label}：${change > 0 ? "+" : "−"}¥${Math.abs(change).toLocaleString("zh-CN")}`);
+  // 事件动的是累计还是别的，这里一律按"大数字实际涨跌了多少"记一笔钱——和柜台小票、晨会那几行同一个格式。
+  if (change) next.history = history(next, receiptLine(`闭店调整 · ${choice.label}`, change));
   return { ...next, history: history(next, "回应 · " + choice.result), eventDoneDays: [...next.eventDoneDays, s.day], activeSession: null };
 }
 

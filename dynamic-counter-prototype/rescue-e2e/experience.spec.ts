@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ledgerYuan } from "../tests/ledger-yuan";
 
 const shots = "../audit/experience-v2/";
 async function start(page: Page) {
@@ -136,7 +137,8 @@ test("a lost-opportunity route completes all five days without inventing purchas
     await page.getByRole("button", { name: day === 5 ? "查看活动周结局" : "进入下一天", exact: true }).click();
   }
   await expect(page.getByRole("heading", { name: "柜台灯灭了", exact: true })).toBeVisible();
-  await expect(page.locator(".order-line")).toHaveCount(0);
+  // 这一周她一单都没接到：账本上一行钱都不该写（钱现在只写在因果行上）。
+  expect(await ledgerYuan(page)).toBe(0);
   // 数字没做到、记录也没留下几行：这一晚摊开本子救不回柜位，判词只能落到撤柜评估。
   await expect(page.locator(".ending-checks")).toContainText("撤柜评估已经写上去");
 });

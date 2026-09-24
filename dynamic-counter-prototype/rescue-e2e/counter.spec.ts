@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { CUSTOMERS, demandBudgetWord, deliveryWord, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { ledgerYuan } from "../tests/ledger-yuan";
 
 // 配货按天到这件事要在晨会上念出来，而不是让玩家自己算抽屉：一早就一句，念的是规则给的那句。
 async function morningArrivals(page: Page, day: number) {
@@ -102,7 +103,9 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
   // 第 4 天周姐那一单修护赶在到货前面：钱没开到，人也没买到。与手机版、规则模拟器同一条路线同一个数。
   await expect(page.locator(".large-number")).toContainText("¥22,930");
-  await expect(page.locator(".order-line")).toHaveCount(9);
+  // 账本要能自己加回去：把这一屏看得见的每一行 ¥ 加起来，就是页顶那个 ¥22,930。
+  // 以前这里数的是另一叠小票（9 张），而晨会转来的一单、六支微信补单那些钱没有地方念。
+  expect(await ledgerYuan(page)).toBe(22_930);
   await page.reload();
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
   // 达标之后页顶不能再念"还差 ¥0"。

@@ -188,7 +188,7 @@
 .touch-list b { color: #edcfaa; font-size: 14px; white-space: nowrap; }
 .touch-list span { color: #b7a491; font-size: 12.5px; }
 .touch-reply { color: #d9c49a; font-size: 13px; line-height: 1.7; padding-left: 12px; border-left: 2px solid #6b4f3b; }
-.ledger-book { margin-top: 20px; }.ledger-book section { border-top: 1px solid #4d3738; padding-top: 14px; margin-top: 18px; }.ledger-book h2 { color: #ceab81; font-size: 15px; margin-bottom: 8px; }.ledger-book p { color: #c8b7a6; font-size: 13px; margin-bottom: 7px; }.ledger-book .order-line { color: #d7c49b; border-top: 1px solid #3f3033; padding: 7px 0; }
+.ledger-book { margin-top: 20px; }.ledger-book section { border-top: 1px solid #4d3738; padding-top: 14px; margin-top: 18px; }.ledger-book h2 { color: #ceab81; font-size: 15px; margin-bottom: 8px; }.ledger-book p { color: #c8b7a6; font-size: 13px; margin-bottom: 7px; }
 .dialog-backdrop { position: fixed; z-index: 500; inset: 0; display: grid; place-items: center; padding: 24px; background: #0b0710cf; }.restart-dialog { padding: 28px; max-width: 460px; border: 1px solid #87664d; border-radius: 10px; background: #251c24; }.restart-dialog p { margin: 14px 0 24px; color: #c9b6a4; }.restart-dialog > div { display: flex; gap: 10px; }
 @media (min-height: 850px) and (min-width: 900px) { .rescue-game { grid-template-rows: 76px minmax(0, 1fr) 280px; }.rescue-dock { padding-top: 25px; } }
 /* 关单这一步要的东西最多：报价、连带、成交按钮。笔记本高度下给柜位 dock 留够，别让主按钮掉到折叠线以下。 */

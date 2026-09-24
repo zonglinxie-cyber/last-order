@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
-  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, openFloorState, parseCampaign,
+  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, ledgerSum, openFloorState, parseCampaign,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
 } from "../src/campaign.ts";
@@ -123,8 +123,8 @@ test("forcing Anjie comes back as a wedding-week blow-up", () => {
   assert.equal(next.sales, 18_000, "强推记进业绩多少，婚礼前就从业绩里退多少");
   assert.ok(next.flags.includes("anjie-blew-up"));
   // 晨会在退货落定之后才念数字，所以柜位那一条排在客诉后面。
-  const blowUp = next.history.findIndex(entry => entry.text === "安姐婚前爆红，苏蔓的三年老客炸了");
-  assert.ok(blowUp >= 0, "婚礼客诉要留在账本里");
+  const blowUp = next.history.findIndex(entry => entry.text === `安姐婚前爆红，苏蔓的三年老客炸了 · −¥${forced.outcome.amount.toLocaleString("zh-CN")}`);
+  assert.ok(blowUp >= 0, "婚礼客诉要留在账本里，而且写下从累计退了多少钱");
   assert.ok(next.history.slice(blowUp + 1).some(entry => entry.text.startsWith("晨会 ·")), "晨会读的是已经落定的数字");
   assert.ok(dawnNotices(next).some(note => note.body.includes("婚礼前双颊爆红")));
   // 旧存档没有逐笔记账。兜底要等于最小的一件强推，不能和报价系统各说一套。
@@ -224,10 +224,11 @@ test("old saves without the current version are discarded", () => {
 
 test("a same-day risky last order is clawed back in the finale", () => {
   // 柜上按整周配货给足，这一条量的是"开口几件就记几件、结局整笔暂扣"，不是断货。
-  const closed = resolveSale(campaign({ day: 5, sales: 20_000, stock: { ...WEEK_ALLOCATION } }), {
-    customerId: "returning", selectedProduct: "repair", bundle: "bulk", revealed: [],
+  const input = {
+    customerId: "returning" as const, selectedProduct: "repair" as const, bundle: "bulk" as const, revealed: [] as const,
     tested: true, askedQuestion: 0, claimed: true, interruption: true, interruptionHandled: true, force: true,
-  });
+  };
+  const closed = resolveSale(campaign({ day: 5, sales: 20_000, stock: { ...WEEK_ALLOCATION } }), input);
   assert.ok(closed);
   const booked = 4 * PRODUCTS.repair.price;
   assert.equal(closed.outcome.units, 4, "强推按你开口的件数记账");
@@ -235,6 +236,47 @@ test("a same-day risky last order is clawed back in the finale", () => {
   const finale = applyFinale(closed.campaign);
   assert.equal(finale.sales, 20_000, "批量强推的金额在结局整笔暂扣");
   assert.ok(finale.flags.includes("returning-chargeback"));
+  // 小票还留在账上，钱却是结局拿走的：那一笔必须写成一行带数额的暂扣，否则结局的累计就少一笔说不清的钱。
+  assert.ok(finale.history.some(entry => entry.text === `沈薇团队发现效果不稳定，批量单暂扣 · −¥${booked.toLocaleString("zh-CN")}`));
+  // "写的钱 = 大数字"只能从 0 起步量：上面那一格手写的 ¥20,000 在账上没有行可念。
+  const fromZero = resolveSale(campaign({ day: 5, stock: { ...WEEK_ALLOCATION } }), input)!.campaign;
+  assert.equal(ledgerSum(fromZero), booked, "开单当下账上就写了这一笔");
+  assert.equal(ledgerSum(applyFinale(fromZero)), 0, "整笔暂扣之后账本跟着归零");
+});
+
+// 账本不是文案集：玩家把界面上看得见的每一行 ¥ 加起来，应当就是页顶那个大数字。
+// 私域那条线一周多出 ¥8,260（六支微信补单加赵青那一单），以前全落在没有数额的散文里。
+const MONEY_LINE = /·\s*−?¥/;
+test("每一笔动过 sales 的钱都在自己那一行写下数额：账本各行加起来等于累计", () => {
+  const privateDomain = runRoute("matched", false, true).final;
+  const routes: Array<[string, Campaign]> = [
+    ["读准她的上限", runRoute().final],
+    ["一件都不连带", runRoute("single").final],
+    ["每套都推到套装", runRoute("set").final],
+    ["每个人都按最多开口", runRoute("bulk").final],
+    ["半脸上妆做满", runRoute("matched", true).final],
+    ["私域做满", privateDomain],
+    ["只要有人看表就迎上去", runRoute("matched", false, false, true).final],
+    ["盯着缺口调货", runRoute("matched", false, false, false, "roman").final],
+    ["误读连带那一排", runRoute("matched", false, false, false, null, undefined, undefined, true).final],
+  ];
+  for (const [label, state] of routes) {
+    assert.equal(ledgerSum(state), state.sales, `${label}：账上写下 ¥ 的行加起来必须等于累计 ${state.sales}`);
+    assert.ok(state.orders.length > 0 && state.history.some(entry => MONEY_LINE.test(entry.text)), `${label}：至少要有对得上的行可念`);
+  }
+  // 17 行 = 8 张小票 + 6 支微信补单 + 赵青那一单 + 两条闭店调整；小票单加只有 20,270，缺的那 8,260 现在每一笔都有数额。
+  assert.equal(privateDomain.history.filter(entry => MONEY_LINE.test(entry.text)).length, 17);
+  assert.equal(privateDomain.orders.reduce((sum, order) => sum + order.amount, 0), 20_270);
+  assert.ok(privateDomain.history.some(entry => entry.text === "赵青加你微信，下了一单修护 · ¥1,680"), "晨会转过来那一单不能只留一句白话");
+  assert.ok(privateDomain.history.some(entry => entry.text === "沈薇在微信上补了一支柔焦 · ¥980"));
+  // 让单给同事的那一笔：账上写的就是自己那半份，不需要再补一条减法，账本才对得回来。
+  const yielded = resolveSale(campaign({ day: 2, stock: { ...WEEK_ALLOCATION } }), {
+    customerId: "shen", selectedProduct: "soft", bundle: "pair", revealed: [],
+    tested: true, askedQuestion: 0, claimed: true, interruption: true, interruptionHandled: true, force: false, rivalChoice: "yield",
+  });
+  assert.ok(yielded?.outcome.shared, "让单这一格确实各半");
+  assert.ok(yielded.campaign.history.some(entry => entry.text === "沈薇带走 2 件柔焦（与陆遥各半） · ¥980"), "整单 ¥1,960，入账那半份写在同一行上");
+  assert.equal(ledgerSum(yielded.campaign), yielded.campaign.sales);
 });
 
 test("the four endings each need their own condition", () => {

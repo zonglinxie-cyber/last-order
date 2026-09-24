@@ -84,7 +84,8 @@ test("私域复购只在最后一天到账，金额是她自己那支", () => {
   assert.equal(before.sales, added.sales, "名单不是当天见效的东西");
   const dawn = applyDawn({ ...before, day: 5, daySales: 0 });
   assert.equal(dawn.sales - before.sales, PRODUCTS.soft.price, "她补的是自己认过的那一支");
-  assert.ok(dawn.history.some(entry => entry.text === `${CUSTOMERS.shen.name}在微信上补了一支${PRODUCTS.soft.short}`));
+  // 这一支不进收银小票，所以账本那一行得自己写下数额，否则累计就是一笔说不清来源的钱。
+  assert.ok(dawn.history.some(entry => entry.text === `${CUSTOMERS.shen.name}在微信上补了一支${PRODUCTS.soft.short} · ¥${PRODUCTS.soft.price.toLocaleString("zh-CN")}`));
   assert.equal(applyDawn(dawn).sales, dawn.sales, "同一个人不重复复购");
   // 强推的那单已经退了，不能又变成复购。
   const risky = applyDawn(campaign({ day: 5, sales: 0, members: ["shen"], orders: [{ ...order("shen", 1), risky: true }] }));

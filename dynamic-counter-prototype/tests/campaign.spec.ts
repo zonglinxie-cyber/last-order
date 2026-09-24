@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ledgerYuan } from "./ledger-yuan";
 
 const morningDelivery = (page: any) => page.locator(".message-preview").filter({ hasText: "品牌 · 到货" });
 
@@ -75,5 +76,7 @@ test("five-day campaign completes and persists across a reload", async ({ page }
   await expect(page.getByText("五日因果账本")).toBeVisible();
   // 沈薇两次都被推对了方向：账本里留下两条按件数记账的成交，而不是笼统的"准确推荐"。
   await expect(page.getByText(/^沈薇带走 \d 件柔焦 · ¥/)).toHaveCount(2);
+  // 手机版只有这一份账：把这一屏看得见的每一行 ¥ 加起来，就是上面那个 ¥22,930。
+  expect(await ledgerYuan(page)).toBe(22_930);
   await expect(page.getByText("DAY 1 · 入口位")).toBeVisible();
 });
