@@ -64,7 +64,7 @@ export function DemandBoard({ game }: { game: Campaign }) {
   return <div className="demand-board">
     <span className="eyebrow">她要什么 <small>已掌握 {preview.known.length} / {customer.demands.length}</small></span>
     {preview.known.map(demand => <p key={demand.trait}><b>{TRAIT_LABELS[demand.trait]}</b><i className={"weight w" + demand.weight}>{"●".repeat(demand.weight)}</i></p>)}
-    {Boolean(preview.missed) && <p className="demand-blind">还有 {preview.missed} 条她没说出口 · 只能靠提问</p>}
+    {Boolean(preview.missed) && <p className="demand-blind">还有 {preview.missed} 条她没说出口 · 问出来，或上脸试出来</p>}
     {customer.veto && preview.vetoKnown && <p className="demand-veto"><b>底线</b>{customer.veto.note}</p>}
     <p className="demand-budget">预算 {customer.budget.toLocaleString("zh-CN")} 元 · 最多带走 {customer.maxUnits} 件</p>
   </div>;

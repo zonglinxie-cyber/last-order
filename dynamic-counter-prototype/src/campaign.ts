@@ -19,6 +19,9 @@ export type CustomerSession = {
   revealed: Trait[];
   tested: boolean;
   reaction: "positive" | "mixed" | "negative" | null;
+  // 半脸上妆是手背试色看不出来的那一步：她最在意的事要压在皮肤上才露出来。
+  faceTrialled: boolean;
+  faceTrialRevealed: Trait | null;
   revisions: number;
   claimed: boolean;
   rivalChoice: RivalChoice | null;
@@ -722,7 +725,9 @@ export function parseCampaign(raw: string | null): Campaign | null {
       || (session.selectedProduct !== null && !Object.hasOwn(PRODUCTS, session.selectedProduct))
       || (session.askedQuestion !== null && (!Number.isInteger(session.askedQuestion) || !QUESTIONS[session.customerId][session.askedQuestion])
       || (session.bundle !== undefined && !Object.hasOwn(BUNDLES, session.bundle))
-      || (session.revealed !== undefined && (!Array.isArray(session.revealed) || session.revealed.some(trait => !Object.hasOwn(TRAIT_LABELS, trait))))))) return null;
+      || (session.revealed !== undefined && (!Array.isArray(session.revealed) || session.revealed.some(trait => !Object.hasOwn(TRAIT_LABELS, trait))))
+      || (session.faceTrialRevealed !== undefined && session.faceTrialRevealed !== null && !Object.hasOwn(TRAIT_LABELS, session.faceTrialRevealed))
+      || (session.faceTrialled !== undefined && typeof session.faceTrialled !== "boolean")))) return null;
     const merged: Campaign = {
       ...INITIAL,
       ...parsed,
@@ -740,7 +745,8 @@ export function parseCampaign(raw: string | null): Campaign | null {
       orders: Array.isArray(parsed.orders) ? parsed.orders.filter(order => order && Object.hasOwn(CUSTOMERS, order.customerId) && Object.hasOwn(PRODUCTS, order.product) && Number.isFinite(order.amount) && order.amount >= 0 && Number.isFinite(order.total) && order.total >= order.amount && Number.isInteger(order.units) && order.units > 0) : [],
       finished: parsed.finished === true,
       activeSession: parsed.activeSession
-        ? { ...parsed.activeSession, bundle: parsed.activeSession.bundle ?? "single", revealed: parsed.activeSession.revealed ?? [], chat: parsed.activeSession.chat ?? [] }
+        ? { ...parsed.activeSession, bundle: parsed.activeSession.bundle ?? "single", revealed: parsed.activeSession.revealed ?? [], chat: parsed.activeSession.chat ?? [],
+            faceTrialled: parsed.activeSession.faceTrialled === true, faceTrialRevealed: parsed.activeSession.faceTrialRevealed ?? null }
         : null,
     };
     return { ...merged, waitMeters: metersFor(floorCustomers(merged), merged.waitMeters) };
@@ -877,6 +883,7 @@ export function resolveSale(s: Campaign, input: {
   interruption: boolean;
   interruptionHandled: boolean;
   force: boolean;
+  faceTrialled?: boolean;
   rivalChoice?: RivalChoice | null;
 }): { campaign: Campaign; outcome: SaleOutcome } | null {
   const customer = CUSTOMERS[input.customerId];
@@ -893,13 +900,15 @@ export function resolveSale(s: Campaign, input: {
     ? input.force ? forcedUnits(customer, input.bundle) : 0
     : unitsWanted(customer, input.selectedProduct, input.bundle, tier);
   const sold = units > 0;
+  // 半脸上过妆，她自己照过镜子：看清了不合适还塞进袋子，就不是判断失误，是明知故犯。
+  const knowing = Boolean(input.faceTrialled) && tier === "negative" && sold;
   const shared = input.rivalChoice === "yield" || (s.activeSession?.customerId === customer.id && s.activeSession.rivalChoice === "yield");
   const total = item.price * units;
   const amount = shared ? total / 2 : total;
   const campaign: Campaign = {
     ...s, sales: s.sales + amount, daySales: s.daySales + amount,
-    trust: clamp(s.trust + (tier === "positive" ? 7 : sold ? 1 : -10) + (usefulQuestion ? 4 : -2) + (guarded ? 2 : -6)),
-    compliance: clamp(s.compliance + (tier === "positive" ? 1 : sold ? 0 : -5)), energy: Math.max(0, s.energy - 14),
+    trust: clamp(s.trust + (tier === "positive" ? 7 : sold ? 1 : -10) + (usefulQuestion ? 4 : -2) + (guarded ? 2 : -6) - (knowing ? 4 : 0)),
+    compliance: clamp(s.compliance + (tier === "positive" ? 1 : sold ? 0 : -5) - (knowing ? 4 : 0)), energy: Math.max(0, s.energy - 14),
     evidence: s.evidence + (input.claimed ? 1 : 0) + (!missed.length && !vetoMissed && sold ? 1 : 0),
     dayServed: [...s.dayServed, customer.id], activeSession: null,
     flags: flag(s, `served:${customer.id}:${sold ? (tier === "negative" ? "risky" : "good") : "refused"}`),
@@ -913,6 +922,7 @@ export function resolveSale(s: Campaign, input: {
   }
   if (shared && sold) campaign.history = history(campaign, `${customer.name}与陆遥拼单：总额 ¥${total.toLocaleString("zh-CN")}，你的业绩 ¥${amount.toLocaleString("zh-CN")}`);
   if (tier === "negative" && sold && vetoMissed) campaign.history = history(campaign, `你没有问出口的那条底线，已经写进这单的风险记录`);
+  if (knowing) campaign.history = history(campaign, `${customer.name}照着镜子看过这半张脸，还是买了`);
   // 连带不是免费的：她每带走一件，就多用一分钟开单讲搭配，柜台另一边的人还在倒数。
   const minutes = sold ? BUNDLES[input.bundle].units : 1;
   return {
@@ -927,6 +937,7 @@ export function resolveSale(s: Campaign, input: {
               ? "她认这个方向，却没有完全被说服。一件就够了，连带没有起来。"
               : `数字立刻好看了 ${total.toLocaleString("zh-CN")} 元，可她最在意的问题没有解决。退货风险已经留在你名下。`)
         : vetoMissed ? "她没有为错误判断买单。你连她在怕什么都没问出来。" : "她没有为这个方向买单。你丢掉一笔销售，但至少记住了这次反应。")
+        + (knowing ? " 而且这半张脸你亲手画过：她知道不合适，你也知道。" : "")
         + (shared && sold ? ` 陆遥分走一半，你实际记入 ¥${amount.toLocaleString("zh-CN")}。` : ""),
     },
   };
@@ -949,7 +960,8 @@ export function startService(s: Campaign, id: CustomerId): Campaign {
   if (s.activeSession) return s; // Finish or release the current customer first.
   if (s.energy < ENERGY_LOCK) return s;
   return { ...s, activeSession: { customerId: id, discovered: [], askedQuestion: null, selectedProduct: null,
-    bundle: "single", revealed: [], tested: false, reaction: null, revisions: 0, claimed: false, rivalChoice: null, chat: [] } };
+    bundle: "single", revealed: [], tested: false, reaction: null, faceTrialled: false, faceTrialRevealed: null,
+    revisions: 0, claimed: false, rivalChoice: null, chat: [] } };
 }
 
 export function observeService(s: Campaign, cue: CueId): Campaign {
@@ -982,8 +994,9 @@ export function chooseBundle(s: Campaign, bundle: BundleId): Campaign {
 export function selectServiceProduct(s: Campaign, id: ProductId): Campaign {
   const session = s.activeSession;
   if (!session || session.selectedProduct === id) return s;
+  // 换一支等于重新上脸：她说过的那件事留着，但这支还没在她脸上试过。
   return { ...s, energy: Math.max(0, s.energy - (session.tested ? 5 : 0)), activeSession: { ...session,
-    selectedProduct: id, tested: false, reaction: null, revisions: session.revisions + (session.tested ? 1 : 0) } };
+    selectedProduct: id, tested: false, reaction: null, faceTrialled: false, revisions: session.revisions + (session.tested ? 1 : 0) } };
 }
 
 export function trialService(s: Campaign): Campaign {
@@ -991,6 +1004,24 @@ export function trialService(s: Campaign): Campaign {
   if (!session || session.tested || session.discovered.length < 2 || session.askedQuestion === null || !session.selectedProduct) return s;
   return { ...spendAttention(s, session.customerId, 1), activeSession: { ...session, tested: true,
     reaction: fitOf(CUSTOMERS[session.customerId], session.selectedProduct).tier } };
+}
+
+// 手背试色只看颜色，半脸上妆才看得出她那张脸两小时后会怎么样：多花两分钟，代价是队伍另一头的人在倒数。
+export const FACE_TRIAL_MINUTES = 2;
+
+// 上脸之后最先露出来的，是她最在意却还没说出口的那件事。两个 UI 都问这一个函数，别各写一份。
+export function faceTrialReveal(customer: Customer, discovered: CueId[], revealed: Trait[]): Trait | null {
+  const hidden = unknownDemands(customer, revealOf(customer, discovered, revealed));
+  return hidden.length ? hidden.reduce((a, b) => (b.weight > a.weight ? b : a)).trait : null;
+}
+
+export function faceTrialService(s: Campaign): Campaign {
+  const session = s.activeSession;
+  if (!session || !session.tested || session.faceTrialled || !session.selectedProduct) return s;
+  const customer = CUSTOMERS[session.customerId];
+  const shown = faceTrialReveal(customer, session.discovered, session.revealed);
+  return { ...spendAttention(s, session.customerId, FACE_TRIAL_MINUTES), activeSession: { ...session,
+    faceTrialled: true, faceTrialRevealed: shown, revealed: shown ? [...new Set([...session.revealed, shown])] : session.revealed } };
 }
 
 export function respondToRival(s: Campaign, choice: RivalChoice): Campaign {

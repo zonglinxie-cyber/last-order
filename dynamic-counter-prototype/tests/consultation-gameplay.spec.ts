@@ -64,6 +64,39 @@ test("a bad trial can be recovered by changing the recommendation", async ({ pag
   await expect(page.getByText("+ ¥980")).toBeVisible();
 });
 
+// 手背试色看不出来的那一步：多占两分钟，换她没说出口的那件事，而且刷新不能忘。
+test("a half-face demo buys the demand she did not say and survives a reload", async ({ page }) => {
+  await enterShen(page);
+  await page.getByRole("button", { name: /柔焦 ¥980/ }).click();
+  await page.getByRole("button", { name: "为沈薇试用" }).click();
+  // 陆遥先插了一句话，dock 才轮得到上妆这一步。
+  await page.getByRole("button", { name: "让顾客确认需求" }).click();
+  const insight = page.locator(".insight-strip span");
+  await expect(insight).toHaveText("2/3 线索 · 诉求 1/3");
+  const queue = page.locator(".consultation-hud time");
+  const meter = async () => Number(/(\d+)\/\d+/.exec(await queue.textContent())?.[1]);
+  const before = await meter();
+  const faceTrial = page.getByRole("button", { name: "半脸上妆 · 多占 2 分钟", exact: true });
+  await expect(faceTrial).toBeVisible();
+  await page.screenshot({ path: "../audit/experience-v2/mobile-face-trial-offer.png" });
+  await faceTrial.click();
+  await expect(page.getByText("妆面压在她脸上，她才承认：低风险，不刺激不闷痘")).toBeVisible();
+  await expect(insight).toHaveText("2/3 线索 · 诉求 2/3");
+  // 这两分钟从队伍另一头扣：她嘴上说等，数字不会等她。
+  expect(before).toBe(4);
+  expect(await meter()).toBe(before - 2);
+  await expect(faceTrial).toHaveCount(0);
+  await page.locator(".service-hand").waitFor({ state: "detached" });
+  await page.screenshot({ path: "../audit/experience-v2/mobile-face-trial.png" });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 1 天" }).click();
+  await page.getByRole("button", { name: "开始营业" }).click();
+  await page.getByRole("button", { name: "查看沈薇" }).click();
+  await page.getByRole("button", { name: "观察沈薇" }).click();
+  await expect(page.getByText("妆面压在她脸上，她才承认：低风险，不刺激不闷痘")).toBeVisible();
+  await expect(faceTrial).toHaveCount(0);
+});
+
 test("leaving a consultation preserves diagnosis and rival pressure", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());

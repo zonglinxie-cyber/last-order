@@ -1,7 +1,7 @@
 # 最后一单 · 主项目约定
 
 - 默认入口是根目录 `src/main.tsx` → `src/CounterGame.tsx`。保留商场沙盘、实名人物与选人检查区，接待在同一界面进入面部近景。
-- 游戏循环是观察至少两处线索 → 提问 → 选品试用 → 处理竞争 → 按她的上限开口要连带 → 明确报价与归属 → 成交或拒绝 → 跨日后果。不能用赠品把不适配产品变成适配，也不能默认错误推荐会成交。
+- 游戏循环是观察至少两处线索 → 提问 → 选品试用 →（可选）半脸上妆 → 处理竞争 → 按她的上限开口要连带 → 明确报价与归属 → 成交或拒绝 → 跨日后果。不能用赠品把不适配产品变成适配，也不能默认错误推荐会成交。
 - 唯一的五日规则和存档格式位于 `dynamic-counter-prototype/src/campaign.ts`。主入口和手机版复用这里的规则；不要在新 UI 里重建另一份销售经济。
 - `src/App.tsx`、`src/sim/engine.ts`、`src/styles.css` 是保留的旧版参考，当前主入口不加载。修复主产品时不要误接回旧 `CounterSim`。
 - 主入口样式是 `src/base.css` 和 `src/rescue.css`；复用现有商场、人物和商品画，不要用 CSS 瓶子或匿名圆点替换真实素材。
@@ -12,7 +12,8 @@
 - 每位顾客对三支产品只有一个 positive 档位，`unitsWanted` 由档位 + 预算 + 用量上限共同决定；不要为了一次通关加隐藏答案，也不要把 `TARGET` 降到当前路线之下。美妆诉求用 `Trait` 档位表达，`wear`（带妆一整天也不斑驳）是第五条：全柜只有婚礼当天的安姐（`anjie2`）把「持妆」当正解，而她只在第 4 天先把皮肤养稳（`served:anjie:good`）之后才会回来。陷阱需要一个反例，否则"厚就是坏、修护最安全"能当启发式通关；新增顾客时先问这条档位她问不问得到（`campaign-rules.test.ts` 会钉住）。她回来这件事在晨会告示和当天因果账本各留一行，账本那行由 `anjie-came-back` 去重，过两次晨会不能记两遍。
 - 业绩之外只有第二本账：`standing`（柜位）和 `members`（私域名单）。柜位一律用一句话说出来（`standingWord`、`counterVerdict`、晨会与巡店告示），不做成进度条或面板；名单只在谈柜位的那两晚才是可以摊在桌上的牌（`MEMBER_MIN_FOR_CREDIT`），复购只在最后一天到账，加一个微信要占一个真实的游戏分钟。这些规则只在 `campaign.ts` 里，两个 UI 只读不算。
 - 合规（小样台账）也不做成数字或进度条：沙盘栏、手机版今日账单和结局里的 `safe` 一律用 `complianceWord()` 与唯一的分界线 `COMPLIANCE_RISK`，三处同源。以前两个界面各写死一条 `>= 50`，界面显示的数和结局判的线能对不上；新增档位文案只改 `complianceWord`，不要在 UI 里再算一次阈值。手机版这句话的排版要压过 `.summary-screen>p` 的居中与 8px（选择器写成 `.summary-screen .summary-compliance`），e2e 直接断言 `text-align`、`font-size` 和两档颜色。
-- 存档字段与 `SAVE_VERSION` 同步升级，新增数值字段必须进 `parseCampaign` 的校验清单；不兼容的旧存档整份丢弃，不做老数字到新账的合并。
+- 存档字段与 `SAVE_VERSION` 同步升级，新增数值字段必须进 `parseCampaign` 的校验清单；不兼容的旧存档整份丢弃，不做老数字到新账的合并。`faceTrialled` / `faceTrialRevealed` 是半脸上妆的两个字段：旧存档缺字段按未上脸处理，类型不对或引用未知诉求则整份拒收。
+- 半脸上妆是试用之后由玩家自己开的一步，规则只在 `campaign.ts`：`faceTrialService` 要求先 `tested`、一支只上一次、换一支产品等于重新上脸（`faceTrialled` 复位，`faceTrialRevealed` 保留）。它露出的是哪条诉求由 `faceTrialReveal` 决定（未知诉求里权重最高的一条），两个 UI 都问这一个函数，别各写一份。它只买信息不买钱：`resolveSale` 的入账不看 `faceTrialled`，只有「上过脸、知道不合适还硬推」才另扣信任 4 与台账 4 并记一行历史。时间成本走 `spendAttention`，从队伍另一头扣（`FACE_TRIAL_MINUTES = 2`）；全柜都上脸的实测五天路线 ¥22,230、少接梅女士和周姐、柜位 44 贴着 `STANDING_RISK`，清洁路线仍是 ¥25,590。按钮不做成第二个金色动作，金色只留给成交。
 - 当前主入口的自由输入由本地剧本规则回答。手机版保留可选本地模型代理，未真实验证模型前不能称为 AI 已接通。测试用 scripted 模式，不消耗用户的外部 API。
 - 本机预览显式绑定 `127.0.0.1`。常规检查：根目录 `npm test`；手机版 `npm run check:runtime`、`npm run build`、`npm run test:runtime`。改 PWA 时补离线验收。
 - 修改手机版前读 `dynamic-counter-prototype/AGENTS.md`；其 28 个受保护运行时文件不能顺手改动。

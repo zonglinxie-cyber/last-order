@@ -266,6 +266,9 @@ button { -webkit-tap-highlight-color:transparent; }
 .bottle-glow { background:linear-gradient(90deg,#806148,#e6c2ae 46%,#6c4b3b); }
 .bottle-repair { width:15px; background:linear-gradient(90deg,#503757,#b88ac0 48%,#38233e); }
 .product-note { min-height:12px; margin:5px 2px 3px; color:#baa89d; font-size:7px; text-align:center; }
+/* 半脸上妆是可选的一步，不做成第二个金色按钮：金色只留给成交。 */
+.face-trial-action { width:100%; min-height:44px; margin:5px 0 0; border:1px solid #dcbd7a55; border-radius:11px; background:#ffffff08; color:#efd39b; font:600 12px 'Noto Serif SC'; }
+.face-trial-said { margin:6px 2px 3px; padding-left:8px; border-left:2px solid #94664e; color:#d8c3ae; font-size:7px; line-height:1.55; text-align:left; }
 .primary-action { width:100%; min-height:44px; border:0; border-radius:12px; background:linear-gradient(135deg,#f1cf86,#b47b43); color:#2a170f; font:700 13px 'Noto Serif SC'; box-shadow:0 8px 18px #0005,inset 0 1px #fff4ca; }
 .primary-action:disabled { background:#584740; color:#96857c; box-shadow:none; }
 .close-actions { display:grid; grid-template-columns:.9fr 1.2fr; gap:7px; }
@@ -340,6 +343,7 @@ button { -webkit-tap-highlight-color:transparent; }
   .rival-interruption span,
   .insight-strip span,
   .product-note,
+  .face-trial-said,
   .summary-sale small,
   .summary-sale span,
   .final-score span,

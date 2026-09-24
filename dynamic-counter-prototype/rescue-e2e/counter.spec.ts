@@ -132,6 +132,26 @@ test("the customer who came back on day five is read by the light she asked abou
   await expect(page.getByRole("button", { name: "观察手机", exact: true })).toHaveCount(0);
 });
 
+const clockMinutes = (text: string) => Number(text.slice(0, 2)) * 60 + Number(text.slice(3, 5));
+
+// 半脸上妆是玩家自己开的一步：多花两分钟，换她没说出口的那件事。
+test("a half-face demo is optional, charges the queue two minutes and says what she did not", async ({ page }) => {
+  await page.clock.install();
+  await start(page);
+  await consult(page, "沈薇", "柔焦 ¥980");
+  await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  const faceTrial = page.getByRole("button", { name: "半脸上妆 · 多占 2 分钟", exact: true });
+  await expect(faceTrial).toBeVisible();
+  const clock = page.locator(".shift-clock strong");
+  const before = clockMinutes(await clock.textContent() ?? "");
+  await faceTrial.click();
+  await expect(page.getByText("妆面压在她脸上，她才承认：低风险，不刺激不闷痘")).toBeVisible();
+  expect(clockMinutes(await clock.textContent() ?? "")).toBe(before + 2);
+  // 一支只能上一次脸；按钮用完就收走，不留成第二个金色动作。
+  await expect(faceTrial).toHaveCount(0);
+  await page.screenshot({ path: "../audit/experience-v2/face-trial.png" });
+});
+
 test("a split sale shows and persists the actual credited amount", async ({ page }) => {
   await start(page);
   await consult(page, "沈薇", "柔焦 ¥980");

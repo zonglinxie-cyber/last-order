@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, chooseBundle, closeService, CUSTOMERS, dayEvent, endingTitle,
-  INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, QUESTIONS,
+  FACE_TRIAL_MINUTES, faceTrialService, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, QUESTIONS,
   releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent,
   startNextDay, startService, TARGET, trialService, type BundleId, type Campaign, type CustomerId, type ProductId,
 } from "../src/campaign.ts";
@@ -61,7 +61,45 @@ test("a sample never turns an unsuitable trial into a suitable sale", () => {
   assert.equal(closeService(chooseBundle(repaired, "set"))!.outcome.units, herCap("shen", "soft"));
 });
 
+test("半脸上妆要先试过才让上，多花两分钟换她没说出口的那件事", () => {
+  const fresh = startService(INITIAL, "shen");
+  assert.equal(faceTrialService(fresh), fresh, "手背都还没试，就上不了脸");
+  const trialled = consult(INITIAL, "shen", "soft");
+  const shown = faceTrialService(trialled);
+  assert.equal(shown.activeSession?.faceTrialled, true);
+  assert.equal(shown.activeSession?.faceTrialRevealed, "steady", "natural 已经问出口了，上脸才露出第二重的 steady");
+  assert.ok(shown.activeSession?.revealed.includes("steady"));
+  assert.equal(shown.shiftMinutes, trialled.shiftMinutes + FACE_TRIAL_MINUTES, "这两分钟从队伍另一头扣");
+  assert.equal(faceTrialService(shown), shown, "同一支不能在她脸上试两次");
+  const switched = selectServiceProduct(shown, "glow");
+  assert.equal(switched.activeSession?.faceTrialled, false, "换一支等于重新上脸");
+  assert.equal(switched.activeSession?.faceTrialRevealed, "steady", "她说出口的那件事不会因为换产品忘掉");
+});
+
+test("半脸上过妆还硬推，扣的是明知故犯，不是营业额", () => {
+  const pending = respondToRival(consult(INITIAL, "shen", "glow"), "clarify");
+  const blind = closeService(pending, true)!;
+  const seen = closeService(faceTrialService(pending), true)!;
+  assert.deepEqual(seen.campaign.lost, blind.campaign.lost, "两次跑法不能一个丢了人一个没丢");
+  assert.equal(seen.campaign.sales, blind.campaign.sales, "钱一分不少：她照样把单买了");
+  assert.equal(seen.campaign.trust, blind.campaign.trust - 4);
+  assert.equal(seen.campaign.compliance, blind.campaign.compliance - 4);
+  assert.ok(seen.campaign.history.some(row => row.text.includes("照着镜子看过这半张脸")));
+  assert.ok(!blind.campaign.history.some(row => row.text.includes("照着镜子看过这半张脸")));
+  assert.ok(seen.outcome.body.includes("她知道不合适，你也知道"));
+});
+
+test("每个人都上脸，队伍后面就会少两个人", () => {
+  const everyTrial = runRoute("matched", true);
+  assert.deepEqual(everyTrial.lost, ["mei", "zhou2"], "两分钟一次不是免费的：排队的人先走");
+  assert.equal(everyTrial.served, 8);
+  assert.equal(everyTrial.final.sales, 22_230, "量出来的值，不是写出来的");
+  assert.ok(everyTrial.final.sales >= TARGET, "全都试也还过线，但余量只剩 ¥1,230");
+  assert.equal(everyTrial.final.standing, 44, "少了两位顾客，柜位那句话就贴着风险线");
+});
+
 test("rival decisions are required and idempotent; split risk refunds only the recorded share", () => {
+
   const pending = consult(INITIAL, "shen", "glow");
   assert.equal(closeService(pending, true), null);
   const shared = respondToRival(pending, "yield");
@@ -87,9 +125,15 @@ test("old version-2 saves migrate additively and malformed sessions cannot enter
   assert.equal(restored.shiftMinutes, 0);
   assert.deepEqual(restored.orders, []);
   assert.equal(restored.finished, false);
-  for (const patch of [{ day: 1.5 }, { day: 6 }, { sales: "1000" }, { sales: null }, { activeSession: { customerId: "unknown" } }]) {
+  for (const patch of [{ day: 1.5 }, { day: 6 }, { sales: "1000" }, { sales: null }, { activeSession: { customerId: "unknown" } },
+    { activeSession: { customerId: "shen", discovered: [], faceTrialled: "yes" } },
+    { activeSession: { customerId: "shen", discovered: [], faceTrialRevealed: "made-up" } }]) {
     assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, ...patch })), null);
   }
+  // 旧存档没有上脸这一格：不能整份丢掉，按「还没上脸」补。
+  const beforeFaceTrial = parseCampaign(JSON.stringify({ ...INITIAL, activeSession: { customerId: "shen", discovered: ["eyes"], selectedProduct: null, askedQuestion: null, tested: true } }))!;
+  assert.equal(beforeFaceTrial.activeSession?.faceTrialled, false);
+  assert.equal(beforeFaceTrial.activeSession?.faceTrialRevealed, null);
 });
 
 test("staff favors require a relationship and can only be used once per shift", () => {

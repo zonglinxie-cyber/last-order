@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   askService, availableCustomers, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
   observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS,
-  selectServiceProduct, settleDayEvent, startNextDay, startService, trialService,
+  selectServiceProduct, settleDayEvent, startNextDay, startService, trialService, faceTrialService,
   fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
 } from "../src/campaign.ts";
 
@@ -37,7 +37,7 @@ export function matchedBundle(id: CustomerId, product: ProductId): BundleId {
 export function playCustomer(
   state: Campaign,
   id: CustomerId,
-  options: { bundle?: BundleId; product?: ProductId; askIndex?: number } = {},
+  options: { bundle?: BundleId; product?: ProductId; askIndex?: number; faceTrial?: boolean } = {},
 ): { campaign: Campaign; outcome: SaleOutcome } {
   const customer = CUSTOMERS[id];
   const product = options.product ?? bestFit(id);
@@ -50,6 +50,10 @@ export function playCustomer(
   assert.ok(asked >= 0, `${id} 需要一个有用的问题`);
   s = askService(s, QUESTIONS[id][asked].label, asked);
   s = trialService(selectServiceProduct(s, product));
+  if (options.faceTrial) {
+    s = faceTrialService(s);
+    assert.equal(s.activeSession?.faceTrialled, true, `${id} 的半脸上妆应该真的发生`);
+  }
   s = chooseBundle(s, bundle);
   if (RIVAL_IDS.includes(id)) s = respondToRival(s, "clarify");
   const quote = orderQuote(id, product, bundle, false);
@@ -66,7 +70,7 @@ export function playCustomer(
 export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[] };
 
 // 每天按现场顺序接完所有还能接的顾客，然后处理闭店事件。
-export function runRoute(bundle: BundleId | "matched" = "matched"): RouteResult {
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false): RouteResult {
   let s = openFloorState(INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
@@ -76,7 +80,7 @@ export function runRoute(bundle: BundleId | "matched" = "matched"): RouteResult 
     for (const id of [...availableCustomers(s)]) {
       // 接待别人期间她可能已经走了； greedy 路线就是在赌这个。
       if (!availableCustomers(s).includes(id)) continue;
-      const played = playCustomer(s, id, bundle === "matched" ? {} : { bundle });
+      const played = playCustomer(s, id, { ...(bundle === "matched" ? {} : { bundle }), faceTrial });
       s = played.campaign;
       served += played.outcome.units > 0 ? 1 : 0;
     }

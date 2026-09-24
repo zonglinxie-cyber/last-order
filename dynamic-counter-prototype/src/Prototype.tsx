@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
   addMember, advanceFloorTime, applyQuestion, applyRival, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
-  fitOf, fitPreview, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
+  fitOf, fitPreview, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
   orderQuote, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
-  TARGET, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+  TARGET, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
@@ -63,6 +63,8 @@ export default function Prototype() {
   const [reaction, setReaction] = useState<"positive" | "mixed" | "negative" | null>(null);
   const [bundle, setBundle] = useState<BundleId>("single");
   const [revealed, setRevealed] = useState<Trait[]>([]);
+  const [faceTrialled, setFaceTrialled] = useState(false);
+  const [faceTrialShown, setFaceTrialShown] = useState<Trait | null>(null);
   const [revisions, setRevisions] = useState(0);
   const [rivalChoice, setRivalChoice] = useState<RivalChoice | null>(null);
   const [serviceMotion, setServiceMotion] = useState<"inspect" | "trial" | "scan" | null>(null);
@@ -182,6 +184,8 @@ export default function Prototype() {
     setReaction(session.reaction);
     setBundle(session.bundle);
     setRevealed(session.revealed);
+    setFaceTrialled(session.faceTrialled);
+    setFaceTrialShown(session.faceTrialRevealed);
     setRevisions(session.revisions);
     setClaimed(session.claimed);
     setRivalChoice(session.rivalChoice);
@@ -209,13 +213,14 @@ export default function Prototype() {
       setCustomerId(id); setSelectedCue(null); setDiscovered([]); setAskedQuestion(null); setSelectedProduct(null);
       setTested(false); setReaction(null); setRevisions(0); setClaimed(false); setRivalChoice(null); setChat([]);
       setBundle("single"); setRevealed([]);
+      setFaceTrialled(false); setFaceTrialShown(null);
       setDraft(""); setTalking(false);
       setInterruption(false); setInterruptionHandled(false);
     }
     setScreen("consultation");
   };
   const saveSession = (patch: Partial<CustomerSession>) => setCampaign(s => {
-    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, bundle: "single" as BundleId, revealed: [] as Trait[], tested: false, reaction: null, revisions: 0, claimed: false, rivalChoice: null, chat: [] };
+    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, bundle: "single" as BundleId, revealed: [] as Trait[], tested: false, reaction: null, faceTrialled: false, faceTrialRevealed: null as Trait | null, revisions: 0, claimed: false, rivalChoice: null, chat: [] };
     return { ...s, activeSession: { ...base, ...patch } };
   });
   const advanceFloor = (cost: number) => {
@@ -274,12 +279,14 @@ export default function Prototype() {
   const selectProduct = (id: ProductId) => {
     if (id === selectedProduct) return;
     setSelectedProduct(id);
+    // 换一支等于重新上脸；她上脸时说出口的那件事留着，不用重新试。
+    setFaceTrialled(false);
     if (tested && id !== selectedProduct) {
       setRevisions(v => v + 1); setTested(false); setReaction(null);
       setCampaign(s => ({ ...s, energy: Math.max(0, s.energy - 5) }));
-      saveSession({ selectedProduct: id, tested: false, reaction: null, revisions: revisions + 1 });
+      saveSession({ selectedProduct: id, tested: false, reaction: null, revisions: revisions + 1, faceTrialled: false });
     } else {
-      setTested(false); setReaction(null); saveSession({ selectedProduct: id, tested: false, reaction: null });
+      setTested(false); setReaction(null); saveSession({ selectedProduct: id, tested: false, reaction: null, faceTrialled: false });
     }
   };
   const tryProduct = () => {
@@ -289,6 +296,16 @@ export default function Prototype() {
     const nextReaction = fitOf(customer, selectedProduct).tier;
     setTested(true); setReaction(nextReaction); saveSession({ tested: true, reaction: nextReaction, selectedProduct });
     if (RIVAL_IDS.includes(customer.id)) setInterruption(true);
+  };
+  const faceTrial = () => {
+    if (!customer || !tested || faceTrialled) return;
+    const shown = faceTrialReveal(customer, discovered, revealed);
+    setFaceTrialled(true); setFaceTrialShown(shown); setSelectedCue(null);
+    setServiceMotion("trial"); window.setTimeout(() => setServiceMotion(null), 650);
+    advanceFloor(FACE_TRIAL_MINUTES);
+    const nextRevealed = shown ? [...new Set([...revealed, shown])] : revealed;
+    setRevealed(nextRevealed);
+    saveSession({ faceTrialled: true, faceTrialRevealed: shown, revealed: nextRevealed });
   };
   const handleRival = (choice: RivalChoice) => {
     if (interruptionHandled) return;
@@ -303,7 +320,7 @@ export default function Prototype() {
   const closeSale = (force = false) => {
     if (!customer || !selectedProduct || !tested) return;
     setServiceMotion("scan"); window.setTimeout(() => setServiceMotion(null), 520);
-    const resolved = resolveSale(campaign, { customerId: customer.id, selectedProduct, bundle, revealed, tested, askedQuestion, claimed, interruption, interruptionHandled, force, rivalChoice });
+    const resolved = resolveSale(campaign, { customerId: customer.id, selectedProduct, bundle, revealed, tested, askedQuestion, claimed, interruption, interruptionHandled, force, faceTrialled, rivalChoice });
     if (!resolved) return;
     setCampaign(resolved.campaign);
     setOutcome(resolved.outcome);
@@ -373,6 +390,9 @@ export default function Prototype() {
         </form>}
         {askedQuestion !== null && (!tested || reaction === "negative" || reaction === "mixed") && <div className="product-options">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button type="button" key={id} className={selectedProduct === id ? "active" : ""} onClick={() => selectProduct(id)}><i className={`product-art product-art-${id}`} /><span>{PRODUCTS[id].short}</span><small>¥{PRODUCTS[id].price}</small></button>)}</div>}
         {selectedProduct && !tested && <p className="product-note">{PRODUCTS[selectedProduct].note}</p>}
+        {tested && !faceTrialled && <button type="button" className="face-trial-action" onClick={faceTrial}>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</button>}
+        {faceTrialShown && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[faceTrialShown]}</p>}
+        {tested && faceTrialled && !faceTrialShown && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
         {tested && quote && <section className="mobile-order-quote" aria-label="本单报价">{quote.lines.map(line => <p key={line.label}><span>{line.label}</span><span>¥{line.amount.toLocaleString("zh-CN")}</span></p>)}{quote.note && <small>{quote.note}</small>}<b>整单 ¥{quote.total.toLocaleString("zh-CN")} · 你入账 ¥{quote.amount.toLocaleString("zh-CN")}{quote.shared ? "（各半）" : ""} · 现场 {quote.minutes} 分</b></section>}
         {selectedProduct && tested && reaction === "positive" && <div className="bundle-row" role="group" aria-label="连带件数">{(Object.keys(BUNDLES) as BundleId[]).map(id => {
           const units = unitsWanted(customer, selectedProduct, id, "positive");
