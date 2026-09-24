@@ -152,7 +152,7 @@ export default function Prototype() {
             next[id] = stepPose({ ...pose, destLeft: dest.left, destTop: dest.top }, floorSpeed);
           });
           const luyaoDest = hot ? rivalHome(rivalApproach(ids, waitMeters, elapsed)) : WAYPOINTS.rivalHold;
-          const romanDest = beat % 12 < 7 ? WAYPOINTS.checkout : { left: 66, top: 63 };
+          const romanDest = beat % 12 < 7 ? WAYPOINTS.checkout : WAYPOINTS.romanSide;
           next.luyao = stepPose({ ...(next.luyao ?? poseAt(luyaoDest)), destLeft: luyaoDest.left, destTop: luyaoDest.top }, floorSpeed);
           next.roman = stepPose({ ...(next.roman ?? poseAt(romanDest)), destLeft: romanDest.left, destTop: romanDest.top }, floorSpeed);
           return next;
@@ -472,32 +472,48 @@ export default function Prototype() {
     ? customerBubble(focusCustomer, focusMeter, floorBeat, focusResumed)
     : focus?.kind === "staff" ? staffBubble(focus.id, contested, floorBeat) : "点现场里的人，先看她在做什么。";
   const liveFeed = partyLines(available, campaign, contested);
-  const feedLine = contested ? `陆遥 · ${staffAction("luyao", true)}` : liveFeed[0];
   // 控制台只列顶上那行和身份块没念过的人：同一个人的状态在一屏里说两遍，面板就只剩占地方——而它正压着站在柜台前的人。
   const focusName = focusCustomer?.name ?? focusStaff?.name ?? null;
-  const otherLines = liveFeed.filter(line => line !== feedLine && (!focusName || !line.startsWith(`${focusName} · `)));
+  // 页顶那行也不报面板已经点名的人：它是"还有谁在等"，不是她的第二份状态。现场只剩她一个时才回到她身上。
+  const ambient = contested ? [`陆遥 · ${staffAction("luyao", true)}`, ...liveFeed] : liveFeed;
+  const notFocused = (line: string) => !focusName || !line.startsWith(`${focusName} · `);
+  const feedLine = ambient.find(notFocused) ?? ambient[0];
+  const otherLines = liveFeed.filter(line => line !== feedLine && notFocused(line));
   const poseOf = (id: string, fallback: { left: number; top: number; face: 1 | -1 }) => poses[id] ?? { ...fallback, destLeft: fallback.left, destTop: fallback.top };
+  // 体力这一句只留一个槽：身份块在念它的时候，面板最下面那行让给那句承诺，同一屏不能出现两个"还剩几位"。
+  const energyLine = energyWord(campaign.energy);
+  const energyInIdentity = !floorNotice && tired && !campaign.activeSession;
+  const identityNote = floorNotice ?? (energyInIdentity ? energyLine : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁");
+  const floorHint = available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失"
+    : tired && !energyInIdentity ? energyLine : "顾客会记住你的判断，也会记住你的承诺。";
   const staffOnFloor: FloorStaffId[] = ["luyao", "roman"];
-  const customerPose = (id: CustomerId, index: number) => {
+  const customerPose = (id: CustomerId, index: number): ActorPose => {
     const patience = campaign.waitMeters[id] ?? CUSTOMERS[id].patience;
     const home = customerHome(index, patience, CUSTOMERS[id].patience);
-    return poseOf(id, { ...home, face: home.left < 40 ? 1 : -1 });
+    const placed = poses[id];
+    // 还没落位那一帧人也在门口、正往自己那一格走：兜底若用家里的位置，名牌会先从柜台那头瞬移回门口再走回来（穿过整块沙盘），
+    // 墙上那句和点亮的名牌就对不上；若连"要去哪儿"都不带，两位一起进场的客人就会在门口叠成一块牌。
+    if (placed) return placed;
+    return { ...WAYPOINTS.entrance, destLeft: home.left, destTop: home.top, face: home.left < 40 ? 1 : -1 };
   };
   const staffPose = (id: FloorStaffId) => poseOf(id, {
     ...(id === "luyao" ? rivalHome(rivalApproach(available, campaign.waitMeters, floorElapsed)) : WAYPOINTS.checkout),
     face: id === "luyao" ? 1 : -1,
   });
   // 一次只让一个人开口，并且把这句话放在人群上方的空墙上：390 宽的柜台上，气泡压在别人身上就两败俱伤。
-  const speaker = floorBeat % (available.length + staffOnFloor.length);
-  const speaking = speaker < available.length
+  // 开口的永远是"面板没点中的那个人"：她的话在下面引号里已经念过一遍，墙上再飘同一条不叫两个槽，叫一屏两遍。
+  const focusKey = `${focus?.kind}:${focus?.id}`;
+  const onFloor = [...available.map(id => ({ kind: "customer" as const, id })), ...staffOnFloor.map(id => ({ kind: "staff" as const, id }))]
+    .filter(entry => `${entry.kind}:${entry.id}` !== focusKey);
+  const speaker = onFloor.length ? onFloor[floorBeat % onFloor.length] : null;
+  const speaking = speaker?.kind === "customer"
     ? {
-      left: customerPose(available[speaker], speaker).left,
-      line: customerBubble(CUSTOMERS[available[speaker]], campaign.waitMeters[available[speaker]] ?? CUSTOMERS[available[speaker]].patience, floorBeat + speaker, campaign.activeSession?.customerId === available[speaker]),
+      left: customerPose(speaker.id, available.indexOf(speaker.id)).left,
+      line: customerBubble(CUSTOMERS[speaker.id], campaign.waitMeters[speaker.id] ?? CUSTOMERS[speaker.id].patience, floorBeat, campaign.activeSession?.customerId === speaker.id),
     }
-    : {
-      left: staffPose(staffOnFloor[speaker - available.length]).left,
-      line: staffBubble(staffOnFloor[speaker - available.length], contested, floorBeat),
-    };
+    : speaker?.kind === "staff"
+      ? { left: staffPose(speaker.id).left, line: staffBubble(speaker.id, contested, floorBeat) }
+      : null;
 
   return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}>
     <img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" />
@@ -517,21 +533,21 @@ export default function Prototype() {
         const meter = campaign.waitMeters[id] ?? c.patience;
         const selected = focus?.kind === "customer" && focus.id === id;
         const walking = isWalking(pose) || meter <= 2;
-        return <button type="button" key={id} className={`floor-actor is-customer ${walking ? "is-walking" : "is-idle"} ${meter <= 2 ? "is-urgent" : ""} ${resumed ? "is-resumable" : ""} ${selected ? "is-selected" : ""} ${speaker === index ? "is-speaking" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 32 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "customer", id })} aria-label={`查看${c.name}`}>
+        return <button type="button" key={id} className={`floor-actor is-customer ${walking ? "is-walking" : "is-idle"} ${meter <= 2 ? "is-urgent" : ""} ${resumed ? "is-resumable" : ""} ${selected ? "is-selected" : ""} ${speaker?.kind === "customer" && speaker.id === id ? "is-speaking" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 32 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "customer", id })} aria-label={`查看${c.name}`}>
           <span className="actor-body"><span className="actor-sprite" style={{ transform: `scaleX(${pose.face})` }}><CustomerMapFigure customer={c} /></span></span>
           <span className="actor-tag">{c.name}</span>
         </button>;
       })}
-      {staffOnFloor.map((staffId, index) => {
+      {staffOnFloor.map(staffId => {
         const pose = staffPose(staffId);
         const selected = focus?.kind === "staff" && focus.id === staffId;
-        return <button type="button" key={staffId} className={`floor-actor is-staff staff-${staffId} ${isWalking(pose) ? "is-walking" : "is-idle"} ${selected ? "is-selected" : ""} ${speaker === available.length + index ? "is-speaking" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 16 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "staff", id: staffId })} aria-label={`查看${STAFF[staffId].name}`}>
+        return <button type="button" key={staffId} className={`floor-actor is-staff staff-${staffId} ${isWalking(pose) ? "is-walking" : "is-idle"} ${selected ? "is-selected" : ""} ${speaker?.kind === "staff" && speaker.id === staffId ? "is-speaking" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 16 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "staff", id: staffId })} aria-label={`查看${STAFF[staffId].name}`}>
           <span className="actor-body"><span className="actor-sprite" style={{ transform: `scaleX(${pose.face})` }}><StaffMapFigure visual={STAFF[staffId]} /></span></span>
           <CharacterFace visual={STAFF[staffId]} className="floor-face" />
           <span className="actor-tag">{STAFF[staffId].name}</span>
         </button>;
       })}
-      <span className={`actor-bubble stage-bubble ${speaking.left > 50 ? "from-right" : ""}`} style={{ "--bubble-x": `${Math.max(20, Math.min(80, speaking.left))}%` } as CSSProperties}>{speaking.line}</span>
+      {speaking && <span className={`actor-bubble stage-bubble ${speaking.left > 50 ? "from-right" : ""}`} style={{ "--bubble-x": `${Math.max(20, Math.min(80, speaking.left))}%` } as CSSProperties}>{speaking.line}</span>}
     </div>
     {latestLost && <div className="lost-opportunity"><b>机会已消失</b><span>{CUSTOMERS[latestLost].lostLine}</span></div>}
     <section className="player-console compact inspect-dock">
@@ -543,7 +559,7 @@ export default function Prototype() {
             {/* 名字要在标题行里：下面那一行不再重复念她，控制台得自己说清"这是谁"。 */}
             <strong>{focusCustomer ? `${focusCustomer.name} · ${focusCustomer.descriptor}` : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
             <b>{inspectNow}</b>
-            <small>{floorNotice ?? (tired && !campaign.activeSession ? energyWord(campaign.energy) : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
+            <small>{identityNote}</small>
           </div>
         </div>
         <blockquote className="inspect-quote">{inspectQuote}</blockquote>
@@ -555,7 +571,7 @@ export default function Prototype() {
         {/* 她已经往中庭那边走过去了：这一条整行放，按钮上直接写清楚花什么、什么时候轮得到。 */}
         {focusCustomer && !campaign.dayServed.includes(focusCustomer.id) && !campaign.lost.includes(focusCustomer.id) && <button className="member-action pull-action" type="button" disabled={!canPullOver(campaign, focusCustomer.id)} aria-label={`迎上去 ${focusCustomer.name}`} onClick={() => setCampaign(s => pullOver(s, focusCustomer.id))}>{pullOverLabel(campaign, focusCustomer.id)}</button>}
       </div>
-      <p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? energyWord(campaign.energy) : "顾客会记住你的判断，也会记住你的承诺。"}</p>
+      <p>{floorHint}</p>
     </section>
   </main></MobileScroll>;
 }

@@ -121,9 +121,13 @@ for (const seed of SEEDS) {
       const tight = await page.locator(".rescue-scene.tight-plates").count() === 1;
       const items = await plates(page);
       expect(overlaps(items), `${viewport.width}×${viewport.height} 有叠字`).toEqual([]);
-      // 沙盘小到一个世界单位不到 66/90 像素时，一张名牌都放不下：这时只该留下被选中/在开口那一张。
+      // 沙盘小到一个世界单位不到 66/90 像素时，一张名牌都放不下：这时只该留下你点中的那一张。
+      // 开口那张不留 —— P21 之后"开口的人"和"点中的人"必定不是同一个，两张一起亮就会在横屏叠住（实测 54×13）。
       const visibleNames = await page.locator(".pawn-name:visible").count();
-      if (tight) expect(visibleNames, viewport.name + "沙盘放不下 " + CAST + " 张名牌，应该收起路人牌子").toBeLessThanOrEqual(2);
+      if (tight) {
+        expect(await page.locator(".pawn-name:visible:not(.selected)").count(), viewport.name + "收起牌子之后还亮着别人的牌").toBe(0);
+        expect(visibleNames, viewport.name + "沙盘放不下 " + CAST + " 张名牌，应该只留点中那一张").toBeLessThanOrEqual(1);
+      }
       else expect(visibleNames, "正常沙盘每张名牌都要在").toBe(CAST);
 
       const pawns = page.locator(".rescue-pawn");

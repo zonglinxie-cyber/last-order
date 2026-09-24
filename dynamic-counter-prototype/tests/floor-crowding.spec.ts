@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { INITIAL } from "../src/campaign";
+import { WAYPOINTS } from "../src/floorLife";
 
 // 390 宽的柜台上，气泡一旦压到别人身上就两败俱伤：这里锁住「一次一人开口、气泡永远在人群上方」。
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
@@ -104,8 +105,24 @@ test("the extra floor action row stays reachable from the tallest phone to the s
     // 那句"每次观察、提问、试用都会让另一位客人继续流失"讲的正是这一行花掉的东西，不能藏在要滚动才看得见的位置。
     expect(hint!.y, tag).toBeGreaterThan(rows[2].bottom);
     expect(Math.round(hint!.y + hint!.height), tag).toBeLessThanOrEqual(size.height);
-    // 地面按百分比排、面板按屏幕比例封顶：实测余量 844→21.2px、667→12.3px、568→7.4px。
+    // 地面按百分比排、面板按屏幕比例封顶：站位抬过一遍之后实测余量 844→58.5px、667→32.3px、568→24.4px。
     expect(band.consoleTop - band.tagBottom, `${tag} 面板压住站着的人`).toBeGreaterThanOrEqual(4);
+    // 上面那条只量得到"按下暂停那一刻站着的人"。人在走，站位是一整排刻度：走得久了会换到另一个刻度上，
+    // 而 568 那一档原本压在最矮那个刻度上（罗曼从收银位走到旁边那格，名牌直接滑进面板：实测 −0.1px）。
+    // 所以这里按刻度整排预测一遍：任何一个站位都必须留得住名牌，而不是赌取样那一刻她恰好站在高的那一格。
+    const band2 = await page.evaluate(() => {
+      const stage = document.querySelector<HTMLElement>(".floor-stage")!.getBoundingClientRect();
+      const console = document.querySelector<HTMLElement>(".player-console")!.getBoundingClientRect();
+      const offsets = [...document.querySelectorAll(".floor-actor")].map(el => {
+        const tag = el.querySelector<HTMLElement>(".actor-tag")!.getBoundingClientRect();
+        return tag.bottom - (stage.top + parseFloat(el.style.top) / 100 * stage.height);
+      });
+      return { consoleTop: console.top, stageTop: stage.top, stageHeight: stage.height, offset: Math.max(...offsets) };
+    });
+    for (const [spot, where] of Object.entries(WAYPOINTS)) {
+      const tagBottom = band2.stageTop + where.top / 100 * band2.stageHeight + band2.offset;
+      expect(band2.consoleTop - tagBottom, `${tag} ${spot}（top ${where.top}%）站不住，名牌会被面板盖住`).toBeGreaterThanOrEqual(4);
+    }
     // 动作行钉在面板里，不能因为封顶后被挤出可视区。
     expect(rows[2].bottom, tag).toBeLessThanOrEqual(Math.round(band.consoleBottom));
     // 气泡整只必须在画面里：320 宽上它曾被屏幕切掉两头，那句话就念不全。

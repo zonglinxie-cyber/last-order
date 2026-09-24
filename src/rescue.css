@@ -58,9 +58,11 @@
 .rescue-game .pawn-name.is-speaking { color: #291d18; background: #f3d08e; border-color: #fff0cd; box-shadow: 0 4px 10px #0007; }
 .pawn-name.is-speaking small { color: #5e4232; }
 /* 沙盘小到一张名牌放不下（66px / 90 单位 = 0.73 px/单位以下，844×390 这类横屏窗口）时，7 张牌子必然互相盖住。
-   这时只留选中/开口那一张，路人身份交给选客条和下面的详情；文字都挪到地图两侧的中庭空地上。 */
+   这时只留选中那一张，路人身份交给选客条和下面的详情；文字都挪到地图两侧的中庭空地上。
+   开口那一张不留：P21 之后"开口的人"和"选中的人"必定不是同一个，两张牌一起亮就会在横屏叠住（实测 54×13）；
+   而空地那一行本来就写着「她“……”」，名字已经在那儿了。 */
 .rescue-scene.tight-plates .pawn-name { display: none; }
-.rescue-scene.tight-plates .pawn-name.selected, .rescue-scene.tight-plates .pawn-name.is-speaking { display: block; }
+.rescue-scene.tight-plates .pawn-name.selected { display: block; }
 .rescue-scene.tight-plates .rescue-pawn img { width: 34px; height: 45px; }
 .rescue-scene.tight-plates .floor-hud { top: 4px; bottom: auto; left: 8px; max-width: 258px; gap: 0; }
 .rescue-scene.tight-plates .floor-mission { display: none; }

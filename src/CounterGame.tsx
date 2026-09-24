@@ -248,12 +248,17 @@ export default function CounterGame() {
     return base;
   };
   const canHelp = !hasFlag(game, "help:suman:" + game.day) && game.energy >= 6 && (hasFlag(game, "covered-suman") || game.relations.suman >= 60);
+  // 空地上那一格放不下整句（窄屏 258px 会被省略号截掉），所以只念她开口那一句的头一段；整句在下面那块面板里念。
+  const firstClause = (line: string) => { const cut = line.indexOf("。"); return cut < 0 ? line : line.slice(0, cut + 1); };
+  const VOICE_LINE: Partial<Record<CustomerId, string>> = { mei: "我只有十分钟。" };
   const customerLine = (id: CustomerId) => {
     const c = CUSTOMERS[id];
-    return (game.waitMeters[id] ?? c.patience) <= 2 ? "我真的要走了。" : id === "shen" ? "先说好，我不缺粉底。" : id === "mei" ? "我只有十分钟。" : c.opening;
+    return (game.waitMeters[id] ?? c.patience) <= 2 ? "我真的要走了。" : VOICE_LINE[id] ?? firstClause(c.opening);
   };
   // 一次只让一个人开口，话落在柜台外的空地上：气泡飘在人头上一律会压住旁边那个人的名字。
-  const voiceId: Focus | null = contestedId && pressure > .4 ? "luyao" : available.includes(focus as CustomerId) ? focus : null;
+  // 空地那一句只念"你没点中的那个人"：选中的人那句话面板已经念过一遍，同一屏念她两遍就白占一格，
+  // 而另一位的开口才是这一屏缺的信息——第 1 天的副标题正是"两个顾客，只能先抓住一个"。
+  const voiceId: Focus | null = contestedId && pressure > .4 ? "luyao" : available.find(id => id !== focus) ?? null;
   const speaking = voiceId && {
     id: voiceId,
     name: voiceId === "luyao" ? STAFF.luyao.name : CUSTOMERS[voiceId as CustomerId].name,

@@ -7,15 +7,18 @@ export type ActorPose = Spot & { destLeft: number; destTop: number };
 export type FloorSpeed = 0 | 1 | 2 | 4;
 
 export const WAYPOINTS = {
-  entrance: { left: 12, top: 62 },
+  // 下面这一排是"站得住的下限"：矮到 568 高的手机上，控制台从 61% 开始往上盖，
+  // 名牌要留 4px 以上，所以最矮的落点压在 57~58（原来 61~63 时罗曼巡完一圈牌子就滑进面板里了）。
+  entrance: { left: 16, top: 58 },
   aisle: { left: 20, top: 56 },
   tester: { left: 27, top: 43 },
   testerSide: { left: 39, top: 50 },
   open: { left: 56, top: 53 },
-  openLow: { left: 63, top: 61 },
+  openLow: { left: 63, top: 58 },
   exit: { left: 20, top: 58 },
-  checkout: { left: 80, top: 61 },
-  rivalHold: { left: 15, top: 58 },
+  checkout: { left: 80, top: 57 },
+  romanSide: { left: 66, top: 59 },
+  rivalHold: { left: 15, top: 54 },
   rivalClose: { left: 26, top: 52 },
 };
 
