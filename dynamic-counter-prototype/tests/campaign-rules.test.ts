@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  applyDawn, applyFinale, CUSTOMERS, dawnNotices, endingTitle, fitOf, floorCustomers, history, INITIAL, leaveSample, parseCampaign,
+  applyDawn, applyFinale, COMPLIANCE_RISK, complianceWord, CUSTOMERS, dawnNotices, endingTitle, fitOf, floorCustomers, history, INITIAL, leaveSample, parseCampaign,
   PRODUCTS, QUESTIONS, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, TARGET, type BundleId, type Campaign,
 } from "../src/campaign.ts";
 import { bestFit, herCap, runRoute } from "./clean-route.ts";
@@ -66,6 +66,15 @@ test("持妆有一个真实需求，而且这个需求是前一天养出来的",
   assert.equal(cameBack(dawn), 1);
   assert.equal(cameBack(applyDawn(dawn)), 1, "重复过晨会不能把她回来再记一遍");
   assert.equal(cameBack(applyDawn(campaign({ day: 5, flags: ["served:anjie:risky"] }))), 0, "第 4 天没接对，就没有这一行");
+});
+
+// 台账不做成第三个数字：两个 UI 念的是同一句，分界线也不能和结局各说一套。
+test("合规只有一句话，而且和结局用的是同一条线", () => {
+  assert.deepEqual([80, 55, 49, 10].map(complianceWord), [
+    "台账对得上，巡店没话说", "台账还压得住", "盘点表上有对不上的数", "方敏的文件夹里已经有你",
+  ]);
+  assert.equal(endingTitle({ ...INITIAL, sales: TARGET, trust: 60, compliance: COMPLIANCE_RISK }), "你留下了，而且没变成她们");
+  assert.equal(endingTitle({ ...INITIAL, sales: TARGET, trust: 60, compliance: COMPLIANCE_RISK - 1 }), "销冠的账单", "差一分就换一本账，这条线必须和台账那句话同源");
 });
 
 test("history keeps more than 25 entries", () => {

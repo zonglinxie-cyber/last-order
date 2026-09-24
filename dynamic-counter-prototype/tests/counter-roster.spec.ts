@@ -1,6 +1,6 @@
 // 私域加粉是手机上够得到的一步：不藏在二级页，也不免费。
 import { expect, test, type Page } from "@playwright/test";
-import { INITIAL, SAVE_KEY, SAVE_VERSION } from "../src/campaign";
+import { INITIAL, SAVE_KEY, SAVE_VERSION, complianceWord } from "../src/campaign";
 
 const seed = (page: Page, patch: Record<string, unknown>) => page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
   key: SAVE_KEY, value: { ...INITIAL, version: SAVE_VERSION, ...patch },
@@ -41,4 +41,33 @@ test("加微信要先有接触，加上以后当场付一分钟", async ({ page 
   await page.screenshot({ path: "../audit/experience-v2/mobile-dock.png" });
   // 一分钟当场付掉；她本人的耐心不动，动的只有现场时间。
   expect(await minutes()).toBe(before + 1);
+});
+
+test("今日账单把台账念成一句话，不是第三个数字", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await seed(page, {
+    day: 2, eventDoneDays: [2], compliance: 40, trust: 62, evidence: 3, daySales: 4200, sales: 7400,
+    history: [{ day: 2, text: "段小姐要的是当天能卸掉的妆" }],
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 2 天" }).click();
+  // 同一条 complianceWord：手机上念的和结局判的是同一句话，界面上不再出现裸分数。
+  const line = page.locator(".summary-compliance");
+  await expect(line).toHaveText(complianceWord(40));
+  await expect(line).toHaveClass(/at-risk/);
+  // 这句话不能排成日期行：居中、8px、字距都是 .summary-screen>p 的旧语法。
+  await expect(line).toHaveCSS("text-align", "left");
+  await expect(line).toHaveCSS("font-size", "12px");
+  await expect(line).toHaveCSS("color", "rgb(224, 166, 141)");
+  await expect(page.locator(".summary-metrics span")).toHaveCount(2);
+  await page.screenshot({ path: "../audit/experience-v2/mobile-summary-ledger-line.png" });
+
+  await seed(page, { day: 2, eventDoneDays: [2], compliance: 80 });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 2 天" }).click();
+  await expect(line).toHaveText(complianceWord(80));
+  await expect(line).not.toHaveClass(/at-risk/);
+  await expect(line).toHaveCSS("color", "rgb(204, 185, 173)");
+  await page.screenshot({ path: "../audit/experience-v2/mobile-summary-ledger-line-calm.png" });
 });

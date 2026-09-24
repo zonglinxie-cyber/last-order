@@ -758,6 +758,12 @@ export function standingWord(value: number) {
   return value >= 60 ? "区域把柜位排在前面" : value >= STANDING_RISK ? "柜位没有被人点名" : "柜位已经写进评估表";
 }
 
+// 台账也不做成进度条：柜位怎么念，它就怎么念。分界线要和结局里的 safe 用同一个数。
+export const COMPLIANCE_RISK = 50;
+export function complianceWord(value: number) {
+  return value >= 75 ? "台账对得上，巡店没话说" : value >= COMPLIANCE_RISK ? "台账还压得住" : value >= 30 ? "盘点表上有对不上的数" : "方敏的文件夹里已经有你";
+}
+
 export function todayHistory(s: Campaign): HistoryEntry[] {
   return s.history.filter(item => item.day === s.day);
 }
@@ -781,7 +787,7 @@ export function counterVerdict(s: Campaign): { label: string; body: string } {
 
 export function endingTitle(s: Campaign) {
   const salesWin = s.sales >= TARGET;
-  const safe = s.compliance >= 50;
+  const safe = s.compliance >= COMPLIANCE_RISK;
   const trusted = s.trust >= 55;
   if (salesWin && !safe) return "销冠的账单";
   if (!salesWin) return trusted ? "没转正，但有人等你" : "柜台灯灭了";

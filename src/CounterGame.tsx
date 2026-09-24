@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
@@ -337,7 +337,7 @@ export default function CounterGame() {
         {(screen === "summary" || screen === "finale") && <section className="story-panel ledger-panel">
           <span className="eyebrow">{screen === "finale" ? "新品活动周 · 最终结算" : "DAY " + game.day + " · 今日账本"}</span><h1>{screen === "finale" ? endingTitle(game) : "今天的单，明天的账"}</h1><strong className="large-number">{money(game.sales)} <small>/ {money(TARGET)}</small></strong>
           {screen === "summary" && eventResponse && <blockquote className="decision-response"><span className="eyebrow">你的选择，得到了回应</span><p>{eventResponse}</p></blockquote>}
-          {screen === "finale" && <div className="ending-checks"><span>业绩 <b>{game.sales >= TARGET ? "达标" : "未达标"}</b></span><span>信任 <b>{game.trust >= 55 ? "留下了口碑" : "仍需重建"}</b></span><span>合规 <b>{game.compliance >= 50 ? "守住底线" : "风险未清"}</b></span><span>柜位 <b>{counter.label}</b></span></div>}
+          {screen === "finale" && <div className="ending-checks"><span>业绩 <b>{game.sales >= TARGET ? "达标" : "未达标"}</b></span><span>信任 <b>{game.trust >= 55 ? "留下了口碑" : "仍需重建"}</b></span><span>合规 <b>{complianceWord(game.compliance)}</b></span><span>柜位 <b>{counter.label}</b></span></div>}
           {screen === "finale" && <p className="counter-verdict">{counter.body}</p>}
           <div className="ledger-book" aria-label="因果账本">{historyByDay(game).filter(group => screen === "finale" || group.day === game.day).map(group => <section key={group.day}><h2>DAY {group.day} · {group.title}</h2>{group.items.filter(item => screen === "finale" || !item.text.startsWith("回应 · ")).map((item, index) => <p key={index}>{item.text}</p>)}</section>)}
             {game.orders.filter(order => screen === "finale" || order.day === game.day).map((order, index) => <p className="order-line" key={index}>D{order.day} · {CUSTOMERS[order.customerId].name} · {PRODUCTS[order.product].short} × {order.units} · {money(order.amount)}{order.shared ? "（拼单后入账）" : ""}{order.risky ? " · 售后风险已记录" : ""}</p>)}
@@ -345,7 +345,7 @@ export default function CounterGame() {
         </section>}
       </main>
       <aside className="rescue-rail">
-        <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><div className="target-track"><i style={{ width: Math.min(100, game.sales / TARGET * 100) + "%" }} /></div><p className="rail-detail">体力 {game.energy} · 小样 {game.samples} · 名单 {game.members.length} · 合规 {game.compliance}</p><p className={"rail-standing" + (game.standing < STANDING_RISK ? " at-risk" : "")}>{standingWord(game.standing)}</p></section>
+        <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><div className="target-track"><i style={{ width: Math.min(100, game.sales / TARGET * 100) + "%" }} /></div><p className="rail-detail">体力 {game.energy} · 小样 {game.samples} · 名单 {game.members.length}</p><p className={"rail-standing" + (game.standing < STANDING_RISK ? " at-risk" : "")}>{standingWord(game.standing)}</p><p className={"rail-compliance" + (game.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(game.compliance)}</p></section>
         <section className="customer-list"><span className="eyebrow">顾客</span>{todayIds.map(id => <button key={id} onClick={() => setFocus(id)} className={focus === id ? "is-selected" : ""}><img src={portrait(id, true)} alt="" /><span><b>{CUSTOMERS[id].name}</b><small>{customerStatus(id)}</small></span><span className={"status-dot " + (game.lost.includes(id) ? "lost" : game.dayServed.includes(id) ? "done" : "")} /></button>)}</section>
         <section className="floor-journal"><span className="eyebrow">刚刚发生</span>{game.history.slice(-5).reverse().map((entry, index) => <p key={index}><small>D{entry.day}</small>{entry.text}</p>)}{game.history.length === 0 && <p>陆遥正在留意入口。先接谁，由你决定。</p>}</section>
         <button className="restart-link" onClick={showRestart}>重新开始</button>
@@ -391,7 +391,7 @@ export default function CounterGame() {
         {screen === "result" && outcome && <div className="result-next"><p>{available.length ? "还有 " + available.length + " 位顾客。刚才这单占掉她们 " + outcome.minutes + " 分钟的等待。" : "今天的接待结束了，柜台还有一件事要处理。"}</p><button className="gold-button" onClick={() => { setScreen(available.length ? "floor" : "event"); setFocus(available[0] ?? "suman"); }}>{available.length ? "回到现场" : "处理闭店事件"}</button></div>}
         {screen === "event" && <div className="event-options">{visibleChoices(game, event).map(choice => <button key={choice.id} onClick={() => { setGame(value => settleDayEvent(value, choice.id)); setScreen("summary"); }}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div>}
         {screen === "summary" && <div className="result-next"><p>今天的选择已经保存。下一天会带着这些结果开始。</p><button className="gold-button" onClick={nextDay}>{game.day === 5 ? "查看活动周结局" : "进入下一天"}</button></div>}
-        {screen === "finale" && <div className="result-next"><p>信任 {relationText(game.trust)} · 合规 {game.compliance} · 苏蔓 {relationText(game.relations.suman)}</p><button className="gold-button" onClick={showRestart}>重新开始 · 换一种活法</button></div>}
+        {screen === "finale" && <div className="result-next"><p>信任 {relationText(game.trust)} · 苏蔓 {relationText(game.relations.suman)}</p><button className="gold-button" onClick={showRestart}>重新开始 · 换一种活法</button></div>}
         {(screen === "intro" || screen === "brief") && <div className="welcome-note"><h3>看现场 → 选顾客 → 判断与试用 → 守住订单</h3><p>每一笔销售，都决定谁欠你、谁恨你、谁会回来。</p></div>}
       </div>
     </footer>

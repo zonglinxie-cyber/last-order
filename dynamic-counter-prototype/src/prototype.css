@@ -307,7 +307,11 @@ button { -webkit-tap-highlight-color:transparent; }
 .summary-sale,.final-score { display:flex; flex-direction:column; align-items:center; padding:17px; border:1px solid #e9c77931; border-radius:17px; background:#ffffff07; }.summary-sale small,.final-score span { color:#aa9689; font-size:7px; }.summary-sale b,.final-score b { color:#f2cc7d; font:700 29px 'Noto Serif SC'; }.summary-sale span,.final-score small { color:#b9a397; font-size:7px; }
 .ledger,.ending-copy,.ledger-book { margin:13px 0; padding:12px; border-radius:13px; background:#ffffff06; }.ledger>b,.ledger-book>b { color:#d5b97f; font-size:8px; }.ledger p,.ending-copy p,.ledger-day p { margin:7px 0 0; padding-left:8px; border-left:2px solid #94664e; color:#ccb9ad; font-size:7px; line-height:1.55; }
 .ledger-day { margin-top:11px; }.ledger-day>span { color:#f0ca84; font:600 11px 'Noto Serif SC'; }
-.summary-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:13px; }.summary-metrics span { padding:8px 4px; border-radius:9px; background:#ffffff06; color:#a79284; font-size:7px; text-align:center; }.summary-metrics b { color:#efd095; font-size:10px; }
+.summary-metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; margin-bottom:8px; }.summary-metrics span { padding:8px 4px; border-radius:9px; background:#ffffff06; color:#a79284; font-size:7px; text-align:center; }.summary-metrics b { color:#efd095; font-size:10px; }
+/* 台账不做成第三个数字：它和柜位一样是念出来的一句话，排版跟着因果账本那一套。
+   选择器要压过 .summary-screen>p 的居中与 8px，否则这句话会被当成日期行。 */
+.summary-screen .summary-compliance { margin:0 0 13px; padding:7px 10px 7px 8px; border-left:2px solid #94664e; background:#ffffff06; color:#ccb9ad; text-align:left; letter-spacing:0; font-family:'Noto Serif SC',serif; line-height:1.55; font-size:7px; }
+.summary-screen .summary-compliance.at-risk { border-left-color:#b06a55; color:#e0a68d; }
 .finale-screen blockquote { margin:0 0 17px; color:#e0c28d; font:600 10px/1.7 'Noto Serif SC'; text-align:center; }
 
 @media (max-height:700px) {
@@ -342,6 +346,7 @@ button { -webkit-tap-highlight-color:transparent; }
   .final-score small,
   .ledger p,
   .ledger-day p,
+  .summary-screen .summary-compliance,
   .ending-copy p,
   .summary-metrics span,
   .brief-orders small,

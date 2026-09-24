@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, BUNDLES, canAddMember, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
+  addMember, advanceFloorTime, applyQuestion, applyRival, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
   fitOf, fitPreview, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
   orderQuote, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
@@ -391,11 +391,11 @@ export default function Prototype() {
     return <MobileScroll className="app-screen event-scroll"><main className="event-screen"><header><span>闭店后 · {event.speaker}</span><b>DAY {campaign.day}</b></header><section className="event-speaker-portrait">{eventCustomer ? <img src={eventCustomer.portrait} alt={`${eventCustomer.name}人物形象`} /> : eventVisual ? <CharacterFace visual={eventVisual} /> : null}<div><span>{event.speaker}</span><b>{eventCustomer ? eventCustomer.descriptor : eventVisual?.role}</b></div></section><p>{event.title}</p><h1>{event.body}</h1>{chosenEvent === null ? <div className="event-choices">{shownChoices.map(choice => <button type="button" key={choice.id} onClick={() => chooseEvent(choice.id)}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div> : <section className="event-result"><b>{chosenEvent.label}</b><p>{chosenEvent.result}</p><button className="primary-action" type="button" onClick={finishDay}>查看今日账单</button></section>}</main></MobileScroll>;
   }
 
-  if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{TARGET.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>合规 <b>{campaign.compliance >= 50 ? "还压得住" : "已经危险"}</b></span><span>证据 <b>{campaign.evidence}</b></span></div><button className="primary-action" type="button" onClick={nextDay}>{campaign.day === 5 ? "查看活动周结局" : "进入下一天"}</button></main></MobileScroll>;
+  if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{TARGET.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>证据 <b>{campaign.evidence}</b></span></div><p className={"summary-compliance" + (campaign.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(campaign.compliance)}</p><button className="primary-action" type="button" onClick={nextDay}>{campaign.day === 5 ? "查看活动周结局" : "进入下一天"}</button></main></MobileScroll>;
 
   if (screen === "finale") {
     const salesWin = campaign.sales >= TARGET;
-    const safe = campaign.compliance >= 50;
+    const safe = campaign.compliance >= COMPLIANCE_RISK;
     const trusted = campaign.trust >= 55;
     const title = endingTitle(campaign);
     const counter = counterVerdict(campaign);
