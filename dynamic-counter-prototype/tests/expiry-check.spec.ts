@@ -52,13 +52,14 @@ test("不查的那一支第二天问回来：晨会念一句、台账扣四分�
   await page.clock.install();
   // 昨天派出去的那支是去年批号（规则里由 leaveSample / 迎上去写进 flags，这里直接摆到晨会那一屏前）。
   await toMorning(page, { day: 4, sales: 9000, daySales: 0, eventDoneDays: [1, 2, 3], compliance: 60, flags: ["sample:zhao", "sample-expired:zhao"] });
-  await expect(note(page, "赵女士 · 微信")).toContainText("是去年的");
+  // P30 起微信合成一条：卡顶写「私域 · 微信」，名字在句子上。
+  await expect(note(page, "赵女士：")).toContainText("是去年的");
   await expect.poll(() => saved(page, "compliance")).toBe(56);
   expect(await saved(page, "sales")).toBe(9000);
   // 刷新重跑晨会不会把同一句话再扣一遍——这一条和"到货不能双倍"是同一类事故。
   await page.reload();
   await page.getByRole("button", { name: "继续第 4 天" }).click();
-  await expect(note(page, "赵女士 · 微信")).toHaveCount(1);
+  await expect(note(page, "赵女士：")).toHaveCount(1);
   expect(await saved(page, "compliance")).toBe(56);
   await page.screenshot({ path: "../audit/experience-v2/p20-mobile-complaint-day4.png" });
 });

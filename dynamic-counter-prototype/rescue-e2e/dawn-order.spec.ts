@@ -1,5 +1,6 @@
-// 晨会那一屏的告示顺序有判据（P29 量的表）：只在这一屏出现一次的"回账"整条都不许被钉住的脚完全吞掉，
+// 晨会那一屏的告示顺序有判据（P29 量的表）：只在这一屏出现一次的"回账"整条都要在钉住的脚以上读得到，
 // 可以留在表尾被压住的只有每天都在的那两条（到货 / 结构 —— 抽屉里和结局那一屏各还有一份）。
+// P30 把微信里的事合成一条之后，第 5 早那三条回账才真放得下 1280×800 那 260px（一条卡 64px + 20px 间距）。
 // 种子是清洁路线真跑出来的当晚状态，按「进入下一天」走进那一早，不手捏数字。
 import { expect, test, type Page } from "@playwright/test";
 import { dawnNotices, floorCustomers, INITIAL, SAVE_KEY, SAVE_VERSION, startNextDay, type Campaign } from "../src/campaign";
@@ -54,7 +55,7 @@ for (const [width, height, strict] of [[1280, 800, true], [1280, 720, true], [10
     if (width === 1280 && height === 800) await page.screenshot({ path: "../audit/experience-v2/p29-day5-fangmin-at-top.png" });
   });
   for (const evening of evenings) {
-    test(`第 ${evening.nextDay} 早的告示顺序在 ${width}×${height} 读得到：回账不被完全吞掉`, async ({ page }) => {
+    test(`第 ${evening.nextDay} 早的告示顺序在 ${width}×${height} 读得到：回账整条在脚以上`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto("/");
       await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
@@ -67,14 +68,15 @@ for (const [width, height, strict] of [[1280, 800, true], [1280, 720, true], [10
       // 界面念的就是规则算的那一份，连顺序一起：这一条挡住"UI 自己再排一遍"。
       expect(seen!.text).toEqual(dawnNotices(startNextDay(evening.state)).map(note => `${note.speaker}${note.body}`));
       const routine = seen!.text.map(text => ROUTINE.some(name => text.startsWith(name)));
-      // 第 5 早是六条挤在一屏那一档：留一张不滚的截图，脚以上只放得下三条半（P29 的 residual 证据）。
-      if (strict && width === 1280 && height === 800 && evening.nextDay === 5) await page.screenshot({ path: "../audit/experience-v2/p29-day5-order-1280x800.png" });
+      // 第 5 早是回音最多的一早：留一张不滚的截图（P29 那一张记的是合并之前，文件名跟着轮次走）。
+      if (strict && width === 1280 && height === 800 && evening.nextDay === 5) await page.screenshot({ path: "../audit/experience-v2/p30-day5-order-1280x800.png" });
       // 每一条都必须在某个滚位整条读得到（包括 844×390 那一档）。
       seen!.heights.forEach((h, index) => expect(seen!.best[index], `第 ${index + 1} 条滚遍全程也读不完整`).toBe(h));
       if (!strict) return;
       routine.forEach((isRoutine, index) => {
         if (isRoutine) return;
-        expect(seen!.atTop[index], `只出现一次的那一条在第 ${evening.nextDay} 早整条被脚吞掉`).toBeGreaterThan(0);
+        // P30 起这条从"不许整条 0px"抬到"整条都在脚以上"：微信合成一条之后，第 5 早的回账真的放得下了。
+        expect(seen!.atTop[index], `只出现一次的那一条在第 ${evening.nextDay} 早只露 ${seen!.atTop[index]}/${seen!.heights[index]}px`).toBe(seen!.heights[index]);
       });
       // 被完全吞掉的那些必须全是例行的那两条 —— 反过来就是"回账排到了表尾"。
       seen!.atTop.forEach((shown, index) => {

@@ -457,8 +457,11 @@ test("到期那批派出去两个人就到头：第二天她问回来，钱一�
   assert.equal(ledgerSum(dawn), dawn.sales, "问回来这两行不带 ¥：它动的不是钱");
   assert.ok(dawn.history.filter(row => row.text.includes("批号是去年的")).every(row => !row.text.includes("¥")));
   const notes = dawnNotices(dawn).filter(note => note.body.includes("批号"));
-  assert.equal(notes.length, 2, "两个人各问一句，晨会各念一条");
+  // P30：微信里的事合成一条通知 —— 一人一句仍然各念一次，只是不再长成两张卡，名字写在句子前面。
+  assert.equal(notes.length, 1, "两个人各问一句，合在同一个聊天框里");
   assert.match(notes[0].speaker, /· 微信$/);
+  assert.equal(notes[0].body.match(/批号/g)?.length, 2, "两条问句都在，一条不多一条不少");
+  assert.ok(notes[0].body.includes("赵女士：") && notes[0].body.includes("段小姐："), "合并不能把名字合掉");
   const again = applyDawn(dawn);
   assert.equal(again.compliance, dawn.compliance, "问过一次的不再问第二遍（刷新重跑晨会也是这一条）");
   assert.equal(again.history.length, dawn.history.length);

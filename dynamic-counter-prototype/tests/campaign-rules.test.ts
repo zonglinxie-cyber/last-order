@@ -66,8 +66,8 @@ test("持妆有一个真实需求，而且这个需求是前一天养出来的",
   assert.deepEqual(floorCustomers(campaign({ day: 5, flags: ["served:anjie:good"] })), ["anjie2", "returning"]);
   assert.deepEqual(floorCustomers(campaign({ day: 5, flags: ["served:anjie:risky", "anjie-blew-up"] })), ["returning"]);
   assert.deepEqual(floorCustomers(campaign({ day: 4, flags: ["served:anjie:good"] })), ["anjie"]);
-  // 回来这件事得在晨会上说清，不然玩家以为现场随机多刷了一个人。
-  assert.ok(dawnNotices(campaign({ day: 5, flags: ["served:anjie:good"] })).some(note => note.speaker.includes("安姐")));
+  // 回来这件事得在晨会上说清，不然玩家以为现场随机多刷了一个人。P30 起她的名字写在微信那一条的句子前面。
+  assert.ok(dawnNotices(campaign({ day: 5, flags: ["served:anjie:good"] })).some(note => note.body.includes("安姐：")));
   // 因果账本里也要留下一行：她的回来是第 4 天那个判断的结果，而且只留一次。
   const dawn = applyDawn(campaign({ day: 5, flags: ["served:anjie:good"] }));
   const cameBack = (c: Campaign) => c.history.filter(entry => entry.text.includes("安姐赶在化妆师之前回来")).length;
@@ -146,7 +146,7 @@ test("a sample only comes back if you followed up that evening", () => {
   const next = applyDawn({ ...touched, day: 2, daySales: 0 });
   assert.equal(next.sales, SAMPLE_RETURN_SALE);
   assert.ok(next.flags.includes("sample-return:shen"));
-  assert.ok(dawnNotices(next).some(note => note.speaker.includes("沈薇")));
+  assert.ok(dawnNotices(next).some(note => note.body.includes("沈薇：")));
 });
 
 // P24：界面上那句"这一支买到什么"不许超过规则真给的条件，而按钮亮不亮必须和收不收这一支同步。
@@ -215,8 +215,8 @@ test("a line that comes back late is read out on the morning it actually lands",
   assert.equal(dawn2.sales, 0, "第 2 早没跟过，小样不会自己回来");
   const dawn3 = applyDawn({ ...applyTouch(dawn2, "shen"), day: 3, daySales: 0 });
   assert.equal(dawn3.sales, SAMPLE_RETURN_SALE, "第 2 晚补上的那一句，第 3 早才兑现");
-  assert.ok(dawnNotices(dawn3).some(note => note.speaker.includes("沈薇")), "到账那一早要念出来");
-  assert.ok(!dawnNotices({ ...dawn3, day: 4, daySales: 0 }).some(note => note.speaker.includes("沈薇")), "同一条线不在第二天再念一遍");
+  assert.ok(dawnNotices(dawn3).some(note => note.body.includes("沈薇：")), "到账那一早要念出来");
+  assert.ok(!dawnNotices({ ...dawn3, day: 4, daySales: 0 }).some(note => note.body.includes("沈薇：")), "同一条线不在第二天再念一遍");
 });
 
 test("working the private domain earns more and costs real customers", () => {
@@ -530,4 +530,20 @@ test("晨会那一屏的表尾留给每天都在的那两条", () => {
   const held = startNextDay(campaign({ day: 4, sales: 12_000, eventDoneDays: [1, 2, 3], flags: ["advance-order", "advance-held"] }));
   const order = dawnNotices(held).map(note => note.speaker);
   assert.ok(order.indexOf("方敏 · 合规") >= 0 && order.indexOf("方敏 · 合规") < order.indexOf("品牌 · 到货"), order.join(" | "));
+});
+
+// P30：微信里的事合成一条通知（一个聊天框连着好几条消息，不该长成好几张卡），柜台那几道各是各的。
+test("微信里的回音合成一条，名字写在句子前面；柜台那一道不混进来", () => {
+  const cards = dawnNotices(campaign({ day: 5, flags: ["zhao-daughter-order", "served:anjie:good"] })).filter(note => note.speaker === "私域 · 微信");
+  assert.equal(cards.length, 1, "整屏只有一条微信通知");
+  assert.ok(cards[0].body.includes("赵青：") && cards[0].body.includes("安姐："), "一个名字一句，都在里面");
+  assert.equal(cards[0].body.match(/赵青：/g)?.length, 1, "合并不把同一个人念两遍");
+  // 客诉是苏蔓当面那道，不是微信里的消息：混进那一条会把"谁在找你"念错。
+  const blown = applyDawn(resolveSale(campaign({ day: 5, sales: 18_000, daySales: 0, stock: { ...WEEK_ALLOCATION } }), {
+    customerId: "anjie", selectedProduct: "glow", bundle: "bulk", revealed: [], tested: true, askedQuestion: null,
+    claimed: true, interruption: false, interruptionHandled: false, force: true,
+  })!.campaign);
+  const notes = dawnNotices(blown);
+  assert.ok(notes.some(note => note.speaker === "客诉 · 苏蔓" && note.body.includes("婚礼前双颊爆红")), "客诉单独一张卡");
+  assert.ok(!notes.some(note => note.speaker === "私域 · 微信" && note.body.includes("婚礼前双颊爆红")), "客诉不并进微信那一条");
 });

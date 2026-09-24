@@ -807,6 +807,9 @@ const landedToday = (s: Campaign, text: string) => s.history.some(entry => entry
 
 export function dawnNotices(s: Campaign): DawnNotice[] {
   const notes: DawnNotice[] = [];
+  // 微信里的事合成一条通知：一个聊天框连着好几条消息，在界面上不该长成好几张卡（P30 量的第 5 早：
+  // 脚顶以上 260px 只放得下三条 64px 的卡，而那天有四个人的回音）。名字写在句子前面，谁说的、说了几次都不丢。
+  const wechat: string[] = [];
   for (const reading of [morningReview(s), counterCheck(s)]) {
     if (reading && hasFlag(s, reading.key)) notes.push({ speaker: reading.speaker, body: reading.body });
   }
@@ -816,29 +819,32 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   // 这一遍自查不是柜上自己想起来的：第 3 天早上品牌说要翻处理记录，晨会念一次，那一屏上才长出这个动作。
   if (s.day === EXPIRED_SAMPLING.fromDay && !expiredCleared(s)) notes.push({ speaker: "品牌 · 巡店", body: EXPIRED_SAMPLING_NOTICE });
   if (s.day === 4 && hasFlag(s, "tang-paid-order")) notes.push({ speaker: "唐可 · 交接", body: "她把一单伴娘妆转到你名下。口头承诺这次兑现了。" });
-  if (s.day === 5 && hasFlag(s, "zhao-daughter-order")) notes.push({ speaker: "赵青 · 微信", body: "妈妈说可以信你。我买了那支修护。" });
+  if (s.day === 5 && hasFlag(s, "zhao-daughter-order")) wechat.push("赵青：妈妈说可以信你。我买了那支修护。");
   if (s.day === 5 && hasFlag(s, "zhao-complaint")) notes.push({ speaker: "客诉 · 方敏", body: "赵女士女儿过敏，这条已经进档案。" });
   if (s.day === 5 && hasFlag(s, "zhao-returned")) notes.push({ speaker: "退货 · 收银", body: "赵女士按你写下的承诺退了那单。" });
-  if (anjieComesBack(s)) notes.push({ speaker: "安姐 · 微信", body: "上周听你的，只用了修护，今天脸是稳的。化妆师两点到，我早上先过来拿当天的妆。" });
+  if (anjieComesBack(s)) wechat.push("安姐：上周听你的，只用了修护，今天脸是稳的。化妆师两点到，我早上先过来拿当天的妆。");
   // 到期小样不是当场翻脸，是台账上答不上来：她只问一句，而这一句让品牌看见你没在处理。
   for (const name of s.flags) {
     if (!name.startsWith("sample-expired:")) continue;
     const id = name.slice("sample-expired:".length) as CustomerId;
-    if (landedToday(s, expiredQuestion(id))) notes.push({ speaker: `${CUSTOMERS[id].name} · 微信`, body: "你那支小样我回家才看到批号，是去年的。脸倒没什么，就是以后不敢随手试了。" });
+    if (landedToday(s, expiredQuestion(id))) wechat.push(`${CUSTOMERS[id].name}：你那支小样我回家才看到批号，是去年的。脸倒没什么，就是以后不敢随手试了。`);
   }
+  // 退货和客诉走的是柜台的通道（收银、方敏、罗曼、苏蔓），不和微信混在一条里。
   for (const item of RISKY_RETURNS) {
     if (hasFlag(s, item.resolve) && landedToday(s, item.text)) notes.push({ speaker: item.speaker, body: item.body });
   }
   for (const item of SAMPLE_RETURNS) {
-    if (hasFlag(s, item.resolve) && landedToday(s, item.text)) notes.push({ speaker: item.speaker, body: item.body });
+    if (hasFlag(s, item.resolve) && landedToday(s, item.text)) wechat.push(`${CUSTOMERS[item.id].name}：${item.body}`);
   }
   // 名单上的人自己补的那一支也要在早上念出来，不然账上的钱是凭空多出来的。
   const repeats = s.day === 5 ? s.members.flatMap(id => {
     if (!hasFlag(s, `member-repeat:${id}`)) return [];
     const order = s.orders.find(item => item.customerId === id && !item.risky);
-    return order ? [memberRepeatLine(id, order.product)] : [];
+    // 台账那一行不带句号（`memberRepeatLine` 两处共用），念给人听的那一句要带上。
+    return order ? [`${memberRepeatLine(id, order.product)}。`] : [];
   }) : [];
-  if (repeats.length) notes.push({ speaker: "私域 · 微信", body: `${repeats.join("；")}。` });
+  if (repeats.length) wechat.push(...repeats);
+  if (wechat.length) notes.push({ speaker: "私域 · 微信", body: wechat.join(" ") });
   // 例行的两条排最后：它们每天都在，漏看一眼不影响今天怎么接人（货数在抽屉里还有一份，结构到结局那一屏也还在）。
   // 上面那些"因为你上一手才出现"的一条只在这一屏念一次 —— 晨会改成整屏滚之后，被脚压住的正是表尾（P29 量的那张表：
   // 第 5 早 1280×800 上第 4 条只露 8/64px、第 5 条整条 0px），所以表尾要留给可以补看的那两条。
