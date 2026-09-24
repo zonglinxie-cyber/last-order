@@ -457,9 +457,19 @@ button { -webkit-tap-highlight-color:transparent; }
 .rival-interruption button small { display:block; font-size:12px; font-weight:400; }
 .rival-trial-result { color:#f0c6b7; font-size:12px; margin:0 0 12px; }
 .consultation-shell { position:absolute; inset:0; overflow:hidden; }
-.consultation-dock { max-height:46%; padding:0; overflow:hidden; transition:bottom 260ms cubic-bezier(.2,.8,.2,1); }
+/* 抽屉多高由 Prototype.tsx 里那一串阶段高度自己说：这里不再放第二个百分比。
+   原来这条 `max-height:46%` 把成交那一档内联的 48% 夹回了 46%（两者都是百分比时 max-height 赢），
+   P16 记的"抬到 48%"其实从没生效：量到的抽屉高一直是 45.8%，而且 48% 那一档面部线索离抽屉顶的数字与 46% 各档一模一样。 */
+.consultation-dock { padding:0; overflow:hidden; transition:bottom 260ms cubic-bezier(.2,.8,.2,1); display:flex; flex-direction:column; }
+/* 动作行做成抽屉的脚：它是滚动区之外的同级固定层（AGENTS 那条"app-owned fixed chrome 留在 MobileScroll 外面"），
+   滚动区自己占剩下的——不给脚写魔法高度，脚多高滚动区就少多少。断货那一屏正文 516 设计像素压进 390 的可见带，
+   以前「提出成交」住在正文最底下、折线以下 70 设计像素；现在它永远在脚下（单行 59，拒绝那一档两行 102）。 */
+.consultation-dock .consultation-controls { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.consultation-foot { flex:0 0 auto; padding:6px 10px 8px; border-top:1px solid #826346; }
+.consultation-foot .recovery-actions { margin:0 0 6px; }
 .consultation-controls .mobile-scroll { bottom:0; }
-.consultation-controls .mobile-scroll-content { padding:10px 10px 16px; }
+/* 原来那 16px 是给最后一行离抽屉底留的呼吸位；现在那个位置由脚下的分隔线负责，留着它成交那一档就白占两像素、四格要滚。 */
+.consultation-controls .mobile-scroll-content { padding:10px 10px 8px; }
 .consultation-controls .mobile-scrollbar { bottom:4px; }
 .consult-chat { max-height:70px; }
 .mobile-order-quote { border-top:1px solid #826346; padding-top:7px; margin-top:7px; font-size:12px; }

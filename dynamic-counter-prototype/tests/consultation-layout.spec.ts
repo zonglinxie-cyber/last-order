@@ -21,10 +21,14 @@ test("mobile consultation scrolls its controls while the face stays fixed", asyn
   await page.screenshot({ path: "../audit/rescue-2026-09-08/after-pwa-rival.png" });
   await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
   const controls = page.locator(".consultation-controls .mobile-scroll");
-  const geometry = await controls.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, content: el.scrollHeight, bottom: Math.round(el.getBoundingClientRect().bottom) }));
-  // 这一屏最挤：她的话、选品、留小样、关单两个按钮全在面板里。关单不能要先滚动才点得到。
+  const geometry = await controls.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, content: el.scrollHeight }));
+  // 这一屏最挤：她的话、选品、留小样住在滚动区里，接受拒绝/强推成交住在抽屉脚上（P18：脚不跟着滚）。
+  // 所以"关单不能要先滚动才点得到"这一条量的界是抽屉的下沿，不再是滚动区的下沿。
   const close = await page.getByRole("button", { name: "接受拒绝", exact: true }).boundingBox();
-  expect(close!.y + close!.height).toBeLessThanOrEqual(geometry.bottom + 1);
+  const dockBottom = (await page.locator(".consultation-dock").boundingBox())!;
+  expect(close!.y + close!.height).toBeLessThanOrEqual(dockBottom.y + dockBottom.height + 1);
+  // 滚动区这一档确实还要滚：不承认这一点，下面那句"拖一下会滚"就成了空断言。
+  expect(geometry.content).toBeGreaterThan(geometry.height);
   const portraitBefore = await page.locator(".customer-portrait").boundingBox();
   // Start on a product card: dragging must scroll, without changing selection.
   const card = await page.getByRole("button", { name: /柔焦 ¥980/ }).boundingBox();
