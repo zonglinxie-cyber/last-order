@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const morningDelivery = (page: any) => page.locator(".message-preview").filter({ hasText: "品牌 · 到货" });
+
 async function observeAndSell(page: any, name: string, product: string, bundle?: string, note?: string) {
   await page.getByRole("button", { name: `查看${name}` }).click();
   await page.getByRole("button", { name: `观察${name}` }).click();
@@ -46,13 +48,16 @@ test("five-day campaign completes and persists across a reload", async ({ page }
   await page.reload();
   await expect(page.getByRole("button", { name: "继续第 2 天" })).toBeVisible();
   await page.getByRole("button", { name: "继续第 2 天" }).click();
+  // 配货按天到这件事写在晨会上：今天补到几支、明天排的是什么，都要念得出来，"等下一次到货"才成一个选项。
+  await expect(morningDelivery(page)).toContainText("今天大仓补到柔焦 2 支、修护 1 支。明天排的是柔焦 2 支、持妆 1 支、修护 2 支。");
 
   const days = [
-    { customers: [["小雨", "柔焦"], ["周姐", "柔焦", "两件连带"]] as Array<[string, string, string?, string?]>, event: /提出平分/ },
+    // 第一批柔焦只有 3 支，第 1 天沈薇整套就带走了：第 2 天周姐要两件，柜上只剩一支。
+    { customers: [["小雨", "柔焦"], ["周姐", "柔焦", "两件连带", "柜上只剩 1 支，这单最多开到 1 件"]] as Array<[string, string, string?, string?]>, event: /提出平分/ },
     { customers: [["赵女士", "修护"], ["段小姐", "柔焦"]] as Array<[string, string, string?, string?]>, event: /换低价基础款/ },
-    { customers: [["安姐", "修护", "批量追加"], ["周姐", "修护"]] as Array<[string, string, string?, string?]>, event: /只按额度给两套/ },
-    // 一周的柔焦配货到第 5 天只剩 3 支：沈薇要 4 件，报价单先按现货说话。
-    { customers: [["安姐", "持妆", "两件连带"], ["沈薇", "柔焦", "批量追加", "柜上只剩 3 支"]] as Array<[string, string, string?, string?]>, event: /把评价分给柜台/ },
+    { customers: [["安姐", "修护", "批量追加"], ["周姐", "修护", undefined, "柜上这一支断了：抽屉里一支修护都没有，这一单开不出来"]] as Array<[string, string, string?, string?]>, event: /只按额度给两套/ },
+    // 缺口挪到了周中：到第 5 天柔焦累计刚好 10 支，沈薇要四件，柜上给得出。
+    { customers: [["安姐", "持妆", "两件连带"], ["沈薇", "柔焦", "批量追加"]] as Array<[string, string, string?, string?]>, event: /把评价分给柜台/ },
   ];
 
   for (let index = 0; index < days.length; index++) {
@@ -64,9 +69,9 @@ test("five-day campaign completes and persists across a reload", async ({ page }
   }
 
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们" })).toBeVisible();
-  // 与商场沙盘 UI 和规则模拟器跑出的清洁路线同一条：¥24,610。
-  // 比一周前的 25,590 少 ¥980：第 5 天沈薇那单连带被抽屉削掉一支柔焦，是柜上没了，不是谁算错。
-  await expect(page.getByText("¥24,610")).toBeVisible();
+  // 与商场沙盘 UI 和规则模拟器跑出的清洁路线同一条：¥22,930。
+  // 同一副牌如果第 1 天一次性给满是 ¥24,610（规则测试里量着）：按天到让第 2、4 天各缺一口，换回第 5 天开得出四件。
+  await expect(page.getByText("¥22,930")).toBeVisible();
   await expect(page.getByText("五日因果账本")).toBeVisible();
   // 沈薇两次都被推对了方向：账本里留下两条按件数记账的成交，而不是笼统的"准确推荐"。
   await expect(page.getByText(/^沈薇带走 \d 件柔焦 · ¥/)).toHaveCount(2);

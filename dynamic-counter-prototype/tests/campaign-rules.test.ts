@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   applyDawn, applyFinale, applyTouch, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
-  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, parseCampaign,
-  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, TARGET, touchThreads,
+  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, openFloorState, parseCampaign,
+  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
 } from "../src/campaign.ts";
 import { bestFit, herCap, runRoute } from "./clean-route.ts";
@@ -16,11 +16,13 @@ test("a clean route still needs day 5 to clear the target", () => {
   const clean = runRoute();
   assert.equal(TARGET, 21_000);
   assert.deepEqual(clean.lost, [], "读准上限的路线不该在路上丢掉任何人");
-  assert.equal(clean.served, 10);
-  assert.equal(clean.dayTotals[3], 17_430);
+  assert.equal(clean.served, 9, "十位里有一位当天开不出单：她在场，只是柜上没货");
+  assert.ok(clean.final.flags.includes("served:zhou2:out-of-stock"), "断货写在旗子上，不算她走掉");
+  assert.equal(clean.dayTotals[3], 14_770);
   assert.ok(clean.dayTotals[3] < TARGET, "第 4 天结束时还不能提前达标");
-  assert.equal(clean.final.sales, 24_610, "第 5 天沈薇那单连带被抽屉削掉一支：¥980 不是谁算错，是柜上没了");
-  assert.ok(clean.final.sales >= TARGET);
+  assert.equal(clean.dayTotals[1], 6_090, "配货按天到之后，第 2 天就被削掉一支柔焦");
+  assert.equal(clean.final.sales, 22_930, "第 2 天柔焦差一支（¥980）、第 4 天修护差一支（¥1,680）：两次都是当天的批次没赶上，不是谁算错");
+  assert.ok(clean.final.sales >= TARGET, "一次电话都不打、只按她说过的上限卖，也还够得着五日目标");
   assert.equal(endingTitle(clean.final), "你留下了，而且没变成她们");
   // 第 5 晚那句「摊得开」必须够得着：一路按「登记我的接待」的干净路线，五天下来本子里有 12 行。
   assert.equal(clean.final.evidence, 12);
@@ -106,11 +108,13 @@ test("history keeps more than 25 entries", () => {
 });
 
 test("forcing Anjie comes back as a wedding-week blow-up", () => {
-  const push = (bundle: BundleId) => resolveSale(campaign({ day: 5, sales: 0 }), {
+  // 这一条量的是退款的兜底算法，不是抽屉：柜上给足整周的配货，别让"只剩一支"混进断言。
+  const full = { stock: { ...WEEK_ALLOCATION } };
+  const push = (bundle: BundleId) => resolveSale(campaign({ day: 5, sales: 0, ...full }), {
     customerId: "anjie", selectedProduct: "glow", bundle, revealed: [], tested: true, askedQuestion: null,
     claimed: true, interruption: false, interruptionHandled: false, force: true,
   })!.campaign.orders[0].amount;
-  const forced = resolveSale(campaign({ day: 5, sales: 18_000, daySales: 0 }), {
+  const forced = resolveSale(campaign({ day: 5, sales: 18_000, daySales: 0, ...full }), {
     customerId: "anjie", selectedProduct: "glow", bundle: "bulk", revealed: [], tested: true, askedQuestion: null,
     claimed: true, interruption: false, interruptionHandled: false, force: true,
   })!;
@@ -124,7 +128,7 @@ test("forcing Anjie comes back as a wedding-week blow-up", () => {
   assert.ok(next.history.slice(blowUp + 1).some(entry => entry.text.startsWith("晨会 ·")), "晨会读的是已经落定的数字");
   assert.ok(dawnNotices(next).some(note => note.body.includes("婚礼前双颊爆红")));
   // 旧存档没有逐笔记账。兜底要等于最小的一件强推，不能和报价系统各说一套。
-  const legacy = applyDawn(campaign({ day: 5, sales: 18_000, daySales: 0, flags: ["served:anjie:risky"] }));
+  const legacy = applyDawn(campaign({ day: 5, sales: 18_000, daySales: 0, ...full, flags: ["served:anjie:risky"] }));
   assert.equal(18_000 - legacy.sales, push("single"));
   assert.ok(18_000 - legacy.sales < forced.outcome.total, "旧存档没有账本，按最小的一件强推退，不能多退");
 });
@@ -205,16 +209,22 @@ test("working the private domain earns more and costs real customers", () => {
   assert.equal(privateDomain.final.flags.filter(f => f.startsWith("member-repeat:")).length, 6, "跟过的六个人全部回柜");
   assert.equal(privateDomain.final.sales, 28_530);
   assert.ok(privateDomain.final.sales > counter.final.sales, "跟到底的私域比只在柜台前多开口更值钱，这一条要能被量出来");
-  assert.ok(privateDomain.final.standing >= counter.final.standing);
+  // 它买的是营业额，不是评分：整周多花的那几分钟让柜位比清洁路线低 6 格（实测 51 对 57），
+  // 但那条线仍然站在 `STANDING_RISK` 之上 —— 掉到风险线以下的代价应该由更贪心的走法去付。
+  assert.ok(privateDomain.final.standing < counter.final.standing, "私域做满不涨柜位：这一晚的耐心是从别人头上扣的");
+  assert.ok(privateDomain.final.standing >= STANDING_RISK, "多出来的营业额不该把柜台推到评估线以下");
 });
 
 test("old saves without the current version are discarded", () => {
   assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, version: 1, sales: 99_000 })), null);
+  // v5 是"配货一次性倒在柜台上"那一版写的：字段一模一样，但过一遍新晨会会多出配货之外的一批货。
+  assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, version: 5, stock: { ...WEEK_ALLOCATION } })), null);
   assert.equal(parseCampaign(JSON.stringify(INITIAL))?.version, SAVE_VERSION);
 });
 
 test("a same-day risky last order is clawed back in the finale", () => {
-  const closed = resolveSale(campaign({ day: 5, sales: 20_000 }), {
+  // 柜上按整周配货给足，这一条量的是"开口几件就记几件、结局整笔暂扣"，不是断货。
+  const closed = resolveSale(campaign({ day: 5, sales: 20_000, stock: { ...WEEK_ALLOCATION } }), {
     customerId: "returning", selectedProduct: "repair", bundle: "bulk", revealed: [],
     tested: true, askedQuestion: 0, claimed: true, interruption: true, interruptionHandled: true, force: true,
   });
@@ -239,4 +249,72 @@ test("the four endings each need their own condition", () => {
 test("Lu Yao's interruption copy changes by customer", () => {
   assert.notEqual(RIVAL_INTERRUPTIONS.shen.quote, RIVAL_INTERRUPTIONS.zhou.quote);
   assert.notEqual(RIVAL_INTERRUPTIONS.shen.quote, RIVAL_INTERRUPTIONS.returning.quote);
+});
+
+const PRODUCT_IDS = Object.keys(PRODUCTS) as (keyof typeof PRODUCTS)[];
+const stockOf = (s: Campaign) => PRODUCT_IDS.map(product => s.stock[product]);
+
+test("整周的配货按天排：五批加起来正好是配货，第 1 天柜上只有第一批", () => {
+  assert.equal(DELIVERIES.length, 5, "一天一批，正好排满活动周");
+  for (const product of PRODUCT_IDS) {
+    assert.equal(DELIVERIES.reduce((sum, batch) => sum + batch[product], 0), WEEK_ALLOCATION[product], `${product} 五批加起来必须正好等于整周配货，不能凭空多也不能少`);
+    assert.equal(INITIAL.stock[product], FIRST_DAY_STOCK[product], "开局柜上就是第一批，不是整周的量");
+    assert.ok(FIRST_DAY_STOCK[product] < WEEK_ALLOCATION[product], `${product} 第 1 天不该一次拿到整周的货`);
+    for (const batch of DELIVERIES) assert.ok(batch[product] + INITIAL.stock[product] <= WEEK_ALLOCATION[product] + TRANSFER_UNITS, `${product} 到货之后不能超出存档认的支数上限`);
+  }
+});
+
+test("到货每早一次：重复过晨会不会双倍到货，第 1 天不再补第一批", () => {
+  const day2 = applyDawn(campaign({ day: 2, daySales: 0 }));
+  assert.deepEqual(stockOf(day2), stockOf(INITIAL).map((left, index) => left + DELIVERIES[1][PRODUCT_IDS[index]]), "第 2 早补的就是第 2 批");
+  assert.deepEqual(stockOf(applyDawn(day2)), stockOf(day2), "同一早过两次晨会，货不能到两次");
+  assert.equal(day2.flags.filter(name => name.startsWith("delivered:")).length, 1);
+  assert.deepEqual(stockOf(applyDawn(campaign({ day: 1, daySales: 0 }))), stockOf(INITIAL), "第 1 天的那批已经在柜上，过晨会不会再来一次");
+  // 进沙盘那一步也走 applyDawn：两个入口算出的抽屉必须是同一个。
+  assert.deepEqual(stockOf(openFloorState(campaign({ day: 3, daySales: 0 }))), stockOf(applyDawn(campaign({ day: 3, daySales: 0 }))));
+});
+
+test("到货那句只在晨会念一次，说的是今天到几支、明天排几支", () => {
+  const arrivals = (s: Campaign) => dawnNotices(s).filter(note => note.speaker.includes("到货"));
+  for (let day = 1; day <= 5; day += 1) {
+    const lines = arrivals(campaign({ day, daySales: 0 }));
+    assert.equal(lines.length, 1, `第 ${day} 早只念一句到货`);
+    assert.equal(lines[0].body, deliveryWord(day));
+  }
+  assert.match(deliveryWord(1), /不是一次性给的/, "第 1 早要顺带把「按天到」这件事说清楚");
+  assert.ok(deliveryWord(1).includes("支"), "支数是柜台的量词，别混进别的东西");
+  assert.match(deliveryWord(2), /明天排的是/, "看不到明天的排期，「等」就不是一个选项");
+  assert.ok(!deliveryWord(5).includes("明天"), "最后一天没有明天的货可以承诺");
+  // 第 4 早那一批修护只有 2 支：清洁路线当天要吃 5 支，缺口就是这两行按钮唯一该亮的地方。
+  assert.match(deliveryWord(4), /修护 2 支/);
+});
+
+// 这轮节奏到底咬掉了多少钱，要用同一条动作序列量出来，不是写一句"更紧张了"。
+// oneShot = 一周的货第 1 天全给到（把后面四批标成已发），其余一步不动。
+test("按天到货真的咬在柜台上：同一条清洁路线，一次性给满是 ¥24,610", () => {
+  const oneShot = campaign({ stock: { ...WEEK_ALLOCATION }, flags: [2, 3, 4, 5].map(day => `delivered:${day}`) });
+  const flat = runRoute("matched", false, false, false, null, undefined, oneShot);
+  const clean = runRoute();
+  assert.equal(flat.final.sales, 24_610);
+  assert.equal(clean.final.sales, 22_930);
+  assert.equal(flat.served, 10, "货一次给到时，第 4 天周姐那一单开得出来");
+  assert.equal(flat.final.flags.includes("served:zhou2:out-of-stock"), false, "反事实里不该有断货旗子");
+  const unitsOf = (s: Campaign, day: number, id: string) => s.orders!.filter(order => order.day === day && order.customerId === id).reduce((sum, order) => sum + order.units, 0);
+  // 差额是三处件数的合力，不是某一步掉线：周中被削的、当天开不出的、第 5 天补回来的。
+  assert.equal(unitsOf(clean.final, 2, "zhou"), 1);
+  assert.equal(unitsOf(flat.final, 2, "zhou"), 2, "第 2 天那两件柔焦，一次性给到时给得出");
+  assert.equal(unitsOf(clean.final, 4, "zhou2"), 0, "第 4 天她要的那支修护，那天早上还没到");
+  assert.equal(unitsOf(flat.final, 5, "returning"), 3, "一次性给到时前面多开走两件，第 5 天就只剩 3 支给她");
+  assert.equal(unitsOf(clean.final, 5, "returning"), 4, "按天到把第 5 天那四件留住了：整周 10 支柔焦，前面少花一支，后面就开得出来");
+});
+
+test("断货那张卡给的出路跟着到货排期走：还有下一批才提\"等\"，周末不再补就只剩两条", () => {
+  const card = (day: number) => resolveSale(campaign({ day, stock: { soft: 10, glow: 4, repair: 0 } }), {
+    customerId: "zhou2", selectedProduct: "repair", bundle: "single", revealed: [],
+    tested: true, askedQuestion: 0, claimed: true, interruption: true, interruptionHandled: true, force: false,
+  })!.outcome;
+  assert.equal(card(4).title, "周姐没买成");
+  assert.ok(card(4).body.includes("等大仓下一批"), "第 4 天断的修护，第 5 早上还排着一支：\"等\"这时候是条真路");
+  assert.ok(!card(5).body.includes("等大仓下一批"), "第 5 天之后没有下一批，不能给玩家指一条不存在的路");
+  assert.ok(card(5).body.includes("只剩两条路"));
 });

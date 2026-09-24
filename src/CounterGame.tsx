@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, canTransfer, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
-  observeService, OBSERVE_MIN, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
+  observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
@@ -57,7 +57,7 @@ function Quote({ game, id, product, onTransfer }: { game: Campaign; id: Customer
     <p className="quote-time"><span>开单与讲搭配</span><span>{quote.minutes} 分钟 · 另一边还在等</span></p>
     {quote.note && <small className="quote-note">{quote.note + "。"}</small>}
     {/* 断货这一步只有两处能救：系统单留名，私下拿货不留名。两行都摆出来，让"值不值得离柜"自己说。 */}
-    {canTransfer(game, product) && <div className="stock-transfer">{(["official", "tangke"] as TransferChannel[]).map(channel => <button type="button" key={channel} disabled={!canTransferVia(game, product, channel)} onClick={() => onTransfer(channel)}>{transferLabel(game, product, channel)}</button>)}</div>}
+    {offerTransfer(game, product, quote) && <div className="stock-transfer">{(["official", "tangke"] as TransferChannel[]).map(channel => <button type="button" key={channel} disabled={!canTransferVia(game, product, channel)} onClick={() => onTransfer(channel)}>{transferLabel(game, product, channel)}</button>)}</div>}
   </section>;
 }
 

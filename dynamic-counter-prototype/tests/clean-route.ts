@@ -2,7 +2,7 @@
 // rule functions only, so the balance numbers are measured instead of hand-written.
 import assert from "node:assert/strict";
 import {
-  addMember, applyTouch, askService, availableCustomers, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
+  addMember, applyTouch, askService, availableCustomers, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, offerTransfer, orderQuote,
   leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS, pullOver,
   selectServiceProduct, settleDayEvent, startNextDay, startService, transferStock, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
   fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
@@ -37,8 +37,8 @@ export function matchedBundle(id: CustomerId, product: ProductId): BundleId {
 export function playCustomer(
   state: Campaign,
   id: CustomerId,
-  options: { bundle?: BundleId; product?: ProductId; askIndex?: number; faceTrial?: boolean } = {},
-): { campaign: Campaign; outcome: SaleOutcome } {
+  options: { bundle?: BundleId; product?: ProductId; askIndex?: number; faceTrial?: boolean; transfer?: TransferChannel } = {},
+): { campaign: Campaign; outcome: SaleOutcome; transferred: ProductId | null } {
   const customer = CUSTOMERS[id];
   const product = options.product ?? bestFit(id);
   const bundle = options.bundle ?? matchedBundle(id, product);
@@ -56,6 +56,15 @@ export function playCustomer(
   }
   s = chooseBundle(s, bundle);
   if (RIVAL_IDS.includes(id)) s = respondToRival(s, "clarify");
+  // 调货这两行按钮长在报价单上，也就是她人在柜台、session 还开着的那一刻。
+  // 在柜台外打这通电话是模拟器的自创动作，规则会把排队中的她一起扣掉 —— 那不是玩家能按出来的东西。
+  let transferred: ProductId | null = null;
+  if (options.transfer && offerTransfer(s, product, orderQuote(id, product, bundle, false, s.stock[product]))) {
+    if (canTransferVia(s, product, options.transfer)) {
+      s = transferStock(s, product, options.transfer);
+      transferred = product;
+    }
+  }
   // 「登记我的接待」是两个 UI 都有的那一步，e2e 每次都按；模拟器不按就等于少测一步，
   // 留痕数会比真实玩出来的低。这里按下去，是为了量到玩家真的会拿到的证据。
   s = { ...s, activeSession: { ...s.activeSession!, claimed: true } };
@@ -67,7 +76,7 @@ export function playCustomer(
   assert.equal(closed.outcome.total, quote.total, `${id} 的成交金额和报价不符`);
   assert.equal(closed.outcome.minutes, quote.minutes, `${id} 占用的时间和报价不符`);
   assert.equal(closed.campaign.activeSession, null);
-  return { campaign: parseCampaign(JSON.stringify(closed.campaign))!, outcome: closed.outcome };
+  return { campaign: parseCampaign(JSON.stringify(closed.campaign))!, outcome: closed.outcome, transferred };
 }
 
 export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[]; pulled: number; transferred: ProductId[] };
@@ -76,10 +85,11 @@ export type RouteResult = { final: Campaign; dayTotals: number[]; served: number
 // roster=true 走的是"把私域也做掉"的那条线：现场先留小样、再要微信（各占一分钟），
 // 闭店事件之后按当晚顺序跟两句。加粉烧掉的是别人的耐心，所以这条线要拿柜台上的人换。
 // pull=true 是"只要有人开始看表就迎上去"：一支小样加离柜两分钟，救回一个的同时把另一个推向门口。
-// transfer 是"盯着抽屉的人"：接下一位之前先看她要的那支还剩几支，够了就不开口，
-// 不够连带就去打电话（罗曼走系统单 3 分钟，唐可私下拿 2 分钟但台账上什么都没有）。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null): RouteResult {
-  let s = openFloorState(INITIAL);
+// transfer 是"盯着抽屉的人"：她这一单正要被削的那一刻才打电话（罗曼走系统单 3 分钟，唐可私下拿 2 分钟但台账上什么都没有）。
+// transferWhen 用来单独量"在哪些缺口上开口"这件事值多少钱，默认每个缺口都打。
+// start 换的是柜台开局的那副牌：默认是第 1 天那一批货，传一份整周配货进来就是"配货一次性给到"的反事实。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign): RouteResult {
+  let s = openFloorState(start ?? INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
   let served = 0;
@@ -95,20 +105,20 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
         s = pullOver(s, waiting);
         pulled += 1;
       }
-      if (transfer && availableCustomers(s).includes(id)) {
-        const target = bestFit(id);
-        if (canTransferVia(s, target, transfer)) {
-          s = transferStock(s, target, transfer);
-          transferred.push(target);
-        }
-      }
-      if (!availableCustomers(s).includes(id)) continue;
       if (roster && s.samples > 0 && !s.members.includes(id)) {
         s = leaveSample(s, id);
         if (canAddMember(s, id)) s = addMember(s, id);
       }
-      const played = playCustomer(s, id, { ...(bundle === "matched" ? {} : { bundle }), faceTrial });
+      // 缺几件按报价单上同一个 wanted 算：这一位要几件、柜上还有几支，和玩家看到的是同一句话。
+      const target = bestFit(id);
+      const quote = orderQuote(id, target, bundle === "matched" ? matchedBundle(id, target) : bundle, false, s.stock[target]);
+      const clip = quote.wanted - quote.units;
+      const played = playCustomer(s, id, {
+        ...(bundle === "matched" ? {} : { bundle }), faceTrial,
+        transfer: transfer && clip > 0 && (!transferWhen || transferWhen(day, target, clip)) ? transfer : undefined,
+      });
       s = played.campaign;
+      if (played.transferred) transferred.push(played.transferred);
       served += played.outcome.units > 0 ? 1 : 0;
     }
     const event = dayEvent(s);

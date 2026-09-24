@@ -1,9 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, deliveryWord, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+
+// 配货按天到这件事要在晨会上念出来，而不是让玩家自己算抽屉：一早就一句，念的是规则给的那句。
+async function morningArrivals(page: Page, day: number) {
+  const arrivals = page.locator(".dawn-note").filter({ hasText: "品牌 · 到货" });
+  await expect(arrivals).toHaveCount(1);
+  await expect(arrivals).toContainText(deliveryWord(day));
+}
 
 async function start(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "开始新品活动周", exact: true }).click();
+  await morningArrivals(page, 1);
   await page.getByRole("button", { name: "开始营业", exact: true }).click();
   await page.getByRole("button", { name: "暂停", exact: true }).click();
 }
@@ -46,39 +54,55 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
     { people: [["安姐", "修护 ¥1,680", "批量追加"], ["周姐", "修护 ¥1,680"]], event: /只按额度给两套/ },
     { people: [["安姐", "持妆 ¥1,280", "两件连带"], ["沈薇", "柔焦 ¥980", "批量追加"]], event: /把评价分给柜台/ },
   ];
+  // 缺口在周中，不在周末：第 2 天柔焦被削一件，第 4 天修护整单开不出来。两句都写在报价单上。
+  const shortages: Record<string, { note: string; sold: boolean }> = {
+    "1/周姐": { note: "柜上只剩 1 支，这单最多开到 1 件。", sold: true },
+    "3/周姐": { note: "柜上这一支断了：抽屉里一支修护都没有，这一单开不出来。", sold: false },
+  };
   for (let day = 0; day < days.length; day++) {
     if (day > 0) {
+      await morningArrivals(page, day + 1);
+      if (day === 1) await page.screenshot({ path: "../audit/experience-v2/p14-morning-delivery.png" });
       await page.getByRole("button", { name: "开始营业", exact: true }).click();
       await page.getByRole("button", { name: "暂停", exact: true }).click();
     }
     for (let index = 0; index < days[day].people.length; index++) {
       const [name, product, bundle] = days[day].people[index];
-      await consult(page, name, product, bundle);
+      await consult(page, name, product);
       if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
         await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
       }
       // 连带按开口要的件数计时：只开到她自己说过的上限。
       if (bundle) await page.getByRole("button", { name: new RegExp("^" + bundle) }).click();
       await expect(page.getByRole("region", { name: "本单报价" })).toBeVisible();
-      // 一周的柔焦配货到第 5 天只剩 3 支：断货要在她面前先说清楚，也要当场给得出两条出路。
-      if (day === 4 && name === "沈薇") {
-        await expect(page.locator(".quote-note")).toHaveText("柜上只剩 3 支，这单最多开到 3 件。");
+      const shortage = shortages[`${day}/${name}`];
+      if (shortage) {
+        // 开不出来不等于没得救：断货那一行旁边就是那两条出路，一起摆在同一屏上。
+        await expect(page.locator(".quote-note")).toHaveText(shortage.note);
         await expect(page.locator(".stock-transfer button")).toHaveCount(2);
+        // 截图要真的把两行拍进去：这一列自己会滚，视口截图只拍到断货那一行不算证据。
+        await page.locator(".stock-transfer button").last().scrollIntoViewIfNeeded();
+        await page.screenshot({ path: `../audit/experience-v2/p14-${shortage.sold ? "clip" : "empty"}-day${day + 1}.png` });
       }
       await page.getByRole("button", { name: "登记我的接待", exact: true }).click();
       await page.getByRole("button", { name: "提出成交", exact: true }).click();
-      await expect(page.getByRole("heading", { name: name + "成交", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: name + (shortage && !shortage.sold ? "没买成" : "成交"), exact: true })).toBeVisible();
+      // 开不出来那张卡上写的出路要跟到货排期对得上：第 4 天还有一句"等大仓下一批"，第 5 天就没有。
+      if (shortage && !shortage.sold) {
+        await expect(page.getByText("等大仓下一批")).toBeVisible();
+        await page.screenshot({ path: "../audit/experience-v2/p14-blocked-card.png" });
+      }
       await page.getByRole("button", { name: index === days[day].people.length - 1 ? "处理闭店事件" : "回到现场", exact: true }).click();
     }
     await page.getByRole("button", { name: days[day].event }).click();
-    if (day === 3) await expect(page.locator(".large-number")).toContainText("¥17,430");
+    if (day === 3) await expect(page.locator(".large-number")).toContainText("¥14,770");
     await page.reload(); // Closed-day state and all money survive, no repeated event.
     await page.getByRole("button", { name: day === 4 ? "查看活动周结局" : "进入下一天", exact: true }).click();
   }
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
-  // 第 5 天沈薇的连带被抽屉削掉一支：¥980 是柜上没了，不是算错。与手机版、规则模拟器同一条路线同一个数。
-  await expect(page.locator(".large-number")).toContainText("¥24,610");
-  await expect(page.locator(".order-line")).toHaveCount(10);
+  // 第 4 天周姐那一单修护赶在到货前面：钱没开到，人也没买到。与手机版、规则模拟器同一条路线同一个数。
+  await expect(page.locator(".large-number")).toContainText("¥22,930");
+  await expect(page.locator(".order-line")).toHaveCount(9);
   await page.reload();
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
   // 达标之后页顶不能再念"还差 ¥0"。

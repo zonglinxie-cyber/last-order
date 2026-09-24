@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, canPullOver, canTransfer, canTransferVia, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, canPullOver, canTransferVia, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
   fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, QUESTIONS,
-  orderQuote, OBSERVE_MIN, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
+  orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
@@ -405,7 +405,7 @@ export default function Prototype() {
         {faceTrialShown && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[faceTrialShown]}</p>}
         {tested && faceTrialled && !faceTrialShown && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
         {tested && quote && <section className="mobile-order-quote" aria-label="本单报价">{quote.lines.map(line => <p key={line.label}><span>{line.label}</span><span>¥{line.amount.toLocaleString("zh-CN")}</span></p>)}{quote.note && <small>{quote.note}</small>}<b>整单 ¥{quote.total.toLocaleString("zh-CN")} · 你入账 ¥{quote.amount.toLocaleString("zh-CN")}{quote.shared ? "（各半）" : ""} · 现场 {quote.minutes} 分</b></section>}
-        {selectedProduct && tested && canTransfer(campaign, selectedProduct) && <div className="stock-transfer">{(["official", "tangke"] as TransferChannel[]).map(channel => <button type="button" key={channel} disabled={!canTransferVia(campaign, selectedProduct, channel)} onClick={() => callStock(channel)}>{transferLabel(campaign, selectedProduct, channel)}</button>)}</div>}
+        {selectedProduct && tested && quote && offerTransfer(campaign, selectedProduct, quote) && <div className="stock-transfer">{(["official", "tangke"] as TransferChannel[]).map(channel => <button type="button" key={channel} disabled={!canTransferVia(campaign, selectedProduct, channel)} onClick={() => callStock(channel)}>{transferLabel(campaign, selectedProduct, channel)}</button>)}</div>}
         {selectedProduct && tested && reaction === "positive" && <div className="bundle-row" role="group" aria-label="连带件数">{(Object.keys(BUNDLES) as BundleId[]).map(id => {
           const units = unitsWanted(customer, selectedProduct, id, "positive", stockLeft);
           return <button type="button" key={id} className={bundle === id ? "active" : ""} disabled={!units} onClick={() => { setBundle(id); saveSession({ bundle: id }); }}><span>{BUNDLES[id].label}</span><small>{units ? `${units} 件 ¥${(units * PRODUCTS[selectedProduct].price).toLocaleString("zh-CN")} · ${BUNDLES[id].units} 分` : stockLeft ? "她不会多拿" : "柜上这一支断了"}</small></button>;

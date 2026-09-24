@@ -65,12 +65,13 @@ test("一支都没有时，按钮说她不会多拿是假话：柜上这一支�
   await expect(page.getByRole("button", { name: /^三件整套/ })).toContainText("柜上这一支断了");
   // 开不出来不等于没得救：报价单旁边就是那两行，调一次就开得出来。
   await expect(page.getByRole("button", { name: /^请罗曼开调拨单/ })).toBeVisible();
+  await page.screenshot({ path: "../audit/experience-v2/p14-mobile-empty.png" });
   await page.getByRole("button", { name: "提出成交" }).click();
   await expect(page.getByRole("heading", { name: "沈薇没买成" })).toBeVisible();
   await expect(page.getByText("+ ¥0")).toBeVisible();
 });
 
-// 抽屉没见底就不该出现这一行：断货是柜台的缺口，不是每次都有的一个按钮。
+// 第一批货刚好够开她这一单，柜台上就不该出现这一行：开口读的是"这一单被不被削件"，不是抽屉见底没有。
 test("货还够开一整套连带时，柜台上不打这通电话", async ({ page }) => {
   await seedSave(page, {});
   await trialSoftOnShen(page);
@@ -96,6 +97,7 @@ for (const [width, height] of [[390, 667], [320, 568]] as const) {
       expect(metrics.clipped, `按钮文字在 ${width}×${height} 被切掉了`).toBeLessThanOrEqual(1);
     }
     // 矮屏上这一行住在可以滚的抽屉里：能真的点到，才算给玩家用。
+    await page.screenshot({ path: `../audit/experience-v2/p14-mobile-rows-${width}x${height}.png`, fullPage: true });
     await page.getByRole("button", { name: "请罗曼开调拨单 · 3 分钟", exact: true }).click();
     await expect(page.locator(".stock-transfer")).toHaveCount(0);
   });

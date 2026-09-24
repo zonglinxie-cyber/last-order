@@ -106,7 +106,8 @@ export type SaleOutcome = { good: boolean; amount: number; total: number; units:
 export type DawnNotice = { speaker: string; body: string };
 
 export const SAVE_KEY = "last-order-campaign-v1";
-export const SAVE_VERSION = 5;
+// 5 → 6：stock 的含义从"整周配货"变成"到今天早上为止到过的货"。字段没变，但一份 v5 存档过了新晨会会拿到超出配货的一批（量出来是柔焦 11、修护 9），所以整份拒收，不做合并。
+export const SAVE_VERSION = 6;
 export const TARGET = 21_000;
 export const ENERGY_LOCK = 18;
 export const RIVAL_IDS: CustomerId[] = ["shen", "returning", "zhou"];
@@ -127,6 +128,30 @@ export const MEMBER_MIN_FOR_CREDIT = 2;
 // 而柜上下来的是 10 / 7 / 4 —— 柔焦少一支、修护刚好见底、持妆多两套没人要。
 // 这个错位才是柜台真实的一天：断货的不是"卖得最贵的那支"，是配货没配上动销的那支。
 export const WEEK_ALLOCATION: Record<ProductId, number> = { soft: 10, glow: 4, repair: 7 };
+// 配货不是一次性倒在柜台上：活动周第一天先出一部分，剩下的按天从大仓补。
+// 批次是照着清洁路线的逐日动销排的（柔焦 3/3/1/0/4、修护 1/0/1/5/0、持妆 0/0/0/0/2），两处故意错位：
+// 第 2 天柔焦差一支（¥980）——那天"打电话""等明天的货""少开一件"三个选项都还活着；
+// 第 4 天修护差一支（¥1,680，而且是安姐接住的同事需求）——大仓把一批排晚了，正是这两行按钮唯一该亮的时候。
+// 便宜的那次缺口要用"等"解决，贵的那次要用人离柜三分钟去换：这才叫选择。
+export const DELIVERIES: Array<Record<ProductId, number>> = [
+  { soft: 3, glow: 1, repair: 1 },
+  { soft: 2, glow: 0, repair: 1 },
+  { soft: 2, glow: 1, repair: 2 },
+  { soft: 1, glow: 0, repair: 2 },
+  { soft: 2, glow: 2, repair: 1 },
+];
+export const FIRST_DAY_STOCK: Record<ProductId, number> = { ...DELIVERIES[0] };
+/** 今天到几支、明天排几支，晨会念的就是这一句。第 1 天那句顺带把"按天到"说清楚，
+ *  明天那一半是给"等下一批"这个选项留的：看不到后天的排期，等和调就不是选择，是猜。 */
+export function deliveryWord(day: number): string {
+  const units = (batch: Record<ProductId, number>) => (Object.keys(PRODUCTS) as ProductId[]).filter(product => batch[product] > 0).map(product => `${PRODUCTS[product].short} ${batch[product]} 支`);
+  const today = units(DELIVERIES[day - 1] ?? DELIVERIES[DELIVERIES.length - 1]);
+  const tomorrow = day < DELIVERIES.length ? units(DELIVERIES[day]) : [];
+  const head = day === 1
+    ? `这一周的配货不是一次性给的：今天先出${today.join("、")}，剩下的按天到。`
+    : today.length ? `今天大仓补到${today.join("、")}。` : "今天大仓没有新货，柜上剩多少就是多少。";
+  return tomorrow.length ? `${head}明天排的是${tomorrow.join("、")}。` : head;
+}
 // 一次调货的量按品牌调拨单的最小单位算：一张单三支。
 export const TRANSFER_UNITS = 3;
 // 剩到 3 支才开口：刚好够开一套，连带（4 支）已经开不出来。一支没断就去找人借货，罗曼会先问你在做什么。
@@ -139,7 +164,7 @@ export const TANGKE_STOCK_GATE = 45;
 export const INITIAL: Campaign = {
   version: SAVE_VERSION,
   day: 1, sales: 0, daySales: 0, trust: 50, compliance: 55, energy: 100, samples: 8, evidence: 0, standing: 50,
-  stock: { ...WEEK_ALLOCATION },
+  stock: { ...FIRST_DAY_STOCK },
   relations: { suman: 50, tangke: 38, luyao: 35, roman: 45 }, flags: [], members: [], history: [], dayServed: [], lost: [], eventDoneDays: [],
   waitMeters: { shen: 8, mei: 8 }, activeSession: null,
   shiftMinutes: 0, floorSeconds: 0, orders: [], finished: false,
@@ -597,6 +622,15 @@ function applyMemberRepeat(s: Campaign): Campaign {
 
 export function applyDawn(s: Campaign): Campaign {
   let next = s;
+  // 第 1 天那批已经在柜上（INITIAL.stock），从第 2 天起每早补一次；旗子挡住"重复过晨会 = 双倍到货"。
+  if (s.day > 1 && !hasFlag(next, `delivered:${s.day}`)) {
+    const batch = DELIVERIES[s.day - 1];
+    next = {
+      ...next,
+      stock: { soft: next.stock.soft + batch.soft, glow: next.stock.glow + batch.glow, repair: next.stock.repair + batch.repair },
+      flags: flag(next, `delivered:${s.day}`),
+    };
+  }
   if (s.day === 4 && hasFlag(s, "tang-owes-order") && !hasFlag(s, "tang-paid-order")) {
     next = { ...next, sales: next.sales + 2080, daySales: next.daySales + 2080, flags: flag(next, "tang-paid-order"), history: history(next, "唐可把一单伴娘妆转到你名下") };
   }
@@ -646,6 +680,7 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   for (const reading of [morningReview(s), counterCheck(s)]) {
     if (reading && hasFlag(s, reading.key)) notes.push({ speaker: reading.speaker, body: reading.body });
   }
+  notes.push({ speaker: "品牌 · 到货", body: deliveryWord(s.day) });
   if (s.day === 4 && hasFlag(s, "tang-paid-order")) notes.push({ speaker: "唐可 · 交接", body: "她把一单伴娘妆转到你名下。口头承诺这次兑现了。" });
   if (s.day === 5 && hasFlag(s, "zhao-daughter-order")) notes.push({ speaker: "赵青 · 微信", body: "妈妈说可以信你。我买了那支修护。" });
   if (s.day === 5 && hasFlag(s, "zhao-complaint")) notes.push({ speaker: "客诉 · 方敏", body: "赵女士女儿过敏，这条已经进档案。" });
@@ -1068,6 +1103,8 @@ export function resolveSale(s: Campaign, input: {
   const sold = units > 0;
   // 断货和推错是两件事：她没买是因为抽屉是空的，不是因为你判断错了，扣分不能共用同一档。
   const blocked = left <= 0;
+  // 断货那一屏有几条路，要看这一支后面还到不到：到货按天排，"等"只有在还有下一批的时候才是选项。
+  const restocks = s.day < DELIVERIES.length && DELIVERIES.slice(s.day).some(batch => batch[input.selectedProduct] > 0);
   // 现货削掉了多少连带，要和"她预算只够"分开说：前者是柜台的锅，后者是她的锅。
   const capped = sold && units < (tier === "negative"
     ? forcedUnits(customer, input.bundle)
@@ -1116,7 +1153,7 @@ export function resolveSale(s: Campaign, input: {
             : vetoMissed ? "她没有为错误判断买单。你连她在怕什么都没问出来。" : "她没有为这个方向买单。你丢掉一笔销售，但至少记住了这次反应。")
           + (knowing ? " 而且这半张脸你亲手画过：她知道不合适，你也知道。" : "")
           + (shared && sold ? ` 陆遥分走一半，你实际记入 ¥${amount.toLocaleString("zh-CN")}。` : ""))
-        + (blocked ? " 下一单之前，要么走调拨单，要么就得开口找人。" : ""),
+        + (blocked ? (restocks ? " 下一单之前有三条路：走调拨单、开口找人，或者等大仓下一批补上——如果她还等得起。" : " 下一单之前只剩两条路：走调拨单，或者开口找人。这一支到周末不会再补了。") : ""),
     },
   };
 }
@@ -1257,7 +1294,7 @@ export function orderQuote(id: CustomerId, product: ProductId, bundle: BundleId,
       : left < wanted ? `柜上只剩 ${left} 支，这单最多开到 ${units} 件`
         : tier === "mixed" ? "她最多只肯先拿一件"
           : units < BUNDLES[bundle].units ? `她的预算和用量只够 ${units} 件` : "";
-  return { lines, units, total, amount: shared ? total / 2 : total, shared, minutes, risky: tier === "negative", forced, tier, note };
+  return { lines, units, total, amount: shared ? total / 2 : total, shared, minutes, risky: tier === "negative", forced, tier, wanted, note };
 }
 
 export type TransferChannel = keyof typeof TRANSFER_MINUTES;
@@ -1265,6 +1302,12 @@ export type TransferChannel = keyof typeof TRANSFER_MINUTES;
 // 一周一次的杠杆：同一支货调两次，罗曼会先问你为什么这么能动。
 export function canTransfer(s: Campaign, product: ProductId) {
   return s.stock[product] <= TRANSFER_GATE && !hasFlag(s, `transfer:${product}`);
+}
+
+// 但这两行按钮只摆在她这一单正要被削的报价单上：柜上够开，就不劝人离柜打电话。
+// 强推那一单不算 —— 她本来就不带走，调三支回来还是不开张。
+export function offerTransfer(s: Campaign, product: ProductId, quote: { risky: boolean; units: number; wanted: number }) {
+  return !quote.risky && quote.units < quote.wanted && canTransfer(s, product);
 }
 
 // 抽屉见底之后只有两条真实出路：走系统的调拨单，或者找人私下拿货。

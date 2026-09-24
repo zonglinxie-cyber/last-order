@@ -4,7 +4,7 @@ import {
   advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, canPullOver, canTransfer, canTransferVia, chooseBundle, closeService, consultationRecord, CUSTOMERS, dayEvent, endingTitle,
   FACE_TRIAL_MINUTES, faceTrialService, floorCustomers, FLOOR_SECONDS_PER_ACTION, hasFlag, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, pullOver, pullOverLabel, patienceLeft, PULL_OVER_MINUTES, PULL_OVER_WINDOW, QUESTIONS,
   releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent, spendAttention, TANGKE_STOCK_GATE,
-  startNextDay, startService, TARGET, transferLabel, transferStock, TRANSFER_MINUTES, TRANSFER_UNITS, trialService, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId,
+  startNextDay, startService, STANDING_RISK, TARGET, offerTransfer, transferLabel, transferStock, TRANSFER_MINUTES, TRANSFER_UNITS, trialService, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, PRODUCT_IDS, runRoute } from "./clean-route.ts";
 
@@ -112,7 +112,8 @@ test("每个人都上脸，队伍后面就会少两个人", () => {
   assert.equal(everyTrial.served, 8);
   assert.equal(everyTrial.final.sales, 21_250, "量出来的值，不是写出来的");
   assert.ok(everyTrial.final.sales >= TARGET, "全都试也还过线，但余量只剩 ¥250");
-  assert.equal(everyTrial.final.standing, 44, "少了两位顾客，柜位那句话就贴着风险线");
+  assert.equal(everyTrial.final.standing, 36, "少了两位顾客，柜位那句话就掉到风险线以下了");
+  assert.ok(everyTrial.final.standing < STANDING_RISK, "这条线的代价就是第 5 天区域经理那句「评估是否保留」");
 });
 
 // 抽屉里该放几支，得先量出来这一周到底被谁吃掉多少：整周路线的件数按支拆开。
@@ -121,36 +122,49 @@ const byProduct = (route: { final: Campaign }) => PRODUCT_IDS
 
 test("一周的配货和整周的动销对不上：断的是柔焦，卖不动的是持妆", () => {
   const clean = runRoute();
-  assert.deepEqual(byProduct(clean), [10, 2, 7], "柔焦被配货削掉一支，修护刚好见底");
+  assert.deepEqual(byProduct(clean), [10, 2, 6], "柔焦卖到最后一支，修护被第 4 天那批没赶上的两支削掉，持妆只走两套");
   assert.equal(clean.final.stock.soft, 0);
-  assert.equal(clean.final.stock.repair, 0, "修护 7 支配得刚好用完：断货那天没人提醒你，是配货表没算动销");
+  assert.equal(clean.final.stock.repair, 1, "配到柜上 7 支、卖掉 6 支：少卖掉的那一支不是没人要，是当天没到");
   assert.equal(clean.final.stock.glow, 2, "配下来四套只卖掉两套：没人要的那支占着抽屉");
-  // 需求本来是 11 支：把电话打出去的那条线跑得动，才知道差的正好是一支。
+  // 需求本来是 11 支柔焦、7 支修护：把电话打在缺口上的那条线跑得动，才知道差的正好是那几支。
   assert.deepEqual(byProduct(runRoute("matched", false, false, true, "official")), [11, 2, 7]);
   // 另外两条线一起量：配货比例不是照着某一条路线配的，是照着"整周最多被要多少"配的。
   assert.deepEqual(byProduct(runRoute("matched", false, true)), [10, 2, 5]);
   assert.deepEqual(byProduct(runRoute("bulk")), [8, 2, 5], "人人都按最大档报，也吃不满配货：断的不是量不够，是比例不对");
+  // 只肯各带走一件的那条线，五天下来抽屉里还剩一半 —— 到货节奏不是靠"卖光"来证明的。
+  assert.deepEqual(byProduct(runRoute("single")), [5, 1, 4]);
 });
 
-// 一次杠杆值多少钱要拿一整周量，而且要看你手里还有没有耐心：同一通电话在两条线上是两个结果。
-test("调货救的是站在柜台前的人，不是数字：有余量才打得出去这通电话", () => {
+// 一次杠杆值多少钱要拿一整周量。这一轮把电话改回它真正的按法：两行按钮长在报价单上，
+// 也就是她人在柜台、session 还开着的那一刻 —— 规则里离柜那三分钟扣的是排队的人，不含正在接待的这位。
+// 上一版量成"净亏 ¥700"，是因为模拟器在两位顾客之间打这通电话，那个时刻两个界面都给不出来。
+test("调货救的是正在被削的那一单：两支货两条路，钱和台账各付一半", () => {
   const stocked = runRoute("matched", false, false, true, "official");
-  assert.equal(stocked.final.sales, 25_590, "迎上去那条线省下的耐心刚好够离柜：¥980 挣回来，一个人都没多走");
+  assert.equal(stocked.final.sales, 25_590, "两次缺口都打电话：¥2,660 挣回来，一个人都没多走");
   assert.deepEqual(stocked.lost, []);
-  assert.equal(stocked.final.compliance, 91);
-  // 两次电话里有一次是白花的：修护本来就刚好配够整周，为它离柜三分钟什么也没换回来。
-  assert.deepEqual(stocked.transferred, ["repair", "soft"]);
-  const blind = runRoute("matched", false, false, false, "official");
-  assert.deepEqual(blind.lost, ["zhou2"], "清洁路线没有余量：为打电话离柜，队伍最后那位走了");
-  assert.equal(blind.final.sales, 23_910, "同一通电话在清洁路线上净亏 ¥700，所以它不是刷营业额的按钮");
-  assert.equal(blind.final.compliance, 90, "走系统单：台账上多了一行你的名字");
-  const privateCall = runRoute("matched", false, false, false, "tangke");
-  assert.equal(privateCall.final.sales, 23_910, "私下拿货挣的钱和调拨单一模一样");
-  assert.equal(privateCall.final.compliance, 68, "差的只是记录：一条留名，一条没有");
+  assert.equal(stocked.final.compliance, 91, "走系统单：台账上多两行你的名字");
+  assert.deepEqual(stocked.transferred, ["soft", "repair"], "第 2 天柔焦、第 4 天修护，各一次");
+  assert.equal(runRoute("matched", false, false, false, "official").final.sales, 25_590, "迎不迎上去都是这个数：这两通电话没有花掉别人的耐心");
+  const blind = runRoute("matched", false, false, false, "tangke");
+  assert.deepEqual(blind.transferred, ["repair"], "第 2 天那通她没接：唐可起步不认你，只有第 4 天的修护拿到了");
+  assert.equal(blind.final.sales, 24_610, "同一批缺口，私下拿货比调拨单少挣 ¥980");
+  assert.equal(blind.final.compliance, 78, "差的只是记录：一条留名，一条系统里没有这张单");
   const tight = runRoute("matched", true, false, false, "official");
-  assert.equal(tight.final.sales, 18_310, "全都上脸那条线只剩 ¥250 余量，再为调货离柜三分钟就把这一周赔掉");
-  assert.deepEqual(tight.lost, ["mei", "zhou2", "returning"], "第 5 天那位带连带的正是打电话要救的人");
-  assert.ok(tight.final.sales < TARGET);
+  assert.equal(tight.final.sales, 22_230, "全都上脸那条线也能靠这通电话多挣 ¥980，但柜位仍然在风险线以下");
+  assert.deepEqual(tight.lost, ["mei", "zhou2"]);
+  assert.equal(tight.final.standing, 44);
+  // 一次都不打也不该出局：清洁路线整周仍然过五日目标，只是差着这两通电话能挣的 ¥2,660。
+  assert.ok(runRoute().final.sales >= TARGET);
+});
+
+// 两行按钮一天只在该亮的时候亮：柜上够开这一单，就不劝人离柜。
+test("报价单没有被削件数时，柜台上不出现调货那两行", () => {
+  const quoted = (product: ProductId, left: number, bundle: BundleId = "set") => orderQuote("zhou", product, bundle, false, left);
+  assert.equal(offerTransfer({ ...INITIAL, stock: { soft: 1, glow: 1, repair: 1 } }, "soft", quoted("soft", 1)), true, "她开口三件、柜上一件：这一单正要被削，出路得摆在报价单下面");
+  assert.equal(offerTransfer({ ...INITIAL, stock: { soft: 10, glow: 10, repair: 10 } }, "soft", quoted("soft", 10)), false, "货够，就不该有这两行");
+  assert.equal(offerTransfer({ ...INITIAL, stock: { soft: 1, glow: 1, repair: 1 } }, "soft", { risky: true, units: 0, wanted: 3 }), false, "强推那一单她本来就不带走，调三支回来还是不开张");
+  const called = transferStock({ ...INITIAL, stock: { soft: 1, glow: 1, repair: 1 } }, "soft", "official");
+  assert.equal(offerTransfer(called, "soft", quoted("soft", called.stock.soft)), false, "同一支货一周只调一次，调完这一周不再开口");
 });
 
 // 一次杠杆值多少钱，要拿一整周量：只要有人看表就迎，救回一个的同时把另一个推向门口。
@@ -158,13 +172,13 @@ test("迎上去是保险不是收入：三条整周路线的钱和走的人一�
   const greedy = runRoute("matched", false, false, true);
   assert.equal(greedy.pulled, 2);
   assert.deepEqual(greedy.lost, []);
-  assert.equal(greedy.final.sales, 24_610, "不动这一行的清洁路线一分不差：这一步不能拿来刷营业额");
+  assert.equal(greedy.final.sales, 22_930, "不动这一行的清洁路线一分不差：这一步不能拿来刷营业额");
   assert.equal(greedy.final.samples, 6, "迎出去的两支，是从柜台那两支里出的");
   const trials = runRoute("matched", true, false, true);
   assert.equal(trials.pulled, 3);
   assert.deepEqual(trials.lost, ["mei", "zhou2"], "上脸那条线该走的两位，窗口开在别人身上就救不到她");
   assert.equal(trials.final.sales, 21_250);
-  assert.equal(trials.final.standing, 44);
+  assert.equal(trials.final.standing, 36);
   const roster = runRoute("matched", false, true, true);
   assert.equal(roster.pulled, 2);
   assert.equal(roster.final.sales, 28_530);
@@ -392,8 +406,8 @@ test("the closing response is recorded once and survives reload", () => {
 
 test("an actual five-day route survives saves and still needs the final order", () => {
   const clean = runRoute();
-  assert.equal(clean.served, 10);
-  assert.equal(clean.final.orders.length, 10);
+  assert.equal(clean.served, 9, "十位里第 4 天周姐带回来的那单修护当天一支都没到，开不出单就不算接到");
+  assert.equal(clean.final.orders.length, 9, "开不出单的那一位不留流水：账上的钱和抽屉里的支数才对得上");
   assert.equal(clean.final.finished, true);
   assert.equal(endingTitle(clean.final), "你留下了，而且没变成她们");
   const reloaded = parseCampaign(JSON.stringify(clean.final))!;
