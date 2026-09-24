@@ -101,13 +101,33 @@ export function customerMood(customer: Customer, meter: number) {
   return "观望";
 }
 
-export function customerBubble(customer: Customer, meter: number, beat: number, resumed: boolean) {
-  const lines = resumed
-    ? ["我还在这儿。", customer.opening]
-    : meter <= 2
-      ? ["你们还接不接？", "我真的要走了。"]
-      : [customer.opening, customer.need, customer.rival ? "对面也在看我。" : "我时间不多。"];
-  return lines[Math.abs(beat) % lines.length];
+/** 现场每一拍是 380 毫秒（`Prototype.tsx` 的 setInterval），而台词中位 12~18 字：
+    按拍子轮台词等于一句话只闪 380 毫秒，谁都读不完。所以这里改成"一句台词对一个状态"——
+    状态不变，话就不变；话变了，是因为现场真的变了（她开始看表、陆遥靠过来了）。 */
+export function firstClause(line: string) {
+  const cut = line.indexOf("。");
+  return cut < 0 ? line : line.slice(0, cut + 1);
+}
+
+export function customerSpeech(customer: Customer, meter: number, resumed: boolean, rivalNear: boolean, whole = false) {
+  if (resumed) return "我还在这儿。";
+  if (meter <= 1) return "你们还接不接？";
+  if (meter <= 2) return "我真的要走了。";
+  if (rivalNear) return "对面也在看我。";
+  if (meter <= customer.patience * 0.5) return "我时间不多。";
+  return whole ? customer.opening : firstClause(customer.opening);
+}
+
+/** 从"没被点中的在场人"里挑一个开口的：按"你该先看谁"排，不按拍子轮。
+    陆遥靠过来就先听她（这是截胡的预警），否则听耐心最少的那位客人，都没有客人就听同事。 */
+export function voiceTarget(candidates: FloorFocus[], meters: Campaign["waitMeters"], closeness: number): FloorFocus | null {
+  if (closeness > .4) {
+    const luyao = candidates.find(entry => entry.kind === "staff" && entry.id === "luyao");
+    if (luyao) return luyao;
+  }
+  const waiting = candidates.filter(entry => entry.kind === "customer")
+    .sort((a, b) => (a.kind === "customer" ? meters[a.id] ?? CUSTOMERS[a.id].patience : 0) - (b.kind === "customer" ? meters[b.id] ?? CUSTOMERS[b.id].patience : 0));
+  return waiting[0] ?? candidates[0] ?? null;
 }
 
 export function staffAction(id: FloorStaffId, contested: boolean) {
@@ -119,13 +139,8 @@ export function staffMood(id: FloorStaffId, relation: number) {
   return relation >= 50 ? "压着场子" : "在盯数字";
 }
 
-export function staffBubble(id: FloorStaffId, contested: boolean, beat: number) {
-  const lines = id === "luyao"
-    ? contested
-      ? ["这单我也可以做。", "她之前用过我们家持妆。", "你要先接谁？"]
-      : ["我在对面看着。", "你们今天排面一般。"]
-    : ["今日排名已更新。", "客单，别只顾着聊天。", "入口位不能空太久。"];
-  return lines[Math.abs(beat) % lines.length];
+export function staffSpeech(id: FloorStaffId, contested: boolean) {
+  return id === "luyao" ? (contested ? "你要先接谁？" : "我在对面看着。") : "入口位不能空太久。";
 }
 
 export function waitCopy(meter: number, max: number) {

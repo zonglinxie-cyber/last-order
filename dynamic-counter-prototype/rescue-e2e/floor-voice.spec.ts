@@ -58,6 +58,29 @@ for (const state of STATES) {
   });
 }
 
+test("沙盘面板那句跟着她的耐心走，且空地按'先看谁'挑人", async ({ page }) => {
+  test.setTimeout(60_000);
+  // 梅女士是按先后来排的第二位，却是更等不住的那一位：这样"按耐心挑"和"按先来挑"才分得开。
+  await enterFloor(page, { day: 1, waitMeters: { shen: 8, mei: 2 } });
+  await pick(page, "梅女士");
+  const seen = await read(page);
+  // 她已经在看表了：面板原来写死开场白，等于把"还有两分钟"这件事抹掉。
+  expect(seen.panel[0], `梅女士只剩 2 分耐心，面板还念「${seen.panel[0]}」`).toBe("我真的要走了。");
+  expect(seen.voiceName, "空地那句又挂回你点中的人身上").not.toBe("梅女士");
+  // 这张要在点中她的时候拍：面板那句就是本轮要改的东西，晚一步面板就换成同事了。
+  await page.screenshot({ path: `../audit/experience-v2/p22-sandbox-panel-看表那一位.png` });
+  // 点中的是同事时，两位客人都在"没点中"那一堆里，空地该报更等不住的那一位。
+  await pick(page, "陆遥");
+  const staff = await read(page);
+  expect(staff.voiceName, `空地念的是${staff.voiceName}，可梅女士只剩 2 分`).toBe("梅女士");
+  expect(staff.speaking.join("|")).toContain("梅女士");
+  await page.screenshot({ path: `../audit/experience-v2/p22-sandbox-floor-空地挑更等不住的那位.png` });
+  // 隔 1.2 秒（三拍多）再拍一张：两张里那句话必须是同一句，这是"停得住"的视觉证据。
+  await page.waitForTimeout(1200);
+  expect((await read(page)).voiceName, "1.2 秒之后空地换人了").toBe("梅女士");
+  await page.screenshot({ path: `../audit/experience-v2/p22-sandbox-floor-1.2秒后还是这句.png` });
+});
+
 test("沙盘空地那句报的是另一个还在等的人，替你把'只能先抓住一个'摆出来", async ({ page }) => {
   test.setTimeout(60_000);
   await enterFloor(page, null);

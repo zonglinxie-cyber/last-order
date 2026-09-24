@@ -9,9 +9,9 @@ import {
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
 import {
-  customerAction, customerBubble, customerHome, customerMood, defaultFocus, formatClock,
-  isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffBubble,
-  staffMood, staffRelation, stepPose, waitCopy, WAYPOINTS, type ActorPose, type FloorFocus,
+  customerAction, customerHome, customerMood, customerSpeech, defaultFocus, formatClock,
+  isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffSpeech,
+  staffMood, staffRelation, stepPose, voiceTarget, waitCopy, WAYPOINTS, type ActorPose, type FloorFocus,
   type FloorSpeed, type FloorStaffId,
 } from "./floorLife";
 
@@ -468,9 +468,10 @@ export default function Prototype() {
   const inspectMood = focusCustomer
     ? customerMood(focusCustomer, focusMeter)
     : focus?.kind === "staff" ? staffMood(focus.id, focus.id === "luyao" ? campaign.relations.luyao : campaign.relations.roman) : "当班";
+  const closeness = rivalApproach(available, campaign.waitMeters, floorElapsed);
   const inspectQuote = focusCustomer
-    ? customerBubble(focusCustomer, focusMeter, floorBeat, focusResumed)
-    : focus?.kind === "staff" ? staffBubble(focus.id, contested, floorBeat) : "点现场里的人，先看她在做什么。";
+    ? customerSpeech(focusCustomer, focusMeter, focusResumed, closeness > .4 && focusCustomer.rival, true)
+    : focus?.kind === "staff" ? staffSpeech(focus.id, contested) : "点现场里的人，先看她在做什么。";
   const liveFeed = partyLines(available, campaign, contested);
   // 控制台只列顶上那行和身份块没念过的人：同一个人的状态在一屏里说两遍，面板就只剩占地方——而它正压着站在柜台前的人。
   const focusName = focusCustomer?.name ?? focusStaff?.name ?? null;
@@ -501,18 +502,20 @@ export default function Prototype() {
     face: id === "luyao" ? 1 : -1,
   });
   // 一次只让一个人开口，并且把这句话放在人群上方的空墙上：390 宽的柜台上，气泡压在别人身上就两败俱伤。
-  // 开口的永远是"面板没点中的那个人"：她的话在下面引号里已经念过一遍，墙上再飘同一条不叫两个槽，叫一屏两遍。
+  // 开口的还是"面板没点中的那个人"（P21），但挑人改成看现场、不看拍子：陆遥靠过来就轮到她，否则轮到耐心最少的那一位。
+  // 按拍子轮一圈等于一句话只闪 380 毫秒，读不完，也答不出这一屏真正要问的"该先看谁"。
   const focusKey = `${focus?.kind}:${focus?.id}`;
-  const onFloor = [...available.map(id => ({ kind: "customer" as const, id })), ...staffOnFloor.map(id => ({ kind: "staff" as const, id }))]
+  const meterLeft = (id: CustomerId) => campaign.waitMeters[id] ?? CUSTOMERS[id].patience;
+  const othersOnFloor: FloorFocus[] = [...available.map(id => ({ kind: "customer" as const, id })), ...staffOnFloor.map(id => ({ kind: "staff" as const, id }))]
     .filter(entry => `${entry.kind}:${entry.id}` !== focusKey);
-  const speaker = onFloor.length ? onFloor[floorBeat % onFloor.length] : null;
+  const speaker = voiceTarget(othersOnFloor, campaign.waitMeters, closeness);
   const speaking = speaker?.kind === "customer"
     ? {
       left: customerPose(speaker.id, available.indexOf(speaker.id)).left,
-      line: customerBubble(CUSTOMERS[speaker.id], campaign.waitMeters[speaker.id] ?? CUSTOMERS[speaker.id].patience, floorBeat, campaign.activeSession?.customerId === speaker.id),
+      line: customerSpeech(CUSTOMERS[speaker.id], meterLeft(speaker.id), campaign.activeSession?.customerId === speaker.id, closeness > .4 && CUSTOMERS[speaker.id].rival),
     }
     : speaker?.kind === "staff"
-      ? { left: staffPose(speaker.id).left, line: staffBubble(speaker.id, contested, floorBeat) }
+      ? { left: staffPose(speaker.id).left, line: staffSpeech(speaker.id, contested) }
       : null;
 
   return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}>

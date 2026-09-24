@@ -24,6 +24,7 @@ function readSlots(page: Page) {
       bubble: text(".actor-bubble.stage-bubble"),
       quote: text(".inspect-quote"),
       focusName: text(".player-identity strong").split(" · ")[0],
+      speakingName: [...document.querySelectorAll(".floor-actor.is-speaking .actor-tag")].map(el => (el.textContent ?? "").trim()),
       small: text(".player-identity small"),
       hint: text(".player-console > p"),
       party: [...document.querySelectorAll(".party-list li")].map(el => (el.textContent ?? "").trim()),
@@ -34,12 +35,13 @@ function readSlots(page: Page) {
   });
 }
 
-/** 墙上那句每 380 毫秒换一拍；采满一整轮，确认不是"这一拍刚好错开"。 */
+/** 墙上那句话现在只跟着现场状态变，不跟着拍子变：连着采几次，它必须一句都没换过。
+    间隔取 300 毫秒（比一拍 380 毫秒还短），换算是"这句话停得住"，不是"这一拍刚好没跳到"。 */
 async function sampleBeats(page: Page, times = 5) {
   const seen: string[] = [];
   for (let i = 0; i < times; i++) {
     seen.push((await readSlots(page)).bubble);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(300);
   }
   return seen;
 }
@@ -56,8 +58,14 @@ for (const day of [2, 4]) {
       const slots = await readSlots(page);
       const beats = await sampleBeats(page);
       expect(slots.both, `${who}：同一个人既被点中又在开口`).toEqual([]);
-      expect(beats.filter(Boolean).length, `${who}：墙上一直是空的，这一屏没有别的人在活`).toBeGreaterThan(0);
-      for (const line of beats) expect(line, `${who}：墙上飘的就是面板里那句`).not.toBe(slots.quote);
+      // 说话的人必须恰好一个，而且不是你刚点中的那个（P21）。以前这里比的是"墙上那句 ≠ 面板那句"，
+      // 但两位客人都到了要走的档位时本来就同说「我真的要走了。」——那是两个人，不是一屏两遍，所以改按人比。
+      expect(slots.speakingName.length, `${who}：墙上说话的人不是一个`).toBe(1);
+      expect(slots.speakingName[0], `${who}：墙上开口的就是你点中的${who}`).not.toBe(slots.focusName);
+      expect(beats.filter(Boolean).length, `${who}：墙上一直是空的，这一屏没有别的人在活`).toBe(beats.length);
+      // 一句话从头到尾没换过拍子（P22），而且短到停这几秒就读得完。
+      expect(new Set(beats).size, `${who}：墙上那句话在跳：${beats.join(" / ")}`).toBe(1);
+      expect([...beats[0]].length, `${who}：墙上那句 ${beats[0]} 有 ${[...beats[0]].length} 字，380 毫秒一档根本读不完`).toBeLessThanOrEqual(18);
       // 页顶那行是"还有谁在等"：现场有别人的时候，它不重复报面板已经点名的人。
       if (slots.onFloor.length > 1) expect(slots.feed.startsWith(`${who} · `), `页顶又念了一遍${who}`).toBe(false);
       expect(slots.hint, "体力的那句在身份块和提示行各念一遍").not.toBe(slots.small);
@@ -66,7 +74,9 @@ for (const day of [2, 4]) {
       expect(new Set(named).size, `这一屏报的人重了：${named.join(" / ")}`).toBe(named.length);
       expect(named.filter(name => slots.onFloor.includes(name)).length, `现场有 ${slots.onFloor.length} 个人，这一屏只报出 ${named.length} 个`).toBe(slots.onFloor.length);
     }
+    // 两张同名不同号：P21 的记录按 p21-* 引证，本轮之后现场是 P22 的状态，两个名字都留下。
     await page.screenshot({ path: `../audit/experience-v2/p21-mobile-floor-day${day}.png` });
+    await page.screenshot({ path: `../audit/experience-v2/p22-mobile-floor-day${day}.png` });
   });
 }
 

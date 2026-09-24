@@ -251,14 +251,19 @@ export default function CounterGame() {
   // 空地上那一格放不下整句（窄屏 258px 会被省略号截掉），所以只念她开口那一句的头一段；整句在下面那块面板里念。
   const firstClause = (line: string) => { const cut = line.indexOf("。"); return cut < 0 ? line : line.slice(0, cut + 1); };
   const VOICE_LINE: Partial<Record<CustomerId, string>> = { mei: "我只有十分钟。" };
-  const customerLine = (id: CustomerId) => {
+  const customerLine = (id: CustomerId, whole = false) => {
     const c = CUSTOMERS[id];
-    return (game.waitMeters[id] ?? c.patience) <= 2 ? "我真的要走了。" : VOICE_LINE[id] ?? firstClause(c.opening);
+    const meter = game.waitMeters[id] ?? c.patience;
+    if (meter <= 1) return "你们还接不接？";
+    if (meter <= 2) return "我真的要走了。";
+    return whole ? c.opening : VOICE_LINE[id] ?? firstClause(c.opening);
   };
   // 一次只让一个人开口，话落在柜台外的空地上：气泡飘在人头上一律会压住旁边那个人的名字。
   // 空地那一句只念"你没点中的那个人"：选中的人那句话面板已经念过一遍，同一屏念她两遍就白占一格，
   // 而另一位的开口才是这一屏缺的信息——第 1 天的副标题正是"两个顾客，只能先抓住一个"。
-  const voiceId: Focus | null = contestedId && pressure > .4 ? "luyao" : available.find(id => id !== focus) ?? null;
+  // 点中的是她的同事时，替她开口的那位按"还剩多少耐心"排：这一格要回答的是先看谁，不是谁先来。
+  const voiceId: Focus | null = contestedId && pressure > .4 && focus !== "luyao" ? "luyao"
+    : available.filter(id => id !== focus).sort((a, b) => (game.waitMeters[a] ?? CUSTOMERS[a].patience) - (game.waitMeters[b] ?? CUSTOMERS[b].patience))[0] ?? null;
   const speaking = voiceId && {
     id: voiceId,
     name: voiceId === "luyao" ? STAFF.luyao.name : CUSTOMERS[voiceId as CustomerId].name,
@@ -369,7 +374,7 @@ export default function CounterGame() {
       {/* dock 这一格在接待时不重复她自己的说法（右上面板已经念过），体力那句也只在栏位收起来的那一档才接手念。 */}
       <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div>{screen === "consultation" && customer ? null : <small>{selectedCustomer?.descriptor ?? selectedStaff?.role}</small>}<h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2>{screen === "consultation" && session ? <p className="rail-fallback">{energyWord(game.energy)}</p> : <p>{selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p>}</div></section>
       <div className="dock-content">
-        {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{selectedCustomer.opening}</p></div>
+        {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{customerLine(selectedCustomer.id, true)}</p></div>
           {available.includes(selectedCustomer.id) ? <div className="floor-actions">
             <button className="gold-button" disabled={(!session && game.energy < ENERGY_LOCK) || Boolean(session && session.customerId !== selectedCustomer.id)} onClick={() => beginCustomer(selectedCustomer.id)}>{session?.customerId === selectedCustomer.id ? "继续接待" + selectedCustomer.name : "接待" + selectedCustomer.name}</button>
             {/* 她已经不在你这一头了：这一步是拿样品和离柜的两分钟，换她重新站回柜台前。 */}
