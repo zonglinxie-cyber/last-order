@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
   addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
-  fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, QUESTIONS,
+  fitOf, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, PULL_OVER_RETURN, QUESTIONS,
   orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
@@ -409,7 +409,7 @@ export default function Prototype() {
         </form>}
         {askedQuestion !== null && (!tested || reaction === "negative" || reaction === "mixed") && <div className="product-options">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button type="button" key={id} className={selectedProduct === id ? "active" : ""} onClick={() => selectProduct(id)}><i className={`product-art product-art-${id}`} /><span>{PRODUCTS[id].short}</span><small>¥{PRODUCTS[id].price}</small></button>)}</div>}
         {selectedProduct && !tested && <p className="product-note">{PRODUCTS[selectedProduct].note}</p>}
-        {tested && !faceTrialled && <button type="button" className="face-trial-action" onClick={faceTrial}>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</button>}
+        {tested && !faceTrialled && <button type="button" className="face-trial-action" onClick={faceTrial}><b>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</b><small>{FACE_TRIAL_RETURN}</small></button>}
         {faceTrialShown && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[faceTrialShown]}</p>}
         {tested && faceTrialled && !faceTrialShown && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
         {tested && quote && <section className="mobile-order-quote" aria-label="本单报价">{quote.lines.map(line => <p key={line.label}><span>{line.label}</span><span>¥{line.amount.toLocaleString("zh-CN")}</span></p>)}{quote.note && <small>{quote.note}</small>}<b>整单 ¥{quote.total.toLocaleString("zh-CN")} · 你入账 ¥{quote.amount.toLocaleString("zh-CN")}{quote.shared ? "（各半）" : ""} · 现场 {quote.minutes} 分</b></section>}
@@ -571,8 +571,8 @@ export default function Prototype() {
       <div className="dock-actions">
         {serveCustomer && <button className="primary-action" type="button" disabled={serveLocked} aria-label={`观察${serveCustomer.name}`} onClick={() => beginCustomer(serveCustomer.id)}>{campaign.activeSession?.customerId === serveCustomer.id ? `继续接待${serveCustomer.name}` : `观察${serveCustomer.name}`}</button>}
         {focusCustomer && <button className="member-action" type="button" disabled={!canAddMember(campaign, focusCustomer.id)} aria-label={`加微信${focusCustomer.name}`} onClick={() => setCampaign(s => addMember(s, focusCustomer.id))}>{campaign.members.includes(focusCustomer.id) ? `${focusCustomer.name}已在名单` : canAddMember(campaign, focusCustomer.id) ? "加微信 · 1 分钟" : "加微信 · 要先有接触"}</button>}
-        {/* 她已经往中庭那边走过去了：这一条整行放，按钮上直接写清楚花什么、什么时候轮得到。 */}
-        {focusCustomer && !campaign.dayServed.includes(focusCustomer.id) && !campaign.lost.includes(focusCustomer.id) && <button className="member-action pull-action" type="button" disabled={!canPullOver(campaign, focusCustomer.id)} aria-label={`迎上去 ${focusCustomer.name}`} onClick={() => setCampaign(s => pullOver(s, focusCustomer.id))}>{pullOverLabel(campaign, focusCustomer.id)}</button>}
+        {/* 她已经往中庭那边走过去了：这一条整行放，按钮上直接写清楚花什么、什么时候轮得到；请得动的时候下面一行写买到什么。 */}
+        {focusCustomer && !campaign.dayServed.includes(focusCustomer.id) && !campaign.lost.includes(focusCustomer.id) && <button className="member-action pull-action" type="button" disabled={!canPullOver(campaign, focusCustomer.id)} aria-label={canPullOver(campaign, focusCustomer.id) ? `迎上去 ${focusCustomer.name} · ${PULL_OVER_RETURN}` : `迎上去 ${focusCustomer.name}`} onClick={() => setCampaign(s => pullOver(s, focusCustomer.id))}>{pullOverLabel(campaign, focusCustomer.id)}{canPullOver(campaign, focusCustomer.id) && <small>{PULL_OVER_RETURN}</small>}</button>}
       </div>
       <p>{floorHint}</p>
     </section>

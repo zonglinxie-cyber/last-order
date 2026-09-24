@@ -1,6 +1,6 @@
 // 私域加粉是手机上够得到的一步：不藏在二级页，也不免费。
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, INITIAL, PULL_OVER_MINUTES, RECORDS_MIN, SAVE_KEY, SAVE_VERSION, complianceWord, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, INITIAL, PULL_OVER_MINUTES, PULL_OVER_RETURN, RECORDS_MIN, SAVE_KEY, SAVE_VERSION, complianceWord, evidenceWord } from "../src/campaign";
 
 const seed = (page: Page, patch: Record<string, unknown>) => page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
   key: SAVE_KEY, value: { ...INITIAL, version: SAVE_VERSION, ...patch },
@@ -56,10 +56,18 @@ test("迎上去把已经在看表的人请回柜台，花掉的那两支各有�
   await page.getByRole("button", { name: "停", exact: true }).click();
   const pull = page.getByRole("button", { name: /^迎上去/ });
   // 场控默认落在最急的那位身上（周姐只剩两拍）；按不动的理由直接写在按钮上，不用翻手册。
-  await expect(pull).toHaveText(`迎上去 · 1 支小样 · ${PULL_OVER_MINUTES} 分钟`);
+  await expect(pull).toContainText(`迎上去 · 1 支小样 · ${PULL_OVER_MINUTES} 分钟`);
+  // 代价写在正文那一行，买到什么写在第二行：这一支花在中庭，就不记在她回柜的账上。
+  await expect(pull.locator("small")).toHaveText(PULL_OVER_RETURN);
+  // 第二行不是"小字备注"：手机上它和正文同字号，否则等于没写。
+  expect(await pull.locator("small").evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
+  expect(await pull.evaluate(el => parseFloat(getComputedStyle(el).height))).toBeGreaterThanOrEqual(44);
+  await page.screenshot({ path: "../audit/experience-v2/p23-mobile-pull-over-offer.png" });
   await expect(pull).toBeEnabled();
   await page.getByRole("button", { name: "查看安姐", exact: true }).click();
   await expect(pull).toHaveText("迎上去 · 她还没开始看表");
+  // 按不动的时候不念收益，否则那句"换她走回柜台前"就成了对一个按不下去的按钮的许诺。
+  await expect(pull.locator("small")).toHaveCount(0);
   await expect(pull).toBeDisabled();
   await page.getByRole("button", { name: "查看周姐", exact: true }).click();
   const before = await saved();
@@ -84,6 +92,65 @@ test("迎上去把已经在看表的人请回柜台，花掉的那两支各有�
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
   await page.screenshot({ path: "../audit/experience-v2/mobile-pull-over.png" });
 });
+
+// 第二行不是白给的：它把整行按钮顶高一格，而这一格到底吃在哪，只有按屏幕高度量得出来。
+// 每一档单独一个用例、视口在 goto 之前就定好 —— 中途 setViewportSize 不改外壳版式（P18 记过一遍，见 docs/DESIGN.md）。
+for (const size of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+  test.describe(`${size.width}×${size.height} 那一档`, () => {
+    test.use({ viewport: size, hasTouch: true, isMobile: true });
+    test("迎上去多出来那一行，在矮屏上也还在眼下", async ({ page }) => {
+      await page.goto("/");
+      await seed(page, { day: 4, sales: 12_000, daySales: 0, eventDoneDays: [1, 2, 3], flags: ["served:zhou:good"], waitMeters: { anjie: 3, zhou2: 2 } });
+      await page.reload();
+      await page.getByRole("button", { name: "继续第 4 天" }).click();
+      await page.getByRole("button", { name: "开始营业" }).click();
+      await page.getByRole("button", { name: "停", exact: true }).click();
+      const pull = page.getByRole("button", { name: /^迎上去/ });
+      await expect(pull.locator("small")).toHaveText(PULL_OVER_RETURN);
+      const band = await page.evaluate(() => {
+        const box = (el: Element | null) => el?.getBoundingClientRect() ?? null;
+        let tagBottom = 0;
+        document.querySelectorAll(".actor-tag").forEach(el => { tagBottom = Math.max(tagBottom, el.getBoundingClientRect().bottom); });
+        return {
+          consoleTop: box(document.querySelector(".player-console"))?.top ?? 0,
+          consoleBottom: box(document.querySelector(".player-console"))?.bottom ?? 0,
+          pullBottom: box(document.querySelector(".pull-action"))?.bottom ?? 0,
+          hint: box(document.querySelector(".player-console > p")),
+          tagBottom,
+        };
+      });
+      console.log("PULL 2LINE", size.width, size.height, JSON.stringify(band));
+      expect(band.pullBottom, "整行按钮掉出屏幕").toBeLessThanOrEqual(size.height);
+      expect(band.pullBottom, "整行按钮被面板自己的下沿切掉").toBeLessThanOrEqual(Math.round(band.consoleBottom));
+      // 面板顶高一格，站着的人的名牌不能因此滑进面板里。
+      expect(band.consoleTop - band.tagBottom, "第二行把控制台顶到站着的人身上").toBeGreaterThanOrEqual(4);
+      expect(band.hint, "面板下面那句计时提示没了").not.toBeNull();
+      expect(Math.round(band.hint!.bottom), "第二行把计时提示挤出屏幕").toBeLessThanOrEqual(size.height);
+      await page.screenshot({ path: `../audit/experience-v2/p23-mobile-pull-over-${size.width}x${size.height}.png` });
+      // 这一档比"只写一行"贵多少，只能在同一个现场量：别的用例种的是另一个人、另一套队列，数对不上。
+      // 所以就地藏掉第二行再量一次 —— 差值才是这一行的代价，不是另一块屏的数。
+      const oneLine = await page.evaluate(() => new Promise<{ consoleTop: number; pullHeight: number; tagBottom: number }>(resolve => {
+        const style = document.createElement("style");
+        style.textContent = ".pull-action small { display:none !important; }";
+        document.head.append(style);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const panel = document.querySelector<HTMLElement>(".player-console")!.getBoundingClientRect();
+          let tagBottom = 0;
+          document.querySelectorAll(".actor-tag").forEach(el => { tagBottom = Math.max(tagBottom, el.getBoundingClientRect().bottom); });
+          resolve({
+            consoleTop: panel.top,
+            pullHeight: document.querySelector<HTMLElement>(".pull-action")!.getBoundingClientRect().height,
+            tagBottom,
+          });
+        }));
+      }));
+      console.log("PULL 1LINE", size.width, size.height, JSON.stringify(oneLine), "第二行：控制台顶↑",
+        (band.consoleTop - oneLine.consoleTop).toFixed(1), "px · 名牌余量",
+        (oneLine.consoleTop - oneLine.tagBottom).toFixed(1), "->", (band.consoleTop - band.tagBottom).toFixed(1));
+      expect(oneLine.pullHeight, "一行时那颗按钮就不够高").toBeGreaterThanOrEqual(44);
+    });
+  });
+}
 
 test("今日账单把台账和记录本都念成一句话，不是第三个数字", async ({ page }) => {
   await page.clock.install();

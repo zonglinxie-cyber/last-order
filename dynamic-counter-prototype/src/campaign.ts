@@ -1105,6 +1105,10 @@ export function pullOverLabel(s: Campaign, id: CustomerId) {
   return `迎上去 · 1 支小样 · ${PULL_OVER_MINUTES} 分钟`;
 }
 
+// 按钮上原来只有代价（一支小样、离柜两分钟），买到的东西写在规则注释里，玩家看不见就决定不了。
+// 这两句由规则一处出，两个界面共用：迎上去换的是她这一整段耐心重来，而中庭这支不记回柜的账（见 `pullOver`）。
+export const PULL_OVER_RETURN = "换她重新站回柜台前 · 这一支不回柜";
+
 export function pullOver(s: Campaign, id: CustomerId): Campaign {
   if (!canPullOver(s, id)) return s;
   const customer = CUSTOMERS[id];
@@ -1314,6 +1318,9 @@ export function trialService(s: Campaign): Campaign {
 
 // 手背试色只看颜色，半脸上妆才看得出她那张脸两小时后会怎么样：多花两分钟，代价是队伍另一头的人在倒数。
 export const FACE_TRIAL_MINUTES = 2;
+// 柜台上这一半脸是"她自己在脸上看见差别"那一步（现实里是一边上妆、一边她自己来）。
+// 规则未必给得出新东西（`faceTrialReveal` 会返回 null），所以这句写的是赌注不是保证。
+export const FACE_TRIAL_RETURN = "赌她还有没说出口的那条";
 
 // 上脸之后最先露出来的，是她最在意却还没说出口的那件事。两个 UI 都问这一个函数，别各写一份。
 export function faceTrialReveal(customer: Customer, discovered: CueId[], revealed: Trait[]): Trait | null {

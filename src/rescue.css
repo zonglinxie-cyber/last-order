@@ -164,6 +164,8 @@
 /* 半脸上妆是可选的一步，不做成第二个金色按钮：金色只留给成交。 */
 .face-trial-button { display: block; margin: -4px 0 12px; padding: 9px 14px; border: 1px solid #6c5748; border-radius: 10px; background: #ffffff08; color: #d8c3ae; font: 13px/1.4 'Songti SC', serif; }
 .face-trial-button:hover { border-color: #b06a55; color: #e0a68d; }
+/* 按钮第二行沿用竞品打断那一格的写法：正文一行是代价，下面一行是买到的东西，同一颗按钮里读完再决定。 */
+.face-trial-button small { display: block; margin-top: 2px; color: #c5b0a0; font-size: 12px; font-weight: 400; }
 .face-trial-said { margin: -4px 0 12px; padding-left: 9px; border-left: 2px solid #94664e; color: #d6c6b4; font-size: 13px; line-height: 1.6; }
 .rescue-game .risk-button { color: #efa798; border-color: #885a52; }
 .order-quote { border-left: 1px solid #4b3836; padding-left: 20px; font-size: 12px; }.order-quote > div, .order-quote > p { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 4px; }.order-quote > div > span { color: #b9a58d; }.order-quote .quote-total { border-top: 1px solid #4b3836; padding-top: 7px; margin-top: 7px; }.quote-total strong { color: #f1d3a4; font-size: 14px; }.order-quote small { color: #e0a294; line-height: 1.4; display: block; }

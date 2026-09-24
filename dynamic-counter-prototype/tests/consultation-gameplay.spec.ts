@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, INITIAL, PRODUCTS } from "../src/campaign";
+import { CUSTOMERS, FACE_TRIAL_RETURN, INITIAL, PRODUCTS } from "../src/campaign";
 
 async function enterShen(page: any) {
   await page.goto("/");
@@ -76,8 +76,10 @@ test("a half-face demo buys the demand she did not say and survives a reload", a
   const queue = page.locator(".consultation-hud time");
   const meter = async () => Number(/(\d+)\/\d+/.exec(await queue.textContent())?.[1]);
   const before = await meter();
-  const faceTrial = page.getByRole("button", { name: "半脸上妆 · 多占 2 分钟", exact: true });
+  const faceTrial = page.getByRole("button", { name: /^半脸上妆 · 多占 2 分钟/ });
   await expect(faceTrial).toBeVisible();
+  // 这两分钟买到的不是保证：规则也可能什么都不露（faceTrialReveal 会返回 null），所以按钮上写的是赌注。
+  await expect(faceTrial.locator("small")).toHaveText(FACE_TRIAL_RETURN);
   await page.screenshot({ path: "../audit/experience-v2/mobile-face-trial-offer.png" });
   await faceTrial.click();
   await expect(page.getByText("妆面压在她脸上，她才承认：低风险，不刺激不闷痘")).toBeVisible();

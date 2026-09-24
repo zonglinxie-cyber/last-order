@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, FACE_TRIAL_RETURN, INITIAL, PULL_OVER_RETURN, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
 import { ledgerYuan } from "../tests/ledger-yuan";
 
 // 沙盘把 campaign 原样写进本机存档，所以"这一步到底做了什么"可以直接从存储里读，不用信界面。
@@ -271,8 +271,11 @@ test("a half-face demo is optional, charges the queue two minutes and says what 
   await start(page);
   await consult(page, "沈薇", "柔焦 ¥980");
   await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
-  const faceTrial = page.getByRole("button", { name: "半脸上妆 · 多占 2 分钟", exact: true });
+  const faceTrial = page.getByRole("button", { name: /^半脸上妆 · 多占 2 分钟/ });
   await expect(faceTrial).toBeVisible();
+  // 上脸不一定给得出新东西（她可能该说的都说了），所以第二行写的是赌注，不是保证。
+  await expect(faceTrial.locator("small")).toHaveText(FACE_TRIAL_RETURN);
+  expect(await faceTrial.locator("small").evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
   const clock = page.locator(".shift-clock strong");
   const before = clockMinutes(await clock.textContent() ?? "");
   await faceTrial.click();
@@ -310,8 +313,21 @@ test("walking out with a sample pulls the waiting one back, and the other one pa
   const pull = page.getByRole("button", { name: /^迎上去/ });
   // 按不动的理由写在按钮上，不用先翻手册才知道轮不轮得到自己。
   await expect(pull).toHaveText("迎上去 · 1 支小样 · 2 分钟");
+  // 按钮上只有代价，玩家就决定不了要不要花这一支：买到什么紧跟在同一格里念出来。
+  const pullNote = page.locator(".floor-actions > p", { hasText: PULL_OVER_RETURN });
+  await expect(pullNote).toBeVisible();
+  // 说明行滚一下才到 = 决定已经做完了才看见理由：它必须和那颗按钮同屏，不靠滚动。
+  {
+    const note = await pullNote.boundingBox();
+    const pane = await page.locator(".dock-content").boundingBox();
+    expect(note && pane, "量不到买到什么那一行").toBeTruthy();
+    expect(note!.y + note!.height - pane!.y - pane!.height, "买到什么那一行在滚动线以下").toBeLessThanOrEqual(1);
+  }
+  await page.screenshot({ path: "../audit/experience-v2/p23-sandbox-pull-over-offer.png" });
   const doorBefore = await page.locator(".pawn-name[aria-label='查看梅女士']").evaluate(el => parseFloat(el.style.left));
   await pull.click();
+  // 这一支已经花掉了：按不动的时候不把收益念第二遍。
+  await expect(pullNote).toHaveCount(0);
   await expect(chip("梅女士")).toHaveText("8 分钟耐心");
   await expect(page.locator(".pawn-name[aria-label='查看梅女士'] small")).toHaveText("正在等你");
   await expect(page.locator(".rail-detail")).toHaveText("小样 7 份 · 名单 0 人");
@@ -332,6 +348,30 @@ test("walking out with a sample pulls the waiting one back, and the other one pa
   await page.screenshot({ path: "../audit/experience-v2/floor-pull-over.png" });
   await page.reload();
   await expect(page.locator(".rail-detail")).toHaveText("小样 7 份 · 名单 0 人");
+});
+
+// 横屏那一档（844×390）面板被钉死成 230px 的一行，动作区在里面是要滚的：
+// 多出来那一行"买到什么"要是落在滚动线以下，玩家就是先按了、后看见理由。
+test.describe("844×390 横屏", () => {
+  test.use({ viewport: { width: 844, height: 390 } });
+  test("买到什么那一行和那颗按钮在同一屏，不用滚", async ({ page }) => {
+    await page.clock.install();
+    await start(page);
+    await page.getByRole("button", { name: "4×", exact: true }).click();
+    await page.clock.runFor(30_000);
+    await page.getByRole("button", { name: "暂停", exact: true }).click();
+    // 横屏那一档名牌整排收起来（tight-plates 只留选中那位），选客只能走下面那条队列。
+    await page.getByRole("button", { name: "选择顾客梅女士", exact: true }).click();
+    const note = page.locator(".floor-actions > p", { hasText: PULL_OVER_RETURN });
+    await expect(note).toBeVisible();
+    const band = await note.boundingBox();
+    const pane = await page.locator(".dock-content").boundingBox();
+    console.log("PULL NOTE TIGHT", JSON.stringify({ band, pane, overflow: band && pane ? (band.y + band.height - pane.y - pane.height).toFixed(1) : null }));
+    expect(band && pane, "量不到买到什么那一行").toBeTruthy();
+    expect(band!.y, "那一行整个在面板上沿之外").toBeGreaterThanOrEqual(pane!.y - 1);
+    expect(band!.y + band!.height - pane!.y - pane!.height, "买到什么那一行在滚动线以下").toBeLessThanOrEqual(1);
+    await page.screenshot({ path: "../audit/experience-v2/p23-sandbox-pull-over-844x390.png" });
+  });
 });
 
 test("floor acceleration consumes patience and pause freezes it", async ({ page }) => {

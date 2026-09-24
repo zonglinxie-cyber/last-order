@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, EXPIRED_SAMPLING,
-  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
-  observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
+  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
+  observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, PULL_OVER_RETURN, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, SPLIT_WORD, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
@@ -379,6 +379,8 @@ export default function CounterGame() {
             <button className="gold-button" disabled={(!session && game.energy < ENERGY_LOCK) || Boolean(session && session.customerId !== selectedCustomer.id)} onClick={() => beginCustomer(selectedCustomer.id)}>{session?.customerId === selectedCustomer.id ? "继续接待" + selectedCustomer.name : "接待" + selectedCustomer.name}</button>
             {/* 她已经不在你这一头了：这一步是拿样品和离柜的两分钟，换她重新站回柜台前。 */}
             <button disabled={!canPullOver(game, selectedCustomer.id)} onClick={() => setGame(value => pullOver(value, selectedCustomer.id))}>{pullOverLabel(game, selectedCustomer.id)}</button>
+            {/* 这一行只在请得动她的时候出现：按钮上写的是花什么，这里写买到什么——同一支小样留在柜台上是另一笔账。 */}
+            {canPullOver(game, selectedCustomer.id) && <p>{PULL_OVER_RETURN}</p>}
             <button disabled={game.samples <= 0 || hasFlag(game, "sample:" + selectedCustomer.id)} onClick={() => setGame(value => leaveSample(value, selectedCustomer.id))}>留小样 · {game.samples}</button>
             <button disabled={!canAddMember(game, selectedCustomer.id)} onClick={() => setGame(value => addMember(value, selectedCustomer.id))} aria-label={"加微信 " + selectedCustomer.name}>{game.members.includes(selectedCustomer.id) ? "已在名单" : "加微信 · 1 分钟"}</button>
             {canHelp && <button onClick={() => setGame(value => requestStaffHelp(value, selectedCustomer.id))}>请苏蔓帮忙留客</button>}
@@ -399,7 +401,7 @@ export default function CounterGame() {
           </div></div>}
           {session.tested && !pendingRival && !revising && picked && <div className="close-review"><div>
             <p className={"trial-reaction " + (session.reaction ?? "negative")}>{REACTIONS[picked][session.reaction ?? "negative"]}</p>
-            {!session.faceTrialled && <button type="button" className="face-trial-button" onClick={() => setGame(faceTrialService)}>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</button>}
+            {!session.faceTrialled && <button type="button" className="face-trial-button" onClick={() => setGame(faceTrialService)}><b>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</b><small>{FACE_TRIAL_RETURN}</small></button>}
             {session.faceTrialRevealed && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[session.faceTrialRevealed]}</p>}
             {session.faceTrialled && !session.faceTrialRevealed && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
             {session.reaction === "positive" && <div ref={bundleRowRef} className="bundle-choices" role="group" aria-label="连带件数">
