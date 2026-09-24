@@ -132,12 +132,18 @@ test("进度落后时闭店事件问的是柜位，不是储备人选", () => {
 });
 
 test("报价、存档和柜位数字互不复用：新字段被校验", () => {
-  assert.equal(SAVE_VERSION, 4);
+  assert.equal(SAVE_VERSION, 5);
   const restored = parseCampaign(JSON.stringify({ ...INITIAL, members: ["shen", "nobody", "shen"], standing: 62 }))!;
   assert.deepEqual(restored.members, ["shen"]);
   assert.equal(restored.standing, 62);
   assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, standing: -5 })), null);
   assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, version: 3 })), null, "旧版本存档整份丢弃，不把老数字并进新的柜位账");
+  // 抽屉里的支数是开单的硬顶：少一个字段、多出第四张调拨单，都不能让它自己长回来。
+  assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, stock: undefined })), null);
+  assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, stock: { ...INITIAL.stock, soft: -1 } })), null);
+  assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, stock: { ...INITIAL.stock, glow: 4.5 } })), null);
+  assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, stock: { ...INITIAL.stock, repair: 20 } })), null);
+  assert.equal(parseCampaign(JSON.stringify({ ...INITIAL, stock: { ...INITIAL.stock, repair: 0 } }))?.stock.repair, 0, "调到上限以上要判掉，断到最后零支要原样读回来");
   // 名单不影响报价：同一位顾客在有无名单时报价完全一致。
   assert.deepEqual(orderQuote("shen", bestFit("shen"), "set", false), orderQuote("shen", bestFit("shen"), "set", false));
 });

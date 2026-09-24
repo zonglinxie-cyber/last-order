@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, canTransfer, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, OBSERVE_MIN, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
-  startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
-  type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
+  startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
+  type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
 } from "../dynamic-counter-prototype/src/campaign";
 import { asset } from "./sim/asset";
 import { customerPortrait as portrait } from "./experience-art";
@@ -46,9 +46,9 @@ function restoredScreen(game: Campaign): Screen {
   if (game.activeSession && availableCustomers(game).includes(game.activeSession.customerId)) return "consultation";
   return availableCustomers(game).length ? "floor" : "event";
 }
-function Quote({ game, id, product }: { game: Campaign; id: CustomerId; product: ProductId }) {
+function Quote({ game, id, product, onTransfer }: { game: Campaign; id: CustomerId; product: ProductId; onTransfer: (channel: TransferChannel) => void }) {
   const session = game.activeSession;
-  const quote = orderQuote(id, product, session?.bundle ?? "single", session?.rivalChoice === "yield");
+  const quote = orderQuote(id, product, session?.bundle ?? "single", session?.rivalChoice === "yield", game.stock[product]);
   return <section className="order-quote" aria-label="本单报价">
     <div><b>本单报价</b><span>{quote.shared ? "与陆遥各记一半" : "记入你的业绩"}</span></div>
     {quote.lines.map(line => <p key={line.label}><span>{line.label}</span><span>{money(line.amount)}</span></p>)}
@@ -56,6 +56,8 @@ function Quote({ game, id, product }: { game: Campaign; id: CustomerId; product:
     <p className="quote-total"><span>整单 {money(quote.total)}</span><strong>你入账 {money(quote.amount)}</strong></p>
     <p className="quote-time"><span>开单与讲搭配</span><span>{quote.minutes} 分钟 · 另一边还在等</span></p>
     {quote.note && <small className="quote-note">{quote.note + "。"}</small>}
+    {/* 断货这一步只有两处能救：系统单留名，私下拿货不留名。两行都摆出来，让"值不值得离柜"自己说。 */}
+    {canTransfer(game, product) && <div className="stock-transfer">{(["official", "tangke"] as TransferChannel[]).map(channel => <button type="button" key={channel} disabled={!canTransferVia(game, product, channel)} onClick={() => onTransfer(channel)}>{transferLabel(game, product, channel)}</button>)}</div>}
   </section>;
 }
 
@@ -366,7 +368,7 @@ export default function CounterGame() {
           </div> : <p className="muted">这次机会已经结束。请选择另一位顾客。</p>}
         </div>}
         {screen === "floor" && selectedStaff && <div className="staff-inspect"><h3>{focus === "luyao" ? "她在争取你还没接住的人" : focus === "suman" ? "愿不愿意帮忙，要看之前的账" : focus === "tangke" ? "她也在为转正凑最后的数字" : focus === "roman" ? "业绩与赠品记录，她都在盯" : "看清现场，再决定把时间给谁"}</h3><p>{focus === "suman" ? "关系：" + relationText(game.relations.suman) + (canHelp ? "。她愿意替你多留客一会儿。" : "。帮忙需要之前的人情，这班最多一次。") : story.threat}</p><div className="floor-actions">{available.map(id => <button key={id} onClick={() => setFocus(id)}>看看{CUSTOMERS[id].name}</button>)}</div></div>}
-        {screen === "consultation" && customer && session && <section className="service-actions">
+        {screen === "consultation" && customer && session && <section className="service-actions"><div className="service-body">
           <div className="action-cost"><span>阅读暂停 · 新观察 / 提问 / 试用各花 1 分钟</span><span>{available.filter(id => id !== customer.id).map(id => CUSTOMERS[id].name + "还等 " + Math.ceil(game.waitMeters[id] ?? CUSTOMERS[id].patience) + " 分钟").join(" · ") || "专心接住眼前这一位"}</span></div>
           <ol className="service-steps">{["观察", "提问", "试用", "成交"].map((step, index) => <li key={step} className={index === stage ? "current" : index < stage ? "done" : ""}>{index + 1} · {step}</li>)}</ol>
           {stage === 0 && <><h3>先看清两处线索</h3><div className="cue-actions">{CUES.map(cue => <button key={cue} aria-pressed={session.discovered.includes(cue)} onClick={() => setGame(value => observeService(value, cue))}>观察{customer.cues[cue].label}{session.discovered.includes(cue) && <span aria-hidden="true"> ✓</span>}</button>)}</div><p className="service-feedback">{lastCue ? customer.cues[lastCue].finding : "点脸部线索，或用上面的按钮观察。另一位客人仍在等你。"}</p></>}
@@ -383,13 +385,17 @@ export default function CounterGame() {
             {session.reaction === "positive" && <div className="bundle-choices" role="group" aria-label="连带件数">
               <span className="eyebrow">她愿意带走几件 <small>预算 {customer.budget.toLocaleString("zh-CN")} · 上限 {customer.maxUnits} 件</small></span>
               {(Object.keys(BUNDLES) as BundleId[]).map(id => {
-                const units = unitsWanted(customer, picked, id, session.reaction ?? "negative");
-                return <button key={id} aria-pressed={session.bundle === id} disabled={!units} onClick={() => setGame(value => chooseBundle(value, id))}><b>{BUNDLES[id].label}</b><small>{units ? <><span className="bundle-price">{money(units * PRODUCTS[picked].price)}</span><span className="bundle-minutes">占 {BUNDLES[id].units} 分钟</span></> : "她不会多拿"}</small></button>;
+                // 抽屉里的支数也是一道上限：她要 4 件、柜上只剩 2 支，就得在她面前说清楚，不能等关单才变。
+                const units = unitsWanted(customer, picked, id, session.reaction ?? "negative", game.stock[picked]);
+                return <button key={id} aria-pressed={session.bundle === id} disabled={!units} onClick={() => setGame(value => chooseBundle(value, id))}><b>{BUNDLES[id].label}</b><small>{units ? <><span className="bundle-price">{units} 件 {money(units * PRODUCTS[picked].price)}</span><span className="bundle-minutes">占 {BUNDLES[id].units} 分钟</span></> : game.stock[picked] ? "她不会多拿" : "柜上这一支断了"}</small></button>;
               })}
             </div>}
-            <div className="closing-buttons">
-            {session.reaction === "negative" ? <><button onClick={() => setRevising(true)}>换一款</button><button disabled={game.samples <= 0 || hasFlag(game, "sample:" + customer.id)} onClick={() => setGame(value => leaveSample(value, customer.id))}>留小样 · {game.samples}</button><button onClick={() => close(false)}>接受拒绝</button><button className="risk-button" onClick={() => close(true)}>强推成交</button></> : <><button disabled={session.claimed} onClick={() => setGame(value => ({ ...value, activeSession: value.activeSession ? { ...value.activeSession, claimed: true } : null }))}>{session.claimed ? "已登记归属" : "登记我的接待"}</button><button className="gold-button" onClick={() => close()}>提出成交</button>{session.reaction === "mixed" && <button onClick={() => setRevising(true)}>换一款再试</button>}</>}
-          </div></div><Quote game={game} id={customer.id} product={picked} /></div>}
+          </div><Quote game={game} id={customer.id} product={picked} onTransfer={channel => setGame(value => transferStock(value, picked, channel))} /></div>}
+        </div>
+        {/* 关单那一排摆在滚动区之外：dock 是一条固定高度的带，成交阶段的内容比它高，跟着一起滚就永远在折线以下。 */}
+        {session.tested && !pendingRival && !revising && picked && <div className="closing-buttons">
+          {session.reaction === "negative" ? <><button onClick={() => setRevising(true)}>换一款</button><button disabled={game.samples <= 0 || hasFlag(game, "sample:" + customer.id)} onClick={() => setGame(value => leaveSample(value, customer.id))}>留小样 · {game.samples}</button><button onClick={() => close(false)}>接受拒绝</button><button className="risk-button" onClick={() => close(true)}>强推成交</button></> : <><button disabled={session.claimed} onClick={() => setGame(value => ({ ...value, activeSession: value.activeSession ? { ...value.activeSession, claimed: true } : null }))}>{session.claimed ? "已登记归属" : "登记我的接待"}</button><button className="gold-button" onClick={() => close()}>提出成交</button>{session.reaction === "mixed" && <button onClick={() => setRevising(true)}>换一款再试</button>}</>}
+        </div>}
         </section>}
         {screen === "result" && outcome && <div className="result-next"><p>{available.length ? "还有 " + available.length + " 位顾客。刚才这单占掉她们 " + outcome.minutes + " 分钟的等待。" : "今天的接待结束了，柜台还有一件事要处理。"}</p><button className="gold-button" onClick={() => { setScreen(available.length ? "floor" : "event"); setFocus(available[0] ?? "suman"); }}>{available.length ? "回到现场" : "处理闭店事件"}</button></div>}
         {screen === "event" && <div className="event-options">{visibleChoices(game, event).map(choice => <button key={choice.id} onClick={() => { setGame(value => settleDayEvent(value, choice.id)); setScreen("summary"); }}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div>}

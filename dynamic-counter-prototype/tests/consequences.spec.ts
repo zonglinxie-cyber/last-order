@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { SAVE_VERSION, energyWord } from "../src/campaign";
+import { SAVE_VERSION, WEEK_ALLOCATION, energyWord } from "../src/campaign";
 
+// 存档里多了一个必填的抽屉（stock）：少了它 parseCampaign 会整份判为不合法，
+// 这几条样本是手写的，必须跟着规则走，不然"续第 N 天"根本不会出现。
 const baseSave = {
   version: SAVE_VERSION, sales: 12000, daySales: 0, trust: 60, compliance: 55, energy: 100, samples: 4, evidence: 1, standing: 50,
+  stock: { ...WEEK_ALLOCATION },
   relations: { suman: 50, tangke: 40, luyao: 35, roman: 45 },
   history: [] as Array<{ day: number; text: string }>, dayServed: [] as string[], lost: [] as string[], eventDoneDays: [] as number[],
   waitMeters: {}, activeSession: null,

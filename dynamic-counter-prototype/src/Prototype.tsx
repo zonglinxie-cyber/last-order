@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, canPullOver, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, canPullOver, canTransfer, canTransferVia, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
   fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, QUESTIONS,
   orderQuote, OBSERVE_MIN, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
-  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
-  type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type Trait,
+  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+  type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
 import {
@@ -317,6 +317,11 @@ export default function Prototype() {
     if (!customer) return;
     setCampaign(s => leaveSample(s, customer.id));
   };
+  // 打电话这三分钟是从排队的人头上扣的，手上这位不能一起扣——她还在柜台前等你回来。
+  const callStock = (channel: TransferChannel) => {
+    if (!selectedProduct) return;
+    setCampaign(s => transferStock(s, selectedProduct, channel, customerId));
+  };
   const closeSale = (force = false) => {
     if (!customer || !selectedProduct || !tested) return;
     setServiceMotion("scan"); window.setTimeout(() => setServiceMotion(null), 520);
@@ -370,7 +375,9 @@ export default function Prototype() {
     const currentReaction = reaction && selectedProduct ? REACTIONS[selectedProduct][reaction] : null;
     const otherMeter = waitingOther ? campaign.waitMeters[waitingOther] ?? CUSTOMERS[waitingOther].patience : null;
     const pendingRival = interruption && !interruptionHandled;
-    const quote = selectedProduct ? orderQuote(customer.id, selectedProduct, bundle, rivalChoice === "yield") : null;
+    // 抽屉里还剩几支，是报价单的第四道闸：先量现货，再报件数。
+    const stockLeft = selectedProduct ? campaign.stock[selectedProduct] : 0;
+    const quote = selectedProduct ? orderQuote(customer.id, selectedProduct, bundle, rivalChoice === "yield", stockLeft) : null;
     const record = consultationRecord(customer, discovered, revealed, tested);
     // 没看的点、答出来的要求、还没问到的条数、问到才知道的底线：合成一句，没说的部分不占行。
     const saidLine = [record.face, record.said.length ? `她在意：${record.said.join(" · ")}` : "", record.blind, record.veto ? `底线：${record.veto}` : ""].filter(Boolean).join(" · ");
@@ -398,9 +405,10 @@ export default function Prototype() {
         {faceTrialShown && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[faceTrialShown]}</p>}
         {tested && faceTrialled && !faceTrialShown && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
         {tested && quote && <section className="mobile-order-quote" aria-label="本单报价">{quote.lines.map(line => <p key={line.label}><span>{line.label}</span><span>¥{line.amount.toLocaleString("zh-CN")}</span></p>)}{quote.note && <small>{quote.note}</small>}<b>整单 ¥{quote.total.toLocaleString("zh-CN")} · 你入账 ¥{quote.amount.toLocaleString("zh-CN")}{quote.shared ? "（各半）" : ""} · 现场 {quote.minutes} 分</b></section>}
+        {selectedProduct && tested && canTransfer(campaign, selectedProduct) && <div className="stock-transfer">{(["official", "tangke"] as TransferChannel[]).map(channel => <button type="button" key={channel} disabled={!canTransferVia(campaign, selectedProduct, channel)} onClick={() => callStock(channel)}>{transferLabel(campaign, selectedProduct, channel)}</button>)}</div>}
         {selectedProduct && tested && reaction === "positive" && <div className="bundle-row" role="group" aria-label="连带件数">{(Object.keys(BUNDLES) as BundleId[]).map(id => {
-          const units = unitsWanted(customer, selectedProduct, id, "positive");
-          return <button type="button" key={id} className={bundle === id ? "active" : ""} disabled={!units} onClick={() => { setBundle(id); saveSession({ bundle: id }); }}><span>{BUNDLES[id].label}</span><small>{units ? `${units} 件 ¥${(units * PRODUCTS[selectedProduct].price).toLocaleString("zh-CN")} · ${BUNDLES[id].units} 分` : "她不会多拿"}</small></button>;
+          const units = unitsWanted(customer, selectedProduct, id, "positive", stockLeft);
+          return <button type="button" key={id} className={bundle === id ? "active" : ""} disabled={!units} onClick={() => { setBundle(id); saveSession({ bundle: id }); }}><span>{BUNDLES[id].label}</span><small>{units ? `${units} 件 ¥${(units * PRODUCTS[selectedProduct].price).toLocaleString("zh-CN")} · ${BUNDLES[id].units} 分` : stockLeft ? "她不会多拿" : "柜上这一支断了"}</small></button>;
         })}<em>预算 ¥{customer.budget.toLocaleString("zh-CN")} · 最多 {customer.maxUnits} 件 · 多要一件多占一分钟</em></div>}
         {!tested ? <button className="primary-action" type="button" disabled={!canTest} onClick={tryProduct}>{canTest ? `为${customer.name}试用` : discovered.length < 2 ? "先观察两处面部线索" : askedQuestion === null ? "再问一个关键问题" : "选择产品开始试用"}</button> : reaction === "negative" ? <div className="recovery-actions"><button type="button" onClick={sendSample} disabled={campaign.samples <= 0 || hasFlag(campaign, `sample:${customer.id}`)}>留小样 · {campaign.samples}</button><b>反应不对：换一款，或承担拒绝风险</b></div> : null}
         {tested && reaction === "negative" ? <div className="close-actions negative-close"><button type="button" onClick={() => closeSale(false)}>接受拒绝</button><button className="primary-action" type="button" onClick={() => closeSale(true)}>强推成交</button></div> : tested ? <div className="close-actions"><button className={claimed ? "claimed" : ""} type="button" onClick={() => { setClaimed(!claimed); saveSession({ claimed: !claimed }); }}>{claimed ? "已登记归属" : "登记我的接待"}</button><button className="primary-action" type="button" onClick={() => closeSale(false)}>提出成交</button></div> : null}

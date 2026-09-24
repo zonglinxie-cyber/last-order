@@ -2,10 +2,10 @@
 // rule functions only, so the balance numbers are measured instead of hand-written.
 import assert from "node:assert/strict";
 import {
-  addMember, applyTouch, askService, availableCustomers, canAddMember, canPullOver, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
+  addMember, applyTouch, askService, availableCustomers, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
   leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS, pullOver,
-  selectServiceProduct, settleDayEvent, startNextDay, startService, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
-  fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
+  selectServiceProduct, settleDayEvent, startNextDay, startService, transferStock, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
+  fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
 } from "../src/campaign.ts";
 
 export const PRODUCT_IDS = Object.keys(PRODUCTS) as ProductId[];
@@ -59,7 +59,7 @@ export function playCustomer(
   // 「登记我的接待」是两个 UI 都有的那一步，e2e 每次都按；模拟器不按就等于少测一步，
   // 留痕数会比真实玩出来的低。这里按下去，是为了量到玩家真的会拿到的证据。
   s = { ...s, activeSession: { ...s.activeSession!, claimed: true } };
-  const quote = orderQuote(id, product, bundle, false);
+  const quote = orderQuote(id, product, bundle, false, s.stock[product]);
   const closed = closeService(s);
   assert.ok(closed, `${id} 的关单不应该失败`);
   // 报价单必须和真实入账一致，否则 UI 在骗玩家。
@@ -70,18 +70,21 @@ export function playCustomer(
   return { campaign: parseCampaign(JSON.stringify(closed.campaign))!, outcome: closed.outcome };
 }
 
-export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[]; pulled: number };
+export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[]; pulled: number; transferred: ProductId[] };
 
 // 每天按现场顺序接完所有还能接的顾客，然后处理闭店事件。
 // roster=true 走的是"把私域也做掉"的那条线：现场先留小样、再要微信（各占一分钟），
 // 闭店事件之后按当晚顺序跟两句。加粉烧掉的是别人的耐心，所以这条线要拿柜台上的人换。
 // pull=true 是"只要有人开始看表就迎上去"：一支小样加离柜两分钟，救回一个的同时把另一个推向门口。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false): RouteResult {
+// transfer 是"盯着抽屉的人"：接下一位之前先看她要的那支还剩几支，够了就不开口，
+// 不够连带就去打电话（罗曼走系统单 3 分钟，唐可私下拿 2 分钟但台账上什么都没有）。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null): RouteResult {
   let s = openFloorState(INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
   let served = 0;
   let pulled = 0;
+  const transferred: ProductId[] = [];
   for (let day = 1; day <= 5; day += 1) {
     assert.equal(s.day, day);
     for (const id of [...availableCustomers(s)]) {
@@ -91,6 +94,13 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
         if (!canPullOver(s, waiting)) continue;
         s = pullOver(s, waiting);
         pulled += 1;
+      }
+      if (transfer && availableCustomers(s).includes(id)) {
+        const target = bestFit(id);
+        if (canTransferVia(s, target, transfer)) {
+          s = transferStock(s, target, transfer);
+          transferred.push(target);
+        }
       }
       if (!availableCustomers(s).includes(id)) continue;
       if (roster && s.samples > 0 && !s.members.includes(id)) {
@@ -110,5 +120,5 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
     s = startNextDay(s);
   }
   assert.equal(s.finished, true);
-  return { final: s, dayTotals, served, lost, pulled };
+  return { final: s, dayTotals, served, lost, pulled, transferred };
 }

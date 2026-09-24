@@ -467,6 +467,10 @@ button { -webkit-tap-highlight-color:transparent; }
 .mobile-order-quote b { display:block; color:#edc78f; font-size:12px; margin:5px 0; }
 .mobile-order-quote small { display:block; color:#c9b4a6; font-size:12px; line-height:1.45; }
 .bundle-row { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin:6px 0; }
+/* 调货两行：按钮上写的是"几分钟、找谁、能不能开口"，截断就白说，所以整宽一行一个。 */
+.stock-transfer { display:grid; gap:5px; margin:6px 0; }
+.stock-transfer button { min-height:44px; padding:0 9px; border:1px solid #dcbd7a55; border-radius:11px; background:#ffffff08; color:#efd39b; font:600 12px/1.35 'Noto Serif SC'; }
+.stock-transfer button:disabled { border-color:#ffffff12; color:#8b7a70; }
 .bundle-row button { display:flex; min-height:44px; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px 3px; border:1px solid #ffffff15; border-radius:10px; background:#ffffff08; color:#ddcec2; transition:.16s; }
 .bundle-row button span { font-size:8px; font-weight:700; }
 .bundle-row button small { color:#a89487; font-size:7px; }

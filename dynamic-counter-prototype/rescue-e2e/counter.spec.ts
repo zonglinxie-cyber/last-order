@@ -60,6 +60,11 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
       // 连带按开口要的件数计时：只开到她自己说过的上限。
       if (bundle) await page.getByRole("button", { name: new RegExp("^" + bundle) }).click();
       await expect(page.getByRole("region", { name: "本单报价" })).toBeVisible();
+      // 一周的柔焦配货到第 5 天只剩 3 支：断货要在她面前先说清楚，也要当场给得出两条出路。
+      if (day === 4 && name === "沈薇") {
+        await expect(page.locator(".quote-note")).toHaveText("柜上只剩 3 支，这单最多开到 3 件。");
+        await expect(page.locator(".stock-transfer button")).toHaveCount(2);
+      }
       await page.getByRole("button", { name: "登记我的接待", exact: true }).click();
       await page.getByRole("button", { name: "提出成交", exact: true }).click();
       await expect(page.getByRole("heading", { name: name + "成交", exact: true })).toBeVisible();
@@ -71,7 +76,8 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
     await page.getByRole("button", { name: day === 4 ? "查看活动周结局" : "进入下一天", exact: true }).click();
   }
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
-  await expect(page.locator(".large-number")).toContainText("¥25,590");
+  // 第 5 天沈薇的连带被抽屉削掉一支：¥980 是柜上没了，不是算错。与手机版、规则模拟器同一条路线同一个数。
+  await expect(page.locator(".large-number")).toContainText("¥24,610");
   await expect(page.locator(".order-line")).toHaveCount(10);
   await page.reload();
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
@@ -81,6 +87,43 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
   // 否则第 5 晚那句「摊得开」就是界面和判词各说一套。
   expect(await page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { evidence: number }).evidence, SAVE_KEY)).toBe(12);
   expect(errors).toEqual([]);
+});
+
+// 抽屉见底不是隐藏数值：报价单先按现货说话，两条出路当场摆出来，一支一周只调一次。
+test("one call reopens the drawer, and the other one is 唐可's decision", async ({ page }) => {
+  await page.goto("/");
+  await seed(page, { ...INITIAL, stock: { soft: 2, glow: 4, repair: 7 } });
+  await page.reload();
+  await consult(page, "沈薇", "柔焦 ¥980");
+  await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  // 她要 3 件、抽屉里只剩 2 支：连带按钮先按现货报，她开口之后报价单再说同一件事。
+  const triple = page.getByRole("button", { name: /^三件整套/ });
+  await expect(triple).toContainText("¥1,960");
+  await triple.click();
+  await expect(page.locator(".quote-note")).toHaveText("柜上只剩 2 支，这单最多开到 2 件。");
+  const official = page.getByRole("button", { name: "请罗曼开调拨单 · 3 分钟", exact: true });
+  await expect(official).toBeEnabled();
+  // 私下拿货不留台账，但要唐可愿意帮你——她这一周还不想。
+  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+  await expect(privateCall).toBeDisabled();
+  await expect(privateCall).toContainText("唐可不会把货给一个刚跟她抢过单的人");
+  const before = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    stock: Record<string, number>; compliance: number; waitMeters: Record<string, number>;
+  }, SAVE_KEY);
+  await official.click();
+  const after = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    stock: Record<string, number>; compliance: number; waitMeters: Record<string, number>; flags: string[]; history: Array<{ text: string }>;
+  }, SAVE_KEY);
+  expect(after.stock.soft - before.stock.soft).toBe(3);
+  // 走系统的单子在台账上留名：合规 +2，离柜 3 分钟从排队另一头扣。
+  expect(after.compliance - before.compliance).toBe(2);
+  expect(before.waitMeters.mei - after.waitMeters.mei).toBe(3);
+  expect(after.flags).toContain("transfer:soft");
+  expect(after.history.at(-1)?.text).toContain("台账上写着你的名字");
+  // 一周只调得出这一次，所以这一行整体收掉，报价也不再削件。
+  await expect(page.locator(".stock-transfer")).toHaveCount(0);
+  await expect(page.locator(".quote-note")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^三件整套/ })).toContainText("¥2,940");
 });
 
 test("a saved observation and pending rival resume; a sample does not erase rejection", async ({ page }) => {

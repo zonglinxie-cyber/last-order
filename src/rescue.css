@@ -108,12 +108,12 @@
 .floor-journal p { font-size: 12px; margin-top: 12px !important; color: #c4b7a7; }
 .floor-journal p small { color: #9c8365; margin-right: 7px; }
 .rescue-game .restart-link { border: 0; background: transparent; text-align: left; color: #b5a18e; margin: 0 3px; font-size: 12px; }
-.rescue-dock { display: grid; grid-template-columns: 235px minmax(0, 1fr); gap: 26px; padding: 20px 24px; background: #171319; border-top: 1px solid #5c443a; min-height: 0; overflow: auto; }
+.rescue-dock { display: grid; grid-template-columns: 235px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 26px; padding: 20px 24px; background: #171319; border-top: 1px solid #5c443a; min-height: 0; overflow: hidden; }
 .dock-person { display: flex; gap: 14px; align-items: flex-start; padding-right: 20px; border-right: 1px solid #3c2e31; }
 .dock-person img { width: 62px; height: 100px; object-fit: cover; object-position: 50% 25%; border-radius: 5px; opacity: .9; }
 .dock-person h2 { font-size: 23px; margin: 2px 0 8px; font-weight: 500; }
 .dock-person small, .dock-person p { font-size: 12px; color: var(--quiet); }
-.dock-content { min-width: 0; }
+.dock-content { min-width: 0; min-height: 0; flex: 1; overflow-y: auto; }
 .floor-inspect { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(200px, 1fr); gap: 28px; align-items: start; }
 .floor-inspect p { margin-top: 6px; max-width: 480px; }
 .floor-actions, .closing-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -165,6 +165,15 @@
 .face-trial-said { margin: -4px 0 12px; padding-left: 9px; border-left: 2px solid #94664e; color: #d6c6b4; font-size: 13px; line-height: 1.6; }
 .rescue-game .risk-button { color: #efa798; border-color: #885a52; }
 .order-quote { border-left: 1px solid #4b3836; padding-left: 20px; font-size: 12px; }.order-quote > div, .order-quote > p { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 4px; }.order-quote > div > span { color: #b9a58d; }.order-quote .quote-total { border-top: 1px solid #4b3836; padding-top: 7px; margin-top: 7px; }.quote-total strong { color: #f1d3a4; font-size: 14px; }.order-quote small { color: #e0a294; line-height: 1.4; display: block; }
+/* 调货的两条出路各占一行：代价那句话（几分钟、留不留名）被折成两列就读不完，所以这里不走报价行的 flex。 */
+.order-quote > .stock-transfer { display: grid; gap: 6px; margin: 8px 0 0; }
+.order-quote > .stock-transfer button { padding: 8px 10px; font-size: 12px; line-height: 1.45; text-align: left; }
+/* 成交那一排钉在抽屉里，不跟着上面一起滚：dock 是一条固定高度的带（258~300px），成交阶段的内容有 ~410px，
+   「提出成交」原来永远在折线以下（1280×720 差 88px、1440×900 差 113px；没有调货那两行时也一样，是一直如此，不是这一轮加高的）。
+   所以滚的是上面那一段，动作行自己占一格——它盖住的只会是空白，不是连带按钮。 */
+.service-actions { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.service-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; }
+.closing-buttons { flex: none; padding-top: 10px; }
 .story-panel { height: 100%; padding: 30px clamp(28px, 6vw, 90px); overflow: auto; background: linear-gradient(130deg, #31222d, #1a161e); }
 /* 闭店事件这一屏正文比能给的带矮一大截：手机上量到文字下面空 220px。让正文在带里垂直居中，
    读起来才不像页面没加载完。`safe` 不被支持时退回顶对齐，最坏是长文案贴顶，不会截掉开头。 */

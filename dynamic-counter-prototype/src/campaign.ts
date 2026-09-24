@@ -57,6 +57,7 @@ export type Campaign = {
   compliance: number;
   energy: number;
   samples: number;
+  stock: Record<ProductId, number>;
   evidence: number;
   standing: number;
   relations: { suman: number; tangke: number; luyao: number; roman: number };
@@ -105,7 +106,7 @@ export type SaleOutcome = { good: boolean; amount: number; total: number; units:
 export type DawnNotice = { speaker: string; body: string };
 
 export const SAVE_KEY = "last-order-campaign-v1";
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const TARGET = 21_000;
 export const ENERGY_LOCK = 18;
 export const RIVAL_IDS: CustomerId[] = ["shen", "returning", "zhou"];
@@ -121,9 +122,24 @@ export const DAY_TARGETS = [2800, 3200, 3600, 4400, 7000];
 export const STANDING_RISK = 40;
 export const MEMBER_MIN_FOR_CREDIT = 2;
 
+// 品牌给这个柜台的是一周的量，不是无限的货架。21 支是按整周动销报的数，
+// 可配下来的比例和这一周真正要卖出去的不一样：五条整周路线实测最多要吃 11 支柔焦、7 支修护、2 套持妆，
+// 而柜上下来的是 10 / 7 / 4 —— 柔焦少一支、修护刚好见底、持妆多两套没人要。
+// 这个错位才是柜台真实的一天：断货的不是"卖得最贵的那支"，是配货没配上动销的那支。
+export const WEEK_ALLOCATION: Record<ProductId, number> = { soft: 10, glow: 4, repair: 7 };
+// 一次调货的量按品牌调拨单的最小单位算：一张单三支。
+export const TRANSFER_UNITS = 3;
+// 剩到 3 支才开口：刚好够开一套，连带（4 支）已经开不出来。一支没断就去找人借货，罗曼会先问你在做什么。
+export const TRANSFER_GATE = 3;
+// 离柜去打电话、等签字，柜台上排队的人不会停下来等你。
+export const TRANSFER_MINUTES = { official: 3, tangke: 2 } as const;
+// 唐可自己也在冲数：她愿意把货给一个她认的人，不愿意给一个刚抢过单的人。
+export const TANGKE_STOCK_GATE = 45;
+
 export const INITIAL: Campaign = {
   version: SAVE_VERSION,
   day: 1, sales: 0, daySales: 0, trust: 50, compliance: 55, energy: 100, samples: 8, evidence: 0, standing: 50,
+  stock: { ...WEEK_ALLOCATION },
   relations: { suman: 50, tangke: 38, luyao: 35, roman: 45 }, flags: [], members: [], history: [], dayServed: [], lost: [], eventDoneDays: [],
   waitMeters: { shen: 8, mei: 8 }, activeSession: null,
   shiftMinutes: 0, floorSeconds: 0, orders: [], finished: false,
@@ -181,15 +197,16 @@ export function fitOf(customer: Customer, product: ProductId) {
   return { score, tier: fitTier(score) };
 }
 
-// 她愿意带走几件：判断越准越敢连带；勉强只拿一件，还要受预算和用量上限约束。
-export function unitsWanted(customer: Customer, product: ProductId, bundle: BundleId, tier: FitTier) {
+// 她愿意带走几件：判断越准越敢连带；勉强只拿一件，还要受预算、用量上限和柜上现货约束。
+// left 是抽屉里剩下的支数。退货不补回来：拆封的单要回仓复检，这一周不会再上架。
+export function unitsWanted(customer: Customer, product: ProductId, bundle: BundleId, tier: FitTier, left = Infinity) {
   if (tier === "negative") return 0;
   const asked = tier === "mixed" ? 1 : Math.min(BUNDLES[bundle].units, customer.maxUnits);
-  return Math.max(0, Math.min(asked, Math.floor(customer.budget / PRODUCTS[product].price)));
+  return Math.max(0, Math.min(asked, left, Math.floor(customer.budget / PRODUCTS[product].price)));
 }
 
-// 强推不看她的预算：她当场把钱付了，退货风险才会记在你名下。
-export const forcedUnits = (customer: Customer, bundle: BundleId) => Math.min(BUNDLES[bundle].units, customer.maxUnits);
+// 强推不看她的预算：她当场把钱付了，退货风险才会记在你名下。但柜上没有的支数，硬推也开不出来。
+export const forcedUnits = (customer: Customer, bundle: BundleId, left = Infinity) => Math.min(BUNDLES[bundle].units, customer.maxUnits, left);
 
 // 只有被线索或提问揭示过的诉求才显示给玩家；未揭示的要求仍然参与真实适配度。
 export function revealOf(customer: Customer, discovered: CueId[], revealed: Trait[]) {
@@ -807,6 +824,12 @@ export function parseCampaign(raw: string | null): Campaign | null {
     for (const key of ["sales", "daySales", "trust", "compliance", "energy", "samples", "evidence", "standing"] as const) {
       if (typeof parsed[key] !== "number" || !Number.isFinite(parsed[key]) || (key !== "daySales" && parsed[key]! < 0)) return null;
     }
+    // 抽屉里的支数是这一单的硬顶，缺一个数就能把整周断货抹平，所以逐支验：负数、小数、凭空多出第四张调拨单都不认。
+    if (!parsed.stock || typeof parsed.stock !== "object") return null;
+    for (const product of Object.keys(PRODUCTS) as ProductId[]) {
+      const value = parsed.stock[product];
+      if (!Number.isInteger(value) || value < 0 || value > WEEK_ALLOCATION[product] + TRANSFER_UNITS) return null;
+    }
     const customerIds = (value: unknown): CustomerId[] => Array.isArray(value)
       ? [...new Set(value.filter((id): id is CustomerId => typeof id === "string" && Object.hasOwn(CUSTOMERS, id)))] : [];
     const session = parsed.activeSession;
@@ -1038,10 +1061,17 @@ export function resolveSale(s: Campaign, input: {
   const vetoMissed = Boolean(customer.veto && !known.has(customer.veto.trait));
   const guarded = !input.interruption || input.interruptionHandled;
   const usefulQuestion = input.askedQuestion !== null && QUESTIONS[customer.id][input.askedQuestion]?.useful;
+  const left = s.stock[input.selectedProduct];
   const units = tier === "negative"
-    ? input.force ? forcedUnits(customer, input.bundle) : 0
-    : unitsWanted(customer, input.selectedProduct, input.bundle, tier);
+    ? input.force ? forcedUnits(customer, input.bundle, left) : 0
+    : unitsWanted(customer, input.selectedProduct, input.bundle, tier, left);
   const sold = units > 0;
+  // 断货和推错是两件事：她没买是因为抽屉是空的，不是因为你判断错了，扣分不能共用同一档。
+  const blocked = left <= 0;
+  // 现货削掉了多少连带，要和"她预算只够"分开说：前者是柜台的锅，后者是她的锅。
+  const capped = sold && units < (tier === "negative"
+    ? forcedUnits(customer, input.bundle)
+    : unitsWanted(customer, input.selectedProduct, input.bundle, tier));
   // 半脸上过妆，她自己照过镜子：看清了不合适还塞进袋子，就不是判断失误，是明知故犯。
   const knowing = Boolean(input.faceTrialled) && tier === "negative" && sold;
   const shared = input.rivalChoice === "yield" || (s.activeSession?.customerId === customer.id && s.activeSession.rivalChoice === "yield");
@@ -1049,17 +1079,20 @@ export function resolveSale(s: Campaign, input: {
   const amount = shared ? total / 2 : total;
   const campaign: Campaign = {
     ...s, sales: s.sales + amount, daySales: s.daySales + amount,
-    trust: clamp(s.trust + (tier === "positive" ? 7 : sold ? 1 : -10) + (usefulQuestion ? 4 : -2) + (guarded ? 2 : -6) - (knowing ? 4 : 0)),
-    compliance: clamp(s.compliance + (tier === "positive" ? 1 : sold ? 0 : -5) - (knowing ? 4 : 0)), energy: Math.max(0, s.energy - 14),
+    stock: { ...s.stock, [input.selectedProduct]: Math.max(0, left - units) },
+    trust: clamp(s.trust + (blocked ? -2 : tier === "positive" ? 7 : sold ? 1 : -10) + (usefulQuestion ? 4 : -2) + (guarded ? 2 : -6) - (knowing ? 4 : 0)),
+    compliance: clamp(s.compliance + (blocked ? 0 : tier === "positive" ? 1 : sold ? 0 : -5) - (knowing ? 4 : 0)), energy: Math.max(0, s.energy - 14),
     evidence: s.evidence + (input.claimed ? 1 : 0) + (!missed.length && !vetoMissed && sold ? 1 : 0),
     dayServed: [...s.dayServed, customer.id], activeSession: null,
-    flags: flag(s, `served:${customer.id}:${sold ? (tier === "negative" ? "risky" : "good") : "refused"}`),
-    history: history(s, sold
+    flags: flag(s, `served:${customer.id}:${blocked ? "out-of-stock" : sold ? (tier === "negative" ? "risky" : "good") : "refused"}`),
+    history: history(s, blocked ? `${customer.name}要的是${item.short}，柜上这一支已经断到最后` : sold
       ? `${customer.name}带走 ${units} 件${item.short} · ¥${total.toLocaleString("zh-CN")}${tier === "negative" ? "（她并不认同这个方向）" : ""}`
       : `${customer.name}拒绝了${item.short}的推荐`),
     orders: sold ? [...s.orders, { day: s.day, customerId: customer.id, product: input.selectedProduct, units, total, amount, shared, risky: tier === "negative" }] : s.orders,
   };
-  if (sold && units < BUNDLES[input.bundle].units && units < customer.maxUnits) {
+  if (capped) campaign.history = history(campaign, `抽屉里只剩 ${left} 支${item.short}，这单按现货开`);
+  // 被抽屉削掉的那几件不能说成"她预算只够"：那是柜台的缺口，不是她的。
+  if (sold && !capped && units < BUNDLES[input.bundle].units && units < customer.maxUnits) {
     campaign.history = history(campaign, `${customer.name}的预算只够 ${units} 件，连带没有谈满`);
   }
   if (shared && sold) campaign.history = history(campaign, `${customer.name}与陆遥拼单：总额 ¥${total.toLocaleString("zh-CN")}，你的业绩 ¥${amount.toLocaleString("zh-CN")}`);
@@ -1070,17 +1103,20 @@ export function resolveSale(s: Campaign, input: {
   return {
     campaign: spendAttention(campaign, null, minutes),
     outcome: {
-      good: tier === "positive" && guarded, amount, total, units, minutes, tier, shared,
-      title: sold ? (tier === "positive" ? `${customer.name}成交` : tier === "mixed" ? `${customer.name}只带走一件` : `${customer.name}被你推下来单`) : `${customer.name}拒绝成交`,
-      body: (sold
-        ? (tier === "positive"
-            ? (guarded ? `你解决了真正需求，她还愿意带走 ${units} 件。她记住的不只是产品，还有你的判断。` : "产品选对了，但订单归属被人插进一道缝。")
-            : tier === "mixed"
-              ? "她认这个方向，却没有完全被说服。一件就够了，连带没有起来。"
-              : `数字立刻好看了 ${total.toLocaleString("zh-CN")} 元，可她最在意的问题没有解决。退货风险已经留在你名下。`)
-        : vetoMissed ? "她没有为错误判断买单。你连她在怕什么都没问出来。" : "她没有为这个方向买单。你丢掉一笔销售，但至少记住了这次反应。")
-        + (knowing ? " 而且这半张脸你亲手画过：她知道不合适，你也知道。" : "")
-        + (shared && sold ? ` 陆遥分走一半，你实际记入 ¥${amount.toLocaleString("zh-CN")}。` : ""),
+      good: tier === "positive" && guarded && !blocked, amount, total, units, minutes, tier, shared,
+      title: blocked ? `${customer.name}没买成` : sold ? (tier === "positive" ? `${customer.name}成交` : tier === "mixed" ? `${customer.name}只带走一件` : `${customer.name}被你推下来单`) : `${customer.name}拒绝成交`,
+      body: (blocked
+        ? `她认这个方向，钱也带了，可是抽屉里一支${item.short}都没有。这一单不是你推错了，是柜台没有货。`
+        : (sold
+            ? (tier === "positive"
+                ? (guarded ? `你解决了真正需求，她还愿意带走 ${units} 件。她记住的不只是产品，还有你的判断。` : "产品选对了，但订单归属被人插进一道缝。")
+                : tier === "mixed"
+                  ? "她认这个方向，却没有完全被说服。一件就够了，连带没有起来。"
+                  : `数字立刻好看了 ${total.toLocaleString("zh-CN")} 元，可她最在意的问题没有解决。退货风险已经留在你名下。`)
+            : vetoMissed ? "她没有为错误判断买单。你连她在怕什么都没问出来。" : "她没有为这个方向买单。你丢掉一笔销售，但至少记住了这次反应。")
+          + (knowing ? " 而且这半张脸你亲手画过：她知道不合适，你也知道。" : "")
+          + (shared && sold ? ` 陆遥分走一半，你实际记入 ¥${amount.toLocaleString("zh-CN")}。` : ""))
+        + (blocked ? " 下一单之前，要么走调拨单，要么就得开口找人。" : ""),
     },
   };
 }
@@ -1204,20 +1240,59 @@ export function requestStaffHelp(s: Campaign, id: CustomerId): Campaign {
     history: history(s, `苏蔓替你留住${CUSTOMERS[id].name}，多争取了两次接待动作`) };
 }
 
-// 报价单不再由隐藏答案决定：件数来自她的预算、用量上限和你判断的准不准。
-export function orderQuote(id: CustomerId, product: ProductId, bundle: BundleId, shared = false) {
+// 报价单不再由隐藏答案决定：件数来自她的预算、用量上限、你判断的准不准，以及抽屉里还剩几支。
+export function orderQuote(id: CustomerId, product: ProductId, bundle: BundleId, shared = false, left = Infinity) {
   const customer = CUSTOMERS[id];
   const item = PRODUCTS[product];
   const { tier } = fitOf(customer, product);
-  const units = unitsWanted(customer, product, bundle, tier);
+  const units = unitsWanted(customer, product, bundle, tier, left);
   const total = item.price * units;
   const lines = units > 0 ? [{ label: `${item.name} × ${units}`, amount: total }] : [];
-  const forced = forcedUnits(customer, bundle);
+  const forced = forcedUnits(customer, bundle, left);
   const minutes = units > 0 ? BUNDLES[bundle].units : 1;
-  const note = tier === "negative" ? `她不会为这个方向买单。硬推只能记 ${forced} 件，退货风险写在你名下`
-    : tier === "mixed" ? "她最多只肯先拿一件"
-      : units < BUNDLES[bundle].units ? `她的预算和用量只够 ${units} 件` : "";
+  // 现货削掉的那几件要说得出数量，否则玩家分不清是她在克制还是柜上没了。
+  const wanted = tier === "negative" ? forcedUnits(customer, bundle) : unitsWanted(customer, product, bundle, tier);
+  const note = left <= 0 ? `柜上这一支断了：抽屉里一支${item.short}都没有，这一单开不出来`
+    : tier === "negative" ? `她不会为这个方向买单。硬推只能记 ${forced} 件，退货风险写在你名下`
+      : left < wanted ? `柜上只剩 ${left} 支，这单最多开到 ${units} 件`
+        : tier === "mixed" ? "她最多只肯先拿一件"
+          : units < BUNDLES[bundle].units ? `她的预算和用量只够 ${units} 件` : "";
   return { lines, units, total, amount: shared ? total / 2 : total, shared, minutes, risky: tier === "negative", forced, tier, note };
+}
+
+export type TransferChannel = keyof typeof TRANSFER_MINUTES;
+
+// 一周一次的杠杆：同一支货调两次，罗曼会先问你为什么这么能动。
+export function canTransfer(s: Campaign, product: ProductId) {
+  return s.stock[product] <= TRANSFER_GATE && !hasFlag(s, `transfer:${product}`);
+}
+
+// 抽屉见底之后只有两条真实出路：走系统的调拨单，或者找人私下拿货。
+// 两条都要离柜打电话，而排队的人不会因为你打电话就停下来。措辞只在这里改一次。
+export function canTransferVia(s: Campaign, product: ProductId, channel: TransferChannel) {
+  return canTransfer(s, product) && (channel !== "tangke" || s.relations.tangke >= TANGKE_STOCK_GATE);
+}
+
+export function transferLabel(s: Campaign, product: ProductId, channel: TransferChannel) {
+  const short = PRODUCTS[product].short;
+  const head = channel === "official" ? `请罗曼开调拨单 · ${TRANSFER_MINUTES.official} 分钟` : `找唐可拿三支 · ${TRANSFER_MINUTES.tangke} 分钟`;
+  if (hasFlag(s, `transfer:${product}`)) return `${head} · ${short}这一周已经调过一次`;
+  if (s.stock[product] > TRANSFER_GATE) return `${head} · ${short}还够开一整套连带，先不用为它开口`;
+  if (channel === "tangke" && s.relations.tangke < TANGKE_STOCK_GATE) return `${head} · 唐可不会把货给一个刚跟她抢过单的人`;
+  return head;
+}
+
+// serving：手机版把接待拆在组件状态里，所以要把它手上那位单独报进来，否则离柜的三分钟会把她一起扣掉。
+export function transferStock(s: Campaign, product: ProductId, channel: TransferChannel, serving: CustomerId | null = s.activeSession?.customerId ?? null): Campaign {
+  if (!canTransferVia(s, product, channel)) return s;
+  const item = PRODUCTS[product];
+  const stock = { ...s.stock, [product]: s.stock[product] + TRANSFER_UNITS };
+  const next: Campaign = channel === "official"
+    ? { ...s, stock, compliance: clamp(s.compliance + 2), flags: flag(s, `transfer:${product}`),
+        history: history(s, `罗曼在系统里替你开了调拨单：${item.short} +${TRANSFER_UNITS} 支，台账上写着你的名字`) }
+    : { ...s, stock, compliance: clamp(s.compliance - 9), relations: { ...s.relations, tangke: s.relations.tangke + 8 },
+        flags: flag(s, `transfer:${product}`), history: history(s, `唐可把 ${TRANSFER_UNITS} 支${item.short}塞进你的抽屉，系统里没有这张单`) };
+  return spendAttention(next, serving, TRANSFER_MINUTES[channel]);
 }
 
 // 玩家能看到的部分：她说出来或被你问出来的诉求，以及还没问到的条数。

@@ -19,7 +19,7 @@ test("a clean route still needs day 5 to clear the target", () => {
   assert.equal(clean.served, 10);
   assert.equal(clean.dayTotals[3], 17_430);
   assert.ok(clean.dayTotals[3] < TARGET, "第 4 天结束时还不能提前达标");
-  assert.equal(clean.final.sales, 25_590);
+  assert.equal(clean.final.sales, 24_610, "第 5 天沈薇那单连带被抽屉削掉一支：¥980 不是谁算错，是柜上没了");
   assert.ok(clean.final.sales >= TARGET);
   assert.equal(endingTitle(clean.final), "你留下了，而且没变成她们");
   // 第 5 晚那句「摊得开」必须够得着：一路按「登记我的接待」的干净路线，五天下来本子里有 12 行。
@@ -203,7 +203,7 @@ test("working the private domain earns more and costs real customers", () => {
   // 四个晚上最多八句，这一局只发得出六句：沈薇和安姐是第 5 天才来的，那之后没有早晨了。
   assert.equal(privateDomain.final.flags.filter(f => f.startsWith("touched:")).length, 6);
   assert.equal(privateDomain.final.flags.filter(f => f.startsWith("member-repeat:")).length, 6, "跟过的六个人全部回柜");
-  assert.equal(privateDomain.final.sales, 29_510);
+  assert.equal(privateDomain.final.sales, 28_530);
   assert.ok(privateDomain.final.sales > counter.final.sales, "跟到底的私域比只在柜台前多开口更值钱，这一条要能被量出来");
   assert.ok(privateDomain.final.standing >= counter.final.standing);
 });
