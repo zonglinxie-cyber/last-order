@@ -21,7 +21,10 @@ test("mobile consultation scrolls its controls while the face stays fixed", asyn
   await page.screenshot({ path: "../audit/rescue-2026-09-08/after-pwa-rival.png" });
   await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
   const controls = page.locator(".consultation-controls .mobile-scroll");
-  const geometry = await controls.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, content: el.scrollHeight }));
+  const geometry = await controls.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, content: el.scrollHeight, bottom: Math.round(el.getBoundingClientRect().bottom) }));
+  // 这一屏最挤：她的话、选品、留小样、关单两个按钮全在面板里。关单不能要先滚动才点得到。
+  const close = await page.getByRole("button", { name: "接受拒绝", exact: true }).boundingBox();
+  expect(close!.y + close!.height).toBeLessThanOrEqual(geometry.bottom + 1);
   const portraitBefore = await page.locator(".customer-portrait").boundingBox();
   // Start on a product card: dragging must scroll, without changing selection.
   const card = await page.getByRole("button", { name: /柔焦 ¥980/ }).boundingBox();

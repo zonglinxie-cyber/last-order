@@ -71,8 +71,8 @@ test("a half-face demo buys the demand she did not say and survives a reload", a
   await page.getByRole("button", { name: "为沈薇试用" }).click();
   // 陆遥先插了一句话，dock 才轮得到上妆这一步。
   await page.getByRole("button", { name: "让顾客确认需求" }).click();
-  const insight = page.locator(".insight-strip span");
-  await expect(insight).toHaveText("2/3 线索 · 诉求 1/3");
+  const said = page.locator(".demand-said");
+  await expect(said).toHaveText("她脸上还有 1 处没看：鼻翼 · 她在意：妆感要轻薄自然 · 还有 2 条她没说出口 · 底线：一厚就卡粉，镜头里全是粉感");
   const queue = page.locator(".consultation-hud time");
   const meter = async () => Number(/(\d+)\/\d+/.exec(await queue.textContent())?.[1]);
   const before = await meter();
@@ -81,7 +81,7 @@ test("a half-face demo buys the demand she did not say and survives a reload", a
   await page.screenshot({ path: "../audit/experience-v2/mobile-face-trial-offer.png" });
   await faceTrial.click();
   await expect(page.getByText("妆面压在她脸上，她才承认：低风险，不刺激不闷痘")).toBeVisible();
-  await expect(insight).toHaveText("2/3 线索 · 诉求 2/3");
+  await expect(said).toHaveText("她脸上还有 1 处没看：鼻翼 · 她在意：妆感要轻薄自然 · 低风险，不刺激不闷痘 · 还有 1 条她没说出口 · 底线：一厚就卡粉，镜头里全是粉感");
   // 这两分钟从队伍另一头扣：她嘴上说等，数字不会等她。
   expect(before).toBe(4);
   expect(await meter()).toBe(before - 2);
@@ -105,6 +105,12 @@ test("leaving a consultation preserves diagnosis and rival pressure", async ({ p
   await page.getByRole("button", { name: "开始营业" }).click();
   await page.getByRole("button", { name: "查看梅女士" }).click();
   await page.getByRole("button", { name: "观察梅女士" }).click();
+  // 一进来那句不能是「0/3 线索」：她脸上全是闪着的点，报剩下几处没有取舍可言。
+  const said = page.locator(".demand-said");
+  await expect(said).not.toContainText("没看");
+  await expect(page.getByRole("button", { name: "观察眼下" })).toHaveAttribute("aria-pressed", "false");
+  // 观察那一步没走完，进度条上不能提前亮成已完成
+  await expect(page.locator(".consult-steps i").first()).not.toHaveClass(/done/);
   await page.getByRole("button", { name: "观察眼下" }).click();
   await page.getByRole("button", { name: "观察脸颊" }).click();
   // 两次观察花掉两分钟：另一位客人的耐心是真的在倒数。
@@ -113,7 +119,10 @@ test("leaving a consultation preserves diagnosis and rival pressure", async ({ p
   await expect(page.getByText("每次观察、提问、试用", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "查看梅女士" }).click();
   await page.getByRole("button", { name: "观察梅女士" }).click();
-  await expect(page.getByText("2/3 线索")).toBeVisible();
+  await expect(said).toHaveText("她脸上还有 1 处没看：鼻翼 · 她在意：先把干燥泛红稳住 · 还有 2 条她没说出口 · 问出来，或上脸试出来");
+  await expect(page.locator(".consult-steps i").first()).toHaveClass(/done/);
+  expect(await page.locator(".face-cue").evaluateAll(nodes => nodes.map(node => node.getAttribute("aria-pressed"))))
+    .toEqual(["true", "true", "false"]);
   await expect(page.getByRole("button", { name: "明早最想改善哪里？" })).toBeVisible();
 });
 

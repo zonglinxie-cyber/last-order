@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { CUSTOMERS, DAYS, ENERGY_LOCK, fitPreview, PRODUCTS, QUESTIONS, relationText, TOUCHES_PER_EVENING, TRAIT_LABELS, type Campaign, type CustomerId } from "../dynamic-counter-prototype/src/campaign";
+import { CUSTOMERS, DAYS, ENERGY_LOCK, consultationRecord, fitPreview, PRODUCTS, QUESTIONS, relationText, TOUCHES_PER_EVENING, TRAIT_LABELS, type Campaign, type CustomerId } from "../dynamic-counter-prototype/src/campaign";
 import { asset } from "./sim/asset";
 
 // Presentation only: money, patience and story consequences stay in campaign.ts.
@@ -55,26 +55,29 @@ export function questionChoices(id: CustomerId) {
   return [...choices.slice(offset), ...choices.slice(0, offset)];
 }
 
-// 信息不对称的界面表达：只有问出来或看出来的诉求才可见，没问到的用条数提醒。
+// 信息不对称的界面表达：只有问出来或看出来的诉求才用她的原话念出来，没问到的只说条数。
 export function DemandBoard({ game }: { game: Campaign }) {
   const session = game.activeSession;
   if (!session) return null;
   const customer = CUSTOMERS[session.customerId];
   const preview = fitPreview(customer, session.revealed);
+  const record = consultationRecord(customer, session.discovered, session.revealed, session.tested);
   return <div className="demand-board">
-    <span className="eyebrow">她要什么 <small>已掌握 {preview.known.length} / {customer.demands.length}</small></span>
+    <span className="eyebrow">她要什么</span>
     {preview.known.map(demand => <p key={demand.trait}><b>{TRAIT_LABELS[demand.trait]}</b><i className={"weight w" + demand.weight}>{"●".repeat(demand.weight)}</i></p>)}
-    {Boolean(preview.missed) && <p className="demand-blind">还有 {preview.missed} 条她没说出口 · 问出来，或上脸试出来</p>}
-    {customer.veto && preview.vetoKnown && <p className="demand-veto"><b>底线</b>{customer.veto.note}</p>}
+    {record.blind && <p className="demand-blind">{record.blind}</p>}
+    {record.veto && <p className="demand-veto"><b>底线</b>{record.veto}</p>}
     <p className="demand-budget">预算 {customer.budget.toLocaleString("zh-CN")} 元 · 最多带走 {customer.maxUnits} 件</p>
   </div>;
 }
 
+// 手记是玩家自己的本子：它说「问没问过」，不再摆 2 条线索 · 1 次问答这样的计数。
 export function ConsultationNotes({ game }: { game: Campaign }) {
   const session = game.activeSession;
   if (!session) return null;
   const customer = CUSTOMERS[session.customerId];
-  return <details className="consultation-notes" key={session.customerId}><summary>接待手记 <span>{session.discovered.length} 条线索 · {session.chat.length / 2} 次问答</span></summary><div>
+  const asked = session.chat.filter(line => line.role === "customer").length;
+  return <details className="consultation-notes" key={session.customerId}><summary>接待手记 <span>{asked ? `她答了 ${asked} 句` : "还没开口问"}</span></summary><div>
     {session.discovered.map(id => <p key={id}><b>{customer.cues[id].label}</b>{customer.cues[id].finding}</p>)}
     {session.chat.map((line, index) => <p key={index} className={line.role}><b>{line.role === "player" ? "你问" : customer.name}</b>{line.text}</p>)}
     {!session.discovered.length && <p>先观察。只有实际发现的线索才会记在这里。</p>}

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
-  fitOf, fitPreview, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
-  orderQuote, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
+  fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
+  orderQuote, OBSERVE_MIN, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type Trait,
 } from "./campaign";
@@ -366,22 +366,26 @@ export default function Prototype() {
   </main></MobileScroll>;
 
   if (screen === "consultation" && customer) {
-    const canTest = discovered.length >= 2 && askedQuestion !== null && selectedProduct;
+    const canTest = discovered.length >= OBSERVE_MIN && askedQuestion !== null && selectedProduct;
     const currentReaction = reaction && selectedProduct ? REACTIONS[selectedProduct][reaction] : null;
     const otherMeter = waitingOther ? campaign.waitMeters[waitingOther] ?? CUSTOMERS[waitingOther].patience : null;
     const pendingRival = interruption && !interruptionHandled;
     const quote = selectedProduct ? orderQuote(customer.id, selectedProduct, bundle, rivalChoice === "yield") : null;
-    const preview = fitPreview(customer, revealed);
+    const record = consultationRecord(customer, discovered, revealed, tested);
+    // 没看的点、答出来的要求、还没问到的条数、问到才知道的底线：合成一句，没说的部分不占行。
+    const saidLine = [record.face, record.said.length ? `她在意：${record.said.join(" · ")}` : "", record.blind, record.veto ? `底线：${record.veto}` : ""].filter(Boolean).join(" · ");
     return <div className="app-screen consultation-shell"><main className={`consultation-game ${selectedCue ? "is-focusing" : ""} reaction-${reaction ?? "none"}`} aria-label={`接待${customer.name}`}>
       <img className="customer-portrait" src={customer.portrait} alt={`${customer.name}面部近景`} /><div className="portrait-grade" />
       <header className="consultation-hud" style={{ paddingTop: device.geometry.safeArea.top + 7, paddingBottom: 8 }}><button className="icon-button" type="button" onClick={() => { keyboard.hide(); saveSession({ discovered, askedQuestion, selectedProduct, bundle, revealed, tested, reaction, revisions, claimed, rivalChoice, chat }); setScreen("floor"); }} aria-label="返回现场">‹</button><div><strong>{customer.name}</strong><span>{customer.descriptor}</span></div><time>{waitingOther && otherMeter != null ? `${CUSTOMERS[waitingOther].name} ${otherMeter}/${CUSTOMERS[waitingOther].patience}` : `DAY ${campaign.day}`}</time></header>
       <div className="customer-speech" style={{ top: device.geometry.safeArea.top + 72 }}><span>{chat.at(-1)?.role === "customer" ? chat.at(-1)?.text : customer.opening}</span></div>
       {/* 点位按脸的位置摆，名字用她自己给的那句：观察按钮说「灯光」时，读到的也是灯光。 */}
-      {(["eyes", "cheek", "nose"] as const).map(cue => <button key={cue} type="button" className={`face-cue cue-${cue} ${discovered.includes(cue) ? "found" : ""}`} onClick={() => inspect(cue)} aria-label={`观察${customer.cues[cue].label}`}><i /></button>)}
+      {(["eyes", "cheek", "nose"] as const).map(cue => <button key={cue} type="button" className={`face-cue cue-${cue} ${discovered.includes(cue) ? "found" : ""}`} onClick={() => inspect(cue)} aria-label={`观察${customer.cues[cue].label}`} aria-pressed={discovered.includes(cue)}><i /></button>)}
       {selectedCue && discovered.length < 2 && <aside className="finding-card"><b>{customer.cues[selectedCue].label}</b><span>{customer.cues[selectedCue].finding}</span></aside>}
       {serviceMotion && <div className={`service-hand ${serviceMotion}`} aria-hidden="true"><i /><span>{serviceMotion === "inspect" ? "观察" : serviceMotion === "trial" ? "试妆" : "登记"}</span></div>}
       {pendingRival && rival && <div className="rival-interruption multi"><p className="rival-trial-result">{currentReaction}</p><div className="event-character-inline"><CharacterFace visual={STAFF.luyao} /><div><b>{rival.headline}</b><span>“{rival.quote}”</span></div></div><div className="rival-actions"><button type="button" onClick={() => handleRival("record")}>先登记接待</button><button type="button" onClick={() => handleRival("clarify")}>让顾客确认需求</button><button type="button" aria-label="让她演示" onClick={() => handleRival("yield")}>让她演示<small>业绩各半</small></button></div></div>}
-      {!pendingRival && <section className="consultation-dock" style={{ bottom: 10 + bottomInset, height: discovered.length < 2 ? "17%" : tested && reaction === "positive" ? "42%" : "46%" }}><MobileScroll className="consultation-controls"><div className="consult-steps"><i className="done">观察</i><i className={askedQuestion !== null ? "done" : ""}>询问</i><i className={tested ? "done" : ""}>试用</i><i>成交</i></div><div className="insight-strip"><span>{discovered.length}/3 线索 · 诉求 {preview.known.length}/{customer.demands.length}</span><b>{currentReaction ?? (discovered.length >= 2 ? (askedQuestion !== null ? "听她的反应，再选产品试用" : "开口问她真正在意什么") : "点按面部线索，先看再问")}</b></div>
+      {!pendingRival && <section className="consultation-dock" style={{ bottom: 10 + bottomInset, height: discovered.length < 2 ? "17%" : tested && reaction === "positive" ? "42%" : "46%" }}><MobileScroll className="consultation-controls"><div className="consult-steps"><i className={discovered.length >= 2 ? "done" : ""}>观察</i><i className={askedQuestion !== null ? "done" : ""}>询问</i><i className={tested ? "done" : ""}>试用</i><i>成交</i></div><div className="insight-strip"><b>{currentReaction ?? (discovered.length >= 2 ? (askedQuestion !== null ? "听她的反应，再选产品试用" : "开口问她真正在意什么") : "点按面部线索，先看再问")}</b></div>
+        {/* 不再是「2/3 线索 · 诉求 1/3」：她答出来的用原话念，没问到的只报条数。 */}
+        {saidLine && <p className="demand-said">{saidLine}</p>}
         {chat.length > 0 && !tested && <div className="consult-chat" aria-label="接待对话">{chat.slice(-1).map((line, index) => <p key={`${line.role}-${index}`} className={line.role}>{line.role === "player" ? "你" : customer.name}：{line.text}</p>)}</div>}
         {discovered.length >= 2 && askedQuestion === null ? <div className="question-options">{QUESTIONS[customer.id].map((q, index) => <button type="button" key={q.label} onClick={() => ask(index)} disabled={talking}>{q.label}</button>)}</div> : null}
         {discovered.length >= 2 && !tested && <form className="consult-composer" onSubmit={(event) => { event.preventDefault(); void speak(draft); }}>

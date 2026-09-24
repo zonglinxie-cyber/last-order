@@ -126,6 +126,41 @@ test("the observe controls speak in her words, not in anatomical directions", as
   await page.screenshot({ path: "../audit/experience-v2/cue-labels-her-words.png" });
 });
 
+// 现场还差什么，念成她说的话：近景下面报没看的点，栏位里报她的原话，屏上不摆 x/y。
+test("what the counter still misses is read as her words, not as a fraction", async ({ page }) => {
+  await start(page);
+  await page.getByRole("button", { name: "接待沈薇", exact: true }).click();
+  const rest = page.locator(".portrait-rest");
+  // 只看过一处时她脸上全是闪着的点，报「还剩几处」没有取舍可言
+  await expect(rest).toHaveCount(0);
+  expect(await page.locator(".cue-actions button").evaluateAll(nodes => nodes.map(node => node.getAttribute("aria-pressed"))))
+    .toEqual(["false", "false", "false"]);
+  await expect(page.locator(".demand-board")).toContainText("还有 3 条她没说出口 · 问出来，或上脸试出来");
+  await page.getByRole("button", { name: "观察眼下", exact: true }).click();
+  await page.getByRole("button", { name: "观察脸颊", exact: true }).click();
+  await expect(rest).toHaveText("她脸上还有 1 处没看：鼻翼");
+  // 看没看过由近景上那三个点自己说，不用再摆一个计数
+  expect(await page.locator(".portrait-cue").evaluateAll(nodes => nodes.map(node => node.getAttribute("aria-pressed"))))
+    .toEqual(["true", "true", "false"]);
+  await page.getByRole("button", { name: "你最怕镜头看到什么？", exact: true }).click();
+  await expect(page.locator(".consultation-notes summary")).toHaveText("接待手记 她答了 1 句");
+  await page.getByRole("button", { name: "柔焦 ¥980", exact: true }).click();
+  await page.getByRole("button", { name: "为沈薇试用", exact: true }).click();
+  await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  // 上脸那一步的按钮已经摆在下面，那句话不用再教一遍怎么问
+  await expect(page.locator(".demand-blind")).toHaveText("还有 2 条她没说出口");
+  await expect(page.locator(".demand-veto b")).toHaveText("底线");
+  await expect(page.locator(".demand-veto")).toContainText("一厚就卡粉，镜头里全是粉感");
+  const restBox = await rest.boundingBox();
+  const frame = await page.locator(".portrait-window").boundingBox();
+  expect(restBox!.y + restBox!.height).toBeLessThanOrEqual(frame!.y + frame!.height + 1);
+  const cueBottoms = await page.locator(".portrait-cue").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().bottom));
+  // 这一行是贴着近景下面放的，不能压住脸上的点位
+  expect(Math.max(...cueBottoms)).toBeLessThanOrEqual(restBox!.y + 1);
+  await expect(page.locator(".consult-scene")).not.toContainText(/\d\s\/\s\d/);
+  await page.screenshot({ path: "../audit/experience-v2/consult-record-words.png" });
+});
+
 // 同一条规则在两个 UI 里都读得出她的名字：第 5 天回到柜台的安姐，第三处线索是宴会厅的灯光。
 test("the customer who came back on day five is read by the light she asked about", async ({ page }) => {
   await page.goto("/");

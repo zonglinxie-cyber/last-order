@@ -154,6 +154,8 @@ export const BUNDLES: Record<BundleId, { units: number; label: string; detail: s
 
 export const POSITIVE_FIT = 0.78;
 export const MIXED_FIT = 0.55;
+// 开口之前的门槛：至少在她脸上看过两处。两个 UI 的这一步判定都问这个数。
+export const OBSERVE_MIN = 2;
 export type FitTier = "positive" | "mixed" | "negative";
 
 export function fitScore(customer: Customer, product: ProductId): number {
@@ -1078,7 +1080,7 @@ export function observeService(s: Campaign, cue: CueId): Campaign {
 
 export function askService(s: Campaign, text: string, chipIndex?: number): Campaign {
   const session = s.activeSession;
-  if (!session || session.discovered.length < 2 || !text.trim() || session.tested) return s;
+  if (!session || session.discovered.length < OBSERVE_MIN || !text.trim() || session.tested) return s;
   const questions = QUESTIONS[session.customerId];
   const useful = chipIndex == null ? inferUseful(session.customerId, text) : Boolean(questions[chipIndex]?.useful);
   const index = chipIndex ?? Math.max(0, questions.findIndex(question => Boolean(question.useful) === useful));
@@ -1105,7 +1107,7 @@ export function selectServiceProduct(s: Campaign, id: ProductId): Campaign {
 
 export function trialService(s: Campaign): Campaign {
   const session = s.activeSession;
-  if (!session || session.tested || session.discovered.length < 2 || session.askedQuestion === null || !session.selectedProduct) return s;
+  if (!session || session.tested || session.discovered.length < OBSERVE_MIN || session.askedQuestion === null || !session.selectedProduct) return s;
   return { ...spendAttention(s, session.customerId, 1), activeSession: { ...session, tested: true,
     reaction: fitOf(CUSTOMERS[session.customerId], session.selectedProduct).tier } };
 }
@@ -1189,5 +1191,20 @@ export function fitPreview(customer: Customer, revealed: Trait[]) {
     known: knownDemands(customer, known),
     missed: unknownDemands(customer, known).length,
     vetoKnown: !customer.veto || known.has(customer.veto.trait),
+  };
+}
+
+// 现场还差什么，念成她说的话而不是分数：脸上没看的点、没说出口的要求、问到才知道的底线。
+// 两个 UI 都问这一个函数，措辞只在这里改一次。
+export function consultationRecord(customer: Customer, discovered: CueId[], revealed: Trait[], tested = false) {
+  const preview = fitPreview(customer, revealed);
+  const left = (Object.keys(customer.cues) as CueId[]).filter(cue => !discovered.includes(cue));
+  return {
+    // 看够 OBSERVE_MIN 处之前不报剩下的点位：那时她脸上只有一直在闪的点，谈不上取舍。
+    face: discovered.length >= OBSERVE_MIN && left.length ? `她脸上还有 ${left.length} 处没看：${left.map(cue => customer.cues[cue].label).join("、")}` : "",
+    said: preview.known.map(demand => TRAIT_LABELS[demand.trait]),
+    // 试过手背之后，「上脸试出来」这一步已经写在面板的按钮上了，句子就不再教一遍。
+    blind: preview.missed ? `还有 ${preview.missed} 条她没说出口${tested ? "" : " · 问出来，或上脸试出来"}` : "",
+    veto: customer.veto && preview.vetoKnown ? customer.veto.note : "",
   };
 }

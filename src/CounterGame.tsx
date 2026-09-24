@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
-  observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
+  observeService, OBSERVE_MIN, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
@@ -96,9 +96,10 @@ export default function CounterGame() {
   const pendingRival = Boolean(session?.tested && RIVAL_IDS.includes(session.customerId) && !session.rivalChoice);
   const rival = customer && RIVAL_IDS.includes(customer.id) ? RIVAL_INTERRUPTIONS[customer.id as keyof typeof RIVAL_INTERRUPTIONS] : null;
   const lastCue = session?.discovered.at(-1);
+  const record = session && customer ? consultationRecord(customer, session.discovered, session.revealed, session.tested) : null;
   const picked = session?.selectedProduct ?? null;
   const showProducts = Boolean(session && session.askedQuestion !== null && !askingAgain && (!session.tested || revising) && !pendingRival);
-  const stage = !session || session.discovered.length < 2 ? 0 : session.askedQuestion === null || askingAgain ? 1 : !session.tested || revising ? 2 : 3;
+  const stage = !session || session.discovered.length < OBSERVE_MIN ? 0 : session.askedQuestion === null || askingAgain ? 1 : !session.tested || revising ? 2 : 3;
   const chapter = CHAPTER_HOOKS[game.day - 1];
   const eventResponse = game.history.filter(entry => entry.day === game.day && entry.text.startsWith("回应 · ")).at(-1)?.text.slice(5);
   const clockMinutes = 19 * 60 + game.shiftMinutes;
@@ -324,8 +325,8 @@ export default function CounterGame() {
         {screen === "consultation" && customer && session && <div className="consult-scene">
           <div className="portrait-window"><div className="portrait-plate">
             <img src={portrait(customer.id)} alt={customer.name + "面部近景"} />
-            {CUES.map(cue => <button key={cue} aria-label={"面部线索：" + customer.cues[cue].label} className={"portrait-cue cue-" + cue + (session.discovered.includes(cue) ? " found" : "")} onClick={() => setGame(value => observeService(value, cue))}><span>{session.discovered.includes(cue) ? "✓" : "+"}</span></button>)}
-          </div><button className="back-floor" onClick={() => setScreen("floor")}>返回现场</button></div>
+            {CUES.map(cue => <button key={cue} aria-label={"面部线索：" + customer.cues[cue].label} aria-pressed={session.discovered.includes(cue)} className={"portrait-cue cue-" + cue + (session.discovered.includes(cue) ? " found" : "")} onClick={() => setGame(value => observeService(value, cue))}><span aria-hidden="true">{session.discovered.includes(cue) ? "✓" : "+"}</span></button>)}
+          </div>{record?.face && <p className="portrait-rest">{record.face}</p>}<button className="back-floor" onClick={() => setScreen("floor")}>返回现场</button></div>
           <section className="customer-reading"><span className="eyebrow">{customer.descriptor}</span><h1>{customer.name}</h1><blockquote>{session.chat.at(-1)?.text ?? customer.opening}</blockquote>
             {lastCue && <p className="reading-finding"><b>{customer.cues[lastCue].label}</b>{customer.cues[lastCue].finding}</p>}
             <DemandBoard game={game} />
@@ -353,7 +354,7 @@ export default function CounterGame() {
       </aside>
     </div>
     <footer ref={dockRef} className="rescue-dock" inert={modalOpen}>
-      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? session.discovered.length + " / 3 处线索 · " + energyWord(game.energy) : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
+      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? energyWord(game.energy) : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
       <div className="dock-content">
         {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{selectedCustomer.opening}</p></div>
           {available.includes(selectedCustomer.id) ? <div className="floor-actions">

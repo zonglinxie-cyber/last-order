@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, chooseBundle, closeService, CUSTOMERS, dayEvent, endingTitle,
+  advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, chooseBundle, closeService, consultationRecord, CUSTOMERS, dayEvent, endingTitle,
   FACE_TRIAL_MINUTES, faceTrialService, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, QUESTIONS,
   releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent,
-  startNextDay, startService, TARGET, trialService, type BundleId, type Campaign, type CustomerId, type ProductId,
+  startNextDay, startService, TARGET, trialService, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
 
@@ -87,6 +87,23 @@ test("半脸上过妆还硬推，扣的是明知故犯，不是营业额", () =>
   assert.ok(seen.campaign.history.some(row => row.text.includes("照着镜子看过这半张脸")));
   assert.ok(!blind.campaign.history.some(row => row.text.includes("照着镜子看过这半张脸")));
   assert.ok(seen.outcome.body.includes("她知道不合适，你也知道"));
+});
+
+// 面板上那句「还差什么」由这里念出来。两个 UI 都问同一个函数，所以措辞只在这里对一次。
+const look = (...cues: CueId[]) => { let s = startService(INITIAL, "shen"); for (const cue of cues) s = observeService(s, cue); return s.activeSession!; };
+
+test("她脸上没看的点、没说出口的要求，念成句子而不是 x/y", () => {
+  const one = look("eyes");
+  assert.deepEqual(consultationRecord(CUSTOMERS.shen, one.discovered, one.revealed), {
+    face: "", said: ["妆感要轻薄自然"], blind: "还有 2 条她没说出口 · 问出来，或上脸试出来", veto: "一厚就卡粉，镜头里全是粉感",
+  }, "只看过一处时她脸上全是闪着的点，报「还剩几处」没有取舍可言");
+  const two = look("eyes", "cheek");
+  assert.equal(consultationRecord(CUSTOMERS.shen, two.discovered, two.revealed).face, "她脸上还有 1 处没看：鼻翼");
+  assert.equal(consultationRecord(CUSTOMERS.shen, look("eyes", "cheek", "nose").discovered, two.revealed).face, "", "看完最后一处就不再报剩下的点");
+  // 半脸上妆的按钮已经摆在面板上，那一句不用再教她怎么问
+  assert.equal(consultationRecord(CUSTOMERS.shen, two.discovered, two.revealed, true).blind, "还有 2 条她没说出口");
+  for (const line of Object.values(consultationRecord(CUSTOMERS.shen, two.discovered, two.revealed)).flat())
+    assert.doesNotMatch(line, /\d\s*\/\s*\d/, `${line} 里不该再有分数样子的计数`);
 });
 
 test("每个人都上脸，队伍后面就会少两个人", () => {

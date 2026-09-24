@@ -128,10 +128,9 @@
 @media (max-height: 750px) and (min-width: 651px) { .editorial-intro h1 { font-size: 64px; margin: 12px 0; }.editorial-intro h2 { font-size: 21px; margin-bottom: 10px; }.intro-copy { padding: 18px 0; }.intro-copy > p { line-height: 1.8; }.editorial-intro blockquote { margin: 12px 0; padding: 8px 12px; }.intro-actions { margin-top: 16px; }.chapter-track { margin-top: 20px; }.intro-art { padding: 28px 0; }.intro-bottom { padding: 12px 0; } }
 @media (max-height: 580px) and (min-width: 651px) { .editorial-intro.shift-intro { grid-template-rows: auto auto; align-items: start; }.intro-art { height: 420px; }.floor-mission { display: none; }.rescue-game.screen-intro, .rescue-game.screen-brief { grid-template-rows: 60px minmax(0, 1fr); } }
 
-/* P1 · 适配度与连带：把"她到底要什么"显示成可见进度，而不是隐藏答案 */
+/* P1 · 适配度与连带：她答出来的要求用原话列在这里，没问到的只说还有几条 */
 .demand-board { margin-top: 14px; padding: 11px 12px; border: 1px solid #6b4a46; border-radius: 5px; background: #2a1f26; }
-.demand-board > .eyebrow { display: flex; justify-content: space-between; gap: 10px; color: #e4c29d; font-size: 12px; letter-spacing: .12em; }
-.demand-board > .eyebrow small { color: #b8a292; letter-spacing: 0; }
+.demand-board > .eyebrow { display: block; color: #e4c29d; font-size: 12px; letter-spacing: .12em; }
 .demand-board p { margin-top: 8px; font-size: 13px; color: #e0cdbd; display: flex; align-items: baseline; gap: 8px; }
 .demand-board p b { font-weight: 500; color: #f0dcc0; }
 .demand-board .weight { font-size: 10px; letter-spacing: .12em; font-style: normal; color: #d3ab7d; }
