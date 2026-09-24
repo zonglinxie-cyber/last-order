@@ -653,6 +653,28 @@ export function counterCheck(s: Campaign): CounterReading | null {
   return null;
 }
 
+// 一周的账不只按总额结：连带率（件/单）和"没等到的人"是同一枚硬币的两面 ——
+// 多要的那一件是从另一边还在等的人身上借分钟（`resolveSale` 按件数扣现场时间）。
+// 只从 orders 与 `lost:` 旗推，不新开存档字段。故意不带 ¥：`sales` 里有转单、小样回柜、微信补单这些
+// 不写 orders 的入账（探针量到每条路线 ¥980，私域那条 ¥8,260），件数和金额放进同一句就是两种口径。
+// 第 4 天才念：前三早手上只有 1~4 单，"平均一单几件"在那个样本上没有意义（推导见 docs/DESIGN.md 的 P26）。
+export const STRUCTURE_FROM_DAY = 4;
+
+export function weekStructure(s: Campaign) {
+  const tickets = s.orders.length;
+  const units = s.orders.reduce((sum, order) => sum + order.units, 0);
+  const walked = s.flags.filter(name => name.startsWith("lost:")).length;
+  return { tickets, units, walked, perTicket: tickets ? Math.round(units / tickets * 10) / 10 : 0 };
+}
+
+// 一句不带方向的描述：只说这一周的钱和件数是怎么摊开的，不评级（评级是 `counterCheck` 那一档的事）。
+export function structureLine(s: Campaign) {
+  const { tickets, units, walked, perTicket } = weekStructure(s);
+  if (!tickets) return `一单没开${walked ? ` · ${walked} 位没等到你` : ""}`;
+  // 一个都没走的时候不念"0 位没等到你"：那是没有发生的事，不是发生了一件叫 0 的事。
+  return `这周开了 ${tickets} 单、带走 ${units} 件 · 平均一单 ${perTicket} 件${walked ? ` · 另有 ${walked} 位没等到你` : ""}`;
+}
+
 function applyReading(s: Campaign, reading: CounterReading | null): Campaign {
   if (!reading || hasFlag(s, reading.key)) return s;
   return {
@@ -761,6 +783,8 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
     if (reading && hasFlag(s, reading.key)) notes.push({ speaker: reading.speaker, body: reading.body });
   }
   notes.push({ speaker: "品牌 · 到货", body: deliveryWord(s.day) });
+  // 总额之外没人念结构：这一行从第 4 早起跟着你，到结局那一屏还在。
+  if (s.day >= STRUCTURE_FROM_DAY && s.orders.length) notes.push({ speaker: "日报 · 柜台", body: structureLine(s) });
   // 这一遍自查不是柜上自己想起来的：第 3 天早上品牌说要翻处理记录，晨会念一次，那一屏上才长出这个动作。
   if (s.day === EXPIRED_SAMPLING.fromDay && !expiredCleared(s)) notes.push({ speaker: "品牌 · 巡店", body: EXPIRED_SAMPLING_NOTICE });
   if (s.day === 4 && hasFlag(s, "tang-paid-order")) notes.push({ speaker: "唐可 · 交接", body: "她把一单伴娘妆转到你名下。口头承诺这次兑现了。" });

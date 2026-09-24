@@ -3,7 +3,7 @@ import {
   advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, EXPIRED_SAMPLING,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, canLeaveSample, leaveSample,
   observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, PULL_OVER_RETURN, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
-  respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, SPLIT_WORD, standingWord,
+  respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, SPLIT_WORD, standingWord, structureLine,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
 } from "../dynamic-counter-prototype/src/campaign";
@@ -363,6 +363,7 @@ export default function CounterGame() {
           <span className="eyebrow">{screen === "finale" ? "新品活动周 · 最终结算" : "DAY " + game.day + " · 今日账本"}</span><h1>{screen === "finale" ? endingTitle(game) : "今天的单，明天的账"}</h1><strong className="large-number">{money(game.sales)} <small>/ {money(TARGET)}</small></strong>
           {screen === "summary" && eventResponse && <blockquote className="decision-response"><span className="eyebrow">你的选择，得到了回应</span><p>{eventResponse}</p></blockquote>}
           {screen === "finale" && <div className="ending-checks"><span>业绩 <b>{game.sales >= TARGET ? "达标" : "未达标"}</b></span><span>信任 <b>{game.trust >= 55 ? "留下了口碑" : "仍需重建"}</b></span><span>合规 <b>{complianceWord(game.compliance)}</b></span><span>柜位 <b>{counter.label}</b></span></div>}
+          {screen === "finale" && <p className="week-structure">{structureLine(game)}</p>}
           {screen === "finale" && <p className="counter-verdict">{counter.body}</p>}
           <div className="ledger-book" aria-label="因果账本">{historyByDay(game).filter(group => screen === "finale" || group.day === game.day).map(group => <section key={group.day}><h2>DAY {group.day} · {group.title}</h2>{group.items.filter(item => screen === "finale" || !item.text.startsWith("回应 · ")).map((item, index) => <p key={index}>{item.text}</p>)}</section>)}
             {/* 收银小票那一叠不再单独排一遍：每笔钱已经写在自己那条因果行上（带走 / 退单 / 晨会补录都带 ¥）。

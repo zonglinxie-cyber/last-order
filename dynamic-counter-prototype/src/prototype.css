@@ -334,6 +334,8 @@ button { -webkit-tap-highlight-color:transparent; }
 .summary-screen,.finale-screen { display:flex; flex-direction:column; justify-content:flex-start; padding:25px 18px 32px; background:linear-gradient(180deg,#241516,#10090a); height:auto; overflow:visible; }.summary-screen>p,.finale-screen>p { margin:0; color:#ae9788; font-size:8px; letter-spacing:.09em; text-align:center; }.summary-screen>h1,.finale-screen>h1 { margin:10px 0 18px; color:#ffedc9; font:700 23px/1.3 'Noto Serif SC'; text-align:center; }
 .summary-sale,.final-score { display:flex; flex-direction:column; align-items:center; padding:17px; border:1px solid #e9c77931; border-radius:17px; background:#ffffff07; }.summary-sale small,.final-score span { color:#aa9689; font-size:7px; }.summary-sale b,.final-score b { color:#f2cc7d; font:700 29px 'Noto Serif SC'; }.summary-sale span,.final-score small { color:#b9a397; font-size:7px; }
 .ledger,.ending-copy,.ledger-book { margin:13px 0; padding:12px; border-radius:13px; background:#ffffff06; }.ledger>b,.ledger-book>b { color:#d5b97f; font-size:8px; }.ledger p,.ending-copy p,.ledger-day p { margin:7px 0 0; padding-left:8px; border-left:2px solid #94664e; color:#ccb9ad; font-size:7px; line-height:1.55; }
+/* 结局那一行"钱是怎么摊开的"贴在总额下面，不进 .ending-copy 那块判词：它是事实，不是评价。 */
+.week-structure { margin:9px 0 0; color:#d8bd8d; font-size:8px; line-height:1.5; text-align:center; text-wrap:balance; }
 .ledger-day { margin-top:11px; }.ledger-day>span { color:#f0ca84; font:600 11px 'Noto Serif SC'; }
 .summary-metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; margin-bottom:8px; }.summary-metrics span { padding:8px 4px; border-radius:9px; background:#ffffff06; color:#a79284; font-size:7px; text-align:center; }.summary-metrics b { color:#efd095; font-size:10px; }
 /* 台账不做成第三个数字：它和柜位一样是念出来的一句话，排版跟着因果账本那一套。
@@ -400,6 +402,7 @@ button { -webkit-tap-highlight-color:transparent; }
   .floor-feed,
   .inspect-quote,
   .party-list li,
+  .week-structure,
   .speed-rail button { font-size:12px; }
 
   .shift-brief small,

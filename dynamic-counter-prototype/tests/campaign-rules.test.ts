@@ -4,7 +4,7 @@ import {
   applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, canLeaveSample, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
-  TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
+  TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
 
@@ -299,6 +299,34 @@ test("每一笔动过 sales 的钱都在自己那一行写下数额：账本各�
   assert.ok(yielded?.outcome.shared, "让单这一格确实各半");
   assert.ok(yielded.campaign.history.some(entry => entry.text === "沈薇带走 2 件柔焦（与陆遥各半） · ¥980"), "整单 ¥1,960，入账那半份写在同一行上");
   assert.equal(ledgerSum(yielded.campaign), yielded.campaign.sales);
+});
+
+// P26：一周的账不只按总额结。探针（/tmp/p26-upt.ts）量到八条路线的连带率 1.0~2.5，
+// 而连带率与钱几乎不相关（Spearman rho = 0.02）：UPT 最高的两条（2.5）都 ¥19,290、都不达标。
+// 所以这一行只做描述，不评级、不进 `standing` —— 把它做成记分牌会表扬一条已知会输的路线。
+test("连带率只从单和件推：件数最凶的那条路线钱更少，所以那句不许写成表扬", () => {
+  const clean = runRoute().final;
+  const singles = runRoute("single").final;
+  const greedy = runRoute("bulk").final;
+  assert.deepEqual(weekStructure(clean), { tickets: 9, units: 18, walked: 0, perTicket: 2 });
+  assert.deepEqual(weekStructure(singles), { tickets: 10, units: 10, walked: 0, perTicket: 1 });
+  assert.deepEqual(weekStructure(greedy), { tickets: 6, units: 15, walked: 3, perTicket: 2.5 });
+  // 规则层的因果：多要一件把件数推上去，同时把单数压下来（人等走了）。
+  assert.ok(weekStructure(greedy).perTicket > weekStructure(clean).perTicket, "按最多件数那一档连带率更高");
+  assert.ok(weekStructure(greedy).tickets < weekStructure(clean).tickets, "而开出去的单更少");
+  assert.ok(weekStructure(greedy).walked > weekStructure(clean).walked, "少掉的那些单是走掉的人");
+  assert.ok(greedy.sales < clean.sales && greedy.sales < TARGET && clean.sales >= TARGET, "钱更少、也不达标");
+  // 那句不许超过规则给的东西：不带 ¥（sales 里有转单、回柜、微信补单这些不写 orders 的入账，件数和金额是两种口径），也不带好坏。
+  for (const [label, state] of [["清洁", clean], ["不连带", singles], ["硬开口", greedy]] as Array<[string, Campaign]>) {
+    assert.equal(structureLine(state).includes("¥"), false, `${label}：这一行不碰钱`);
+    assert.doesNotMatch(structureLine(state), /达标|优秀|很好|糟|差|失败|成功/, `${label}：这一行不评级`);
+  }
+  assert.equal(structureLine(clean), "这周开了 9 单、带走 18 件 · 平均一单 2 件");
+  assert.equal(structureLine(greedy), "这周开了 6 单、带走 15 件 · 平均一单 2.5 件 · 另有 3 位没等到你");
+  assert.equal(structureLine(INITIAL), "一单没开", "没人可接的那一早不硬凑句子");
+  // 前三早手上只有 1~4 单（探针 /tmp/p26-days.ts），平均一单几件在那个样本上没意义：从第 4 早起才念。
+  assert.equal(dawnNotices({ ...clean, day: 3 }).some(note => note.speaker === "日报 · 柜台"), false, "第 3 早不念结构");
+  assert.ok(dawnNotices({ ...clean, day: 4 }).some(note => note.body === structureLine(clean)), "第 4 早念的是同一句，不在 UI 各拼一份");
 });
 
 test("the four endings each need their own condition", () => {

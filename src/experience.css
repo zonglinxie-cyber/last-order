@@ -88,6 +88,8 @@
 .ending-checks { display: flex; flex-wrap: wrap; gap: 10px; }
 .ending-checks > span { padding: 10px 15px; background: #ffffff06; border: 1px solid #5b453f; font-size: 12px; color: #bba18d; }
 .ending-checks b { display: block; color: #e0c7a7; font-size: 14px; }
+/* 总额之外只念结构：件数摊在几单上、几位没等到。这一行故意不带 ¥、也不带好坏。 */
+.week-structure { margin: 12px 0 0; color: #d8bd8d; font-size: 13px; line-height: 1.7; text-wrap: balance; }
 .experience-dialog { width: min(780px, 100%); max-height: min(86dvh, 850px); overflow: auto; border: 1px solid #a88063; border-radius: 12px; background: #251c24; box-shadow: 0 30px 100px #0008; }
 .experience-dialog > header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; gap: 15px; background: #291f26; border-bottom: 1px solid #634741; position: sticky; top: 0; z-index: 1; }
 .experience-dialog h2 { font-family: 'Songti SC', serif; font-size: 26px; font-weight: 500; }

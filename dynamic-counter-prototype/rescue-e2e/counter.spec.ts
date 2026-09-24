@@ -516,6 +516,44 @@ test("the finale states what happened to the counter itself, not only the money"
   await expect(page.locator(".counter-verdict")).toHaveText("绮光这个柜位被排进下一轮撤柜评估。你留下的数字，被人拿去说明面积不够。");
 });
 
+// P26：总额之外那一行只念结构 —— 件数摊在几单上、几位没等到。
+// 第 4 早的晨会和结局那一屏念的是**同一句**（两边都调 `structureLine`，UI 不各拼一份），且都不带 ¥。
+// 两个屏各一个 test：在同一页里"先玩到第 4 天再写结局档"试过，reload 回来还是第 4 天 —— 还挂着的那一局会把自己存回去。
+const STRUCTURE_ORDERS = [
+  { day: 1, customerId: "shen", product: "soft", units: 2, total: 1_960, amount: 1_960, shared: false, risky: false },
+  { day: 2, customerId: "mei", product: "repair", units: 1, total: 1_680, amount: 1_680, shared: false, risky: false },
+  { day: 3, customerId: "anjie", product: "soft", units: 3, total: 2_940, amount: 2_940, shared: false, risky: false },
+];
+const STRUCTURE_LINE = "这周开了 3 单、带走 6 件 · 平均一单 2 件 · 另有 2 位没等到你";
+
+test("第 4 早的晨会把一周的结构念一句：件数摊在几单上、几位没等到", async ({ page }) => {
+  await page.goto("/");
+  await seed(page, { ...INITIAL, day: 3, sales: 6_580, eventDoneDays: [1, 2, 3], orders: STRUCTURE_ORDERS, flags: ["lost:xiaoyu", "lost:duan"] });
+  await page.reload();
+  await page.getByRole("button", { name: "进入下一天", exact: true }).click();
+  await expect(page.locator(".dawn-note").filter({ hasText: STRUCTURE_LINE })).toHaveCount(1);
+});
+
+test("结局那一屏把同一句摆在四格判定和柜位判词之间", async ({ page }) => {
+  await page.goto("/");
+  await seed(page, { ...INITIAL, day: 5, sales: 6_580, trust: 60, compliance: 60, standing: 44, finished: true, eventDoneDays: [1, 2, 3, 4, 5], orders: STRUCTURE_ORDERS, flags: ["lost:xiaoyu", "lost:duan"] });
+  await page.reload();
+  const structure = page.locator(".week-structure");
+  await expect(structure).toHaveText(STRUCTURE_LINE);
+  expect((await structure.innerText()).includes("¥"), "这一行不碰钱：sales 里有不写 orders 的入账，件数和金额是两种口径").toBe(false);
+  // 先给事实，再给评价。
+  const [checks, note, verdict] = await Promise.all([
+    page.locator(".ending-checks").boundingBox(),
+    structure.boundingBox(),
+    page.locator(".counter-verdict").boundingBox(),
+  ]);
+  expect(note).not.toBeNull();
+  expect(verdict).not.toBeNull();
+  expect(note!.y).toBeGreaterThan(checks!.y + checks!.height - 1);
+  expect(note!.y + note!.height).toBeLessThanOrEqual(verdict!.y + 1);
+  await page.screenshot({ path: "../audit/experience-v2/p26-sandbox-structure.png" });
+});
+
 test("when the counter is under review the roster is a card you can put on the table", async ({ page }) => {
   await page.goto("/");
   await seed(page, {
