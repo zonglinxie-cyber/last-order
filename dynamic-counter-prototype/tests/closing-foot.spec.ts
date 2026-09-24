@@ -49,6 +49,10 @@ const fold = () => {
     // 脚上那句"买到什么"离带底还剩多少（负数 = 直接被抽屉的 overflow:hidden 裁掉，不是"看得见但要滚"）。
     footNotes: [...document.querySelectorAll<HTMLElement>(".consultation-foot small")].map(node => Math.round(band.bottom - node.getBoundingClientRect().bottom)),
     footHeight: foot.offsetHeight,
+    // 半脸上妆那颗住在滚动区里（脚上只有成交那一排）：它压到脚下 = 这一步等于没有。
+    face: past(".face-trial-action"),
+    faceHeight: [...document.querySelectorAll<HTMLElement>(".face-trial-action")].map(node => node.offsetHeight),
+    faceNote: [...document.querySelectorAll<HTMLElement>(".face-trial-action small")].map(node => parseFloat(getComputedStyle(node).fontSize)),
   };
 };
 
@@ -137,5 +141,23 @@ for (const [width, height] of [[390, 667], [320, 568]] as const) {
     // 脚矮了一行，滚动区就该把这行还给正文：她那句话不能反而被顶出带外。
     expect(after!.clue.length, "她这句话没出现在抽屉里").toBeGreaterThanOrEqual(1);
     expect(Math.max(...after!.clue), `她这句话有 ${Math.max(...after!.clue)} 设计像素落在脚下`).toBeLessThanOrEqual(0);
+  });
+}
+
+// P25：半脸上妆那一排在真机三档都得"不滚就在脚上面"。这颗是按一下就消失的可选一步
+// （多占 2 分钟换她没说出口的那条诉求），掉到脚下就等于这一步不存在 —— 沙盘那一屏已经为同一件事改过滚动锚。
+for (const [width, height] of [[390, 844], [390, 667], [320, 568]] as const) {
+  test(`半脸上妆在 ${width}×${height}：不滚就在脚上面、按得动`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await seedSave(page, {});
+    await toQuote(page);
+    const seen = await page.evaluate(fold);
+    expect(seen).not.toBeNull();
+    console.log("P25 MOBILE FACE", width, height, JSON.stringify({ face: seen!.face, h: seen!.faceHeight, note: seen!.faceNote, scrolls: seen!.scrolls }));
+    expect(seen!.face.length, "试用之后半脸上妆那颗没出来").toBe(1);
+    expect(seen!.face[0], `那颗按钮有 ${seen!.face[0]} 设计像素压在脚下：不滚就看不到这一步`).toBeLessThanOrEqual(0);
+    expect(seen!.faceHeight[0], "矮于 44px 触摸下限").toBeGreaterThanOrEqual(44);
+    expect(seen!.faceNote[0], "第二行做成了小字备注").toBeGreaterThanOrEqual(12);
+    await page.screenshot({ path: `../audit/experience-v2/p25-mobile-face-${width}x${height}.png` });
   });
 }

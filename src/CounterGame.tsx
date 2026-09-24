@@ -83,6 +83,7 @@ export default function CounterGame() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const bundleRowRef = useRef<HTMLDivElement>(null);
+  const faceTrialRef = useRef<HTMLButtonElement>(null);
   const [sceneSize, setSceneSize] = useState({ width: 900, height: 480 });
   const [controlBand, setControlBand] = useState(0);
   const [mapRatio, setMapRatio] = useState(1.55);
@@ -157,7 +158,13 @@ export default function CounterGame() {
   useEffect(() => { dockRef.current?.scrollTo({ top: 0 }); }, [screen, stage, pendingRival, revising]);
   // 连带那一排是这一屏唯一要做决定的四格，而它在 258px 的 dock 带子里本来就在折线以下：出现时把抽屉滚到它。
   // 只在这一排挂载那一次滚，之后玩家自己滚的位置不再被覆盖；声明在上面那条归零之后，所以是它说了算。
-  useEffect(() => { if (bundleRowShown) bundleRowRef.current?.scrollIntoView({ block: "nearest" }); }, [bundleRowShown]);
+  // 但半脸上妆那颗还在的时候，锚要换到它身上：它在连带四格上面，滚到底也还滚得到；
+  // 反过来（844×390 量到的）会把这颗"还能再要两分钟"的可选一步整颗顶到带外，玩家根本不知道有这一步。
+  useEffect(() => {
+    if (!bundleRowShown) return;
+    if (faceTrialRef.current) faceTrialRef.current.scrollIntoView({ block: "start" });
+    else bundleRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [bundleRowShown]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && screen === "floor" && !modalOpen) setSpeed(0);
@@ -402,7 +409,7 @@ export default function CounterGame() {
           </div></div>}
           {session.tested && !pendingRival && !revising && picked && <div className="close-review"><div>
             <p className={"trial-reaction " + (session.reaction ?? "negative")}>{REACTIONS[picked][session.reaction ?? "negative"]}</p>
-            {!session.faceTrialled && <button type="button" className="face-trial-button" onClick={() => setGame(faceTrialService)}><b>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</b><small>{FACE_TRIAL_RETURN}</small></button>}
+            {!session.faceTrialled && <button type="button" ref={faceTrialRef} className="face-trial-button" onClick={() => setGame(faceTrialService)}><b>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</b><small>{FACE_TRIAL_RETURN}</small></button>}
             {session.faceTrialRevealed && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[session.faceTrialRevealed]}</p>}
             {session.faceTrialled && !session.faceTrialRevealed && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
             {session.reaction === "positive" && <div ref={bundleRowRef} className="bundle-choices" role="group" aria-label="连带件数">
