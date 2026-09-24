@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
   addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, canAddMember, canPullOver, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
@@ -510,22 +510,24 @@ export default function Prototype() {
           <span className="actor-tag">{STAFF[staffId].name}</span>
         </button>;
       })}
-      <span className={`actor-bubble stage-bubble ${speaking.left > 50 ? "from-right" : ""}`} style={{ left: `${Math.max(20, Math.min(80, speaking.left))}%` }}>{speaking.line}</span>
+      <span className={`actor-bubble stage-bubble ${speaking.left > 50 ? "from-right" : ""}`} style={{ "--bubble-x": `${Math.max(20, Math.min(80, speaking.left))}%` } as CSSProperties}>{speaking.line}</span>
     </div>
     {latestLost && <div className="lost-opportunity"><b>机会已消失</b><span>{CUSTOMERS[latestLost].lostLine}</span></div>}
     <section className="player-console compact inspect-dock">
-      <div className="player-identity">
-        <CharacterFace visual={STAFF.player} className="player-chip" />
-        {inspectVisual && inspectVisual.name !== STAFF.player.name ? <CharacterFace visual={inspectVisual} /> : null}
-        <div>
-          {/* 名字要在标题行里：下面那一行不再重复念她，控制台得自己说清"这是谁"。 */}
-          <strong>{focusCustomer ? `${focusCustomer.name} · ${focusCustomer.descriptor}` : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
-          <b>{inspectNow}</b>
-          <small>{floorNotice ?? (tired && !campaign.activeSession ? energyWord(campaign.energy) : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
+      <div className="console-head">
+        <div className="player-identity">
+          <CharacterFace visual={STAFF.player} className="player-chip" />
+          {inspectVisual && inspectVisual.name !== STAFF.player.name ? <CharacterFace visual={inspectVisual} /> : null}
+          <div>
+            {/* 名字要在标题行里：下面那一行不再重复念她，控制台得自己说清"这是谁"。 */}
+            <strong>{focusCustomer ? `${focusCustomer.name} · ${focusCustomer.descriptor}` : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
+            <b>{inspectNow}</b>
+            <small>{floorNotice ?? (tired && !campaign.activeSession ? energyWord(campaign.energy) : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
+          </div>
         </div>
+        <blockquote className="inspect-quote">{inspectQuote}</blockquote>
+        {otherLines.length > 0 && <ul className="party-list">{otherLines.map(line => <li key={line}>{line}</li>)}</ul>}
       </div>
-      <blockquote className="inspect-quote">{inspectQuote}</blockquote>
-      {otherLines.length > 0 && <ul className="party-list">{otherLines.map(line => <li key={line}>{line}</li>)}</ul>}
       <div className="dock-actions">
         {serveCustomer && <button className="primary-action" type="button" disabled={serveLocked} aria-label={`观察${serveCustomer.name}`} onClick={() => beginCustomer(serveCustomer.id)}>{campaign.activeSession?.customerId === serveCustomer.id ? `继续接待${serveCustomer.name}` : `观察${serveCustomer.name}`}</button>}
         {focusCustomer && <button className="member-action" type="button" disabled={!canAddMember(campaign, focusCustomer.id)} aria-label={`加微信${focusCustomer.name}`} onClick={() => setCampaign(s => addMember(s, focusCustomer.id))}>{campaign.members.includes(focusCustomer.id) ? `${focusCustomer.name}已在名单` : canAddMember(campaign, focusCustomer.id) ? "加微信 · 1 分钟" : "加微信 · 要先有接触"}</button>}

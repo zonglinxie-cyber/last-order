@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   advanceFloorTime, applyDawn, askService, availableCustomers, BUNDLES, canPullOver, chooseBundle, closeService, consultationRecord, CUSTOMERS, dayEvent, endingTitle,
-  FACE_TRIAL_MINUTES, faceTrialService, hasFlag, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, pullOver, pullOverLabel, patienceLeft, PULL_OVER_MINUTES, PULL_OVER_WINDOW, QUESTIONS,
+  FACE_TRIAL_MINUTES, faceTrialService, floorCustomers, FLOOR_SECONDS_PER_ACTION, hasFlag, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, pullOver, pullOverLabel, patienceLeft, PULL_OVER_MINUTES, PULL_OVER_WINDOW, QUESTIONS,
   releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent, spendAttention,
   startNextDay, startService, TARGET, trialService, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId,
 } from "../src/campaign.ts";
@@ -177,6 +177,22 @@ test("staff favors require a relationship and can only be used once per shift", 
   assert.equal(helped.waitMeters.shen, INITIAL.waitMeters.shen + 2);
   assert.equal(helped.energy, 94);
   assert.equal(requestStaffHelp(helped, "mei"), helped);
+});
+
+// 上一轮我在验收记录里写下"手机版的分钟数最多比规则多约 1 分钟"。这条用例把它按回去：
+// patienceLeft 永远落在 (waitMeters-1, waitMeters] 里，向上取整之后两端念的是同一个整数。
+test("现场那截零头不会让两端念出两个分钟数", () => {
+  for (let seconds = 0; seconds < FLOOR_SECONDS_PER_ACTION; seconds += 1) {
+    const ticking = { ...INITIAL, floorSeconds: seconds };
+    for (const id of floorCustomers(ticking)) {
+      assert.equal(Math.ceil(patienceLeft(ticking, id)), ticking.waitMeters[id], `${id} 在 +${seconds}s 时读数不符`);
+    }
+  }
+  // 零头只影响一件事：迎上去的窗口按含零头的那个数开，所以"2 分钟耐心"那一档正好是它能按下去的那一档。
+  const almost = { ...INITIAL, floorSeconds: FLOOR_SECONDS_PER_ACTION - 1, waitMeters: { shen: 3, mei: 3 } };
+  assert.equal(patienceLeft(almost, "shen") > PULL_OVER_WINDOW, true, "刚过两拍还不算开始看表");
+  assert.equal(canPullOver(almost, "shen"), false);
+  assert.equal(canPullOver({ ...almost, waitMeters: { shen: 2, mei: 3 } }, "shen"), true);
 });
 
 test("迎上去：一支小样加离柜两分钟，只能请回一个", () => {
