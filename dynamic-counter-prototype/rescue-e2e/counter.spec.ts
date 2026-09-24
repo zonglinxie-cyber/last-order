@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, INITIAL, RECORDS_MIN, SAVE_KEY } from "../src/campaign";
+import { CUSTOMERS, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
 
 async function start(page: Page) {
   await page.goto("/");
@@ -261,6 +261,8 @@ test("the morning read states the settled number once, and a reload does not rep
   await expect(page.locator(".rail-standing")).toHaveText("柜位已经写进评估表");
   // 栏位里不剩裸的体力分和进度条：站不站得住是一句话，差多少是一句钱。
   await expect(page.locator(".rail-energy")).toHaveText("还站得住，能再接 4 位");
+  // 记录本在栏位里也是一句话，和第 5 晚判的是同一条线（不是第四个数字）。
+  await expect(page.locator(".rail-records")).toHaveText("记录本 空着");
   // 差多少只在页顶说一遍，栏位里不再开第二块记分牌（进度条也一起撤了）。
   await expect(page.locator(".top-score")).toContainText("还差 ¥19,500");
   await expect(page.locator(".rail-target")).toHaveCount(0);
@@ -317,6 +319,8 @@ for (const [evidence, verdict] of [[0, "撤柜评估已经写上去"], [RECORDS_
     });
     await page.goto("/");
     await expect(page.getByText(evidence ? "五天本子摊得开" : "只是你的本子摊开来没几行")).toBeVisible();
+    // 栏位那句话和事件判词必须念同一本账：同一个 evidenceWord，同一个 RECORDS_MIN。
+    await expect(page.locator(".rail-records")).toHaveText(`记录本 ${evidenceWord(evidence)}`);
     await page.getByRole("button", { name: /把五天记录摊开/ }).click();
     await expect(page.locator(".decision-response")).toContainText(evidence ? "在表上写了备注" : "就这些");
     await page.getByRole("button", { name: "查看活动周结局", exact: true }).click();

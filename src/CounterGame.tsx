@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   advanceFloorTime, addMember, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent,
-  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
+  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
@@ -345,7 +345,7 @@ export default function CounterGame() {
         </section>}
       </main>
       <aside className="rescue-rail">
-        <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><p className="rail-detail">小样 {game.samples} 份 · 名单 {game.members.length} 人</p><p className="rail-energy">{energyWord(game.energy)}</p><p className={"rail-standing" + (game.standing < STANDING_RISK ? " at-risk" : "")}>{standingWord(game.standing)}</p><p className={"rail-compliance" + (game.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(game.compliance)}</p></section>
+        <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><p className="rail-detail">小样 {game.samples} 份 · 名单 {game.members.length} 人</p><p className="rail-records">记录本 {evidenceWord(game.evidence)}</p><p className="rail-energy">{energyWord(game.energy)}</p><p className={"rail-standing" + (game.standing < STANDING_RISK ? " at-risk" : "")}>{standingWord(game.standing)}</p><p className={"rail-compliance" + (game.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(game.compliance)}</p></section>
         <section className="customer-list"><span className="eyebrow">顾客</span>{todayIds.map(id => <button key={id} onClick={() => setFocus(id)} className={focus === id ? "is-selected" : ""}><img src={portrait(id, true)} alt="" /><span><b>{CUSTOMERS[id].name}</b><small>{customerStatus(id)}</small></span><span className={"status-dot " + (game.lost.includes(id) ? "lost" : game.dayServed.includes(id) ? "done" : "")} /></button>)}</section>
         <section className="floor-journal"><span className="eyebrow">刚刚发生</span>{game.history.slice(-5).reverse().map((entry, index) => <p key={index}><small>D{entry.day}</small>{entry.text}</p>)}{game.history.length === 0 && <p>陆遥正在留意入口。先接谁，由你决定。</p>}</section>
         <button className="restart-link" onClick={showRestart}>重新开始</button>
