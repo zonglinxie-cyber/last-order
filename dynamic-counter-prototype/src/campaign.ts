@@ -182,6 +182,18 @@ export const PRODUCTS: Record<ProductId, { name: string; short: string; price: n
   repair: { name: "夜兰修护精华", short: "修护", price: 1680, note: "舒缓干燥与泛红，见效不靠厚重遮盖；它是护肤，不是当天的妆" },
 };
 
+// 垫货：调研里最难看也最真实的一格（虎嗅那条：KPI 普遍完不成、BA 自掏腰包囤货、完不成要交改进报告，
+// 见 audit/research-2026-09/调研与改造方案.md 第三节）。挑最便宜的那一支——真被逼到这一步的人，
+// 先算的是自己掏多少，不是哪一支更好卖。进 sales 的是小票价，内购折扣只发生在她自己的工资上。
+export const ADVANCE_PRODUCT: ProductId = "soft";
+export const ADVANCE_POCKET_RATE = 0.7;
+export const ADVANCE_SALE = PRODUCTS[ADVANCE_PRODUCT].price;
+export const advancePocket = () => Math.round(ADVANCE_SALE * ADVANCE_POCKET_RATE);
+export const ADVANCE_COMPLIANCE = -12;
+export const ADVANCE_TANGKE = 6;
+export const ADVANCE_HELD_STANDING = -6;
+export const ADVANCE_HELD_COMPLIANCE = -6;
+
 export const TRAIT_LABELS: Record<Trait, string> = {
   natural: "妆感要轻薄自然",
   correct: "要立刻看得出改善",
@@ -749,6 +761,22 @@ export function applyDawn(s: Campaign): Campaign {
   if (s.day === 5 && hasFlag(s, "served:anjie:good") && !hasFlag(s, "anjie-came-back")) {
     next = { ...next, flags: flag(next, "anjie-came-back"), history: history(next, "安姐赶在化妆师之前回来，只要当天的妆") };
   }
+  // 垫的那一支第二天必须有个去处。认的是唐可肯不肯替你张罗：和她借货、替她出货是同一条关系（`TANGKE_STOCK_GATE`）。
+  // 出掉了钱也不再进一次 sales —— 那 980 昨天已经入账，再进一次就是把同一支货卖了两遍。
+  // 出不掉才是真代价：货压在自己家里，数字却留在账上，方敏要的是一个写得出客人名字的说法。
+  if (s.day === 5 && hasFlag(s, "advance-order") && !hasFlag(s, "advance-out") && !hasFlag(s, "advance-held")) {
+    const sold = next.relations.tangke >= TANGKE_STOCK_GATE;
+    next = {
+      ...next,
+      compliance: clamp(next.compliance + (sold ? 0 : ADVANCE_HELD_COMPLIANCE)),
+      standing: clamp(next.standing + (sold ? 0 : ADVANCE_HELD_STANDING)),
+      relations: sold ? { ...next.relations, tangke: next.relations.tangke + 5 } : next.relations,
+      flags: flag(next, sold ? "advance-out" : "advance-held"),
+      history: history(next, sold
+        ? "唐可把垫的那支出给了真正要用的熟客，钱回到你口袋里"
+        : "垫的那支还在你家里，没有客人名字"),
+    };
+  }
   for (const item of RISKY_RETURNS) next = applyPayback(next, item);
   for (const item of SAMPLE_RETURNS) next = applySampleReturn(next, item);
   next = applyMemberRepeat(next);
@@ -785,6 +813,9 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   notes.push({ speaker: "品牌 · 到货", body: deliveryWord(s.day) });
   // 总额之外没人念结构：这一行从第 4 早起跟着你，到结局那一屏还在。
   if (s.day >= STRUCTURE_FROM_DAY && s.orders.length) notes.push({ speaker: "日报 · 柜台", body: structureLine(s) });
+  // 垫出去的那一支第二天早上一念定音：钱回没回来是玩家自己该知道的事，念一次就够（旗决定，不重复）。
+  if (hasFlag(s, "advance-out")) notes.push({ speaker: "唐可 · 柜后", body: `昨天那张单是她替你开的，货她今天出给了一个真正要用的熟客：¥${money(advancePocket())} 回到你口袋里。大数字一分没多，你只是没亏。` });
+  if (hasFlag(s, "advance-held")) notes.push({ speaker: "方敏 · 合规", body: `账上那 ¥${money(ADVANCE_SALE)} 找不到对应的客人。方敏要你写一份说明：这一支是谁买走的，货现在在哪里。` });
   // 这一遍自查不是柜上自己想起来的：第 3 天早上品牌说要翻处理记录，晨会念一次，那一屏上才长出这个动作。
   if (s.day === EXPIRED_SAMPLING.fromDay && !expiredCleared(s)) notes.push({ speaker: "品牌 · 巡店", body: EXPIRED_SAMPLING_NOTICE });
   if (s.day === 4 && hasFlag(s, "tang-paid-order")) notes.push({ speaker: "唐可 · 交接", body: "她把一单伴娘妆转到你名下。口头承诺这次兑现了。" });
@@ -882,12 +913,33 @@ export function dayEvent(s: Campaign): DayEvent {
       ],
     };
   }
+  // 第 4 晚才给这一格：前三晚的缺口还来得及靠接待补，第四晚已经来不及了 —— 这正是它真实出现的时机。
+  // 价目写在按钮第二行（和「迎上去」「留小样」同一种语法）：涨的是小票上的 980，掏的是自己工资里的 686。
+  const advanceCard: EventChoice = {
+    id: "advance-order",
+    label: "自己垫一支走单",
+    detail: `业绩 +¥${money(ADVANCE_SALE)} · 你先掏 ¥${money(advancePocket())} · 台账上多一笔虚增`,
+    result: "唐可替你在系统里开了那张单。收银条写着你的名字，货搬进你自己的包。",
+    // 两道闸：当晚没结过（`settleDayEvent` 认 eventDoneDays）+ 这一整周没垫过。
+    // 注意 `visible` 是按当下状态算的，按下去之后它会翻假 —— 手机版的确认屏因此不能只读 visibleChoices。
+    visible: st => !hasFlag(st, "advance-order") && thisWeekPercent(st) < 100,
+    apply: st => ({
+      ...st,
+      sales: st.sales + ADVANCE_SALE,
+      daySales: st.daySales + ADVANCE_SALE,
+      compliance: clamp(st.compliance + ADVANCE_COMPLIANCE),
+      relations: { ...st.relations, tangke: st.relations.tangke + ADVANCE_TANGKE },
+      flags: flag(st, "advance-order"),
+      history: history(st, "你把一支柔焦买下来，走成今天的单"),
+    }),
+  };
   if (s.day === 4 && !hasPurchase(s, "anjie")) return {
     speaker: "苏蔓", speakerStaff: "suman", speakerCustomer: null, title: "没留下的婚礼单",
     body: "安姐没有在你这里下单。苏蔓收起准备好的旅行装：她跟了我三年。今天没卖成，也不能把原因藏起来。",
     choices: [
       { id: "record-anjie-miss", label: "如实交接试用记录", detail: "不补销售，不隐瞒风险", result: "苏蔓没有责怪你。她把记录留给下次接待的人，这至少不是一场没人负责的失败。", apply: st => ({ ...st, evidence: st.evidence + 1, flags: flag(st, "recorded-anjie-miss"), history: history(st, "你向苏蔓交接了未成交的婚礼咨询") }) },
       { id: "own-anjie-miss", label: "承认没能接住她", detail: "承担复盘，不伪造订单", result: "苏蔓让你明天一起复盘。她听见你没有拿顾客的敏感当借口。", apply: st => ({ ...st, relations: { ...st.relations, suman: st.relations.suman + 3 }, flags: flag(st, "owned-anjie-miss"), history: history(st, "你承担了婚礼单未成交的复盘") }) },
+      advanceCard,
     ],
   };
   if (s.day === 4) return {
@@ -897,6 +949,7 @@ export function dayEvent(s: Campaign): DayEvent {
       { id: "refuse-gifts", label: "只按额度给两套", detail: "守住规则，可能得罪大客", result: "安姐脸色不好看，但接受了。罗曼第一次在群里公开说你“能守底线”。", apply: st => ({ ...st, compliance: clamp(st.compliance + 12), relations: { ...st.relations, roman: st.relations.roman + 12 }, flags: flag(st, "refused-anjie-gifts"), history: history(st, "你拒绝给安姐超额赠品") }) },
       { id: "give-gifts", label: "私下补足六套", detail: "消耗4份库存，不登记", visible: st => st.samples >= 4, result: "安姐满意离开。盘点表上出现四个无法解释的空位。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 18), relations: { ...st.relations, suman: st.relations.suman + 8 }, flags: flag(st, "gave-anjie-gifts"), history: history(st, "你给安姐四套未登记赠品") }) },
       { id: "sign-gifts", label: "请苏蔓共同签字", detail: "消耗4份库存，责任共同留下", visible: st => st.samples >= 4, result: "苏蔓签了字。她帮了你，也知道你把她绑进了记录。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 6), evidence: st.evidence + 2, relations: { ...st.relations, suman: st.relations.suman + 3 }, flags: flag(st, "signed-anjie-gifts"), history: history(st, "你和苏蔓共同签了安姐赠品记录") }) },
+      advanceCard,
     ],
   };
   const gap = hasFlag(s, "covered-suman") || hasFlag(s, "gave-anjie-gifts") || hasFlag(s, "signed-anjie-gifts");

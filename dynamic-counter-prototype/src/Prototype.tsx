@@ -92,7 +92,9 @@ export default function Prototype() {
   const remaining = Math.max(0, TARGET - campaign.sales);
   const event = dayEvent(campaign);
   const shownChoices = visibleChoices(campaign, event);
-  const chosenEvent = shownChoices.find(choice => choice.id === eventChoiceId) ?? null;
+  // 已经按下的那一格要按 id 回全量列表找：visible 是按当下状态算的，垫货那一格按下去自己就会翻假
+  // （进度追平、或旗子落下），那时确认屏读不到它就等于把玩家丢回选择列表。
+  const chosenEvent = event.choices.find(choice => choice.id === eventChoiceId) ?? null;
   const tired = campaign.energy < ENERGY_LOCK;
   const waitingOther = available.find(id => id !== customerId);
   const notices = dawnNotices(campaign);

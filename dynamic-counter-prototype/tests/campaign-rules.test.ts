@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, canLeaveSample, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
+  ADVANCE_COMPLIANCE, ADVANCE_HELD_COMPLIANCE, ADVANCE_HELD_STANDING, ADVANCE_SALE, ADVANCE_TANGKE, advancePocket, dayEvent, settleDayEvent, startNextDay, TANGKE_STOCK_GATE, visibleChoices,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign,
 } from "../src/campaign.ts";
@@ -446,4 +447,67 @@ test("把连带那一排整周都误读成\"更贵=更多\"，少 ¥3,640、走�
   assert.ok(over.final.sales < TARGET, "误读一周的代价是这一周不达标");
   assert.equal(over.served, 6);
   assert.deepEqual([...new Set(over.lost)].sort(), ["duan", "mei", "zhou"]);
+});
+
+// —— P28 自掏腰包垫货：调研里那条"KPI 完不成、BA 自己掏钱囤货、完不成要交改进报告"（虎嗅），
+// 落到第 4 晚的一格选择上。钱按小票价进 sales，内购折扣只发生在她自己的工资里，所以不进账。
+const yuan = (value: number) => value.toLocaleString("zh-CN");
+const dayFourBehind = () => campaign({ day: 4, sales: 12_000, daySales: 2_000, eventDoneDays: [1, 2, 3] });
+const advanceOf = (s: Campaign) => visibleChoices(s, dayEvent(s)).find(choice => choice.id === "advance-order");
+
+test("这一格只给追不上进度的人，而且当晚只结一次", () => {
+  assert.ok(advanceOf(dayFourBehind()), "落后 2,000 的人该看得见这条出路");
+  const anjie: Campaign = { ...dayFourBehind(), orders: [{ day: 4, customerId: "anjie", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false }] };
+  assert.ok(advanceOf(anjie), "第 4 晚两个事件（婚礼单没留下 / 安姐要赠品）都摆同一格，不然它变成事件的彩蛋");
+  assert.equal(advanceOf({ ...dayFourBehind(), sales: 14_770 }), undefined, "干净路线第 4 天已经做到 14,770，不该白送她一格");
+  const once = settleDayEvent(dayFourBehind(), "advance-order");
+  assert.equal(advanceOf(once), undefined, "垫过一次不再摆出来");
+  assert.equal(settleDayEvent(once, "advance-order").sales, once.sales, "当晚结过一次，再点一次不再进钱");
+  // 13,500 垫一支正好越过 100%：这一格按下去就"自己看不见自己"，手机版的确认屏得回全量列表找它。
+  const crossing = settleDayEvent({ ...dayFourBehind(), sales: 13_500 }, "advance-order");
+  assert.equal(advanceOf(crossing), undefined, "追平之后不再摆出来");
+  assert.ok(dayEvent(crossing).choices.some(choice => choice.id === "advance-order"), "确认那一屏按 id 找得到它");
+});
+
+test("按下去买到什么：小票价的业绩、自己工资里的钱、台账上一条虚增", () => {
+  const before = dayFourBehind();
+  const after = settleDayEvent(before, "advance-order");
+  assert.equal(ADVANCE_SALE, 980);
+  assert.equal(advancePocket(), 686);
+  assert.equal(after.sales - before.sales, ADVANCE_SALE, "进账的是小票价");
+  assert.equal(after.daySales - before.daySales, ADVANCE_SALE);
+  assert.equal(after.compliance, before.compliance + ADVANCE_COMPLIANCE, "没有客人的单子记在合规上");
+  assert.equal(after.relations.tangke, before.relations.tangke + ADVANCE_TANGKE, "单是唐可替你开的");
+  // P19 那条口径在这一格上同样成立：动了钱就得有一行 ¥，而且那行的数正好等于涨跌。
+  assert.equal(ledgerSum(after) - ledgerSum(before), ADVANCE_SALE);
+  assert.ok(after.history.some(entry => entry.text.includes(`· ¥${yuan(ADVANCE_SALE)}`)), "台账里没有这一笔钱");
+  assert.equal(after.history.filter(entry => entry.text.includes("¥")).length, 1, "同一笔钱不能写两行");
+});
+
+test("第 5 早两条分岔：她出得掉钱回来，出不掉货压在家里还要写说明", () => {
+  const advanced = settleDayEvent(dayFourBehind(), "advance-order");
+  assert.equal(advanced.relations.tangke, 44, "38 + 6：差一格，所以垫完立刻指望唐可是靠不住的");
+  // 同一个早晨再走一遍"没垫过"的版本：第 5 早的晨会读数也会动 standing，只有对比才知道扣的是哪一格。
+  const baseline = startNextDay({ ...advanced, flags: advanced.flags.filter(name => name !== "advance-order") });
+  const sold = startNextDay({ ...advanced, relations: { ...advanced.relations, tangke: TANGKE_STOCK_GATE } });
+  assert.ok(hasFlag(sold, "advance-out"));
+  assert.equal(sold.sales, advanced.sales, "那 980 昨天已经入账，替她出掉不能把同一支货再卖一遍");
+  assert.equal(sold.compliance, baseline.compliance, "钱回来了不代表台账干净了：那张单子还是你自己开的");
+  assert.ok(dawnNotices(sold).some(note => note.speaker === "唐可 · 柜后" && note.body.includes(`¥${yuan(advancePocket())}`)));
+  assert.ok(!dawnNotices(sold).some(note => note.speaker === "方敏 · 合规" && note.body.includes("是谁买走的")));
+
+  const held = startNextDay(advanced);
+  assert.ok(hasFlag(held, "advance-held"));
+  assert.equal(held.compliance, baseline.compliance + ADVANCE_HELD_COMPLIANCE);
+  assert.equal(held.standing, baseline.standing + ADVANCE_HELD_STANDING, "写不出客人名字的说明会挪到柜位那一栏");
+  assert.equal(held.sales, advanced.sales, "出不掉也不冲业绩：数字留下来了，这才是这一格真正难放下的地方");
+  assert.ok(dawnNotices(held).some(note => note.speaker === "方敏 · 合规" && note.body.includes(`¥${yuan(ADVANCE_SALE)}`)));
+  // 晨会重跑不会再扣一遍（和 P20 那条"刷新不重复入账"是同一类事故）。
+  assert.equal(applyDawn(held).history.filter(entry => entry.text.includes("垫的那支")).length, 1);
+});
+
+test("没垫过的人第 5 早不该听见这一句", () => {
+  const clean = startNextDay(campaign({ day: 4, sales: 14_770, eventDoneDays: [1, 2, 3] }));
+  assert.ok(!dawnNotices(clean).some(note => note.body.includes("自己垫") || note.body.includes("是谁买走的")));
+  assert.equal(applyDawn(clean).history.filter(entry => entry.text.includes("垫")).length, 0);
 });
