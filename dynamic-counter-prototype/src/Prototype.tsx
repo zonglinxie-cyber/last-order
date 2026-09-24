@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
   fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, QUESTIONS,
   orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
@@ -367,6 +367,10 @@ export default function Prototype() {
     <section className="brief-orders"><span><small>今天必须守住</small><b>{dayCustomerIds.map(id => CUSTOMERS[id].name).join(" / ")}</b></span><span><small>小样 / 私域名单</small><b>{campaign.samples} 份 · {campaign.members.length} 人</b></span></section>
     {notices.map(note => <section className="message-preview" key={`${note.speaker}-${note.body}`}><b>{note.speaker}</b><p>{note.body}</p></section>)}
     {/* 今日现场的风险那一行上面已经念过；这里再造一条"罗曼 · 08:52"是把规则提示安到别人头上，同一屏还读两遍。 */}
+    {campaign.day >= EXPIRED_SAMPLING.fromDay && <section className="brief-check">
+      <button type="button" disabled={!canCheckCounter(campaign)} onClick={() => setCampaign(s => checkCounter(s))}>{checkCounterLabel(campaign)}</button>
+      <p>{CHECK_COUNTER_NOTE}</p>
+    </section>}
     <button className="primary-action" type="button" onClick={() => { openFloor(); setScreen("floor"); }}>开始营业</button>
   </main></MobileScroll>;
 

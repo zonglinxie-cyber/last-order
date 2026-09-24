@@ -5,6 +5,7 @@ import {
   FACE_TRIAL_MINUTES, faceTrialService, floorCustomers, FLOOR_SECONDS_PER_ACTION, hasFlag, INITIAL, leaveSample, observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, pullOver, pullOverLabel, patienceLeft, PULL_OVER_MINUTES, PULL_OVER_WINDOW, QUESTIONS,
   releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, selectServiceProduct, settleDayEvent, spendAttention, TANGKE_STOCK_GATE,
   startNextDay, startService, STANDING_RISK, TARGET, offerTransfer, transferLabel, transferStock, TRANSFER_MINUTES, TRANSFER_UNITS, trialService, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId,
+  canCheckCounter, checkCounter, checkCounterLabel, dawnNotices, EXPIRED_SAMPLING, expiredSamplesLeft, ledgerSum,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, PRODUCT_IDS, runRoute } from "./clean-route.ts";
 
@@ -142,7 +143,8 @@ test("调货救的是正在被削的那一单：两支货两条路，钱和台�
   const stocked = runRoute("matched", false, false, true, "official");
   assert.equal(stocked.final.sales, 25_590, "两次缺口都打电话：¥2,660 挣回来，一个人都没多走");
   assert.deepEqual(stocked.lost, []);
-  assert.equal(stocked.final.compliance, 91, "走系统单：台账上多两行你的名字");
+  // 91 → 87 不是这一轮调了价：这条线迎上去递给周姐的那一支是去年批号，第二天她问回来扣四分（P20 的账，量在下面的路线表里）。
+  assert.equal(stocked.final.compliance, 87, "走系统单：台账上多两行你的名字");
   assert.deepEqual(stocked.transferred, ["soft", "repair"], "第 2 天柔焦、第 4 天修护，各一次");
   assert.equal(runRoute("matched", false, false, false, "official").final.sales, 25_590, "迎不迎上去都是这个数：这两通电话没有花掉别人的耐心");
   const blind = runRoute("matched", false, false, false, "tangke");
@@ -415,4 +417,71 @@ test("an actual five-day route survives saves and still needs the final order", 
   assert.deepEqual(reloaded.orders, clean.final.orders);
   assert.ok(clean.dayTotals[3] < TARGET, "第 4 天还不能提前达标");
   assert.ok(clean.final.sales >= TARGET);
+});
+
+// 《化妆品监督管理条例》第三十九条要经营者"定期检查并及时处理"到期货。柜台抽屉里压着去年批号的小样，
+// 整周就两支、只查得了一次：查要当场下架并晚开门一分钟，不查则派出去的人第二天在微信上问回来。
+const day3open = (): Campaign => ({ ...INITIAL, day: 3, waitMeters: { zhao: 8, duan: 8 }, eventDoneDays: [1, 2] });
+const handOut = (s: Campaign, ids: CustomerId[]) => ids.reduce((value, id) => leaveSample(value, id), s);
+
+test("开店前那一遍自查：整周只查一次，价写在自己那一行上", () => {
+  assert.equal(expiredSamplesLeft(INITIAL), 0, "第 3 天以前这一批还没被人想起来");
+  assert.equal(canCheckCounter(INITIAL), false);
+  const s = day3open();
+  assert.equal(expiredSamplesLeft(s), EXPIRED_SAMPLING.units);
+  assert.equal(checkCounterLabel(s), `开店前查一遍批号 · 下 2 支 · 晚开门 ${EXPIRED_SAMPLING.minutes} 分钟`);
+  const checked = checkCounter(s);
+  assert.equal(checked.samples, s.samples - EXPIRED_SAMPLING.units, "到期那两支从抽屉里出去，不是从营业额里出去");
+  assert.equal(checked.compliance, s.compliance + EXPIRED_SAMPLING.compliance);
+  assert.equal(checked.standing, s.standing + EXPIRED_SAMPLING.standing);
+  assert.equal(checked.shiftMinutes, EXPIRED_SAMPLING.minutes, "晚开门的那一分钟照扣排队的人");
+  assert.equal(patienceLeft(checked, "zhao"), CUSTOMERS.zhao.patience - EXPIRED_SAMPLING.minutes);
+  assert.ok(checked.history.some(row => row.text === "开店前查了一遍批号，下了 2 支到期小样"));
+  assert.ok(!checked.history.some(row => row.text.includes("¥")), "这一遍查的是货，账上的钱一分没动");
+  assert.equal(expiredSamplesLeft(checked), 0, "整周只查这一次");
+  assert.equal(checkCounterLabel(checked), "查批号 · 到期那批已经下了");
+  assert.equal(checkCounter(checked), checked, "按不动的时候一个数都不该变");
+  const opened = { ...day3open(), shiftMinutes: 1 };
+  assert.equal(canCheckCounter(opened), false, "门已经开了就不存在「晚开门」这件事");
+  assert.equal(checkCounterLabel(opened), "查批号 · 已经开门了");
+});
+
+test("到期那批派出去两个人就到头：第二天她问回来，钱一分不动", () => {
+  // leaveSample 不分人在不在柜上（她只要抽屉里还有），所以第三支拿"今天根本没来的沈薇"来试上限。
+  const handed = handOut(day3open(), ["zhao", "duan", "shen"]);
+  assert.deepEqual(handed.flags.filter(name => name.startsWith("sample-expired:")),
+    ["sample-expired:zhao", "sample-expired:duan"], "抽屉里那批就两支，第三支不是这一批的");
+  const dawn = applyDawn({ ...handed, day: 4 });
+  assert.equal(dawn.compliance, handed.compliance - 8, "一支扣四分，两支扣八分");
+  assert.equal(dawn.trust, handed.trust - 8, "她以后不敢随手试——这一笔扣的是信任");
+  assert.equal(ledgerSum(dawn), dawn.sales, "问回来这两行不带 ¥：它动的不是钱");
+  assert.ok(dawn.history.filter(row => row.text.includes("批号是去年的")).every(row => !row.text.includes("¥")));
+  const notes = dawnNotices(dawn).filter(note => note.body.includes("批号"));
+  assert.equal(notes.length, 2, "两个人各问一句，晨会各念一条");
+  assert.match(notes[0].speaker, /· 微信$/);
+  const again = applyDawn(dawn);
+  assert.equal(again.compliance, dawn.compliance, "问过一次的不再问第二遍（刷新重跑晨会也是这一条）");
+  assert.equal(again.history.length, dawn.history.length);
+  // 查过的人不会被这一批问回来：同一双手、同三天，账上少那八分。
+  const checkedOut = handOut(checkCounter(day3open()), ["zhao", "duan", "shen"]);
+  assert.deepEqual(checkedOut.flags.filter(name => name.startsWith("sample-expired:")), []);
+  const cleanDawn = applyDawn({ ...checkedOut, day: 4 });
+  assert.equal(cleanDawn.compliance, checkedOut.compliance);
+  assert.equal(dawnNotices(cleanDawn).filter(note => note.body.includes("批号")).length, 0);
+});
+
+test("查这一遍值多少钱：整周量，钱不会因为它变多，分钟会扣人", () => {
+  // 第九格是"开店前查不查"。清洁线第 3 天柜上没人卡在门口，这一分钟没花掉任何人。
+  const clean = runRoute("matched", false, false, false, null, undefined, undefined, false, true);
+  assert.equal(clean.final.sales, 22_930, "查这一遍不该改变营业额：清洁线还是 ¥22,930");
+  assert.equal(clean.final.compliance, 92, "86 分台账 + 这一遍的 6 分");
+  assert.deepEqual(clean.lost, []);
+  // 半脸上妆那条线第 3 天段小姐只剩最后一分钟：晚开门一分钟就把她扣在柜门外，代价是 ¥980。
+  const trials = runRoute("matched", true, false, false, null, undefined, undefined, false, true);
+  assert.equal(trials.final.sales, 20_270, "同一条线不查是 ¥21,250");
+  assert.ok(trials.lost.includes("duan"), "多走的就是那一个被分钟扣掉的人");
+  assert.equal(runRoute("matched", true, false, false, null, undefined, undefined, false, false).final.sales, 21_250);
+  // 迎上去递出去的那一支是去年批号：不查 87，查了 97（省下的四分 + 这一遍记下的六分）。
+  assert.equal(runRoute("matched", false, false, true, "official", undefined, undefined, false, true).final.compliance, 97);
+  assert.equal(ledgerSum(clean.final), clean.final.sales, "P19 那条账平契约在这个新动作上照样成立");
 });

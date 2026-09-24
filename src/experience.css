@@ -12,7 +12,12 @@
 .screen-intro .rescue-pawn, .screen-brief .rescue-pawn, .screen-intro .pawn-name, .screen-brief .pawn-name { visibility: hidden; }
 .trial-actions { display: flex; gap: 10px; align-items: center; }
 .trial-actions .text-button { margin-top: 10px; font-size: 12px; }
-.editorial-intro.shift-intro { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr); grid-template-rows: minmax(0, 1fr) auto; align-items: center; gap: 0 7%; padding: 0 clamp(28px, 7vw, 120px); background: radial-gradient(ellipse at 85% 20%, #77534b38, transparent 55%), linear-gradient(105deg, #211820fc 30%, #251d29e8 68%, #402e32cf); }
+/* 左列那一行原本是 minmax(0, 1fr)：晨会的字一多（第 3 天起有到货 + 巡店 + 效期自查三张卡），
+   这一行被压回容器高度，多出来的字往上下两头溢出——上面那行 CHAPTER 在 1280×800 量到 -10px，
+   而 .shift-intro 的 scrollTop 最小是 0，滚不回去。改成 minmax(max-content, 1fr) 之后
+   行高一律不小于内容：屏幕够高时和原来一模一样（开场封面、第 1 天 room 仍是 0），
+   不够高时整屏往下滚，首行始终在原地。 */
+.editorial-intro.shift-intro { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr); grid-template-rows: minmax(max-content, 1fr) auto; align-items: center; gap: 0 7%; padding: 0 clamp(28px, 7vw, 120px); background: radial-gradient(ellipse at 85% 20%, #77534b38, transparent 55%), linear-gradient(105deg, #211820fc 30%, #251d29e8 68%, #402e32cf); }
 .intro-copy { z-index: 2; max-width: 660px; padding: 28px 0; }
 .intro-copy > .eyebrow { font-size: 11px; letter-spacing: .22em; color: #c5a494; }
 .editorial-intro h1 { font-size: clamp(64px, 7.5vw, 116px); letter-spacing: -.045em; margin: 14px 0 20px; line-height: 1.05; color: #f5e8d9; }
@@ -26,6 +31,10 @@
 .rescue-game .intro-actions .gold-button { padding: 15px 24px; background: #ead4b7; border-color: #ead4b7; min-width: 225px; text-align: left; font-size: 15px; }
 .intro-actions button > span { float: right; margin-left: 28px; }
 .intro-actions > span { font-size: 12px; color: #b9a89a; }
+/* 开店前那一遍自查：按钮说价（下几支、晚开门几分钟），下面那一行说买到什么。虚线框是柜后要办的事，不是她说的话。 */
+.brief-check { margin-top: 22px; padding: 12px 14px; border: 1px dashed #8a6a55; border-radius: 5px; background: #ffffff05; }
+.brief-check button { text-align: left; font-family: 'Songti SC', 'Noto Serif SC', Georgia, serif; }
+.brief-check span { display: block; margin-top: 8px; color: #b39c92; font-size: 12px; line-height: 1.6; }
 .chapter-track { display: flex; list-style: none; margin: 26px 0 0; padding: 0; }
 .chapter-track li { flex: 1; border-top: 1px solid #665052; padding-top: 10px; color: #a58f86; }
 .chapter-track li[aria-current] { border-top: 2px solid #e9c29e; padding-top: 9px; color: #f0d0b0; }

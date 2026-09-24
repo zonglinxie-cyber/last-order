@@ -461,6 +461,45 @@ export const ledgerSum = (s: Campaign) => s.history.reduce((sum, entry) => sum +
   .reduce((part, hit) => part + (hit[1] ? -1 : 1) * Number(hit[2].replace(/,/g, "")), 0), 0);
 // 让单给同事这件事只在两处提：让她演示那颗按钮，和入账那一行。措辞只有一份。
 export const SPLIT_WORD = "与陆遥各半";
+// 《化妆品监督管理条例》第三十九条要经营者"定期检查并及时处理变质或者超过使用期限的化妆品"。
+// 抽屉最下面压着一批去年批号的小样，第 3 天品牌巡店要翻处理记录才被人想起来：
+// 这一批整周就两支，所以这一遍只查得了一次；不查，派出去了她第二天会问回来。
+export const EXPIRED_SAMPLING = { fromDay: 3, units: 2, minutes: 1, compliance: 6, standing: 3, penalty: 4 };
+// 查过的证据只有一条：这一批下没下架。已经派出去的那几支不在柜上了，下架也不能凭空多扣。
+export const expiredCleared = (s: Campaign) => s.flags.some(name => name.startsWith("checked:"));
+export const expiredSamplesGiven = (s: Campaign) => s.flags.filter(name => name.startsWith("sample-expired:")).length;
+export const expiredSamplesLeft = (s: Campaign) => s.day < EXPIRED_SAMPLING.fromDay || expiredCleared(s) ? 0
+  : Math.max(0, EXPIRED_SAMPLING.units - expiredSamplesGiven(s));
+// 这一步长在晨会那一屏：现场时间一旦花出去，就不存在"晚开门"这件事了。
+export const canCheckCounter = (s: Campaign) => expiredSamplesLeft(s) > 0 && !s.finished
+  && !s.activeSession && s.shiftMinutes === 0 && s.dayServed.length === 0;
+export const CHECK_COUNTER_NOTE = "当场下架，台账上留下一条处理记录";
+export function checkCounterLabel(s: Campaign) {
+  if (expiredCleared(s)) return "查批号 · 到期那批已经下了";
+  if (canCheckCounter(s)) return `开店前查一遍批号 · 下 ${expiredSamplesLeft(s)} 支 · 晚开门 ${EXPIRED_SAMPLING.minutes} 分钟`;
+  return "查批号 · 已经开门了";
+}
+const handsExpiredSample = (s: Campaign) => !expiredCleared(s) && s.day >= EXPIRED_SAMPLING.fromDay
+  && expiredSamplesGiven(s) < EXPIRED_SAMPLING.units;
+// 一支到期小样只记在一个人身上：抽屉里那批就两支，柜上不能凭空派出一整周。
+const markExpiredSample = (s: Campaign, id: CustomerId): Campaign =>
+  handsExpiredSample(s) ? { ...s, flags: flag(s, `sample-expired:${id}`) } : s;
+export const expiredQuestion = (id: CustomerId) => `${CUSTOMERS[id].name}问起你给的那支小样：批号是去年的`;
+export const EXPIRED_SAMPLING_NOTICE = "活动周过半，巡店要翻化妆品处理记录。抽屉最下面那排小样，批号是去年的。";
+
+export function checkCounter(s: Campaign): Campaign {
+  const left = expiredSamplesLeft(s);
+  if (!left || !canCheckCounter(s)) return s;
+  const cleared: Campaign = {
+    ...s,
+    samples: Math.max(0, s.samples - left),
+    compliance: clamp(s.compliance + EXPIRED_SAMPLING.compliance),
+    standing: clamp(s.standing + EXPIRED_SAMPLING.standing),
+    flags: flag(s, `checked:${s.day}`),
+    history: history(s, `开店前查了一遍批号，下了 ${left} 支到期小样`),
+  };
+  return spendAttention(cleared, null, EXPIRED_SAMPLING.minutes);
+}
 export const servedZhou = (s: Campaign) => hasFlag(s, "served:zhou:good") || hasFlag(s, "served:zhou:risky");
 // 她回来要的是"当天的妆"，前提是第 4 天你按她的皮肤给了修护而不是硬推：被退掉的人不会再来找你要判断。
 export const anjieComesBack = (s: Campaign) => s.day === 5 && hasFlag(s, "served:anjie:good");
@@ -657,6 +696,16 @@ export function applyDawn(s: Campaign): Campaign {
       flags: flag(next, `delivered:${s.day}`),
     };
   }
+  // 到期那批没当场下架，派出去的人第二天就会问回来：品牌要的是"谁在处理、什么时候处理"，柜上答不上来。
+  for (const name of [...next.flags]) {
+    if (!name.startsWith("sample-expired:")) continue;
+    const id = name.slice("sample-expired:".length) as CustomerId;
+    if (hasFlag(next, `expired-raised:${id}`)) continue;
+    next = {
+      ...next, trust: clamp(next.trust - EXPIRED_SAMPLING.penalty), compliance: clamp(next.compliance - EXPIRED_SAMPLING.penalty),
+      flags: flag(next, `expired-raised:${id}`), history: history(next, expiredQuestion(id)),
+    };
+  }
   if (s.day === 4 && hasFlag(s, "tang-owes-order") && !hasFlag(s, "tang-paid-order")) {
     // 她私下转过来这一单不进收银小票：钱只写在账本这一行上，否则累计就是一笔凭空多出来的数。
     const booked = 2080;
@@ -712,11 +761,19 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
     if (reading && hasFlag(s, reading.key)) notes.push({ speaker: reading.speaker, body: reading.body });
   }
   notes.push({ speaker: "品牌 · 到货", body: deliveryWord(s.day) });
+  // 这一遍自查不是柜上自己想起来的：第 3 天早上品牌说要翻处理记录，晨会念一次，那一屏上才长出这个动作。
+  if (s.day === EXPIRED_SAMPLING.fromDay && !expiredCleared(s)) notes.push({ speaker: "品牌 · 巡店", body: EXPIRED_SAMPLING_NOTICE });
   if (s.day === 4 && hasFlag(s, "tang-paid-order")) notes.push({ speaker: "唐可 · 交接", body: "她把一单伴娘妆转到你名下。口头承诺这次兑现了。" });
   if (s.day === 5 && hasFlag(s, "zhao-daughter-order")) notes.push({ speaker: "赵青 · 微信", body: "妈妈说可以信你。我买了那支修护。" });
   if (s.day === 5 && hasFlag(s, "zhao-complaint")) notes.push({ speaker: "客诉 · 方敏", body: "赵女士女儿过敏，这条已经进档案。" });
   if (s.day === 5 && hasFlag(s, "zhao-returned")) notes.push({ speaker: "退货 · 收银", body: "赵女士按你写下的承诺退了那单。" });
   if (anjieComesBack(s)) notes.push({ speaker: "安姐 · 微信", body: "上周听你的，只用了修护，今天脸是稳的。化妆师两点到，我早上先过来拿当天的妆。" });
+  // 到期小样不是当场翻脸，是台账上答不上来：她只问一句，而这一句让品牌看见你没在处理。
+  for (const name of s.flags) {
+    if (!name.startsWith("sample-expired:")) continue;
+    const id = name.slice("sample-expired:".length) as CustomerId;
+    if (landedToday(s, expiredQuestion(id))) notes.push({ speaker: `${CUSTOMERS[id].name} · 微信`, body: "你那支小样我回家才看到批号，是去年的。脸倒没什么，就是以后不敢随手试了。" });
+  }
   for (const item of RISKY_RETURNS) {
     if (hasFlag(s, item.resolve) && landedToday(s, item.text)) notes.push({ speaker: item.speaker, body: item.body });
   }
@@ -1052,8 +1109,9 @@ export function pullOver(s: Campaign, id: CustomerId): Campaign {
   if (!canPullOver(s, id)) return s;
   const customer = CUSTOMERS[id];
   // 中庭递出去的那一支换的是"她肯走过来"，不是"她明天回来"——那是留在柜台上那一支的账（`sample:` 才兑现回柜）。
+  const marked = markExpiredSample(s, id);
   const stayed = {
-    ...s, samples: s.samples - 1, flags: flag(s, `pulled:${id}`),
+    ...marked, samples: s.samples - 1, flags: flag(marked, `pulled:${id}`),
     waitMeters: { ...s.waitMeters, [id]: customer.patience },
     history: history(s, `你端着试用装走向${customer.name}，把她从中庭那边请回柜台`),
   };
@@ -1100,7 +1158,8 @@ export function addMember(s: Campaign, id: CustomerId): Campaign {
 export function leaveSample(s: Campaign, customerId: CustomerId): Campaign {
   if (s.samples <= 0 || hasFlag(s, `sample:${customerId}`)) return s;
   const customer = CUSTOMERS[customerId];
-  return { ...s, samples: s.samples - 1, trust: clamp(s.trust + 4), flags: flag(s, `sample:${customerId}`), history: history(s, `你给${customer.name}留下试用小样`) };
+  const marked = markExpiredSample(s, customerId);
+  return { ...marked, samples: s.samples - 1, trust: clamp(s.trust + 4), flags: flag(marked, `sample:${customerId}`), history: history(s, `你给${customer.name}留下试用小样`) };
 }
 
 export function resolveSale(s: Campaign, input: {

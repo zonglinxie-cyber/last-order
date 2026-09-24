@@ -2,8 +2,9 @@
 // rule functions only, so the balance numbers are measured instead of hand-written.
 import assert from "node:assert/strict";
 import {
-  addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, offerTransfer, orderQuote,
+  addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, canCheckCounter, canPullOver, canTransferVia, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, expiredCleared, offerTransfer, orderQuote,
   leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS, pullOver,
+  checkCounter,
   selectServiceProduct, settleDayEvent, startNextDay, startService, transferStock, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
   fitOf, unitsWanted, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
 } from "../src/campaign.ts";
@@ -89,7 +90,8 @@ export type RouteResult = { final: Campaign; dayTotals: number[]; served: number
 // transferWhen 用来单独量"在哪些缺口上开口"这件事值多少钱，默认每个缺口都打。
 // start 换的是柜台开局的那副牌：默认是第 1 天那一批货，传一份整周配货进来就是"配货一次性给到"的反事实。
 // overAsk 量的是误读连带那一排的代价：件数已经被削到和便宜档一样时，仍然按最贵的那一档。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign, overAsk = false): RouteResult {
+// check 量的是开店前那一遍自查：两支到期小样当场下架、晚开门一分钟，换来台账上那条处理记录。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false, pull = false, transfer: TransferChannel | null = null, transferWhen?: (day: number, product: ProductId, clip: number) => boolean, start?: Campaign, overAsk = false, check = false): RouteResult {
   let s = openFloorState(start ?? INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
@@ -99,6 +101,11 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
   const tiers = Object.keys(BUNDLES) as BundleId[];
   for (let day = 1; day <= 5; day += 1) {
     assert.equal(s.day, day);
+    if (check && canCheckCounter(s)) {
+      const before = s.samples;
+      s = checkCounter(s);
+      assert.ok(before > s.samples && expiredCleared(s), "查这一遍至少该下一支、并且在台账上留下记录");
+    }
     for (const id of [...availableCustomers(s)]) {
       // 接待别人期间她可能已经走了； greedy 路线就是在赌这个。
       if (!availableCustomers(s).includes(id)) continue;

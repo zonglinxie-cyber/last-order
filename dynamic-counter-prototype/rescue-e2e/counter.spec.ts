@@ -1,6 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, demandBudgetWord, deliveryWord, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
 import { ledgerYuan } from "../tests/ledger-yuan";
+
+// 沙盘把 campaign 原样写进本机存档，所以"这一步到底做了什么"可以直接从存储里读，不用信界面。
+const savedField = (page: Page, field: string) => page.evaluate(([key, name]) =>
+  ((JSON.parse(localStorage.getItem(key) ?? "{}") as Record<string, number>)[name] ?? -1), [SAVE_KEY, field] as [string, string]);
 
 // 配货按天到这件事要在晨会上念出来，而不是让玩家自己算抽屉：一早就一句，念的是规则给的那句。
 async function morningArrivals(page: Page, day: number) {
@@ -64,6 +68,23 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
     if (day > 0) {
       await morningArrivals(page, day + 1);
       if (day === 1) await page.screenshot({ path: "../audit/experience-v2/p14-morning-delivery.png" });
+      if (day === 2) {
+        // 开店前那一遍效期自查（条例第三十九条）：为什么现在查写在晨会上，价写在按钮上，两支小样当场出去。
+        const expired = page.locator(".dawn-note").filter({ hasText: "品牌 · 巡店" });
+        await expect(expired).toContainText(EXPIRED_SAMPLING_NOTICE);
+        // 按下去之后按钮自己改口，所以这里认的是这一个控件，不是它当下那串字。
+        const check = page.locator(".brief-check button");
+        await expect(check).toHaveText(`开店前查一遍批号 · 下 ${EXPIRED_SAMPLING.units} 支 · 晚开门 ${EXPIRED_SAMPLING.minutes} 分钟`);
+        await page.screenshot({ path: "../audit/experience-v2/p20-sandbox-brief-day3.png" });
+        await check.click();
+        await expect(check).toHaveText("查批号 · 到期那批已经下了");
+        await expect(check).toBeDisabled();
+        // 办完这件事，晨会就不该再拿它念第二遍。
+        await expect(expired).toHaveCount(0);
+        expect(await savedField(page, "samples")).toBe(INITIAL.samples - EXPIRED_SAMPLING.units);
+      }
+      // 查过的这一批不会再从微信上问回来：第 4 天早上不该有任何"批号"那一句。
+      if (day === 3) await expect(page.locator(".dawn-note").filter({ hasText: "批号" })).toHaveCount(0);
       await page.getByRole("button", { name: "开始营业", exact: true }).click();
       await page.getByRole("button", { name: "暂停", exact: true }).click();
     }

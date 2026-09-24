@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, EXPIRED_SAMPLING,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, SPLIT_WORD, standingWord,
@@ -319,6 +319,8 @@ export default function CounterGame() {
               <p>{screen === "intro" ? "你叫许愿，试用期还剩五天。柜长要业绩，前辈要人情，对面的销冠要你的客人。两万一的目标之外，你还想保住一点自己。" : story.brief}</p>
               <blockquote className="chapter-quote"><b>{chapter.speaker}</b>“{chapter.line}”</blockquote>
               {screen === "brief" && notices.map((note, index) => <blockquote className="dawn-note" key={index}><b>{note.speaker}</b>{note.body}</blockquote>)}
+              {/* 开店前那一遍自查：价写在按钮上（下几支、晚开门几分钟），买到什么写在下面那一行。 */}
+              {screen === "brief" && game.day >= EXPIRED_SAMPLING.fromDay && <div className="brief-check"><button type="button" disabled={!canCheckCounter(game)} onClick={() => setGame(value => checkCounter(value))}>{checkCounterLabel(game)}</button><span>{CHECK_COUNTER_NOTE}</span></div>}
               <div className="intro-actions"><button className="gold-button" onClick={screen === "intro" ? begin : openFloor}>{screen === "intro" ? "开始新品活动周" : "开始营业"}<span aria-hidden="true"> ↗</span></button><span>{screen === "intro" ? "五天 · 多种结局 · 本机存档" : "阅读不计时，开始营业后计时"}</span></div>
               <ChapterTrack day={game.day} />
             </div>
