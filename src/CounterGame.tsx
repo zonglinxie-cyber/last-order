@@ -180,14 +180,13 @@ export default function CounterGame() {
     setGame(next); setSpeed(0); setOutcome(null); setDraft(""); setCamera({ x: 0, y: 0 });
     setFocus(availableCustomers(next)[0] ?? "player"); setScreen(next.finished ? "finale" : "brief");
   };
-  // 底部控制条（手机上）叠在沙盘下缘，正好盖住门口那一排垂下来的名牌（名牌要占脚下约 40px），
+  // 底部控制条（手机上）叠在沙盘下缘，正好盖住门口那一排名牌的两行下摆（名牌下缘会超出脚下约 20px），
   // 所以从沙盘里划出这一截：地图只在带以上居中，按钮永远在带以下。带多高按 DOM 量，不写死。
   // 只在"横向铺满"那一档让出这截：整张图收进来时地图比屏幕窄，按钮本来就落在两侧的留白里，不该白扣高度。
   const pannable = sceneSize.width < sceneSize.height * mapRatio;
   const controlInset = pannable ? controlBand : 0;
   const bandHeight = sceneSize.height - controlInset;
-  // 沙盘画多大只在这里算一次。装不下整张图时该裁哪一边是有讲究的：名牌挂在人脚下约 60 单位（NAME_Y），
-  // 上下裁就会让人牌飘到 HUD 和时间按钮上；左右裁没有这个问题，因为沙盘本来就靠拖着看。
+  // 沙盘画多大只在这里算一次。上下裁会把人脚下的名牌裁掉半截，所以只裁左右：沙盘本来就靠拖着看。
   const worldWidth = pannable ? bandHeight * mapRatio : Math.min(sceneSize.width, bandHeight * mapRatio);
   // 铺满了还容不下一张名牌（横屏手机这类又扁又矮的窗口）才收起路人牌子，只留选中/开口的那张：
   // 宁可少两个名字，也不要人名压人名。
@@ -312,12 +311,12 @@ export default function CounterGame() {
               <h2>{screen === "intro" ? "卖的是美妆，算的是人情。" : story.subtitle}</h2>
               <p>{screen === "intro" ? "你叫许愿，试用期还剩五天。柜长要业绩，前辈要人情，对面的销冠要你的客人。两万一的目标之外，你还想保住一点自己。" : story.brief}</p>
               <blockquote className="chapter-quote"><b>{chapter.speaker}</b>“{chapter.line}”</blockquote>
-              {screen === "brief" && notices.map((note, index) => <blockquote key={index}><b>{note.speaker}</b>{note.body}</blockquote>)}
+              {screen === "brief" && notices.map((note, index) => <blockquote className="dawn-note" key={index}><b>{note.speaker}</b>{note.body}</blockquote>)}
               <div className="intro-actions"><button className="gold-button" onClick={screen === "intro" ? begin : openFloor}>{screen === "intro" ? "开始新品活动周" : "开始营业"}<span aria-hidden="true"> ↗</span></button><span>{screen === "intro" ? "五天 · 多种结局 · 本机存档" : "阅读不计时，开始营业后计时"}</span></div>
               <ChapterTrack day={game.day} />
             </div>
             <div className="intro-art" aria-hidden="true"><div className="intro-art-frame"><img src={asset("assets/aurora/xuyuan.png")} alt="" /><span className="intro-art-label">许愿 <small>BEAUTY ADVISOR / 试用期</small></span></div><span className="intro-art-stamp">05 DAYS<br />¥21,000</span></div>
-            <div className="intro-bottom"><span>{screen === "intro" ? "一笔成交，是故事的开始，不是结束。" : chapter.question}</span><b>{screen === "intro" ? "绮光百货 · 晚班 19:00" : "晨会要看到 " + money(progressNeed) + " · 累计 " + money(game.sales) + " / " + money(TARGET)}</b></div>
+            <div className="intro-bottom"><span>{screen === "intro" ? "一笔成交，是故事的开始，不是结束。" : chapter.question}</span><b>{screen === "intro" ? "绮光百货 · 晚班 19:00" : "晨会要看到 " + money(progressNeed)}</b></div>
           </section>}
         </>}
         {screen === "consultation" && customer && session && <div className="consult-scene">

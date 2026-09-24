@@ -152,3 +152,34 @@ for (const seed of SEEDS) {
     });
   }
 }
+
+/* 名牌是点人的快捷方式，但它压在彼此头顶上时"点谁的名字选出别人"是最难查的 bug —— 光看截图看不出来，
+   因为两张牌各自都没被遮住，只有落点归谁这件事错了。这里逐张量"这个像素归谁"。
+   44px 的触摸目标由立绘（手机 46×61）和选客条承担：纵向间距契约最紧只有 60 单位，名牌撑到 44px 就必然盖住邻牌。 */
+for (const viewport of VIEWPORTS) {
+  test(`每张名牌的落点归自己，点名字不会选出别人（${viewport.width}×${viewport.height}）`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await enterFloor(page, SEEDS[0].state);
+    const tight = await page.locator(".rescue-scene.tight-plates").count() === 1;
+    const owned = await page.evaluate(() => {
+      const band = document.querySelector(".map-viewport")!.getBoundingClientRect();
+      return [...document.querySelectorAll(".pawn-name")]
+        .filter(el => el.getBoundingClientRect().height > 0)
+        .flatMap(el => {
+          const b = el.getBoundingClientRect();
+          const x = b.x + b.width / 2, y = b.y + b.height / 2;
+          // 手机上沙盘比屏幕宽，人本来就在屏外 —— 拖进来才谈得上点得到，这里不把她算成 bug。
+          if (x < band.x || x > band.right || y < band.y || y > band.bottom) return [];
+          const who = document.elementFromPoint(x, y)?.closest(".pawn-name");
+          return who === el ? [] : ["「" + (el.textContent || "").trim().slice(0, 6) + "」的正中被「" + ((who?.textContent || document.elementFromPoint(x, y)?.className || "别的东西").trim().slice(0, 10)) + "」截走"];
+        });
+    });
+    expect(owned, viewport.width + "×" + viewport.height + " 有名牌点错人").toEqual([]);
+    // 收起来那一档只剩一两张牌，点不到每一个人：顾客仍然要能从选客条里选出来。
+    if (tight) expect(await page.locator(".floor-queue button").count()).toBeGreaterThan(0);
+    // 立绘是真正的触摸目标，按约定不能低于 44px。
+    const shortest = await page.evaluate(() => Math.min(...[...document.querySelectorAll(".rescue-pawn img")]
+      .filter(el => el.getBoundingClientRect().height > 0).map(el => el.getBoundingClientRect().height)));
+    expect(shortest, "立绘点不到了，低于 44px").toBeGreaterThanOrEqual(44);
+  });
+}
