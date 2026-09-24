@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
-  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, ledgerSum, openFloorState, parseCampaign,
+  applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, canLeaveSample, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
+  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
 } from "../src/campaign.ts";
@@ -148,8 +148,30 @@ test("a sample only comes back if you followed up that evening", () => {
   assert.ok(dawnNotices(next).some(note => note.speaker.includes("沈薇")));
 });
 
+// P24：界面上那句"这一支买到什么"不许超过规则真给的条件，而按钮亮不亮必须和收不收这一支同步。
+test("留在柜台那一支：按得动就等于收得下，回柜要三件事同时成立", () => {
+  // 抽屉空了 / 她手上已经有一支 / 正常。三种状态下 `canLeaveSample` 都得和 `leaveSample` 的"什么都不做"对齐：
+  // 闸写在按钮上、理由写在别处，两边就会各自漂移（界面亮着、按下去一个数都不变）。
+  for (const [name, s] of [
+    ["抽屉空的", campaign({ day: 1, samples: 0 })],
+    ["给过一支", leaveSample(campaign({ day: 1 }), "shen")],
+    ["还能给", campaign({ day: 1 })],
+  ] as Array<[string, Campaign]>)
+    assert.equal(canLeaveSample(s, "shen"), leaveSample(s, "shen") !== s, `${name}这一档按钮和规则不同步`);
+  const given = leaveSample(campaign({ day: 1, flags: ["served:shen:refused"] }), "shen");
+  // 她当场就买过一支：这一支是赠品，不是第二条线。回柜那一单只属于"没成的那一单"。
+  const bought = applyTouch(leaveSample(campaign({ day: 1, flags: ["served:shen:good"] }), "shen"), "shen");
+  assert.equal(applyDawn({ ...bought, day: 2, daySales: 0 }).sales, 0, "已经成交的人不再回柜一次");
+  // 排定的那天之前不到账：周姐那条写在第 3 天，第 2 早问也问不回来。
+  const zhou = applyTouch(leaveSample(campaign({ day: 2, flags: ["served:zhou:refused"] }), "zhou"), "zhou");
+  assert.equal(applyDawn({ ...zhou, day: 2, daySales: 0 }).sales, 0, "没到她那天的早晨，这一支还不该回柜");
+  assert.equal(applyDawn({ ...zhou, day: 3, daySales: 0 }).sales, SAMPLE_RETURN_SALE, "三件事都齐了才兑这一单");
+  assert.equal(hasFlag(given, "sample:shen"), true, "留小样记的是她这一支，截流那一支不记（见 pullOver）");
+  // 那句只念条件，不念钱和日子：¥620、第几天到账是规则里的数，写进按钮就是替她保证她一定会回来。
+  assert.doesNotMatch(LEAVE_SAMPLE_RETURN, /[¥0-9第]/, "那句「买到什么」里出现了承诺性的数字");
+});
+
 test("the evening follow-up is a capped, spend-once line", () => {
-  // 两条看得见的线：她被拒过又拿了小样；她在名单上成过一单。
   const base = campaign({
     day: 1, members: ["shen", "mei", "xiaoyu"], flags: ["sample:shen", "sample:mei", "served:shen:refused"],
     orders: [{ day: 1, customerId: "mei", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false }],

@@ -1109,6 +1109,15 @@ export function pullOverLabel(s: Campaign, id: CustomerId) {
 // 这两句由规则一处出，两个界面共用：迎上去换的是她这一整段耐心重来，而中庭这支不记回柜的账（见 `pullOver`）。
 export const PULL_OVER_RETURN = "换她重新站回柜台前 · 这一支不回柜";
 
+// 同一支小样留在柜台上是另一笔账，而它买到的是一条**要等**的线：`applySampleReturn` 要同时满足
+// 「她这一单没成（refused / lost）」+「当晚跟过一句」+「到了 `fromDay` 那天」才兑成回柜那一单。
+// 所以这句只念规则真给的两个条件，不写 ¥620、也不写第几天 —— 那正是它和迎上去那一支的区别。
+export const LEAVE_SAMPLE_RETURN = "她这一单没成才回得来 · 当晚还得跟一句";
+
+// 这一支还花得出去吗（抽屉里有货、她手上还没有你给的那一支）。两个界面的 disabled 和那句"买到什么"都读这一句，
+// 免得闸写在按钮上、理由写在别处，两边各自漂移。
+export const canLeaveSample = (s: Campaign, id: CustomerId) => s.samples > 0 && !hasFlag(s, `sample:${id}`);
+
 export function pullOver(s: Campaign, id: CustomerId): Campaign {
   if (!canPullOver(s, id)) return s;
   const customer = CUSTOMERS[id];

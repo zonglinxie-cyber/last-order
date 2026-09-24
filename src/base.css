@@ -5,5 +5,8 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; touch-action: manipulation; }
 * { scrollbar-width: thin; scrollbar-color: #6b514a #1b161e; }
 .rescue-game.screen-floor { grid-template-rows: 76px minmax(0, 1fr) 190px; }
-@media (max-width: 650px) { .rescue-game.screen-floor { grid-template-rows: 86px minmax(0, 1fr) 260px; } }
+/* 现场那一屏 dock 多高，看它要装什么：四步动作，每步下面跟一行"买到什么"。
+   260 那一档可见带只有 169，而这一屏最挤的状态（迎上去 + 留小样 + 加微信 三行理由都在）实测 170 —— 差的那 1px
+   就是把最后一行理由推到滚动线以下。多给的这 16px 从沙盘那一行扣（390×844 上沙盘从 498 到 482，站着的人和名牌不受影响）。 */
+@media (max-width: 650px) { .rescue-game.screen-floor { grid-template-rows: 86px minmax(0, 1fr) min(276px, 41vh); } }
 @media (max-height: 600px) and (min-width: 651px) { .rescue-game.screen-floor { grid-template-rows: 60px minmax(0, 1fr) 170px; } }

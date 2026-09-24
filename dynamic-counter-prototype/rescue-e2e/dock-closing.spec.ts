@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { LEAVE_SAMPLE_RETURN } from "../src/campaign";
 
 // 「提出成交」原来在 1280×720 折线以下 88px，而 counter.spec.ts 一直是绿的：click() 会先把元素滚进视野。
 // 所以这里不靠点击，只量位置——点了还"可见"等于没测。
@@ -91,5 +92,14 @@ for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await toClosing(page, "持妆 ¥1,280");
     await expectBarPinned(page, viewport, "接受拒绝");
+    // 那颗"留小样"连它买到什么一起钉在脚上：只留一颗光按钮，玩家就比不出它和"换一款"的差别。
+    const note = page.locator(".closing-buttons p", { hasText: LEAVE_SAMPLE_RETURN });
+    await expect(note, "拒绝那一排没把留小样的理由带进脚里").toBeVisible();
+    const noteBox = await note.boundingBox();
+    const barBox = await page.locator(".closing-buttons").boundingBox();
+    expect(noteBox && barBox, "量不到留小样那句").toBeTruthy();
+    expect(noteBox!.y, "理由整个掉到带上沿之外").toBeGreaterThanOrEqual(barBox!.y - 1);
+    expect(noteBox!.y + noteBox!.height - barBox!.y - barBox!.height, "理由掉出钉住的那条带（会被 overflow 裁掉）").toBeLessThanOrEqual(1);
+    expect(noteBox!.y + noteBox!.height, "理由落在折线以下：先按了、后看见理由").toBeLessThanOrEqual(viewport.height);
   });
 }

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { INITIAL, SAVE_KEY } from "../src/campaign";
+import { INITIAL, LEAVE_SAMPLE_RETURN, SAVE_KEY } from "../src/campaign";
 
 // P18：手上这一步做什么（试用 / 留小样 / 提出成交）做成抽屉的脚，住在 MobileScroll 之外。
 // 这一屏钉的是"不滚也按得到"，界是抽屉的下沿；滚动区自己要不要滚是另一件事（下面第 2 条如实承认它要滚）。
@@ -46,8 +46,23 @@ const fold = () => {
     transfer: past(".stock-transfer button"),
     cells: past(".bundle-row button"),
     footHeights: buttons.map(node => node.offsetHeight),
+    // 脚上那句"买到什么"离带底还剩多少（负数 = 直接被抽屉的 overflow:hidden 裁掉，不是"看得见但要滚"）。
+    footNotes: [...document.querySelectorAll<HTMLElement>(".consultation-foot small")].map(node => Math.round(band.bottom - node.getBoundingClientRect().bottom)),
+    footHeight: foot.offsetHeight,
   };
 };
+
+// 试用她不要的那一款：脚上换成「留小样 + 接受拒绝」那一档。
+async function toNegative(page: Page) {
+  await page.getByRole("button", { name: "观察沈薇" }).click();
+  await page.getByRole("button", { name: "观察眼下" }).click();
+  await page.getByRole("button", { name: "观察脸颊" }).click();
+  await page.getByRole("button", { name: "你最怕镜头看到什么？" }).click();
+  await page.locator(".product-options button").filter({ hasText: "持妆" }).click();
+  await page.getByRole("button", { name: "为沈薇试用" }).click();
+  const interruption = page.getByRole("button", { name: "让顾客确认需求" });
+  if (await interruption.count()) await interruption.click();
+}
 
 for (const [width, height] of [[390, 667], [320, 568]] as const) {
   test(`断货那一屏在 ${width}×${height}：脚不跟着滚，报价与第一行调货不滚就在`, async ({ page }) => {
@@ -93,5 +108,34 @@ for (const [width, height] of [[390, 667], [320, 568]] as const) {
     expect(seen!.buttonInBand, "试用那颗按钮（还没到能按的状态）也要不滚就在带内").toBeGreaterThanOrEqual(0);
     // 抽屉矮的这一档最容易被脚吃掉：脸部的线索还得点得到，脚又不能把提示行顶没。
     expect(seen!.footInsideScroller).toBe(false);
+  });
+}
+
+// P24：留在柜台那一支买到什么，和那颗按钮一起钉在脚上。
+// 这句住在滚动区里的话等于先按了、后看见理由；而它比"提出成交"那一档多占一行，得量矮的那两档还剩多少。
+for (const [width, height] of [[390, 667], [320, 568]] as const) {
+  test(`留小样那一档在 ${width}×${height}：理由和按钮同在脚上、不滚就在，按完一起收`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await seedSave(page, {});
+    await toNegative(page);
+    const note = page.locator(".consultation-foot .recovery-actions small");
+    await expect(note).toHaveText(LEAVE_SAMPLE_RETURN);
+    const seen = await page.evaluate(fold);
+    expect(seen).not.toBeNull();
+    expect(seen!.footNotes.length, "脚上没有那句理由").toBe(1);
+    expect(seen!.footNotes[0], `理由掉出抽屉 ${-seen!.footNotes[0]} 设计像素（会被 overflow:hidden 裁掉）`).toBeGreaterThanOrEqual(0);
+    expect(seen!.footInsideScroller, "动作行又住回滚动区里了：它就又会落在折线以下").toBe(false);
+    for (const h of seen!.footHeights) expect(h, "脚下的按钮矮于 44px 触摸下限").toBeGreaterThanOrEqual(44);
+    console.log("P24 MOBILE FOOT", width, height, JSON.stringify({ footHeight: seen!.footHeight, heights: seen!.footHeights, noteInBand: seen!.footNotes, scrolls: seen!.scrolls, clue: seen!.clue }));
+    await page.screenshot({ path: `../audit/experience-v2/p24-sample-note-${width}x${height}.png` });
+    // 按下去：这一支花出去了，理由不许继续对同一个人念第二遍，按钮也当场按不动。
+    await page.getByRole("button", { name: /^留小样/ }).click();
+    await expect(page.locator(".consultation-foot .recovery-actions small")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^留小样/ })).toBeDisabled();
+    const after = await page.evaluate(fold);
+    expect(after!.footNotes.length, "按完那句理由还留在脚上").toBe(0);
+    // 脚矮了一行，滚动区就该把这行还给正文：她那句话不能反而被顶出带外。
+    expect(after!.clue.length, "她这句话没出现在抽屉里").toBeGreaterThanOrEqual(1);
+    expect(Math.max(...after!.clue), `她这句话有 ${Math.max(...after!.clue)} 设计像素落在脚下`).toBeLessThanOrEqual(0);
   });
 }

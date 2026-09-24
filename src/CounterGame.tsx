@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, EXPIRED_SAMPLING,
-  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
+  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, canLeaveSample, leaveSample,
   observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, PULL_OVER_RETURN, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, SPLIT_WORD, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
@@ -377,14 +377,15 @@ export default function CounterGame() {
         {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{customerLine(selectedCustomer.id, true)}</p></div>
           {available.includes(selectedCustomer.id) ? <div className="floor-actions">
             <button className="gold-button" disabled={(!session && game.energy < ENERGY_LOCK) || Boolean(session && session.customerId !== selectedCustomer.id)} onClick={() => beginCustomer(selectedCustomer.id)}>{session?.customerId === selectedCustomer.id ? "继续接待" + selectedCustomer.name : "接待" + selectedCustomer.name}</button>
-            {/* 她已经不在你这一头了：这一步是拿样品和离柜的两分钟，换她重新站回柜台前。 */}
-            <button disabled={!canPullOver(game, selectedCustomer.id)} onClick={() => setGame(value => pullOver(value, selectedCustomer.id))}>{pullOverLabel(game, selectedCustomer.id)}</button>
-            {/* 这一行只在请得动她的时候出现：按钮上写的是花什么，这里写买到什么——同一支小样留在柜台上是另一笔账。 */}
-            {canPullOver(game, selectedCustomer.id) && <p>{PULL_OVER_RETURN}</p>}
-            <button disabled={game.samples <= 0 || hasFlag(game, "sample:" + selectedCustomer.id)} onClick={() => setGame(value => leaveSample(value, selectedCustomer.id))}>留小样 · {game.samples}</button>
-            <button disabled={!canAddMember(game, selectedCustomer.id)} onClick={() => setGame(value => addMember(value, selectedCustomer.id))} aria-label={"加微信 " + selectedCustomer.name}>{game.members.includes(selectedCustomer.id) ? "已在名单" : "加微信 · 1 分钟"}</button>
+            {/* 她已经不在你这一头了：这一步是拿样品和离柜的两分钟，换她重新站回柜台前。
+                买到什么紧跟在同一格里、只在请得动她的时候出现：注做成整行会把后面的按钮各顶下一行，两颗一行那一档当场散掉。 */}
+            <div className="floor-action"><button disabled={!canPullOver(game, selectedCustomer.id)} onClick={() => setGame(value => pullOver(value, selectedCustomer.id))}>{pullOverLabel(game, selectedCustomer.id)}</button>{canPullOver(game, selectedCustomer.id) && <small>{PULL_OVER_RETURN}</small>}</div>
+            {/* 留在柜台这一支买的是"等"，不是"现在"：不写清那两条前提，玩家就会把它当成另一种截流。 */}
+            <div className="floor-action"><button disabled={!canLeaveSample(game, selectedCustomer.id)} onClick={() => setGame(value => leaveSample(value, selectedCustomer.id))}>留小样 · {game.samples}</button>{canLeaveSample(game, selectedCustomer.id) && <small>{LEAVE_SAMPLE_RETURN}</small>}</div>
+            {/* 加微信为什么轮不到，也钉在这颗按钮下面：它讲的还是这一支小样，散在面板末尾就没人把它和按钮对上。
+                "她还没接到过你的东西"是按钮此刻的状态，不重复；留在这里的只有"怎么才能"。 */}
+            <div className="floor-action"><button disabled={!canAddMember(game, selectedCustomer.id)} onClick={() => setGame(value => addMember(value, selectedCustomer.id))} aria-label={"加微信 " + selectedCustomer.name}>{game.members.includes(selectedCustomer.id) ? "已在名单" : "加微信 · 1 分钟"}</button>{!game.members.includes(selectedCustomer.id) && !canAddMember(game, selectedCustomer.id) && !game.lost.includes(selectedCustomer.id) && <small>先留一支小样，或接完这一单</small>}</div>
             {canHelp && <button onClick={() => setGame(value => requestStaffHelp(value, selectedCustomer.id))}>请苏蔓帮忙留客</button>}
-            {!game.members.includes(selectedCustomer.id) && !canAddMember(game, selectedCustomer.id) && !game.lost.includes(selectedCustomer.id) && <p>她还没接到过你的东西。先留一支小样，或者接完这一单，再要微信。</p>}
             {session && session.customerId !== selectedCustomer.id && <p>你还在接待{CUSTOMERS[session.customerId].name}。<button className="text-button" onClick={() => beginCustomer(session.customerId)}>回去接待</button><button className="text-button" onClick={() => setGame(releaseService)}>放下这笔单</button></p>}
             {!session && game.energy < ENERGY_LOCK && <p>今天先到这里。<button onClick={endFloor}>结束今日接待</button></p>}
           </div> : <p className="muted">这次机会已经结束。请选择另一位顾客。</p>}
@@ -416,7 +417,7 @@ export default function CounterGame() {
         </div>
         {/* 关单那一排摆在滚动区之外：dock 是一条固定高度的带，成交阶段的内容比它高，跟着一起滚就永远在折线以下。 */}
         {session.tested && !pendingRival && !revising && picked && <div className="closing-buttons">
-          {session.reaction === "negative" ? <><button onClick={() => setRevising(true)}>换一款</button><button disabled={game.samples <= 0 || hasFlag(game, "sample:" + customer.id)} onClick={() => setGame(value => leaveSample(value, customer.id))}>留小样 · {game.samples}</button><button onClick={() => close(false)}>接受拒绝</button><button className="risk-button" onClick={() => close(true)}>强推成交</button></> : <><button disabled={session.claimed} onClick={() => setGame(value => ({ ...value, activeSession: value.activeSession ? { ...value.activeSession, claimed: true } : null }))}>{session.claimed ? "已登记归属" : "登记我的接待"}</button><button className="gold-button" onClick={() => close()}>提出成交</button>{session.reaction === "mixed" && <button onClick={() => setRevising(true)}>换一款再试</button>}</>}
+          {session.reaction === "negative" ? <><button onClick={() => setRevising(true)}>换一款</button><button disabled={!canLeaveSample(game, customer.id)} onClick={() => setGame(value => leaveSample(value, customer.id))}>留小样 · {game.samples}</button>{canLeaveSample(game, customer.id) && <p>{LEAVE_SAMPLE_RETURN}</p>}<button onClick={() => close(false)}>接受拒绝</button><button className="risk-button" onClick={() => close(true)}>强推成交</button></> : <><button disabled={session.claimed} onClick={() => setGame(value => ({ ...value, activeSession: value.activeSession ? { ...value.activeSession, claimed: true } : null }))}>{session.claimed ? "已登记归属" : "登记我的接待"}</button><button className="gold-button" onClick={() => close()}>提出成交</button>{session.reaction === "mixed" && <button onClick={() => setRevising(true)}>换一款再试</button>}</>}
         </div>}
         </section>}
         {screen === "result" && outcome && <div className="result-next"><p>{available.length ? "还有 " + available.length + " 位顾客。刚才这单占掉她们 " + outcome.minutes + " 分钟的等待。" : "今天的接待结束了，柜台还有一件事要处理。"}</p><button className="gold-button" onClick={() => { setScreen(available.length ? "floor" : "event"); setFocus(available[0] ?? "suman"); }}>{available.length ? "回到现场" : "处理闭店事件"}</button></div>}

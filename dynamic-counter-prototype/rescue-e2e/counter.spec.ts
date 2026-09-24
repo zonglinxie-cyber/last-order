@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, FACE_TRIAL_RETURN, INITIAL, PULL_OVER_RETURN, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, FACE_TRIAL_RETURN, INITIAL, LEAVE_SAMPLE_RETURN, PULL_OVER_RETURN, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
 import { ledgerYuan } from "../tests/ledger-yuan";
 
 // 沙盘把 campaign 原样写进本机存档，所以"这一步到底做了什么"可以直接从存储里读，不用信界面。
@@ -314,14 +314,25 @@ test("walking out with a sample pulls the waiting one back, and the other one pa
   // 按不动的理由写在按钮上，不用先翻手册才知道轮不轮得到自己。
   await expect(pull).toHaveText("迎上去 · 1 支小样 · 2 分钟");
   // 按钮上只有代价，玩家就决定不了要不要花这一支：买到什么紧跟在同一格里念出来。
-  const pullNote = page.locator(".floor-actions > p", { hasText: PULL_OVER_RETURN });
+  const pullNote = page.locator(".floor-action small", { hasText: PULL_OVER_RETURN });
   await expect(pullNote).toBeVisible();
-  // 说明行滚一下才到 = 决定已经做完了才看见理由：它必须和那颗按钮同屏，不靠滚动。
+  // 同一支小样的三个去处摆到一处才比得出：请回来是"现在"，留小样是"等她自己回柜"，加微信要前两步先成立。
+  await expect(page.locator(".floor-action small", { hasText: LEAVE_SAMPLE_RETURN })).toBeVisible();
+  await expect(page.locator(".floor-action small", { hasText: "先留一支小样" })).toBeVisible();
+  // 说明行滚一下才到 = 决定已经做完了才看见理由：每句都得贴着自己那颗按钮，且不靠滚动。
   {
-    const note = await pullNote.boundingBox();
     const pane = await page.locator(".dock-content").boundingBox();
-    expect(note && pane, "量不到买到什么那一行").toBeTruthy();
-    expect(note!.y + note!.height - pane!.y - pane!.height, "买到什么那一行在滚动线以下").toBeLessThanOrEqual(1);
+    const rows = await page.locator(".floor-action").evaluateAll(cells => cells.map(cell => ({
+      buttonBottom: cell.querySelector("button")!.getBoundingClientRect().bottom,
+      noteTop: cell.querySelector("small")!.getBoundingClientRect().top,
+      said: cell.querySelector("small")!.textContent ?? "",
+    })));
+    expect(pane, "量不到动作面板").toBeTruthy();
+    expect(rows.length, "一支小样在柜台上摆出几个去处").toBe(3);
+    for (const row of rows) {
+      expect(row.noteTop, `“${row.said}”没挂在自己那颗按钮下面`).toBeGreaterThanOrEqual(row.buttonBottom - 1);
+      expect(row.noteTop, `“${row.said}”在滚动线以下`).toBeLessThanOrEqual(pane!.y + pane!.height + 1);
+    }
   }
   await page.screenshot({ path: "../audit/experience-v2/p23-sandbox-pull-over-offer.png" });
   const doorBefore = await page.locator(".pawn-name[aria-label='查看梅女士']").evaluate(el => parseFloat(el.style.left));
@@ -350,7 +361,7 @@ test("walking out with a sample pulls the waiting one back, and the other one pa
   await expect(page.locator(".rail-detail")).toHaveText("小样 7 份 · 名单 0 人");
 });
 
-// 横屏那一档（844×390）面板被钉死成 230px 的一行，动作区在里面是要滚的：
+// 横屏那一档（844×390）面板被钉死成一条矮带，动作区在里面是要滚的：
 // 多出来那一行"买到什么"要是落在滚动线以下，玩家就是先按了、后看见理由。
 test.describe("844×390 横屏", () => {
   test.use({ viewport: { width: 844, height: 390 } });
@@ -362,7 +373,7 @@ test.describe("844×390 横屏", () => {
     await page.getByRole("button", { name: "暂停", exact: true }).click();
     // 横屏那一档名牌整排收起来（tight-plates 只留选中那位），选客只能走下面那条队列。
     await page.getByRole("button", { name: "选择顾客梅女士", exact: true }).click();
-    const note = page.locator(".floor-actions > p", { hasText: PULL_OVER_RETURN });
+    const note = page.locator(".floor-action small", { hasText: PULL_OVER_RETURN });
     await expect(note).toBeVisible();
     const band = await note.boundingBox();
     const pane = await page.locator(".dock-content").boundingBox();
@@ -370,6 +381,12 @@ test.describe("844×390 横屏", () => {
     expect(band && pane, "量不到买到什么那一行").toBeTruthy();
     expect(band!.y, "那一行整个在面板上沿之外").toBeGreaterThanOrEqual(pane!.y - 1);
     expect(band!.y + band!.height - pane!.y - pane!.height, "买到什么那一行在滚动线以下").toBeLessThanOrEqual(1);
+    // 这一档最挤的是行数：三格各带一句，如果每句都要占满一行，就又多出两行要滚。
+    // 截流和留小样这两颗得并在同一行里 —— 它们是同一支小样的两个去处，摆散了就没得比。
+    const pair = await page.locator(".floor-action").filter({ has: page.locator("small", { hasText: PULL_OVER_RETURN }) })
+      .evaluateAll(cells => cells.map(cell => Math.round(cell.getBoundingClientRect().y)));
+    const sampleCell = page.locator(".floor-action").filter({ has: page.locator("small", { hasText: LEAVE_SAMPLE_RETURN }) });
+    expect(await sampleCell.evaluate(cell => Math.round(cell.getBoundingClientRect().y)), "截流和留小样没并成一行：两个去处要各滚一次才看全").toEqual(pair[0]);
     await page.screenshot({ path: "../audit/experience-v2/p23-sandbox-pull-over-844x390.png" });
   });
 });
@@ -444,9 +461,19 @@ test("加微信 costs a floor minute and only comes after she has taken somethin
   await page.getByRole("button", { name: "查看沈薇", exact: true }).click();
   const member = page.getByRole("button", { name: "加微信 沈薇", exact: true });
   await expect(member).toBeDisabled();
-  await expect(page.getByText("她还没接到过你的东西")).toBeVisible();
+  // "为什么轮不到"钉在这颗按钮自己那一格：散在面板末尾就没人把它和按钮对上。
+  const why = page.locator(".floor-action small", { hasText: "先留一支小样" });
+  await expect(why).toBeVisible();
+  await expect(why.locator("..")).toContainText("加微信");
+  // 留在柜台那一支买的是"等"：能不能按和它买到什么得同时出现、也同时消失。
+  const leaveNote = page.locator(".floor-action small", { hasText: LEAVE_SAMPLE_RETURN });
+  await expect(leaveNote).toBeVisible();
   await page.getByRole("button", { name: "留小样 · 8", exact: true }).click();
   await expect(member).toBeEnabled();
+  // 这一支已经花出去了：它的理由不许继续亮着，不然玩家以为对她还有第二条线。
+  await expect(leaveNote).toHaveCount(0);
+  await expect(why).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "留小样 · 7", exact: true })).toBeDisabled();
   await member.click();
   await expect(member).toHaveText("已在名单");
   await expect(page.locator(".rail-detail")).toContainText("名单 1");
