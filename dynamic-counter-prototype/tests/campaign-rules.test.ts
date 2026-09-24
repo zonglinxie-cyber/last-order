@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  applyDawn, applyFinale, COMPLIANCE_RISK, complianceWord, CUSTOMERS, dawnNotices, endingTitle, fitOf, floorCustomers, history, INITIAL, leaveSample, parseCampaign,
-  PRODUCTS, QUESTIONS, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, TARGET, type BundleId, type Campaign,
+  applyDawn, applyFinale, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
+  ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, parseCampaign,
+  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, TARGET, type BundleId, type Campaign,
 } from "../src/campaign.ts";
 import { bestFit, herCap, runRoute } from "./clean-route.ts";
 
@@ -20,6 +21,9 @@ test("a clean route still needs day 5 to clear the target", () => {
   assert.equal(clean.final.sales, 25_590);
   assert.ok(clean.final.sales >= TARGET);
   assert.equal(endingTitle(clean.final), "你留下了，而且没变成她们");
+  // 第 5 晚那句「摊得开」必须够得着：一路按「登记我的接待」的干净路线，五天下来本子里有 12 行。
+  assert.equal(clean.final.evidence, 12);
+  assert.ok(hasRecords(clean.final.evidence), "门槛高过走得通的路线，摊记录就成了死文案");
 });
 
 test("连带 is what closes the gap, not luck", () => {
@@ -75,6 +79,22 @@ test("合规只有一句话，而且和结局用的是同一条线", () => {
   ]);
   assert.equal(endingTitle({ ...INITIAL, sales: TARGET, trust: 60, compliance: COMPLIANCE_RISK }), "你留下了，而且没变成她们");
   assert.equal(endingTitle({ ...INITIAL, sales: TARGET, trust: 60, compliance: COMPLIANCE_RISK - 1 }), "销冠的账单", "差一分就换一本账，这条线必须和台账那句话同源");
+});
+
+// 体力不做成百分比：界面念的是"还能再接几位"，而这个数按实测最贵的一次接待算。
+test("体力念成还能再接几位，锁人的那条线只有一个来源", () => {
+  assert.deepEqual([17, 18, 42, 100].map(consultsLeft), [0, 1, 2, 4], "100→76→52→28→4 是实测的四单");
+  assert.deepEqual([17, 18, 100].map(energyWord), [
+    "腿已经不听使唤，接不了新人", "撑一撑还能再接一位，之后就站不住", "还站得住，能再接 4 位",
+  ]);
+  assert.equal(consultsLeft(ENERGY_LOCK - 1), 0, "低于锁位就是零位，界面不能自己再算一遍");
+});
+
+// 留痕不是分数：只有"摊得开/摊不开"两种说法，和第 5 天那一步用的是同一条线。
+test("记录本只说摊不摊得开", () => {
+  assert.deepEqual([0, RECORDS_MIN - 1, RECORDS_MIN].map(evidenceWord), ["空着", "没几行", "摊得开"]);
+  assert.equal(hasRecords(RECORDS_MIN - 1), false);
+  assert.equal(hasRecords(RECORDS_MIN), true);
 });
 
 test("history keeps more than 25 entries", () => {

@@ -674,10 +674,19 @@ export function dayEvent(s: Campaign): DayEvent {
   if (atRisk) return {
     speaker: "罗曼", speakerStaff: "roman", speakerCustomer: null, title: "柜位在评估表上",
     body: `本周进度做到 ${thisWeekPercent(s)}%。罗曼把区域发来的表推过来，绮光这个柜位被标了黄色。她问你：这一栏要不要有人替你写几句话。`
-      + (s.members.length >= MEMBER_MIN_FOR_CREDIT ? ` 你手上有 ${s.members.length} 个人是她问不到、但明年还在的。` : ""),
+      + (s.members.length >= MEMBER_MIN_FOR_CREDIT ? ` 你手上有 ${s.members.length} 个人是她问不到、但明年还在的。` : "")
+      // 摊记录之前得先让她知道本子里有没有东西，不然这一步是盲选。
+      + (hasRecords(s.evidence) ? " 五天本子摊得开，哪一条她都问得出答案。" : " 只是你的本子摊开来没几行。"),
     choices: [
       rosterCard,
-      { id: "argue-records", label: "把五天记录摊开", detail: "用留痕、售后和退货记录说话", result: "罗曼一条条看完，在表上写了备注。柜位留到季度末，条件写在下一行。", apply: st => ({ ...st, evidence: st.evidence + 2, standing: clamp(st.standing + 10), relations: { ...st.relations, roman: st.relations.roman + 4 }, flags: flag(st, "counter-argued-records"), history: history(st, "你用五天的记录替柜位说话") }) },
+      // 摊记录这件事得有本子可摊：留痕不够的人同样能选，只是罗曼翻两页就停住。
+      { id: "argue-records", label: "把五天记录摊开", detail: hasRecords(s.evidence) ? "用留痕、售后和退货记录说话" : "把本子里那几行推过去", result: hasRecords(s.evidence)
+        ? "罗曼一条条看完，在表上写了备注。柜位留到季度末，条件写在下一行。"
+        : "罗曼翻了两页就停住：\"就这些？\"她在表上写了一行，字比你预想的短。", apply: st => ({ ...st,
+        // 她没看完的那两页不算新记录：本子的行数只在真的被逐条看完时才涨，结局里那句「摊得开」才不会和这一晚对不上。
+        evidence: st.evidence + (hasRecords(st.evidence) ? 2 : 0), standing: clamp(st.standing + (hasRecords(st.evidence) ? 10 : 3)),
+        // 那条"留到季度末"的判词认的是这个旗：本子空着的人不配挂它，柜位仍然在评估表上。
+        relations: { ...st.relations, roman: st.relations.roman + 4 }, ...(hasRecords(st.evidence) ? { flags: flag(st, "counter-argued-records") } : {}), history: history(st, hasRecords(st.evidence) ? "你用五天的记录替柜位说话" : "你摊开记录本，里面没几条") }) },
       { id: "own-counter-miss", label: "认领自己的判断失误", detail: "不怪顾客，也不怪同事", result: "罗曼没有替你求情，但她在评价里写下'肯认'。你自己知道这两个字是真的。", apply: st => ({ ...st, trust: clamp(st.trust + 6), standing: clamp(st.standing + 6), flags: flag(st, "counter-owned-miss"), history: history(st, "你为柜位进度承担了复盘") }) },
       { id: "ask-roman-vouch", label: "请罗曼替你签一个字", detail: "她肯签，前提是你之前站在她这边", visible: st => st.relations.roman >= 50, result: "罗曼签了字，说这一次的人情你要自己还上。", apply: st => ({ ...st, standing: clamp(st.standing + 12), relations: { ...st.relations, roman: st.relations.roman + 6 }, flags: flag(st, "counter-vouched"), history: history(st, "罗曼替柜位签了字") }) },
     ],
@@ -768,6 +777,26 @@ export function standingWord(value: number) {
 export const COMPLIANCE_RISK = 50;
 export function complianceWord(value: number) {
   return value >= 75 ? "台账对得上，巡店没话说" : value >= COMPLIANCE_RISK ? "台账还压得住" : value >= 30 ? "盘点表上有对不上的数" : "方敏的文件夹里已经有你";
+}
+
+// 体力不做成百分比：站到柜台后面的人只知道"还能再接几位"。
+// 一次接待实测 17（干净）到 24（竞品插话），按 24 报才是不会骗人的那个数。
+export const ENERGY_PER_CONSULT = 24;
+export function consultsLeft(value: number) {
+  return value < ENERGY_LOCK ? 0 : Math.floor((value - ENERGY_LOCK) / ENERGY_PER_CONSULT) + 1;
+}
+export function energyWord(value: number) {
+  const left = consultsLeft(value);
+  return left === 0 ? "腿已经不听使唤，接不了新人"
+    : left === 1 ? "撑一撑还能再接一位，之后就站不住"
+    : `还站得住，能再接 ${left} 位`;
+}
+
+// 留痕不是分数：它只在第 5 天"把记录摊开"那一刻兑现，界面和事件问的是同一条线。
+export const RECORDS_MIN = 4;
+export const hasRecords = (value: number) => value >= RECORDS_MIN;
+export function evidenceWord(value: number) {
+  return hasRecords(value) ? "摊得开" : value > 0 ? "没几行" : "空着";
 }
 
 export function todayHistory(s: Campaign): HistoryEntry[] {

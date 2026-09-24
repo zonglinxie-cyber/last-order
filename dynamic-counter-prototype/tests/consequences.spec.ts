@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { SAVE_VERSION } from "../src/campaign";
+import { SAVE_VERSION, energyWord } from "../src/campaign";
 
 const baseSave = {
   version: SAVE_VERSION, sales: 12000, daySales: 0, trust: 60, compliance: 55, energy: 100, samples: 4, evidence: 1, standing: 50,
@@ -61,7 +61,10 @@ test("low energy blocks a new consultation", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: "继续第 1 天" }).click();
   await page.getByRole("button", { name: "开始营业" }).click();
-  await expect(page.getByText("体力见底", { exact: false })).toBeVisible();
+  // 体力这句话全场只有一处，而且出自 rules：界面不再自己写"见底"，也不再报裸分数。
+  await expect(page.getByText(energyWord(10), { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("体力见底")).toHaveCount(0);
+  await expect(page.getByText(/剩余体力 \d/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "观察沈薇" })).toBeDisabled();
 });
 

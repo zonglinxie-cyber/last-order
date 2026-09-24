@@ -69,9 +69,6 @@ button { -webkit-tap-highlight-color:transparent; }
 .game-hud span { font-size:9px; letter-spacing:.07em; color:#dbc7ae; }
 .game-hud b { font:700 18px 'Noto Serif SC'; color:#ffdc96; }
 .game-hud .target-mini b { font-size:15px; }
-.sales-progress { position:absolute; z-index:31; top:calc(var(--top-inset) + 42px); left:17px; right:17px; height:3px; overflow:hidden; border-radius:4px; background:#ffffff24; }
-.sales-progress i { display:block; height:100%; background:linear-gradient(90deg,#a57b4c,#ffd789); box-shadow:0 0 10px #ffc45c; transition:width .45s; }
-
 .floor-stage { position:absolute; inset:0; z-index:32; pointer-events:none; }
 .floor-actor { position:absolute; display:flex; width:72px; min-height:92px; padding:0; flex-direction:column; align-items:center; justify-content:flex-end; border:0; background:transparent; color:inherit; transform:translate(-50%,-88%); pointer-events:auto; transition:left .38s linear, top .38s linear; }
 .floor-actor .map-character,

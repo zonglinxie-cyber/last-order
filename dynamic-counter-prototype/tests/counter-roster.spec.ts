@@ -1,6 +1,6 @@
 // 私域加粉是手机上够得到的一步：不藏在二级页，也不免费。
 import { expect, test, type Page } from "@playwright/test";
-import { INITIAL, SAVE_KEY, SAVE_VERSION, complianceWord } from "../src/campaign";
+import { INITIAL, RECORDS_MIN, SAVE_KEY, SAVE_VERSION, complianceWord, evidenceWord } from "../src/campaign";
 
 const seed = (page: Page, patch: Record<string, unknown>) => page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
   key: SAVE_KEY, value: { ...INITIAL, version: SAVE_VERSION, ...patch },
@@ -43,7 +43,7 @@ test("加微信要先有接触，加上以后当场付一分钟", async ({ page 
   expect(await minutes()).toBe(before + 1);
 });
 
-test("今日账单把台账念成一句话，不是第三个数字", async ({ page }) => {
+test("今日账单把台账和记录本都念成一句话，不是第三个数字", async ({ page }) => {
   await page.clock.install();
   await page.goto("/");
   await seed(page, {
@@ -61,12 +61,15 @@ test("今日账单把台账念成一句话，不是第三个数字", async ({ pa
   await expect(line).toHaveCSS("font-size", "12px");
   await expect(line).toHaveCSS("color", "rgb(224, 166, 141)");
   await expect(page.locator(".summary-metrics span")).toHaveCount(2);
+  // 记录本也是同一套做法：界面上不报裸行数，只念摊不摊得开，而那句和第 5 晚判的是同一条线。
+  await expect(page.locator(".summary-metrics span").nth(1)).toHaveText(`记录本 ${evidenceWord(3)}`);
   await page.screenshot({ path: "../audit/experience-v2/mobile-summary-ledger-line.png" });
 
-  await seed(page, { day: 2, eventDoneDays: [2], compliance: 80 });
+  await seed(page, { day: 2, eventDoneDays: [2], compliance: 80, evidence: RECORDS_MIN });
   await page.reload();
   await page.getByRole("button", { name: "继续第 2 天" }).click();
   await expect(line).toHaveText(complianceWord(80));
+  await expect(page.locator(".summary-metrics span").nth(1)).toHaveText(`记录本 ${evidenceWord(RECORDS_MIN)}`);
   await expect(line).not.toHaveClass(/at-risk/);
   await expect(line).toHaveCSS("color", "rgb(204, 185, 173)");
   await page.screenshot({ path: "../audit/experience-v2/mobile-summary-ledger-line-calm.png" });

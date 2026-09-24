@@ -127,14 +127,18 @@ test("a lost-opportunity route completes all five days without inventing purchas
     if (day === 5) {
       await expect(page.getByRole("heading", { name: "柜位在评估表上", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: /把私域名单放在桌上/ })).toHaveCount(0, "一个名单都没留下的人，交不出人数");
+      // 五天没接到人，本子里只剩事件里那两行——她得先看见这件事，才不会以为摊开就能救。
+      await expect(page.getByText("只是你的本子摊开来没几行")).toBeVisible();
     }
     await page.getByRole("button", { name: choices[day - 1] }).click();
+    if (day === 5) await expect(page.locator(".decision-response")).toContainText("就这些");
     await expect(page.locator(".large-number")).toContainText("¥0");
     await page.getByRole("button", { name: day === 5 ? "查看活动周结局" : "进入下一天", exact: true }).click();
   }
   await expect(page.getByRole("heading", { name: "柜台灯灭了", exact: true })).toBeVisible();
   await expect(page.locator(".order-line")).toHaveCount(0);
-  await expect(page.locator(".ending-checks")).toContainText("柜位留到季度末", "数字没做到，但摊开的记录还是替柜位争取到了下一轮");
+  // 数字没做到、记录也没留下几行：这一晚摊开本子救不回柜位，判词只能落到撤柜评估。
+  await expect(page.locator(".ending-checks")).toContainText("撤柜评估已经写上去");
 });
 
 test("arcade still starts, delivers, pauses and survives reload independently", async ({ page }) => {

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, INITIAL, SAVE_KEY } from "../src/campaign";
+import { CUSTOMERS, INITIAL, RECORDS_MIN, SAVE_KEY } from "../src/campaign";
 
 async function start(page: Page) {
   await page.goto("/");
@@ -75,6 +75,11 @@ test("the full floor-to-consultation campaign reaches the honest ending after re
   await expect(page.locator(".order-line")).toHaveCount(10);
   await page.reload();
   await expect(page.getByRole("heading", { name: "你留下了，而且没变成她们", exact: true })).toBeVisible();
+  // 达标之后页顶不能再念"还差 ¥0"。
+  await expect(page.locator(".top-score")).toContainText("五日 ¥21,000 已经做到");
+  // 一路按「登记我的接待」的 UI 路线，本子里的行数要和规则模拟器测出来的同一个数，
+  // 否则第 5 晚那句「摊得开」就是界面和判词各说一套。
+  expect(await page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { evidence: number }).evidence, SAVE_KEY)).toBe(12);
   expect(errors).toEqual([]);
 });
 
@@ -254,6 +259,12 @@ test("the morning read states the settled number once, and a reload does not rep
   await seed(page, { ...INITIAL, day: 2, sales: 1500, daySales: 1500, standing: 44, samples: 7 });
   await page.reload();
   await expect(page.locator(".rail-standing")).toHaveText("柜位已经写进评估表");
+  // 栏位里不剩裸的体力分和进度条：站不站得住是一句话，差多少是一句钱。
+  await expect(page.locator(".rail-energy")).toHaveText("还站得住，能再接 4 位");
+  // 差多少只在页顶说一遍，栏位里不再开第二块记分牌（进度条也一起撤了）。
+  await expect(page.locator(".top-score")).toContainText("还差 ¥19,500");
+  await expect(page.locator(".rail-target")).toHaveCount(0);
+  await expect(page.locator(".target-track")).toHaveCount(0);
   await expect(page.locator(".floor-journal")).toContainText("晨会 · 累计达成 54%");
   await page.screenshot({ path: "../audit/experience-v2/morning-standing.png" });
   await page.reload();
@@ -280,6 +291,8 @@ test("when the counter is under review the roster is a card you can put on the t
   await page.reload();
   await expect(page.getByRole("heading", { name: "柜位在评估表上", exact: true })).toBeVisible();
   await expect(page.getByText("2 个人是她问不到")).toBeVisible();
+  // 摊记录之前得先让她知道本子里有没有东西，不然这一步是盲选。
+  await expect(page.getByText("只是你的本子摊开来没几行")).toBeVisible();
   await page.screenshot({ path: "../audit/experience-v2/counter-event.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".event-panel")).toBeVisible();
@@ -290,3 +303,24 @@ test("when the counter is under review the roster is a card you can put on the t
   await page.getByRole("button", { name: "查看活动周结局", exact: true }).click();
   await expect(page.locator(".ending-checks")).toContainText("柜位留下，名单归你");
 });
+
+// 同一晚同一句话，本子摊不摊得开落点不同：空本子救不回柜位，这不是暗扣。
+// 实测：一路按「登记我的接待」的干净路线五天有 12 行；一个人都没接到的路线只有 2 行。
+for (const [evidence, verdict] of [[0, "撤柜评估已经写上去"], [RECORDS_MIN, "柜位留到季度末"]] as const) {
+  test(`spreading the record book needs a book that has pages（留痕 ${evidence}）`, async ({ page }) => {
+    // 上一轮的存档会在关页时被内存里的状态写回去，种子必须在页面脚本跑起来之前落盘。
+    await page.addInitScript(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+      key: SAVE_KEY, value: {
+        ...INITIAL, day: 5, sales: 6000, daySales: 0, standing: 41, samples: 2, evidence,
+        dayServed: ["returning"], eventDoneDays: [1, 2, 3, 4], relations: { ...INITIAL.relations, roman: 40 },
+      },
+    });
+    await page.goto("/");
+    await expect(page.getByText(evidence ? "五天本子摊得开" : "只是你的本子摊开来没几行")).toBeVisible();
+    await page.getByRole("button", { name: /把五天记录摊开/ }).click();
+    await expect(page.locator(".decision-response")).toContainText(evidence ? "在表上写了备注" : "就这些");
+    await page.getByRole("button", { name: "查看活动周结局", exact: true }).click();
+    await expect(page.locator(".ending-checks")).toContainText(verdict);
+    await page.screenshot({ path: `../audit/experience-v2/record-book-${evidence}.png` });
+  });
+}

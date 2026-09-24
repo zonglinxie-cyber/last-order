@@ -8,7 +8,6 @@ const LABELS = {
   bar: ".status-bar",
   "hud-day": ".game-hud span",
   "hud-num": ".game-hud b",
-  progress: ".sales-progress",
   feed: ".floor-feed",
   speed: ".speed-rail",
   bubble: ".actor-bubble",
@@ -65,6 +64,9 @@ test("the floor keeps one speaker at a time and never drops a bubble on a person
   test.setTimeout(90_000);
   for (const day of [1, 4]) {
     await seedFloor(page, day);
+    // 差多少只在页顶说一遍：钱是一行字，不再挂一条进度条。
+    await expect(page.locator(".sales-progress")).toHaveCount(0);
+    await expect(page.locator(".target-mini")).toContainText("距五日目标");
     for (let sample = 0; sample < 5; sample++) {
       const items = await rects(page, LABELS);
       const bubbles = items.filter(item => item.label === "bubble");

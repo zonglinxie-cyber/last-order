@@ -56,6 +56,9 @@ export function playCustomer(
   }
   s = chooseBundle(s, bundle);
   if (RIVAL_IDS.includes(id)) s = respondToRival(s, "clarify");
+  // 「登记我的接待」是两个 UI 都有的那一步，e2e 每次都按；模拟器不按就等于少测一步，
+  // 留痕数会比真实玩出来的低。这里按下去，是为了量到玩家真的会拿到的证据。
+  s = { ...s, activeSession: { ...s.activeSession!, claimed: true } };
   const quote = orderQuote(id, product, bundle, false);
   const closed = closeService(s);
   assert.ok(closed, `${id} 的关单不应该失败`);

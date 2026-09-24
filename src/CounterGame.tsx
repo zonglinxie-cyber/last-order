@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   advanceFloorTime, addMember, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent,
-  dawnNotices, endingTitle, ENERGY_LOCK, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
+  dawnNotices, endingTitle, ENERGY_LOCK, energyWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
   startNextDay, startService, STANDING_RISK, TARGET, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
@@ -285,7 +285,7 @@ export default function CounterGame() {
       <div className="rescue-brand"><span className="brand-monogram">AU</span><div><b>最后一单 <span>绮光专柜</span></b><small>第 {game.day} / 5 天 · {story.title}</small></div></div>
       <nav className="experience-nav" aria-label="游戏菜单"><button onClick={showHandbook}>值班手册</button><a className="rush-mode-link" href="?mode=rush">闭店大作战 <small>90 秒挑战 · 独立计分</small></a></nav>
       <div className="shift-clock"><strong>{clock}</strong><span>{screen === "floor" ? speed === 0 ? "现场已暂停" : "营业中" : screen === "consultation" ? "接待按动作计时" : "待命"}</span></div>
-      <div className="top-score"><span>还差 <b>{money(Math.max(0, TARGET - game.sales))}</b></span><small className={saveError ? "save-failed" : ""}>{saveError ? "保存失败，请勿关闭页面" : screen === "intro" ? "五日销售与人情账" : "已保存到本机"}</small></div>
+      <div className="top-score"><span>{game.sales >= TARGET ? <>五日 <b>{money(TARGET)}</b> 已经做到</> : <>还差 <b>{money(TARGET - game.sales)}</b></>}</span><small className={saveError ? "save-failed" : ""}>{saveError ? "保存失败，请勿关闭页面" : screen === "intro" ? "五日销售与人情账" : "已保存到本机"}</small></div>
     </header>
     <div className="rescue-workspace" inert={modalOpen}>
       <main ref={sceneRef} className={"rescue-scene" + (tightPlates ? " tight-plates" : "")} aria-label={screen === "consultation" && customer ? "接待" + customer.name : "专柜现场"}>
@@ -332,7 +332,7 @@ export default function CounterGame() {
             <div className="outside-pressure"><b>柜台另一边 · 每次新动作都会消耗等待</b>{available.filter(id => id !== customer.id).map(id => <p key={id}>{CUSTOMERS[id].name} · {waitLabel(id)}</p>)}{available.length === 1 && <p>其他机会已经结束。这一位仍在等你的判断。</p>}</div>
           </section>
         </div>}
-        {screen === "result" && outcome && <section className={"story-panel sale-panel " + (outcome.good ? "sale-good" : "sale-risky")}><span className="eyebrow">本次接待 · 收银记录</span><h1>{outcome.title}</h1><strong className="large-number">+ {money(outcome.amount)}</strong>{outcome.units > 0 && <p className="result-units">{outcome.units} 件 · 整单 {money(outcome.total)}{outcome.shared ? " · 与陆遥各半" : ""} · 占用现场 {outcome.minutes} 分钟</p>}<p>{outcome.body}</p><div className="result-metrics"><span>信任 <b>{relationText(game.trust)}</b></span><span>体力 <b>{game.energy} / 100</b></span><span>小样 <b>{game.samples} 份</b></span></div></section>}
+        {screen === "result" && outcome && <section className={"story-panel sale-panel " + (outcome.good ? "sale-good" : "sale-risky")}><span className="eyebrow">本次接待 · 收银记录</span><h1>{outcome.title}</h1><strong className="large-number">+ {money(outcome.amount)}</strong>{outcome.units > 0 && <p className="result-units">{outcome.units} 件 · 整单 {money(outcome.total)}{outcome.shared ? " · 与陆遥各半" : ""} · 占用现场 {outcome.minutes} 分钟</p>}<p>{outcome.body}</p><div className="result-metrics"><span>信任 <b>{relationText(game.trust)}</b></span><span>{energyWord(game.energy)}</span><span>小样 <b>{game.samples} 份</b></span></div></section>}
         {screen === "event" && <section className="story-panel event-panel"><div className="event-speaker"><img src={event.speakerCustomer ? portrait(event.speakerCustomer, true) : asset("assets/aurora/" + (event.speakerStaff === "player" ? "xuyuan" : event.speakerStaff ?? "roman") + ".png")} alt="" /><span>柜台关灯以后<br /><b>{event.speaker}</b></span></div><span className="eyebrow">闭店 · {event.speaker}</span><h1>{event.title}</h1><p>{event.body}</p><span className="story-footnote">这次选择会进入账本，并改变之后几天的现场。</span></section>}
         {(screen === "summary" || screen === "finale") && <section className="story-panel ledger-panel">
           <span className="eyebrow">{screen === "finale" ? "新品活动周 · 最终结算" : "DAY " + game.day + " · 今日账本"}</span><h1>{screen === "finale" ? endingTitle(game) : "今天的单，明天的账"}</h1><strong className="large-number">{money(game.sales)} <small>/ {money(TARGET)}</small></strong>
@@ -345,14 +345,14 @@ export default function CounterGame() {
         </section>}
       </main>
       <aside className="rescue-rail">
-        <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><div className="target-track"><i style={{ width: Math.min(100, game.sales / TARGET * 100) + "%" }} /></div><p className="rail-detail">体力 {game.energy} · 小样 {game.samples} · 名单 {game.members.length}</p><p className={"rail-standing" + (game.standing < STANDING_RISK ? " at-risk" : "")}>{standingWord(game.standing)}</p><p className={"rail-compliance" + (game.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(game.compliance)}</p></section>
+        <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><p className="rail-detail">小样 {game.samples} 份 · 名单 {game.members.length} 人</p><p className="rail-energy">{energyWord(game.energy)}</p><p className={"rail-standing" + (game.standing < STANDING_RISK ? " at-risk" : "")}>{standingWord(game.standing)}</p><p className={"rail-compliance" + (game.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(game.compliance)}</p></section>
         <section className="customer-list"><span className="eyebrow">顾客</span>{todayIds.map(id => <button key={id} onClick={() => setFocus(id)} className={focus === id ? "is-selected" : ""}><img src={portrait(id, true)} alt="" /><span><b>{CUSTOMERS[id].name}</b><small>{customerStatus(id)}</small></span><span className={"status-dot " + (game.lost.includes(id) ? "lost" : game.dayServed.includes(id) ? "done" : "")} /></button>)}</section>
         <section className="floor-journal"><span className="eyebrow">刚刚发生</span>{game.history.slice(-5).reverse().map((entry, index) => <p key={index}><small>D{entry.day}</small>{entry.text}</p>)}{game.history.length === 0 && <p>陆遥正在留意入口。先接谁，由你决定。</p>}</section>
         <button className="restart-link" onClick={showRestart}>重新开始</button>
       </aside>
     </div>
     <footer ref={dockRef} className="rescue-dock" inert={modalOpen}>
-      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? session.discovered.length + " / 3 处线索 · 体力 " + game.energy : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
+      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? session.discovered.length + " / 3 处线索 · " + energyWord(game.energy) : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
       <div className="dock-content">
         {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{selectedCustomer.opening}</p></div>
           {available.includes(selectedCustomer.id) ? <div className="floor-actions">
@@ -362,7 +362,7 @@ export default function CounterGame() {
             {canHelp && <button onClick={() => setGame(value => requestStaffHelp(value, selectedCustomer.id))}>请苏蔓帮忙留客</button>}
             {!game.members.includes(selectedCustomer.id) && !canAddMember(game, selectedCustomer.id) && !game.lost.includes(selectedCustomer.id) && <p>她还没接到过你的东西。先留一支小样，或者接完这一单，再要微信。</p>}
             {session && session.customerId !== selectedCustomer.id && <p>你还在接待{CUSTOMERS[session.customerId].name}。<button className="text-button" onClick={() => beginCustomer(session.customerId)}>回去接待</button><button className="text-button" onClick={() => setGame(releaseService)}>放下这笔单</button></p>}
-            {!session && game.energy < ENERGY_LOCK && <p>体力不足以接新人。<button onClick={endFloor}>结束今日接待</button></p>}
+            {!session && game.energy < ENERGY_LOCK && <p>今天先到这里。<button onClick={endFloor}>结束今日接待</button></p>}
           </div> : <p className="muted">这次机会已经结束。请选择另一位顾客。</p>}
         </div>}
         {screen === "floor" && selectedStaff && <div className="staff-inspect"><h3>{focus === "luyao" ? "她在争取你还没接住的人" : focus === "suman" ? "愿不愿意帮忙，要看之前的账" : focus === "tangke" ? "她也在为转正凑最后的数字" : focus === "roman" ? "业绩与赠品记录，她都在盯" : "看清现场，再决定把时间给谁"}</h3><p>{focus === "suman" ? "关系：" + relationText(game.relations.suman) + (canHelp ? "。她愿意替你多留客一会儿。" : "。帮忙需要之前的人情，这班最多一次。") : story.threat}</p><div className="floor-actions">{available.map(id => <button key={id} onClick={() => setFocus(id)}>看看{CUSTOMERS[id].name}</button>)}</div></div>}

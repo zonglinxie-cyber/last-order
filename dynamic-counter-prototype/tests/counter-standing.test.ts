@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   addMember, applyDawn, canAddMember, counterVerdict, CUSTOMERS, dayEvent, DAY_TARGETS, dawnNotices,
-  INITIAL, morningReview, orderQuote, parseCampaign, PRODUCTS, progressTarget, SAVE_VERSION, settleDayEvent,
+  INITIAL, morningReview, orderQuote, parseCampaign, PRODUCTS, progressTarget, RECORDS_MIN, SAVE_VERSION, settleDayEvent,
   spendAttention, STANDING_RISK, TARGET, visibleChoices, type Campaign, type CustomerId,
 } from "../src/campaign.ts";
 import { bestFit, playCustomer } from "./clean-route.ts";
@@ -107,8 +107,15 @@ test("进度落后时闭店事件问的是柜位，不是储备人选", () => {
   assert.equal(counterVerdict(settleDayEvent(rescued, "hand-roster")).label, "柜位留下，名单归你");
   const vouched = dayEvent({ ...atRisk, relations: { roman: 60 } });
   assert.equal(visibleChoices({ ...atRisk, relations: { roman: 60 } }, vouched).length, 3, "之前站在她这边，她才肯签");
-  const settled = settleDayEvent(atRisk, "argue-records");
-  assert.equal(settled.standing, 40, "摊开记录能救回柜位，但刚好压在及格线上");
+  // 摊记录这件事得有本子可摊：空本子只够她翻两页，柜位仍然被写进评估。
+  const emptyBook = settleDayEvent(atRisk, "argue-records");
+  assert.equal(emptyBook.standing, 33, "没几条记录只救回三个点");
+  assert.equal(counterVerdict(emptyBook).label, "撤柜评估已经写上去", "旗没挂上，判词就不能认这一步");
+  assert.ok(dayEvent(atRisk).body.includes("摊开来没几行"), "她得先知道你本子里有没有东西");
+  const withBook = { ...atRisk, evidence: RECORDS_MIN };
+  assert.ok(dayEvent(withBook).body.includes("五天本子摊得开"));
+  const settled = settleDayEvent(withBook, "argue-records");
+  assert.equal(settled.standing, 40, "摊得开的记录能救回柜位，但刚好压在及格线上");
   assert.equal(counterVerdict(settled).label, "柜位留到季度末");
   // 有赠品缺口时，审计仍然先于柜位；但进度会写进同一张桌子。
   const gap = dayEvent({ ...atRisk, flags: ["covered-suman"] });

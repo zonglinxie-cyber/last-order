@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
+  addMember, advanceFloorTime, applyQuestion, applyRival, BUNDLES, canAddMember, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
   fitOf, fitPreview, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
   orderQuote, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
@@ -403,7 +403,7 @@ export default function Prototype() {
       </MobileScroll></section>}</main></div>;
   }
 
-  if (screen === "result" && outcome) return <MobileScroll className="app-screen result-scroll"><main className={`sale-result ${outcome.good ? "good" : "risky"}`}><div className="result-light" /><p>DAY {campaign.day} · 收银提示</p><span className="result-seal">{outcome.good ? "✓" : "!"}</span><h1>{outcome.title}</h1><strong>+ ¥{outcome.amount.toLocaleString("zh-CN")}</strong><p className="result-copy">{outcome.body}</p><div className="consequence-list"><span><b>顾客信任</b><em>{relationText(campaign.trust)}</em></span><span><b>订单留痕</b><em>{claimed ? "已登记" : "可能争议"}</em></span><span><b>剩余体力</b><em>{tired ? "几乎站不住" : campaign.energy >= 50 ? "还能再接" : "开始发沉"}</em></span></div><button className="primary-action" type="button" onClick={afterResult}>{available.filter(id => id !== customerId).length > 0 ? "回到现场" : "处理闭店事件"}</button></main></MobileScroll>;
+  if (screen === "result" && outcome) return <MobileScroll className="app-screen result-scroll"><main className={`sale-result ${outcome.good ? "good" : "risky"}`}><div className="result-light" /><p>DAY {campaign.day} · 收银提示</p><span className="result-seal">{outcome.good ? "✓" : "!"}</span><h1>{outcome.title}</h1><strong>+ ¥{outcome.amount.toLocaleString("zh-CN")}</strong><p className="result-copy">{outcome.body}</p><div className="consequence-list"><span><b>顾客信任</b><em>{relationText(campaign.trust)}</em></span><span><b>订单留痕</b><em>{claimed ? "已登记" : "可能争议"}</em></span><span><b>剩余体力</b><em>{energyWord(campaign.energy)}</em></span></div><button className="primary-action" type="button" onClick={afterResult}>{available.filter(id => id !== customerId).length > 0 ? "回到现场" : "处理闭店事件"}</button></main></MobileScroll>;
 
   if (screen === "event") {
     const eventVisual = event.speakerStaff ? STAFF[event.speakerStaff] : null;
@@ -411,7 +411,7 @@ export default function Prototype() {
     return <MobileScroll className="app-screen event-scroll"><main className="event-screen"><header><span>闭店后 · {event.speaker}</span><b>DAY {campaign.day}</b></header><section className="event-speaker-portrait">{eventCustomer ? <img src={eventCustomer.portrait} alt={`${eventCustomer.name}人物形象`} /> : eventVisual ? <CharacterFace visual={eventVisual} /> : null}<div><span>{event.speaker}</span><b>{eventCustomer ? eventCustomer.descriptor : eventVisual?.role}</b></div></section><p>{event.title}</p><h1>{event.body}</h1>{chosenEvent === null ? <div className="event-choices">{shownChoices.map(choice => <button type="button" key={choice.id} onClick={() => chooseEvent(choice.id)}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div> : <section className="event-result"><b>{chosenEvent.label}</b><p>{chosenEvent.result}</p><button className="primary-action" type="button" onClick={finishDay}>查看今日账单</button></section>}</main></MobileScroll>;
   }
 
-  if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{TARGET.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>证据 <b>{campaign.evidence}</b></span></div><p className={"summary-compliance" + (campaign.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(campaign.compliance)}</p><button className="primary-action" type="button" onClick={nextDay}>{campaign.day === 5 ? "查看活动周结局" : "进入下一天"}</button></main></MobileScroll>;
+  if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{TARGET.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>记录本 <b>{evidenceWord(campaign.evidence)}</b></span></div><p className={"summary-compliance" + (campaign.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(campaign.compliance)}</p><button className="primary-action" type="button" onClick={nextDay}>{campaign.day === 5 ? "查看活动周结局" : "进入下一天"}</button></main></MobileScroll>;
 
   if (screen === "finale") {
     const salesWin = campaign.sales >= TARGET;
@@ -475,7 +475,6 @@ export default function Prototype() {
       <div><span>DAY {campaign.day} · {story.title}</span><b>{formatClock(floorClock)}</b></div>
       <div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
     </header>
-    <div className="sales-progress"><i style={{ width: `${Math.min(100, campaign.sales / TARGET * 100)}%` }} /></div>
     <div className="floor-feed-row">
       <p className="floor-feed">{contested ? `陆遥 · ${staffAction("luyao", true)}` : liveFeed[0]}</p>
       <div className="speed-rail" role="group" aria-label="现场时间">{([0, 1, 2, 4] as FloorSpeed[]).map(value => <button type="button" key={value} className={floorSpeed === value ? "is-on" : ""} onClick={() => setFloorSpeed(value)}>{value === 0 ? "停" : `${value}x`}</button>)}</div>
@@ -511,8 +510,8 @@ export default function Prototype() {
         {inspectVisual && inspectVisual.name !== STAFF.player.name ? <CharacterFace visual={inspectVisual} /> : null}
         <div>
           <strong>{focusCustomer ? focusCustomer.descriptor : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
-          <b>{tired && !campaign.activeSession ? "体力见底，接不了新人" : inspectNow}</b>
-          <small>{floorNotice ?? (tired && !campaign.activeSession ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
+          <b>{inspectNow}</b>
+          <small>{floorNotice ?? (tired && !campaign.activeSession ? energyWord(campaign.energy) : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
         </div>
       </div>
       <blockquote className="inspect-quote">{inspectQuote}</blockquote>
@@ -522,7 +521,7 @@ export default function Prototype() {
         {serveCustomer && <button className="primary-action" type="button" disabled={serveLocked} aria-label={`观察${serveCustomer.name}`} onClick={() => beginCustomer(serveCustomer.id)}>{campaign.activeSession?.customerId === serveCustomer.id ? `继续接待${serveCustomer.name}` : `观察${serveCustomer.name}`}</button>}
         {focusCustomer && <button className="member-action" type="button" disabled={!canAddMember(campaign, focusCustomer.id)} aria-label={`加微信${focusCustomer.name}`} onClick={() => setCampaign(s => addMember(s, focusCustomer.id))}>{campaign.members.includes(focusCustomer.id) ? `${focusCustomer.name}已在名单` : canAddMember(campaign, focusCustomer.id) ? "加微信 · 1 分钟" : "加微信 · 要先有接触"}</button>}
       </div>
-      <p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : "顾客会记住你的判断，也会记住你的承诺。"}</p>
+      <p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? energyWord(campaign.energy) : "顾客会记住你的判断，也会记住你的承诺。"}</p>
     </section>
   </main></MobileScroll>;
 }
