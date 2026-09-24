@@ -472,12 +472,14 @@ button { -webkit-tap-highlight-color:transparent; }
 .stock-transfer button { min-height:44px; padding:0 9px; border:1px solid #dcbd7a55; border-radius:11px; background:#ffffff08; color:#efd39b; font:600 12px/1.35 'Noto Serif SC'; }
 .stock-transfer button:disabled { border-color:#ffffff12; color:#8b7a70; }
 .bundle-row button { display:flex; min-height:44px; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px 3px; border:1px solid #ffffff15; border-radius:10px; background:#ffffff08; color:#ddcec2; transition:.16s; }
-.bundle-row button span { font-size:8px; font-weight:700; }
-.bundle-row button small { color:#a89487; font-size:7px; }
+/* 连带这一排原来是 8px/7px：整套 12px 字号下限那一遍漏了它，
+   结果"多要一件多占一分钟"这句规则说明在手机上比正文小一半。跟上面的调货两行同一档。 */
+.bundle-row button span { font-size:12px; font-weight:700; }
+.bundle-row button small { color:#a89487; font-size:12px; line-height:1.35; }
 .bundle-row button.active { border-color:#efc47799; background:#eac07414; color:#f6dfae; box-shadow:0 0 0 1px #f6d69c25; }
 .bundle-row button.active small { color:#efc978; }
 .bundle-row button:disabled { opacity:.4; }
-.bundle-row em { grid-column:1/-1; color:#b3a094; font-size:7px; font-style:normal; text-align:center; }
+.bundle-row em { grid-column:1/-1; color:#b3a094; font-size:12px; line-height:1.4; font-style:normal; text-align:center; }
 .product-options small, .finding-card b { font-size:12px; }
 
 @media (prefers-reduced-motion:reduce) {

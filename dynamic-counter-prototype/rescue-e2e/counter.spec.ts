@@ -544,8 +544,6 @@ test("bundle minutes buy the ask, not the goods: the top tier says 要 4 件 whe
   await expect(tier("三件整套")).toContainText("占 3 分钟");
   await expect(tier("批量追加")).toContainText("3 件 ¥2,940");
   await expect(tier("批量追加")).toContainText("要 4 件 · 占 4 分钟");
-  // 这一排在 720 高的 dock 带子里本来就在折线以下：截图之前先把它滚进视野，不然证据是空的。
-  await page.locator(".bundle-choices button").last().scrollIntoViewIfNeeded();
   await page.screenshot({ path: "../audit/experience-v2/p15-bundle-row.png" });
 });
 
@@ -564,6 +562,67 @@ test("the same ask reads on a tier the drawer already clipped", async ({ page })
   const tier = (label: string) => page.locator(".bundle-choices button", { hasText: label });
   await expect(tier("两件连带")).toContainText("1 件 ¥980");
   await expect(tier("两件连带")).toContainText("要 2 件 · 占 2 分钟");
-  await page.locator(".bundle-choices button").last().scrollIntoViewIfNeeded();
   await page.screenshot({ path: "../audit/experience-v2/p15-bundle-row-clipped.png" });
+});
+
+// P16：这一排是成交那一屏唯一要做决定的四格。P15 截图时才撞出来：它在 258px 的 dock 带子里压在折线以下，
+// 玩家得先自己找到滚动条。这里不用任何 scrollIntoView——断言读的就是"程序落地那一屏"的几何。
+const inView = () => {
+  const body = document.querySelector<HTMLElement>(".service-body");
+  const row = document.querySelector<HTMLElement>(".bundle-choices");
+  if (!body || !row) return null;
+  const band = body.getBoundingClientRect();
+  const cells = [...row.querySelectorAll<HTMLElement>("button")].map(cell => cell.getBoundingClientRect());
+  const centers = cells.map(cell => (cell.top + cell.bottom) / 2);
+  return {
+    // 一格都没被抽屉的上下边切到：四格全在可见带里。
+    allInside: cells.every(cell => cell.top >= band.top - 1 && cell.bottom <= band.bottom + 1),
+    // 第一格和那行说明在不在：矮到放不下整排时，至少这一排的开头要在。
+    headInside: cells.every(cell => cell.top >= band.top - 1),
+    eyebrow: (() => { const e = row.querySelector<HTMLElement>(".eyebrow"); if (!e) return false; const r = e.getBoundingClientRect(); return r.top >= band.top - 1 && r.bottom <= band.bottom + 1; })(),
+    scrollTop: Math.round(body.scrollTop),
+    // 滚过去不能把报价单的头一行切掉：那是按哪一格都在核对的数。
+    quoteCut: Math.round(Math.max(0, band.top - (document.querySelector<HTMLElement>(".close-review > .order-quote")?.getBoundingClientRect().top ?? band.top))),
+    cells: cells.length,
+    // 四格排在同一行才比得起来：align-items:center 下同一行的格子共享垂直中心线。
+    centerSpread: Math.round(Math.max(...centers) - Math.min(...centers)),
+    cut: Math.round(Math.max(0, ...cells.map(cell => cell.bottom - band.bottom))),
+  };
+};
+
+for (const [width, height] of [[1280, 720], [1280, 800], [1024, 700], [1440, 900]] as const) {
+  test(`第一张报价单的连带四格在 ${width}×${height} 不用滚就看得完`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width, height });
+    await start(page);
+    await consult(page, "沈薇", "柔焦 ¥980");
+    if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
+      await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+    }
+    const seen = await page.evaluate(inView);
+    expect(seen).not.toBeNull();
+    expect(seen!.cells).toBe(4);
+    expect(seen!.centerSpread, "四格要排在同一行，横向比档位").toBeLessThanOrEqual(2);
+    expect(seen!.cut, `抽屉没有玩家滚过就切掉 ${seen!.cut}px`).toBe(0);
+    expect(seen!.quoteCut, `滚到这一排时报价单被切掉 ${seen!.quoteCut}px`).toBe(0);
+    expect(seen!.allInside).toBe(true);
+    await page.screenshot({ path: `../audit/experience-v2/p16-bundle-fold-${width}x${height}.png` });
+  });
+}
+
+// 844×390 的抽屉只有 161px 高，四格那一行放不下：这一档只保证"这一排从开头起就在眼前"，剩下的靠滚动消化。
+test("横屏矮带上至少这一排的开头在视野里，且是程序自己滚到的", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await start(page);
+  await consult(page, "沈薇", "柔焦 ¥980");
+  if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
+    await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  }
+  const seen = await page.evaluate(inView);
+  expect(seen!.headInside, "第一格不该在折线以上被切掉").toBe(true);
+  expect(seen!.eyebrow, "「她愿意带走几件」那句要读得到").toBe(true);
+  expect(seen!.scrollTop, "抽屉是程序滚过来的，不是停在开头").toBeGreaterThan(0);
+  expect(seen!.quoteCut, `滚到这一排时报价单被切掉 ${seen!.quoteCut}px`).toBe(0);
+  await page.screenshot({ path: "../audit/experience-v2/p16-bundle-fold-844x390.png" });
 });

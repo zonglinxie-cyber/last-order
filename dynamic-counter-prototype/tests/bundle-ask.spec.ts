@@ -39,3 +39,34 @@ test("被削平的那一档在按钮上说自己开口要几件，四格读起�
   expect(boxes.filter(box => box.clipped), "四格里有字被切掉").toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
+
+// P16：整套 12px 字号下限那一遍漏了这一排，结果 P15 新写的那句规则说明在手机版是 7px——
+// 比正文小一半，等于没解释。字号下限和"抽屉不用滚就看完"一起钉住。
+const drawer = () => {
+  const dock = document.querySelector<HTMLElement>(".consultation-dock");
+  const scroller = document.querySelector<HTMLElement>(".consultation-controls .mobile-scroll");
+  const cells = [...document.querySelectorAll<HTMLElement>(".bundle-row button")].map(node => node.getBoundingClientRect());
+  const close = document.querySelector<HTMLElement>(".close-actions .primary-action")?.getBoundingClientRect();
+  if (!dock || !scroller || !cells.length || !close) return null;
+  const band = dock.getBoundingClientRect();
+  return {
+    // 屏幕像素：抽屉是缩放预览，格子/按钮要和抽屉的同一条边比，不能拿设计像素比。
+    cut: Math.round(Math.max(0, ...cells.map(cell => cell.bottom - band.bottom), ...cells.map(cell => band.top - cell.top), close.bottom - band.bottom)),
+    overflow: scroller.scrollHeight - scroller.clientHeight,
+    type: Math.min(...[...document.querySelectorAll<HTMLElement>(".bundle-row span, .bundle-row small, .bundle-row em")]
+      .map(node => parseFloat(getComputedStyle(node).fontSize))),
+  };
+};
+
+for (const [width, height] of [[390, 667], [320, 568]] as const) {
+  test(`连带那一排在 ${width}×${height} 不用滚就读得完`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await toBundleRow(page);
+    const seen = await page.evaluate(drawer);
+    expect(seen).not.toBeNull();
+    expect(seen!.type, "四格里的字号掉到 12px 下限以下").toBeGreaterThanOrEqual(12);
+    expect(seen!.overflow, "抽屉里的内容比抽屉高，玩家得先滚一下").toBeLessThanOrEqual(1);
+    expect(seen!.cut, `四格或「提出成交」被抽屉的边切掉 ${seen!.cut}px`).toBe(0);
+    await page.screenshot({ path: `../audit/experience-v2/p16-mobile-bundle-row-${width}x${height}.png` });
+  });
+}

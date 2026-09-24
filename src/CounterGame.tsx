@@ -82,6 +82,7 @@ export default function CounterGame() {
   const panned = useRef(false);
   const sceneRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
+  const bundleRowRef = useRef<HTMLDivElement>(null);
   const [sceneSize, setSceneSize] = useState({ width: 900, height: 480 });
   const [controlBand, setControlBand] = useState(0);
   const [mapRatio, setMapRatio] = useState(1.55);
@@ -102,6 +103,8 @@ export default function CounterGame() {
   const picked = session?.selectedProduct ?? null;
   const showProducts = Boolean(session && session.askedQuestion !== null && !askingAgain && (!session.tested || revising) && !pendingRival);
   const stage = !session || session.discovered.length < OBSERVE_MIN ? 0 : session.askedQuestion === null || askingAgain ? 1 : !session.tested || revising ? 2 : 3;
+  // 连带那一排出现的那一屏（和下面把抽屉滚到它的效果读同一个条件）。
+  const bundleRowShown = Boolean(session?.tested && !pendingRival && !revising && picked && session.reaction === "positive");
   const chapter = CHAPTER_HOOKS[game.day - 1];
   const eventResponse = game.history.filter(entry => entry.day === game.day && entry.text.startsWith("回应 · ")).at(-1)?.text.slice(5);
   const clockMinutes = 19 * 60 + game.shiftMinutes;
@@ -152,6 +155,9 @@ export default function CounterGame() {
   }, [screen]);
 
   useEffect(() => { dockRef.current?.scrollTo({ top: 0 }); }, [screen, stage, pendingRival, revising]);
+  // 连带那一排是这一屏唯一要做决定的四格，而它在 258px 的 dock 带子里本来就在折线以下：出现时把抽屉滚到它。
+  // 只在这一排挂载那一次滚，之后玩家自己滚的位置不再被覆盖；声明在上面那条归零之后，所以是它说了算。
+  useEffect(() => { if (bundleRowShown) bundleRowRef.current?.scrollIntoView({ block: "nearest" }); }, [bundleRowShown]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && screen === "floor" && !modalOpen) setSpeed(0);
@@ -382,7 +388,7 @@ export default function CounterGame() {
             {!session.faceTrialled && <button type="button" className="face-trial-button" onClick={() => setGame(faceTrialService)}>半脸上妆 · 多占 {FACE_TRIAL_MINUTES} 分钟</button>}
             {session.faceTrialRevealed && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[session.faceTrialRevealed]}</p>}
             {session.faceTrialled && !session.faceTrialRevealed && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
-            {session.reaction === "positive" && <div className="bundle-choices" role="group" aria-label="连带件数">
+            {session.reaction === "positive" && <div ref={bundleRowRef} className="bundle-choices" role="group" aria-label="连带件数">
               <span className="eyebrow">她愿意带走几件 <small>{bundleHint(customer)}</small></span>
               {(Object.keys(BUNDLES) as BundleId[]).map(id => {
                 // 抽屉里的支数也是一道上限：她要 4 件、柜上只剩 2 支，就得在她面前说清楚，不能等关单才变。

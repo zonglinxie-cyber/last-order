@@ -142,13 +142,17 @@
 .bundle-choices { margin: 2px 0 12px; padding: 10px 12px; border: 1px dashed #63494c; border-radius: 5px; display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
 .bundle-choices > .eyebrow { width: 100%; font-size: 12px; color: #c9b39f; }
 .bundle-choices > .eyebrow small { color: #a5907e; }
-.rescue-game .bundle-choices button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 44px; padding: 6px 11px; border-color: #6b4f43; background: #201a20; font-size: 12px; }
+/* 四格等宽、永远排一行：原来按内容宽度排，第 4 格最长时整排折成两行，
+   连带那一排在 258px 的 dock 带子里就顶到折线以下了。档位要横向比，不是竖向堆。 */
+.rescue-game .bundle-choices button { flex:1 1 0; min-width:0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 44px; padding: 6px 11px; border-color: #6b4f43; background: #201a20; font-size: 12px; }
 .rescue-game .bundle-choices button b { font-weight: 500; color: #e9d3b3; }
 .rescue-game .bundle-choices button[aria-pressed=true] { border-color: #e6bb91; background: #3b2a29; }
 .rescue-game .bundle-choices button:disabled { opacity: .45; }
 .bundle-choices button small { display: flex; flex-wrap: wrap; gap: 2px 7px; color: #b39a88; font-size: 12px; }
 .bundle-choices .bundle-price { color: #e9cc9e; }
 .trial-reaction.mixed { color: #e3cf9d; }
+/* 抽屉滚到连带那一排时，报价单要留在原地：那是你按哪一格都在核对的数，不能为了看格子把它的头一行切掉。 */
+.close-review > .order-quote { position: sticky; top: 0; align-self: start; }
 .order-quote .quote-note { color: #cbb09c; }
 .result-units { display: block; margin: -6px 0 16px; color: #cdb79f; font: 12px/1.6 ui-monospace, monospace; letter-spacing: .08em; }
 @media (max-width: 650px) {
