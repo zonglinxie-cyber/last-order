@@ -23,6 +23,8 @@ const row = (page: import("@playwright/test").Page, label: string) => page.locat
 
 test("被削平的那一档在按钮上说自己开口要几件，四格读起来还是一句话", async ({ page }) => {
   await toBundleRow(page);
+  // P17：她的预算/上限和计时那句在 campaign.ts 拆成两句了。沙盘拆给两个槽，手机版这一屏只有一个槽，
+  // 所以它把两句接回一行——屏幕上读到的还是一整句，但措辞不再各写一份。
   await expect(page.locator(".bundle-row em")).toHaveText("预算 ¥3,200 · 上限 3 件 · 多要一件多占一分钟");
   // 她自己就到 3 件：三件整套按件数报价，批量追加那第 4 分钟只买到一次开口。
   await expect(row(page, "三件整套")).toContainText("3 件 ¥2,940");
@@ -55,6 +57,10 @@ const drawer = () => {
     overflow: scroller.scrollHeight - scroller.clientHeight,
     type: Math.min(...[...document.querySelectorAll<HTMLElement>(".bundle-row span, .bundle-row small, .bundle-row em")]
       .map(node => parseFloat(getComputedStyle(node).fontSize))),
+    // 她的预算那句这一屏只念一次（手机版只有连带这一行念得下它）。
+    budgetSays: [...document.querySelectorAll<HTMLElement>("body *")]
+      .filter(node => !node.querySelector("*") && (node.textContent ?? "").includes("预算 ¥3,200"))
+      .filter(node => node.getBoundingClientRect().width >= 2 && node.checkVisibility({ contentVisibilityAuto: true })).length,
   };
 };
 
@@ -67,6 +73,7 @@ for (const [width, height] of [[390, 667], [320, 568]] as const) {
     expect(seen!.type, "四格里的字号掉到 12px 下限以下").toBeGreaterThanOrEqual(12);
     expect(seen!.overflow, "抽屉里的内容比抽屉高，玩家得先滚一下").toBeLessThanOrEqual(1);
     expect(seen!.cut, `四格或「提出成交」被抽屉的边切掉 ${seen!.cut}px`).toBe(0);
+    expect(seen!.budgetSays, "她的预算与上限在这一屏念了不止一遍，或者根本没念").toBe(1);
     await page.screenshot({ path: `../audit/experience-v2/p16-mobile-bundle-row-${width}x${height}.png` });
   });
 }

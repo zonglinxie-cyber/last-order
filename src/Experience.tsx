@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { CUSTOMERS, DAYS, ENERGY_LOCK, consultationRecord, fitPreview, PRODUCTS, QUESTIONS, relationText, TOUCHES_PER_EVENING, TRAIT_LABELS, type Campaign, type CustomerId } from "../dynamic-counter-prototype/src/campaign";
+import { CUSTOMERS, DAYS, demandBudgetWord, ENERGY_LOCK, consultationRecord, fitPreview, PRODUCTS, QUESTIONS, relationText, TOUCHES_PER_EVENING, TRAIT_LABELS, type Campaign, type CustomerId } from "../dynamic-counter-prototype/src/campaign";
 import { asset } from "./sim/asset";
 
 // Presentation only: money, patience and story consequences stay in campaign.ts.
@@ -67,8 +67,8 @@ export function DemandBoard({ game }: { game: Campaign }) {
     {preview.known.map(demand => <p key={demand.trait}><b>{TRAIT_LABELS[demand.trait]}</b><i className={"weight w" + demand.weight}>{"●".repeat(demand.weight)}</i></p>)}
     {record.blind && <p className="demand-blind">{record.blind}</p>}
     {record.veto && <p className="demand-veto"><b>底线</b>{record.veto}</p>}
-    {/* 同一屏两处报她的上限：这里和连带那一行得是同一句话的同一套说法，不能一个写「最多带走」、一个写「上限」。 */}
-    <p className="demand-budget">预算 ¥{customer.budget.toLocaleString("zh-CN")} · 上限 {customer.maxUnits} 件</p>
+    {/* 她的预算与上限全场只在这块念一次；连带那一行念的是多出来的那一分钟买的是什么。措辞由 campaign.ts 一处出。 */}
+    <p className="demand-budget">{demandBudgetWord(customer)}</p>
   </div>;
 }
 

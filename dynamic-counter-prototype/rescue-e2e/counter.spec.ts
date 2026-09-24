@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, deliveryWord, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, demandBudgetWord, deliveryWord, INITIAL, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
 
 // 配货按天到这件事要在晨会上念出来，而不是让玩家自己算抽屉：一早就一句，念的是规则给的那句。
 async function morningArrivals(page: Page, day: number) {
@@ -538,13 +538,55 @@ test("bundle minutes buy the ask, not the goods: the top tier says 要 4 件 whe
   if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
     await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
   }
-  await expect(page.locator(".bundle-choices .eyebrow")).toContainText("预算 ¥3,200 · 上限 3 件 · 多要一件多占一分钟");
+  await expect(page.locator(".bundle-choices .eyebrow")).toContainText("多要一件多占一分钟");
+  await expect(page.locator(".bundle-choices .eyebrow")).not.toContainText("预算");
   const tier = (label: string) => page.locator(".bundle-choices button", { hasText: label });
   await expect(tier("三件整套")).toContainText("3 件 ¥2,940");
   await expect(tier("三件整套")).toContainText("占 3 分钟");
   await expect(tier("批量追加")).toContainText("3 件 ¥2,940");
   await expect(tier("批量追加")).toContainText("要 4 件 · 占 4 分钟");
   await page.screenshot({ path: "../audit/experience-v2/p15-bundle-row.png" });
+});
+
+// P17：同一屏一句话只念一遍。栏位（≤1100px 整块收起）是那句体力的正主，dock 那一格和成交卡只在它不在时接手；
+// 她的说法由右上面板念，她的预算与上限由诉求板念，连带那一行只解释多出来的那一分钟买的是什么。
+// 一句"看得见的"话在场内出现几次：只算自己写着这句话、且真的占位的节点（display:none 的接手槽不算）。
+const countVisible = (page: Page, needle: string) => page.evaluate(t => Array.from(document.querySelectorAll<HTMLElement>("body *"))
+  .filter(node => Array.from(node.childNodes).filter(c => c.nodeType === 3).map(c => c.textContent ?? "").join(" ").replace(/\s+/g, " ").trim() === t)
+  .filter(node => node.getBoundingClientRect().width >= 2 && node.checkVisibility({ contentVisibilityAuto: true })).length, needle);
+const slotText = (page: Page, selector: string) => page.evaluate(s => document.querySelector(s)?.textContent?.replace(/\s+/g, " ").trim() ?? null, selector);
+
+test("接待那一屏：她的说法、体力、预算上限各只有一个槽在念", async ({ page }) => {
+  test.setTimeout(60_000);
+  await start(page);
+  await consult(page, "沈薇", "柔焦 ¥980");
+  if (await page.getByRole("button", { name: "先登记接待", exact: true }).count()) {
+    await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  }
+  const descriptor = await slotText(page, ".customer-reading > .eyebrow");
+  const energy = await slotText(page, ".rail-energy");
+  const budget = await slotText(page, ".demand-budget");
+  expect(budget).toBe(demandBudgetWord(CUSTOMERS.shen));
+  expect(await countVisible(page, descriptor!), "她的说法在 dock 那一格又念了一遍").toBe(1);
+  expect(await countVisible(page, energy!), "栏位已经念过体力，dock 不能跟着念").toBe(1);
+  expect(await countVisible(page, budget!), "诉求板念过的预算与上限，连带那一行不能再说一次").toBe(1);
+  expect(await page.evaluate(() => document.querySelector(".dock-person .rail-fallback")!.checkVisibility({ contentVisibilityAuto: true })),
+    "栏位在场时 dock 的那个接手槽必须是收着的").toBe(false);
+  await page.screenshot({ path: "../audit/experience-v2/p17-one-slot-1280x720.png" });
+});
+
+// 栏位收起来的那一档，体力那句改由 dock 接手——不能两边都念，也不能一句都没有。
+test("栏位不在的那一档（1024×700），体力那句由 dock 接手念一次", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1024, height: 700 });
+  await start(page);
+  await page.getByRole("button", { name: "查看沈薇", exact: true }).click();
+  await page.getByRole("button", { name: "接待沈薇", exact: true }).click();
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector<HTMLElement>(".rescue-rail")!).display)).toBe("none");
+  const energy = await slotText(page, ".dock-person .rail-fallback");
+  expect(energy, "dock 的接手槽得真的写着那句").toBeTruthy();
+  expect(await countVisible(page, energy!), "体力那句在窄一档要么没有、要么被念了两遍").toBe(1);
+  await page.screenshot({ path: "../audit/experience-v2/p17-one-slot-1024x700.png" });
 });
 
 // 被抽屉削件时同一句话也要能读出来：她要 2 件、柜上只剩 1 支，那一档是在开口问，不是多开一件。

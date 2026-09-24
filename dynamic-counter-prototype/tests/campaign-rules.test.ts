@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  applyDawn, applyFinale, applyTouch, availableCustomers, bundleHint, bundleMinutesWord, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
+  applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, openFloorState, parseCampaign,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
@@ -324,7 +324,14 @@ test("件数已经被削平时，按钮要把这一档开口要几件写在分�
   assert.equal(bundleMinutesWord("set", 3), "占 3 分钟");
   assert.equal(bundleMinutesWord("bulk", 3), "要 4 件 · 占 4 分钟", "她自己就到 3 件：第 4 分钟买的是开口，不是货");
   assert.equal(bundleMinutesWord("pair", 1), "要 2 件 · 占 2 分钟", "柜上只剩 1 支时也一样，这一档是在问她要 2 件");
-  assert.equal(bundleHint(CUSTOMERS.shen), "预算 ¥3,200 · 上限 3 件 · 多要一件多占一分钟");
+});
+
+// P17：她的预算/上限和"多要一件多占一分钟"是两个槽各念一句，原来合成一句在同一个屏幕读两遍。
+test("她的预算那句和连带那一行的计时句各念各的，不互相重复", () => {
+  assert.equal(demandBudgetWord(CUSTOMERS.shen), "预算 ¥3,200 · 上限 3 件");
+  assert.equal(BUNDLE_MINUTE_HINT, "多要一件多占一分钟");
+  assert.ok(!BUNDLE_MINUTE_HINT.includes("预算") && !BUNDLE_MINUTE_HINT.includes("上限"), "计时那句不能再把她的数字念一遍");
+  assert.ok(!demandBudgetWord(CUSTOMERS.shen).includes("分钟"), "她那句也不能替连带解释分钟");
 });
 
 test("游戏里第一张报价单：多按一档开的还是 3 件，但当天就没有第二位顾客了", () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, bundleHint, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
@@ -338,7 +338,7 @@ export default function CounterGame() {
             <div className="outside-pressure"><b>柜台另一边 · 每次新动作都会消耗等待</b>{available.filter(id => id !== customer.id).map(id => <p key={id}>{CUSTOMERS[id].name} · {waitLabel(id)}</p>)}{available.length === 1 && <p>其他机会已经结束。这一位仍在等你的判断。</p>}</div>
           </section>
         </div>}
-        {screen === "result" && outcome && <section className={"story-panel sale-panel " + (outcome.good ? "sale-good" : "sale-risky")}><span className="eyebrow">本次接待 · 收银记录</span><h1>{outcome.title}</h1><strong className="large-number">+ {money(outcome.amount)}</strong>{outcome.units > 0 && <p className="result-units">{outcome.units} 件 · 整单 {money(outcome.total)}{outcome.shared ? " · 与陆遥各半" : ""} · 占用现场 {outcome.minutes} 分钟</p>}<p>{outcome.body}</p><div className="result-metrics"><span>信任 <b>{relationText(game.trust)}</b></span><span>{energyWord(game.energy)}</span><span>小样 <b>{game.samples} 份</b></span></div></section>}
+        {screen === "result" && outcome && <section className={"story-panel sale-panel " + (outcome.good ? "sale-good" : "sale-risky")}><span className="eyebrow">本次接待 · 收银记录</span><h1>{outcome.title}</h1><strong className="large-number">+ {money(outcome.amount)}</strong>{outcome.units > 0 && <p className="result-units">{outcome.units} 件 · 整单 {money(outcome.total)}{outcome.shared ? " · 与陆遥各半" : ""} · 占用现场 {outcome.minutes} 分钟</p>}<p>{outcome.body}</p><div className="result-metrics"><span>信任 <b>{relationText(game.trust)}</b></span><span className="rail-fallback">{energyWord(game.energy)}</span><span>小样 <b>{game.samples} 份</b></span></div></section>}
         {screen === "event" && <section className="story-panel event-panel"><div className="event-speaker"><img src={event.speakerCustomer ? portrait(event.speakerCustomer, true) : asset("assets/aurora/" + (event.speakerStaff === "player" ? "xuyuan" : event.speakerStaff ?? "roman") + ".png")} alt="" /><span>柜台关灯以后<br /><b>{event.speaker}</b></span></div><span className="eyebrow">闭店 · {event.speaker}</span><h1>{event.title}</h1><p>{event.body}</p>{threads.length > 0 && <div className="evening-touch"><span className="eyebrow">今晚跟一句 · 还能发 {touchesLeft(game)} 条</span>{touchedTonight.length === 0 && <p className="touch-note">小样发出去、微信加上，都不算完。今晚问一句使用感，她才会再推开这个门；一个人整周只跟一次。</p>}<div className="touch-list">{threads.map(thread => <button type="button" key={thread.id} disabled={touchesLeft(game) <= 0} onClick={() => setGame(value => applyTouch(value, thread.id))}><b>{CUSTOMERS[thread.id].name}</b><span>{thread.detail}</span></button>)}</div>{touchedTonight.map(id => <p className="touch-reply" key={id}>{touchReply(game, id)}</p>)}</div>}<span className="story-footnote">这次选择会进入账本，并改变之后几天的现场。</span></section>}
         {(screen === "summary" || screen === "finale") && <section className="story-panel ledger-panel">
           <span className="eyebrow">{screen === "finale" ? "新品活动周 · 最终结算" : "DAY " + game.day + " · 今日账本"}</span><h1>{screen === "finale" ? endingTitle(game) : "今天的单，明天的账"}</h1><strong className="large-number">{money(game.sales)} <small>/ {money(TARGET)}</small></strong>
@@ -358,7 +358,8 @@ export default function CounterGame() {
       </aside>
     </div>
     <footer ref={dockRef} className="rescue-dock" inert={modalOpen}>
-      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? energyWord(game.energy) : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
+      {/* dock 这一格在接待时不重复她自己的说法（右上面板已经念过），体力那句也只在栏位收起来的那一档才接手念。 */}
+      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div>{screen === "consultation" && customer ? null : <small>{selectedCustomer?.descriptor ?? selectedStaff?.role}</small>}<h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2>{screen === "consultation" && session ? <p className="rail-fallback">{energyWord(game.energy)}</p> : <p>{selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p>}</div></section>
       <div className="dock-content">
         {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{selectedCustomer.opening}</p></div>
           {available.includes(selectedCustomer.id) ? <div className="floor-actions">
@@ -389,7 +390,7 @@ export default function CounterGame() {
             {session.faceTrialRevealed && <p className="face-trial-said">妆面压在她脸上，她才承认：{TRAIT_LABELS[session.faceTrialRevealed]}</p>}
             {session.faceTrialled && !session.faceTrialRevealed && <p className="face-trial-said">这半张脸没有新东西：该说的刚才都说了。</p>}
             {session.reaction === "positive" && <div ref={bundleRowRef} className="bundle-choices" role="group" aria-label="连带件数">
-              <span className="eyebrow">她愿意带走几件 <small>{bundleHint(customer)}</small></span>
+              <span className="eyebrow">她愿意带走几件 <small>{BUNDLE_MINUTE_HINT}</small></span>
               {(Object.keys(BUNDLES) as BundleId[]).map(id => {
                 // 抽屉里的支数也是一道上限：她要 4 件、柜上只剩 2 支，就得在她面前说清楚，不能等关单才变。
                 const units = unitsWanted(customer, picked, id, session.reaction ?? "negative", game.stock[picked]);

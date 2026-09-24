@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, bundleHint, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canPullOver, canTransferVia, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord,
   fitOf, FACE_TRIAL_MINUTES, faceTrialReveal, floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, QUESTIONS,
   orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
@@ -366,7 +366,7 @@ export default function Prototype() {
     <section className="brief-card"><b>今日现场</b><p>{story.brief}</p><em>{story.threat}</em></section>
     <section className="brief-orders"><span><small>今天必须守住</small><b>{dayCustomerIds.map(id => CUSTOMERS[id].name).join(" / ")}</b></span><span><small>小样 / 私域名单</small><b>{campaign.samples} 份 · {campaign.members.length} 人</b></span></section>
     {notices.map(note => <section className="message-preview" key={`${note.speaker}-${note.body}`}><b>{note.speaker}</b><p>{note.body}</p></section>)}
-    <section className="message-preview"><b>罗曼 · 08:52</b><p>{story.threat}</p></section>
+    {/* 今日现场的风险那一行上面已经念过；这里再造一条"罗曼 · 08:52"是把规则提示安到别人头上，同一屏还读两遍。 */}
     <button className="primary-action" type="button" onClick={() => { openFloor(); setScreen("floor"); }}>开始营业</button>
   </main></MobileScroll>;
 
@@ -410,7 +410,9 @@ export default function Prototype() {
         {selectedProduct && tested && reaction === "positive" && <div className="bundle-row" role="group" aria-label="连带件数">{(Object.keys(BUNDLES) as BundleId[]).map(id => {
           const units = unitsWanted(customer, selectedProduct, id, "positive", stockLeft);
           return <button type="button" key={id} className={bundle === id ? "active" : ""} disabled={!units} onClick={() => { setBundle(id); saveSession({ bundle: id }); }}><span>{BUNDLES[id].label}</span><small>{units ? `${units} 件 ¥${(units * PRODUCTS[selectedProduct].price).toLocaleString("zh-CN")} · ${bundleMinutesWord(id, units)}` : stockLeft ? "她不会多拿" : "柜上这一支断了"}</small></button>;
-        })}<em>{bundleHint(customer)}</em></div>}
+        {/* 手机版这一屏没有第二格念得下她的预算与上限：抽屉成交那一档的溢出实测已经贴着契约上限（scrollHeight-clientHeight=1，
+            再加一行实测顶到 24），所以这两句在这里合成一行；沙盘把它们拆给诉求板和连带行两个槽。措辞都由 campaign.ts 一处出。 */}
+        })}<em>{demandBudgetWord(customer)} · {BUNDLE_MINUTE_HINT}</em></div>}
         {!tested ? <button className="primary-action" type="button" disabled={!canTest} onClick={tryProduct}>{canTest ? `为${customer.name}试用` : discovered.length < 2 ? "先观察两处面部线索" : askedQuestion === null ? "再问一个关键问题" : "选择产品开始试用"}</button> : reaction === "negative" ? <div className="recovery-actions"><button type="button" onClick={sendSample} disabled={campaign.samples <= 0 || hasFlag(campaign, `sample:${customer.id}`)}>留小样 · {campaign.samples}</button><b>反应不对：换一款，或承担拒绝风险</b></div> : null}
         {tested && reaction === "negative" ? <div className="close-actions negative-close"><button type="button" onClick={() => closeSale(false)}>接受拒绝</button><button className="primary-action" type="button" onClick={() => closeSale(true)}>强推成交</button></div> : tested ? <div className="close-actions"><button className={claimed ? "claimed" : ""} type="button" onClick={() => { setClaimed(!claimed); saveSession({ claimed: !claimed }); }}>{claimed ? "已登记归属" : "登记我的接待"}</button><button className="primary-action" type="button" onClick={() => closeSale(false)}>提出成交</button></div> : null}
       </MobileScroll></section>}</main></div>;
