@@ -74,3 +74,39 @@ test("今日账单把台账和记录本都念成一句话，不是第三个数�
   await expect(line).toHaveCSS("color", "rgb(204, 185, 173)");
   await page.screenshot({ path: "../audit/experience-v2/mobile-summary-ledger-line-calm.png" });
 });
+
+// 闭店以后的那两句在手机上也是够得着的动作，不是二级页里的说明文字。
+test("今晚跟一句在手机上是一步有限的动作：两句花完，第三句按不动", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await seed(page, {
+    day: 2, sales: 4620, daySales: 0, samples: 6, dayServed: ["xiaoyu", "zhou"], eventDoneDays: [1],
+    members: ["xiaoyu", "zhou"], flags: ["sample:mei", "served:mei:refused"],
+    orders: [
+      { day: 2, customerId: "xiaoyu", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false },
+      { day: 2, customerId: "zhou", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false },
+    ],
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 2 天" }).click();
+  const panel = page.locator(".evening-touch");
+  await expect(panel).toContainText("还能发 2 条");
+  await expect(panel.locator(".touch-list button")).toHaveCount(3);
+  await panel.getByRole("button", { name: /梅女士/ }).click();
+  await expect(panel.locator(".touch-reply")).toHaveText(["梅女士回：「那支我在用。我最在意的是：先把干燥泛红稳住。这条你说得对，哪天路过我再来找你。」"]);
+  await panel.getByRole("button", { name: /周姐/ }).click();
+  await expect(panel).toContainText("还能发 0 条");
+  await expect(panel.getByRole("button", { name: /小雨/ })).toBeDisabled();
+  await page.screenshot({ path: "../audit/experience-v2/mobile-evening-touch.png" });
+  // 拇指够得着的尺寸底线：正文不小于 12px，主操作不小于 44px。
+  await expect(panel.locator(".touch-list button").first()).toHaveCSS("min-height", "60px");
+  await expect(panel.locator(".touch-list span")).toHaveCSS("font-size", "12px");
+  await expect(panel.locator(".touch-reply").last()).toHaveCSS("font-size", "12px");
+  await expect(panel.locator("h2")).toHaveCSS("font-size", "13px");
+  // 存档走的是同一份规则：刷新以后不能又变回两句。
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 2 天" }).click();
+  await expect(page.locator(".evening-touch")).toContainText("还能发 0 条");
+  expect(await page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { flags: string[] }).flags.filter(f => f.startsWith("touched:")), SAVE_KEY))
+    .toEqual(["touched:mei:2", "touched:zhou:2"]);
+});

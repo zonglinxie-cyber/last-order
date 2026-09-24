@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  applyDawn, applyFinale, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
+  applyDawn, applyFinale, applyTouch, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, endingTitle,
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasRecords, history, INITIAL, leaveSample, parseCampaign,
-  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, TARGET, type BundleId, type Campaign,
+  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, TARGET, touchThreads,
+  TOUCHES_PER_EVENING, touchesLeft, type BundleId, type Campaign,
 } from "../src/campaign.ts";
 import { bestFit, herCap, runRoute } from "./clean-route.ts";
 
@@ -128,12 +129,83 @@ test("forcing Anjie comes back as a wedding-week blow-up", () => {
   assert.ok(18_000 - legacy.sales < forced.outcome.total, "旧存档没有账本，按最小的一件强推退，不能多退");
 });
 
-test("a sample left after a refusal returns as a small repurchase", () => {
+test("a sample only comes back if you followed up that evening", () => {
   const refused = leaveSample(campaign({ day: 1, flags: ["served:shen:refused"] }), "shen");
-  const next = applyDawn({ ...refused, day: 2, daySales: 0 });
+  // 发完小样当晚没跟：她顺着别柜的微信走了，这支小样换不回任何一单。
+  const ignored = applyDawn({ ...refused, day: 2, daySales: 0 });
+  assert.equal(ignored.sales, 0, "没人跟进的小样不算复购");
+  assert.ok(!ignored.flags.includes("sample-return:shen"));
+  // 同一支小样，当晚问一句使用感，第二天才变成一单。
+  const touched = applyTouch(refused, "shen");
+  assert.ok(touched.flags.includes("touched:shen:1"), "跟进要留在当天那一批 flag 里");
+  const next = applyDawn({ ...touched, day: 2, daySales: 0 });
   assert.equal(next.sales, SAMPLE_RETURN_SALE);
   assert.ok(next.flags.includes("sample-return:shen"));
   assert.ok(dawnNotices(next).some(note => note.speaker.includes("沈薇")));
+});
+
+test("the evening follow-up is a capped, spend-once line", () => {
+  // 两条看得见的线：她被拒过又拿了小样；她在名单上成过一单。
+  const base = campaign({
+    day: 1, members: ["shen", "mei", "xiaoyu"], flags: ["sample:shen", "sample:mei", "served:shen:refused"],
+    orders: [{ day: 1, customerId: "mei", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false }],
+  });
+  assert.deepEqual(touchThreads(base).map(thread => `${thread.id}:${thread.kind}`), ["shen:sample", "mei:repeat"],
+    "小雨既没成过单也没被拒过，今晚就没有线可以跟");
+  const first = applyTouch(applyTouch(base, "shen"), "mei");
+  assert.equal(touchesLeft(first), 0);
+  assert.deepEqual(touchThreads(first).map(thread => thread.id), [], "同一个人整周只跟一次");
+  // 配额花完以后第三次调用必须原样退回，不能只靠界面挡。
+  assert.equal(applyTouch(first, "shen"), first);
+  // 换一天就是新的一晚：昨天的两句不能替今天预支。
+  assert.equal(touchesLeft({ ...first, day: 2 }), TOUCHES_PER_EVENING);
+  // 第 5 晚之后没有早晨，跟谁都不会再回来。
+  assert.deepEqual(touchThreads({ ...base, day: 5 }), []);
+  assert.deepEqual(touchThreads(campaign({ day: 1 })), [], "手里没线的人开不出这个面板");
+});
+
+test("the day-5 private-domain repurchase needs the touch, not just the follow", () => {
+  const product = bestFit("shen");
+  const bought = resolveSale(campaign({ day: 4, members: ["shen"] }), {
+    customerId: "shen", selectedProduct: product, bundle: "single", revealed: [], tested: true, askedQuestion: 0,
+    claimed: true, interruption: false, interruptionHandled: false, force: false,
+  })!.campaign;
+  assert.equal(bought.orders.length, 1, "先要真有一单，第 5 天才有得补");
+  const quiet = applyDawn({ ...bought, day: 5, daySales: 0 });
+  assert.equal(quiet.daySales, 0, "只加了微信、从没跟进的人不会在第 5 天自己补单");
+  const spoken = applyDawn({ ...applyTouch({ ...bought, day: 4 }, "shen"), day: 5, daySales: 0 });
+  assert.equal(spoken.daySales, PRODUCTS[product].price, "她回来补的是你给她的那一支");
+  // 钱不能是凭空多出来的：早上那一叠通知里要有点名的那一句。
+  assert.deepEqual(dawnNotices(spoken).filter(note => note.speaker === "私域 · 微信").map(note => note.body),
+    [`沈薇在微信上补了一支${PRODUCTS[product].short}。`]);
+  assert.deepEqual(dawnNotices(quiet).filter(note => note.speaker === "私域 · 微信"), [], "没跟过的线早上也没的可念");
+});
+
+// 跟进可以晚一天，兑现就晚一天：晨会认的是今天到账的那笔流水，不是排定的天数。
+test("a line that comes back late is read out on the morning it actually lands", () => {
+  const day1 = leaveSample(campaign({ day: 1, flags: ["served:shen:refused"] }), "shen");
+  const dawn2 = applyDawn({ ...day1, day: 2, daySales: 0 });
+  assert.equal(dawn2.sales, 0, "第 2 早没跟过，小样不会自己回来");
+  const dawn3 = applyDawn({ ...applyTouch(dawn2, "shen"), day: 3, daySales: 0 });
+  assert.equal(dawn3.sales, SAMPLE_RETURN_SALE, "第 2 晚补上的那一句，第 3 早才兑现");
+  assert.ok(dawnNotices(dawn3).some(note => note.speaker.includes("沈薇")), "到账那一早要念出来");
+  assert.ok(!dawnNotices({ ...dawn3, day: 4, daySales: 0 }).some(note => note.speaker.includes("沈薇")), "同一条线不在第二天再念一遍");
+});
+
+test("working the private domain earns more and costs real customers", () => {
+  const counter = runRoute();
+  const privateDomain = runRoute("matched", false, true);
+  // 现场每要一个微信占一分钟，这一分钟是从别人头上扣的：私域做满要拿柜台上的人换。
+  assert.deepEqual(privateDomain.lost, ["mei", "zhou2"], "加粉烧掉的耐心让两个人走掉了");
+  assert.equal(privateDomain.served, 8);
+  assert.equal(privateDomain.final.samples, 0, "小样全派出去了，第 5 天的巡店才认这条线");
+  assert.equal(privateDomain.final.members.length, 8);
+  // 四个晚上最多八句，这一局只发得出六句：沈薇和安姐是第 5 天才来的，那之后没有早晨了。
+  assert.equal(privateDomain.final.flags.filter(f => f.startsWith("touched:")).length, 6);
+  assert.equal(privateDomain.final.flags.filter(f => f.startsWith("member-repeat:")).length, 6, "跟过的六个人全部回柜");
+  assert.equal(privateDomain.final.sales, 29_510);
+  assert.ok(privateDomain.final.sales > counter.final.sales, "跟到底的私域比只在柜台前多开口更值钱，这一条要能被量出来");
+  assert.ok(privateDomain.final.standing >= counter.final.standing);
 });
 
 test("old saves without the current version are discarded", () => {

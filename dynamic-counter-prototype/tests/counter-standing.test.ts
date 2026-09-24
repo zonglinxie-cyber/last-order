@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  addMember, applyDawn, canAddMember, counterVerdict, CUSTOMERS, dayEvent, DAY_TARGETS, dawnNotices,
+  addMember, applyDawn, applyTouch, canAddMember, counterVerdict, CUSTOMERS, dayEvent, DAY_TARGETS, dawnNotices,
   INITIAL, morningReview, orderQuote, parseCampaign, PRODUCTS, progressTarget, RECORDS_MIN, SAVE_VERSION, settleDayEvent,
-  spendAttention, STANDING_RISK, TARGET, visibleChoices, type Campaign, type CustomerId,
+  spendAttention, STANDING_RISK, TARGET, visibleChoices, wasTouched, type Campaign, type CustomerId,
 } from "../src/campaign.ts";
 import { bestFit, playCustomer } from "./clean-route.ts";
 
@@ -76,7 +76,9 @@ test("加粉花现场时间，而且只在她接到过你的东西之后", () =>
 
 test("私域复购只在最后一天到账，金额是她自己那支", () => {
   const sold = playCustomer(campaign({ day: 1, waitMeters: { shen: 8, mei: 8 } }), "shen");
-  const added = addMember(sold.campaign, "shen");
+  // 加完粉当晚跟一句：第 5 天那笔补单认的是这一句，不是名单里躺着的人数。
+  const added = applyTouch(addMember(sold.campaign, "shen"), "shen");
+  assert.ok(wasTouched(added, "shen"));
   assert.ok(added.dayServed.includes("shen"));
   const before = applyDawn({ ...added, day: 4, daySales: 0 });
   assert.equal(before.sales, added.sales, "名单不是当天见效的东西");
@@ -143,7 +145,7 @@ test("报价、存档和柜位数字互不复用：新字段被校验", () => {
 test("清洁路线的柜位落在安全区，但名单和派样不会白送", () => {
   const shen = playCustomer(campaign({ day: 1, waitMeters: { shen: 8, mei: 8 } }), "shen");
   const mei = playCustomer(shen.campaign, "mei");
-  const withRoster = addMember(mei.campaign, "mei");
+  const withRoster = applyTouch(addMember(mei.campaign, "mei"), "mei");
   const dawn = applyDawn({ ...withRoster, day: 5, daySales: 0, samples: 2 });
   assert.ok(dawn.standing > STANDING_RISK, `接待满员、名单和派样都做对的柜位不该被评估：${dawn.standing}`);
   assert.ok(dawn.sales > withRoster.sales, "名单在最后一天要还钱");

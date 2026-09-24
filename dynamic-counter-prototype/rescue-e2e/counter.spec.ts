@@ -328,3 +328,62 @@ for (const [evidence, verdict] of [[0, "撤柜评估已经写上去"], [RECORDS_
     await page.screenshot({ path: `../audit/experience-v2/record-book-${evidence}.png` });
   });
 }
+
+// 当晚的跟进是有限额的：三条线只发得出两句，第三句今晚就是没有。
+test("the evening panel holds two follow-ups and the third line waits", async ({ page }) => {
+  await page.goto("/");
+  await seed(page, {
+    ...INITIAL, day: 2, sales: 4620, daySales: 0, samples: 6, dayServed: ["xiaoyu", "zhou"], eventDoneDays: [1],
+    members: ["xiaoyu", "zhou"], flags: ["sample:mei", "served:mei:refused"],
+    orders: [
+      { day: 2, customerId: "xiaoyu", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false },
+      { day: 2, customerId: "zhou", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false },
+    ],
+  });
+  await page.reload();
+  // 当天的人都接完了，闭店事件就在眼前：这一屏读的是今晚还剩几句。
+  const panel = page.locator(".evening-touch");
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("今晚跟一句 · 还能发 2 条");
+  await expect(panel.locator(".touch-list button")).toHaveCount(3);
+  await panel.getByRole("button", { name: /梅女士/ }).click();
+  await expect(panel).toContainText("还能发 1 条");
+  await expect(panel.locator(".touch-reply")).toHaveText(["梅女士回：「那支我在用。我最在意的是：先把干燥泛红稳住。这条你说得对，哪天路过我再来找你。」"]);
+  await panel.getByRole("button", { name: /周姐/ }).click();
+  await expect(panel).toContainText("还能发 0 条");
+  // 跟过的人从名单上消失，剩下那条线按不动：配额是规则给的，不是按钮样式。
+  await expect(panel.getByRole("button", { name: /小雨/ })).toBeDisabled();
+  await expect(panel.locator(".touch-reply")).toHaveCount(2);
+  // 回复是这一步的兑现，不能被面板自己的高度切掉半句：最后一行要整条落在面板可见区里。
+  const lastReply = await panel.locator(".touch-reply").last().boundingBox();
+  const panelBox = await panel.boundingBox();
+  expect(lastReply!.y + lastReply!.height).toBeLessThanOrEqual(panelBox!.y + panelBox!.height);
+  await page.screenshot({ path: "../audit/experience-v2/evening-touch.png" });
+  // 刷新之后还剩几句要跟着存档走，不能回到两条。
+  await page.reload();
+  await expect(page.locator(".evening-touch")).toContainText("还能发 0 条");
+  expect(await page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { flags: string[] }).flags.filter(f => f.startsWith("touched:")), SAVE_KEY))
+    .toEqual(["touched:mei:2", "touched:zhou:2"]);
+});
+
+// 跟进不是仪式感：第 5 天只有被跟过的那个人会补单，钱要能对上。
+test("only the line you followed up actually repurchases on day five", async ({ page }) => {
+  await page.goto("/");
+  await seed(page, {
+    ...INITIAL, day: 4, sales: 17_000, daySales: 0, samples: 2, dayServed: ["anjie"], eventDoneDays: [1, 2, 3, 4],
+    members: ["shen", "mei"], flags: ["touched:shen:2"],
+    orders: [
+      { day: 1, customerId: "shen", product: "soft", units: 1, total: 980, amount: 980, shared: false, risky: false },
+      { day: 2, customerId: "mei", product: "repair", units: 1, total: 1680, amount: 1680, shared: false, risky: false },
+    ],
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "进入下一天", exact: true }).click();
+  // 补单发生在清晨，所以它必须出现在第 5 天早上的那一叠通知里，不能只是账上多出来的数。
+  await expect(page.locator(".dawn-note", { hasText: "沈薇在微信上补了一支柔焦" })).toBeVisible();
+  await expect(page.locator(".dawn-note", { hasText: "梅女士在微信上补了一支" })).toHaveCount(0);
+  await expect(page.locator(".rail-sales")).toContainText("¥980");
+  // 名单上两个人，只有跟过的那一条线兑现：多出来的钱必须能追到那一晚的一句跟进。
+  expect(await page.evaluate(key => (JSON.parse(localStorage.getItem(key) ?? "{}") as { sales: number }).sales, SAVE_KEY)).toBe(17_980);
+  await page.screenshot({ path: "../audit/experience-v2/member-repeat.png" });
+});

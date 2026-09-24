@@ -80,15 +80,27 @@ test("forcing Anjie comes back as a wedding-week chargeback", async ({ page }) =
   await expect(page.getByText("¥10,720")).toBeVisible();
 });
 
-test("a sample left after a refusal returns as a repurchase", async ({ page }) => {
+test("a sample left after a refusal returns as a repurchase only if that evening followed up", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate((state) => localStorage.setItem("last-order-campaign-v1", JSON.stringify(state)), {
+    ...baseSave, day: 2, flags: ["sample:shen", "served:shen:refused", "touched:shen:1"],
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 2 天" }).click();
+  await expect(page.getByText("柔焦比昨天那支对", { exact: false })).toBeVisible();
+  await expect(page.getByText("¥12,620")).toBeVisible();
+});
+
+// 小样不会自己说话：那一晚没跟上一句，第 2 天早上什么都不会回来。
+test("a sample nobody followed up does not come back", async ({ page }) => {
   await page.goto("/");
   await page.evaluate((state) => localStorage.setItem("last-order-campaign-v1", JSON.stringify(state)), {
     ...baseSave, day: 2, flags: ["sample:shen", "served:shen:refused"],
   });
   await page.reload();
   await page.getByRole("button", { name: "继续第 2 天" }).click();
-  await expect(page.getByText("柔焦比昨天那支对", { exact: false })).toBeVisible();
-  await expect(page.getByText("¥12,620")).toBeVisible();
+  await expect(page.getByText("柔焦比昨天那支对", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("¥12,000")).toBeVisible();
 });
 
 test("a versionless save starts a new week instead of merging old numbers", async ({ page }) => {

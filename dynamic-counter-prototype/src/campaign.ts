@@ -433,9 +433,71 @@ function applyPayback(s: Campaign, item: Payback): Campaign {
   };
 }
 
+// 私域这条线在真实柜台上是有节奏的：小样发出去、微信加上，都不算完 —— 当晚跟一句，她才会回柜。
+// 一晚上跟不了几个人，所以"跟谁"是个要放弃一些人的决定；同一个人整周只跟一次，第二次就是骚扰。
+export const TOUCHES_PER_EVENING = 2;
+const TOUCH_PREFIX = "touched:";
+export const wasTouched = (s: Campaign, id: CustomerId) => s.flags.some(f => f.startsWith(`${TOUCH_PREFIX}${id}:`));
+// 今晚用掉几条，读的是当天那一批 flag：不为此新开一个数值字段，存档格式仍然只有 flags 一套。
+export const touchesLeft = (s: Campaign) => TOUCHES_PER_EVENING - s.flags.filter(f => f.startsWith(TOUCH_PREFIX) && f.endsWith(`:${s.day}`)).length;
+
+const SAMPLE_RETURN_BY_ID = new Map(SAMPLE_RETURNS.map(item => [item.id, item]));
+// 一条回访只跟得动一条本来就存在的线。下面这两个判据用的就是兑现处那几个条件，
+// 所以面板上写给她的那句"你在等她回来"不会比规则真正给的更多。
+function sampleReturnDue(s: Campaign, id: CustomerId) {
+  const item = SAMPLE_RETURN_BY_ID.get(id);
+  return Boolean(item) && hasFlag(s, `sample:${id}`)
+    && (hasFlag(s, `served:${id}:refused`) || hasFlag(s, `lost:${id}`)) && !hasFlag(s, item!.resolve);
+}
+function memberRepeatDue(s: Campaign, id: CustomerId) {
+  return s.members.includes(id) && s.orders.some(order => order.customerId === id && !order.risky) && !hasFlag(s, `member-repeat:${id}`);
+}
+
+export type TouchKind = "sample" | "repeat";
+// 两个人都在线的时候，先说小样那一头：她那句"回去试试"还悬着。
+export const touchKind = (s: Campaign, id: CustomerId): TouchKind | null =>
+  sampleReturnDue(s, id) ? "sample" : memberRepeatDue(s, id) ? "repeat" : null;
+
+export type TouchThread = { id: CustomerId; kind: TouchKind; detail: string };
+
+// 第 5 晚之后没有早晨了：最后那一晚跟谁，都不会再有人回来。
+export function touchThreads(s: Campaign): TouchThread[] {
+  if (s.day >= 5) return [];
+  const threads: Array<TouchThread> = [];
+  for (const id of Object.keys(CUSTOMERS) as CustomerId[]) {
+    if (wasTouched(s, id)) continue;
+    const kind = touchKind(s, id);
+    if (!kind) continue;
+    threads.push({ id, kind, detail: kind === "sample"
+      ? "拿了小样，那单没成"
+      : "名单上，也在你这里成过单" });
+  }
+  return threads;
+}
+
+// 她回的那句话用的是她自己排第一的那条诉求：离开了柜台，她说的还是那件事，只是终于说完整。
+export function touchReply(s: Campaign, id: CustomerId) {
+  const customer = CUSTOMERS[id];
+  const demand = TRAIT_LABELS[customer.demands[0].trait];
+  return touchKind(s, id) === "repeat"
+    ? `${customer.name}回：「那支我用完了。我最在意的是：${demand}。这条你说到做到，我在微信上跟你开口。」`
+    : `${customer.name}回：「那支我在用。我最在意的是：${demand}。这条你说得对，哪天路过我再来找你。」`;
+}
+
+export function applyTouch(s: Campaign, id: CustomerId): Campaign {
+  if (s.finished || touchesLeft(s) <= 0 || !touchThreads(s).some(thread => thread.id === id)) return s;
+  return { ...s, flags: flag(s, `${TOUCH_PREFIX}${id}:${s.day}`), history: history(s, `当晚你跟进了${CUSTOMERS[id].name}那条线`) };
+}
+
+// 今晚已经跟过谁，两个界面都从这一句读：回复的话由规则给，不在 UI 各拼一份。
+export const tonightTouches = (s: Campaign): CustomerId[] => s.flags
+  .filter(f => f.startsWith(TOUCH_PREFIX) && f.endsWith(`:${s.day}`))
+  .map(f => f.slice(TOUCH_PREFIX.length, f.lastIndexOf(":")) as CustomerId);
+
 function applySampleReturn(s: Campaign, item: (typeof SAMPLE_RETURNS)[number]): Campaign {
   const refusedOrLost = hasFlag(s, `served:${item.id}:refused`) || hasFlag(s, `lost:${item.id}`);
-  if (s.day < item.fromDay || !hasFlag(s, `sample:${item.id}`) || !refusedOrLost || hasFlag(s, item.resolve)) return s;
+  // 小样不会自己说话：发出去那一晚没跟上的，她就顺着别柜的微信走了。
+  if (s.day < item.fromDay || !wasTouched(s, item.id) || !hasFlag(s, `sample:${item.id}`) || !refusedOrLost || hasFlag(s, item.resolve)) return s;
   return {
     ...s,
     sales: s.sales + SAMPLE_RETURN_SALE,
@@ -490,18 +552,21 @@ function applyReading(s: Campaign, reading: CounterReading | null): Campaign {
   };
 }
 
-// 私域复购：加过粉、而且真在她那里成过单的人，会在最后一天自己在微信上补一支。
+// 私域复购：加过粉、真在她那里成过单、而且那一晚你跟她跟进过的人，才会在最后一天自己在微信上补一支。
+// 这一句既是账本上的一行，也是晨会念的那一句，两处不能各写一遍。
+const memberRepeatLine = (id: CustomerId, product: ProductId) => `${CUSTOMERS[id].name}在微信上补了一支${PRODUCTS[product].short}`;
+
 function applyMemberRepeat(s: Campaign): Campaign {
   if (s.day < 5) return s;
   let next = s;
   for (const id of next.members) {
     const order = next.orders.find(item => item.customerId === id && !item.risky);
     const guard = `member-repeat:${id}`;
-    if (!order || hasFlag(next, guard)) continue;
+    if (!order || hasFlag(next, guard) || !wasTouched(next, id)) continue;
     const amount = PRODUCTS[order.product].price;
     next = {
       ...next, sales: next.sales + amount, daySales: next.daySales + amount, trust: clamp(next.trust + 3),
-      flags: flag(next, guard), history: history(next, `${CUSTOMERS[id].name}在微信上补了一支${PRODUCTS[order.product].short}`),
+      flags: flag(next, guard), history: history(next, memberRepeatLine(id, order.product)),
     };
   }
   return next;
@@ -550,6 +615,9 @@ export function applyFinale(s: Campaign): Campaign {
   };
 }
 
+// 兑现的那一句早上念一次：认的是今天这笔流水，不是排定的天数 —— 跟进晚一天，线就会晚一天回来。
+const landedToday = (s: Campaign, text: string) => s.history.some(entry => entry.day === s.day && entry.text === text);
+
 export function dawnNotices(s: Campaign): DawnNotice[] {
   const notes: DawnNotice[] = [];
   for (const reading of [morningReview(s), counterCheck(s)]) {
@@ -561,11 +629,18 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   if (s.day === 5 && hasFlag(s, "zhao-returned")) notes.push({ speaker: "退货 · 收银", body: "赵女士按你写下的承诺退了那单。" });
   if (anjieComesBack(s)) notes.push({ speaker: "安姐 · 微信", body: "上周听你的，只用了修护，今天脸是稳的。化妆师两点到，我早上先过来拿当天的妆。" });
   for (const item of RISKY_RETURNS) {
-    if (s.day === item.fromDay && hasFlag(s, item.resolve)) notes.push({ speaker: item.speaker, body: item.body });
+    if (hasFlag(s, item.resolve) && landedToday(s, item.text)) notes.push({ speaker: item.speaker, body: item.body });
   }
   for (const item of SAMPLE_RETURNS) {
-    if (s.day === item.fromDay && hasFlag(s, item.resolve)) notes.push({ speaker: item.speaker, body: item.body });
+    if (hasFlag(s, item.resolve) && landedToday(s, item.text)) notes.push({ speaker: item.speaker, body: item.body });
   }
+  // 名单上的人自己补的那一支也要在早上念出来，不然账上的钱是凭空多出来的。
+  const repeats = s.day === 5 ? s.members.flatMap(id => {
+    if (!hasFlag(s, `member-repeat:${id}`)) return [];
+    const order = s.orders.find(item => item.customerId === id && !item.risky);
+    return order ? [memberRepeatLine(id, order.product)] : [];
+  }) : [];
+  if (repeats.length) notes.push({ speaker: "私域 · 微信", body: `${repeats.join("；")}。` });
   return notes;
 }
 

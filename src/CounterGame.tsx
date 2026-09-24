@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
-  advanceFloorTime, addMember, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent,
+  advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, canAddMember, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, counterVerdict, CUSTOMERS, DAYS, dayEvent,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, leaveSample,
   observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, REACTIONS, relationText, releaseService, requestStaffHelp,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, standingWord,
-  startNextDay, startService, STANDING_RISK, TARGET, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
+  startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
 } from "../dynamic-counter-prototype/src/campaign";
 import { asset } from "./sim/asset";
@@ -92,6 +92,7 @@ export default function CounterGame() {
   const available = availableCustomers(game);
   const todayIds = [...new Set([...DAYS[game.day - 1].customers, ...available, ...game.dayServed, ...game.lost])];
   const story = DAYS[game.day - 1], event = dayEvent(game), notices = dawnNotices(game);
+  const threads = touchThreads(game), touchedTonight = tonightTouches(game);
   const pendingRival = Boolean(session?.tested && RIVAL_IDS.includes(session.customerId) && !session.rivalChoice);
   const rival = customer && RIVAL_IDS.includes(customer.id) ? RIVAL_INTERRUPTIONS[customer.id as keyof typeof RIVAL_INTERRUPTIONS] : null;
   const lastCue = session?.discovered.at(-1);
@@ -333,7 +334,7 @@ export default function CounterGame() {
           </section>
         </div>}
         {screen === "result" && outcome && <section className={"story-panel sale-panel " + (outcome.good ? "sale-good" : "sale-risky")}><span className="eyebrow">本次接待 · 收银记录</span><h1>{outcome.title}</h1><strong className="large-number">+ {money(outcome.amount)}</strong>{outcome.units > 0 && <p className="result-units">{outcome.units} 件 · 整单 {money(outcome.total)}{outcome.shared ? " · 与陆遥各半" : ""} · 占用现场 {outcome.minutes} 分钟</p>}<p>{outcome.body}</p><div className="result-metrics"><span>信任 <b>{relationText(game.trust)}</b></span><span>{energyWord(game.energy)}</span><span>小样 <b>{game.samples} 份</b></span></div></section>}
-        {screen === "event" && <section className="story-panel event-panel"><div className="event-speaker"><img src={event.speakerCustomer ? portrait(event.speakerCustomer, true) : asset("assets/aurora/" + (event.speakerStaff === "player" ? "xuyuan" : event.speakerStaff ?? "roman") + ".png")} alt="" /><span>柜台关灯以后<br /><b>{event.speaker}</b></span></div><span className="eyebrow">闭店 · {event.speaker}</span><h1>{event.title}</h1><p>{event.body}</p><span className="story-footnote">这次选择会进入账本，并改变之后几天的现场。</span></section>}
+        {screen === "event" && <section className="story-panel event-panel"><div className="event-speaker"><img src={event.speakerCustomer ? portrait(event.speakerCustomer, true) : asset("assets/aurora/" + (event.speakerStaff === "player" ? "xuyuan" : event.speakerStaff ?? "roman") + ".png")} alt="" /><span>柜台关灯以后<br /><b>{event.speaker}</b></span></div><span className="eyebrow">闭店 · {event.speaker}</span><h1>{event.title}</h1><p>{event.body}</p>{threads.length > 0 && <div className="evening-touch"><span className="eyebrow">今晚跟一句 · 还能发 {touchesLeft(game)} 条</span>{touchedTonight.length === 0 && <p className="touch-note">小样发出去、微信加上，都不算完。今晚问一句使用感，她才会再推开这个门；一个人整周只跟一次。</p>}<div className="touch-list">{threads.map(thread => <button type="button" key={thread.id} disabled={touchesLeft(game) <= 0} onClick={() => setGame(value => applyTouch(value, thread.id))}><b>{CUSTOMERS[thread.id].name}</b><span>{thread.detail}</span></button>)}</div>{touchedTonight.map(id => <p className="touch-reply" key={id}>{touchReply(game, id)}</p>)}</div>}<span className="story-footnote">这次选择会进入账本，并改变之后几天的现场。</span></section>}
         {(screen === "summary" || screen === "finale") && <section className="story-panel ledger-panel">
           <span className="eyebrow">{screen === "finale" ? "新品活动周 · 最终结算" : "DAY " + game.day + " · 今日账本"}</span><h1>{screen === "finale" ? endingTitle(game) : "今天的单，明天的账"}</h1><strong className="large-number">{money(game.sales)} <small>/ {money(TARGET)}</small></strong>
           {screen === "summary" && eventResponse && <blockquote className="decision-response"><span className="eyebrow">你的选择，得到了回应</span><p>{eventResponse}</p></blockquote>}

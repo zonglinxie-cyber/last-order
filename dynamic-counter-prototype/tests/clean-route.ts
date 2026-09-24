@@ -2,9 +2,9 @@
 // rule functions only, so the balance numbers are measured instead of hand-written.
 import assert from "node:assert/strict";
 import {
-  askService, availableCustomers, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
-  observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS,
-  selectServiceProduct, settleDayEvent, startNextDay, startService, trialService, faceTrialService,
+  addMember, applyTouch, askService, availableCustomers, canAddMember, chooseBundle, closeService, CUSTOMERS, INITIAL, dayEvent, orderQuote,
+  leaveSample, observeService, openFloorState, parseCampaign, PRODUCTS, QUESTIONS, respondToRival, RIVAL_IDS,
+  selectServiceProduct, settleDayEvent, startNextDay, startService, trialService, faceTrialService, touchThreads, TOUCHES_PER_EVENING,
   fitOf, type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
 } from "../src/campaign.ts";
 
@@ -73,7 +73,9 @@ export function playCustomer(
 export type RouteResult = { final: Campaign; dayTotals: number[]; served: number; lost: CustomerId[] };
 
 // 每天按现场顺序接完所有还能接的顾客，然后处理闭店事件。
-export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false): RouteResult {
+// roster=true 走的是"把私域也做掉"的那条线：现场先留小样、再要微信（各占一分钟），
+// 闭店事件之后按当晚顺序跟两句。加粉烧掉的是别人的耐心，所以这条线要拿柜台上的人换。
+export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = false, roster = false): RouteResult {
   let s = openFloorState(INITIAL);
   const dayTotals: number[] = [];
   const lost: CustomerId[] = [];
@@ -83,6 +85,10 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
     for (const id of [...availableCustomers(s)]) {
       // 接待别人期间她可能已经走了； greedy 路线就是在赌这个。
       if (!availableCustomers(s).includes(id)) continue;
+      if (roster && s.samples > 0 && !s.members.includes(id)) {
+        s = leaveSample(s, id);
+        if (canAddMember(s, id)) s = addMember(s, id);
+      }
       const played = playCustomer(s, id, { ...(bundle === "matched" ? {} : { bundle }), faceTrial });
       s = played.campaign;
       served += played.outcome.units > 0 ? 1 : 0;
@@ -90,6 +96,7 @@ export function runRoute(bundle: BundleId | "matched" = "matched", faceTrial = f
     const event = dayEvent(s);
     const choice = event.choices.find(option => option.id === CLEAN_EVENTS[day - 1]) ?? event.choices[0];
     s = settleDayEvent(s, choice.id);
+    if (roster) for (const thread of touchThreads(s).slice(0, TOUCHES_PER_EVENING)) s = applyTouch(s, thread.id);
     dayTotals.push(s.sales);
     lost.push(...s.lost);
     s = startNextDay(s);

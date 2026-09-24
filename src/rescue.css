@@ -169,6 +169,14 @@
 .event-panel { display: flex; flex-direction: column; justify-content: safe center; }.story-panel h1 { margin: 12px 0 18px; }.story-panel > p { max-width: 660px; color: #d8c5b3; font-size: 16px; line-height: 1.9; }.large-number { display: block; color: #ebcc99; font: 38px/1.3 'IBM Plex Mono', monospace; margin-bottom: 14px; }.large-number small { font-size: 16px; color: #a79484; }.result-metrics { display: flex; gap: 30px; margin-top: 22px; color: #bdaa98; }.result-metrics b { color: #e7d3b8; margin-left: 6px; }.story-footnote { display: block; margin-top: 24px; font-size: 13px; color: #b7a491; }
 .result-next { display: flex; gap: 30px; align-items: center; height: 100%; justify-content: space-between; }.result-next p { max-width: 580px; color: #c3af9d; }.result-next button { flex: none; }
 .event-options { display: flex; gap: 12px; }.event-options button { flex: 1; text-align: left; padding: 18px; }.event-options b, .event-options span { display: block; }.event-options b { color: #edcfaa; font-size: 16px; }.event-options span { margin-top: 8px; color: #bdaa9b; font-size: 13px; }
+/* 闭店以后的私域跟进：读的是"今晚还剩几句"，不是一块带进度条的面板。 */
+.evening-touch { display: flex; flex-direction: column; gap: 8px; max-width: 660px; margin-top: 16px; padding-top: 12px; border-top: 1px solid #4d3738; }
+.evening-touch .touch-note { color: #b7a491; font-size: 13px; line-height: 1.75; }
+.touch-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.touch-list button { flex: 1 1 210px; display: flex; align-items: baseline; gap: 9px; text-align: left; padding: 8px 14px; }
+.touch-list b { color: #edcfaa; font-size: 14px; white-space: nowrap; }
+.touch-list span { color: #b7a491; font-size: 12.5px; }
+.touch-reply { color: #d9c49a; font-size: 13px; line-height: 1.7; padding-left: 12px; border-left: 2px solid #6b4f3b; }
 .ledger-book { margin-top: 20px; }.ledger-book section { border-top: 1px solid #4d3738; padding-top: 14px; margin-top: 18px; }.ledger-book h2 { color: #ceab81; font-size: 15px; margin-bottom: 8px; }.ledger-book p { color: #c8b7a6; font-size: 13px; margin-bottom: 7px; }.ledger-book .order-line { color: #d7c49b; border-top: 1px solid #3f3033; padding: 7px 0; }
 .dialog-backdrop { position: fixed; z-index: 500; inset: 0; display: grid; place-items: center; padding: 24px; background: #0b0710cf; }.restart-dialog { padding: 28px; max-width: 460px; border: 1px solid #87664d; border-radius: 10px; background: #251c24; }.restart-dialog p { margin: 14px 0 24px; color: #c9b6a4; }.restart-dialog > div { display: flex; gap: 10px; }
 @media (min-height: 850px) and (min-width: 900px) { .rescue-game { grid-template-rows: 76px minmax(0, 1fr) 280px; }.rescue-dock { padding-top: 25px; } }
