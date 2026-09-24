@@ -31,6 +31,12 @@
 .rescue-game .intro-actions .gold-button { padding: 15px 24px; background: #ead4b7; border-color: #ead4b7; min-width: 225px; text-align: left; font-size: 15px; }
 .intro-actions button > span { float: right; margin-left: 28px; }
 .intro-actions > span { font-size: 12px; color: #b9a89a; }
+/* 出口不跟着滚：探针量到第 3 早起"开始营业"整颗在带外（1280×800 差 130px、844×390 差 414px），
+   玩家读完告示反而找不到进门那一步。脚钉在带底，正文照常滚；不滚的那几档它是 no-op。 */
+.intro-actions { position: sticky; bottom: 0; z-index: 3; padding-top: 14px; background: linear-gradient(180deg, #21182000, #211820 34%); }
+/* 脚会挡住滚到它底下的那一步：探针量到不写这一行时，滚到"查批号"那颗会整颗停在脚后面
+   （1280×720 第 5 早压住 69px、640×800 压住 97px = 脚自己的高度）。留白按量的脚高给。 */
+.shift-intro { scroll-padding-bottom: 110px; }
 /* 开店前那一遍自查：按钮说价（下几支、晚开门几分钟），下面那一行说买到什么。虚线框是柜后要办的事，不是她说的话。 */
 .brief-check { margin-top: 22px; padding: 12px 14px; border: 1px dashed #8a6a55; border-radius: 5px; background: #ffffff05; }
 .brief-check button { text-align: left; font-family: 'Songti SC', 'Noto Serif SC', Georgia, serif; }
