@@ -26,6 +26,8 @@ export type CustomerSession = {
   claimed: boolean;
   rivalChoice: RivalChoice | null;
   chat: ChatLine[];
+  // 这一位在柜前实际花掉的分钟，由 spendAttention 逐笔记进来：成交卡上那句说的就是它，不是连带那一档的分钟。
+  visitMinutes: number;
 };
 
 export type Demand = { trait: Trait; want: 1 | 2; weight: 1 | 2 | 3 };
@@ -104,7 +106,7 @@ export type DayStory = {
   customers: CustomerId[];
 };
 
-export type SaleOutcome = { good: boolean; amount: number; total: number; units: number; minutes: number; tier: FitTier; shared: boolean; title: string; body: string };
+export type SaleOutcome = { good: boolean; amount: number; total: number; units: number; minutes: number; visitMinutes: number; tier: FitTier; shared: boolean; title: string; body: string };
 export type DawnNotice = { speaker: string; body: string };
 
 export const SAVE_KEY = "last-order-campaign-v1";
@@ -256,6 +258,12 @@ export const bundleMinutesWord = (bundle: BundleId, units: number) => {
   const asked = BUNDLES[bundle].units;
   return asked > units ? `要 ${asked} 件 · 占 ${asked} 分钟` : `占 ${asked} 分钟`;
 };
+// 成交卡上这两个分钟各管一件事：连带那一档自己花几分钟，和这一位从头到尾在柜前花掉几分钟。
+// 只念前一个数，会把"一单只花两分钟"教给玩家 —— 而挤走柜台另一边那位的是后一个数。
+// 没买成时那一分钟不是"开单"，同一张卡上别写着写着把上面的标题推翻；旧存档续上的那一单没有逐笔账（缺字段按 0 起算），这时退回只念关单那个数，不说"其中"。
+export const visitWord = (closingMinutes: number, visitMinutes: number, sold: boolean) => visitMinutes > closingMinutes
+  ? `这一位在柜前花掉 ${visitMinutes} 分钟，其中${sold ? "开单" : "收尾"}占 ${closingMinutes} 分钟`
+  : `这一单占现场 ${closingMinutes} 分钟`;
 export const MIXED_FIT = 0.55;
 // 开口之前的门槛：至少在她脸上看过两处。两个 UI 的这一步判定都问这个数。
 export const OBSERVE_MIN = 2;
@@ -1282,7 +1290,9 @@ export function parseCampaign(raw: string | null): Campaign | null {
       || (session.bundle !== undefined && !Object.hasOwn(BUNDLES, session.bundle))
       || (session.revealed !== undefined && (!Array.isArray(session.revealed) || session.revealed.some(trait => !Object.hasOwn(TRAIT_LABELS, trait))))
       || (session.faceTrialRevealed !== undefined && session.faceTrialRevealed !== null && !Object.hasOwn(TRAIT_LABELS, session.faceTrialRevealed))
-      || (session.faceTrialled !== undefined && typeof session.faceTrialled !== "boolean")))) return null;
+      || (session.faceTrialled !== undefined && typeof session.faceTrialled !== "boolean")
+      // 这一单的分钟账：老存档没这个字段按 0 起算，但写了就必须是个非负整数（和 faceTrialled 那一串同一套判法）。
+      || (session.visitMinutes !== undefined && (!Number.isInteger(session.visitMinutes) || session.visitMinutes < 0))))) return null;
     const merged: Campaign = {
       ...INITIAL,
       ...parsed,
@@ -1301,7 +1311,9 @@ export function parseCampaign(raw: string | null): Campaign | null {
       finished: parsed.finished === true,
       activeSession: parsed.activeSession
         ? { ...parsed.activeSession, bundle: parsed.activeSession.bundle ?? "single", revealed: parsed.activeSession.revealed ?? [], chat: parsed.activeSession.chat ?? [],
-            faceTrialled: parsed.activeSession.faceTrialled === true, faceTrialRevealed: parsed.activeSession.faceTrialRevealed ?? null }
+            faceTrialled: parsed.activeSession.faceTrialled === true, faceTrialRevealed: parsed.activeSession.faceTrialRevealed ?? null,
+            // 这一单的分钟账只给成交卡念，缺字段按 0 起算：少记的分钟只可能让那句话偏小，不会把没花的钱算成花的。
+            visitMinutes: Number.isInteger(parsed.activeSession.visitMinutes) ? parsed.activeSession.visitMinutes! : 0 }
         : null,
     };
     return { ...merged, waitMeters: metersFor(floorCustomers(merged), merged.waitMeters) };
@@ -1377,27 +1389,30 @@ export function endingTitle(s: Campaign) {
 
 export function spendAttention(s: Campaign, servingId: CustomerId | null, cost: number): Campaign {
   if (!Number.isFinite(cost) || cost <= 0 || s.finished) return s;
-  const ids = floorCustomers(s);
-  const waitMeters = { ...s.waitMeters };
+  // 正在接待的这位身上花的每一分钟，先记进这一单的账：两个 UI 的每一个离柜动作都走这里，成交卡念的就是这个数。
+  const timed = s.activeSession && s.activeSession.customerId === servingId
+    ? { ...s, activeSession: { ...s.activeSession, visitMinutes: s.activeSession.visitMinutes + cost } } : s;
+  const ids = floorCustomers(timed);
+  const waitMeters = { ...timed.waitMeters };
   const newlyLost: CustomerId[] = [];
   for (const id of ids) {
-    if (id === servingId || s.dayServed.includes(id) || s.lost.includes(id)) continue;
+    if (id === servingId || timed.dayServed.includes(id) || timed.lost.includes(id)) continue;
     const next = Math.max(0, (waitMeters[id] ?? CUSTOMERS[id].patience) - cost);
     waitMeters[id] = next;
     if (next === 0) newlyLost.push(id);
   }
-  const shiftMinutes = s.shiftMinutes + cost;
-  if (newlyLost.length === 0) return { ...s, waitMeters, shiftMinutes };
-  let flags = s.flags;
-  let log = s.history;
-  let relations = s.relations;
+  const shiftMinutes = timed.shiftMinutes + cost;
+  if (newlyLost.length === 0) return { ...timed, waitMeters, shiftMinutes };
+  let flags = timed.flags;
+  let log = timed.history;
+  let relations = timed.relations;
   for (const id of newlyLost) {
-    flags = flag({ ...s, flags }, `lost:${id}`);
-    log = history({ ...s, history: log }, CUSTOMERS[id].lostLine);
+    flags = flag({ ...timed, flags }, `lost:${id}`);
+    log = history({ ...timed, history: log }, CUSTOMERS[id].lostLine);
     if (CUSTOMERS[id].rival) relations = { ...relations, luyao: relations.luyao - 4 };
   }
-  return { ...s, waitMeters, shiftMinutes, lost: [...s.lost, ...newlyLost], flags, history: log, relations,
-    activeSession: s.activeSession && newlyLost.includes(s.activeSession.customerId) ? null : s.activeSession };
+  return { ...timed, waitMeters, shiftMinutes, lost: [...timed.lost, ...newlyLost], flags, history: log, relations,
+    activeSession: timed.activeSession && newlyLost.includes(timed.activeSession.customerId) ? null : timed.activeSession };
 }
 
 export function availableCustomers(s: Campaign) {
@@ -1571,10 +1586,12 @@ export function resolveSale(s: Campaign, input: {
   if (knowing) campaign.history = history(campaign, `${customer.name}照着镜子看过这半张脸，还是买了`);
   // 连带不是免费的：她每带走一件，就多用一分钟开单讲搭配，柜台另一边的人还在倒数。
   const minutes = sold ? BUNDLES[input.bundle].units : 1;
+  // 这一档连带自己花的分钟，和这一位从头到尾在柜前花掉的分钟，是两个数：只有后者说得出柜台另一边的人为什么走。
+  const visitMinutes = (s.activeSession?.customerId === customer.id ? s.activeSession.visitMinutes : 0) + minutes;
   return {
     campaign: spendAttention(campaign, null, minutes),
     outcome: {
-      good: tier === "positive" && guarded && !blocked, amount, total, units, minutes, tier, shared,
+      good: tier === "positive" && guarded && !blocked, amount, total, units, minutes, visitMinutes, tier, shared,
       title: blocked ? `${customer.name}没买成` : sold ? (tier === "positive" ? `${customer.name}成交` : tier === "mixed" ? `${customer.name}只带走一件` : `${customer.name}被你推下来单`) : `${customer.name}拒绝成交`,
       body: (blocked
         ? `她认这个方向，钱也带了，可是抽屉里一支${item.short}都没有。这一单不是你推错了，是柜台没有货。`
@@ -1611,7 +1628,7 @@ export function startService(s: Campaign, id: CustomerId): Campaign {
   if (s.energy < ENERGY_LOCK) return s;
   return { ...s, activeSession: { customerId: id, discovered: [], askedQuestion: null, selectedProduct: null,
     bundle: "single", revealed: [], tested: false, reaction: null, faceTrialled: false, faceTrialRevealed: null,
-    revisions: 0, claimed: false, rivalChoice: null, chat: [] } };
+    revisions: 0, claimed: false, rivalChoice: null, chat: [], visitMinutes: 0 } };
 }
 
 export function observeService(s: Campaign, cue: CueId): Campaign {
@@ -1619,7 +1636,8 @@ export function observeService(s: Campaign, cue: CueId): Campaign {
   if (!session || session.discovered.includes(cue)) return s;
   const customer = CUSTOMERS[session.customerId];
   const revealed = [...new Set([...session.revealed, ...customer.cues[cue].reveals])];
-  return { ...spendAttention(s, session.customerId, 1), activeSession: { ...session, discovered: [...session.discovered, cue], revealed } };
+  // 先挂这一单自己的改动，再让 spendAttention 记分钟：反过来写，旧 session 会把刚记下的那一分钟盖掉。
+  return spendAttention({ ...s, activeSession: { ...session, discovered: [...session.discovered, cue], revealed } }, session.customerId, 1);
 }
 
 export function askService(s: Campaign, text: string, chipIndex?: number): Campaign {
@@ -1628,10 +1646,10 @@ export function askService(s: Campaign, text: string, chipIndex?: number): Campa
   const questions = QUESTIONS[session.customerId];
   // 打字进来的这句话先落到她答得出的那一条：问到哪件事就露出哪件事，而不是只分"问对了 / 白问"两档。
   const ask = resolveAsk(session.customerId, text, chipIndex ?? null);
-  const next = applyQuestion(spendAttention(s, session.customerId, 1), session.customerId, ask.index);
   const revealed = [...new Set([...session.revealed, ...(questions[ask.index]?.reveals ?? [])])];
-  return { ...next, activeSession: { ...session, askedQuestion: ask.index, revealed,
+  const asked: Campaign = { ...s, activeSession: { ...session, askedQuestion: ask.index, revealed,
     chat: [...session.chat, { role: "player" as const, text: text.trim().slice(0, 280) }, { role: "customer" as const, text: ask.reply }].slice(-8) } };
+  return spendAttention(applyQuestion(asked, session.customerId, ask.index), session.customerId, 1);
 }
 
 export function chooseBundle(s: Campaign, bundle: BundleId): Campaign {
@@ -1651,8 +1669,8 @@ export function selectServiceProduct(s: Campaign, id: ProductId): Campaign {
 export function trialService(s: Campaign): Campaign {
   const session = s.activeSession;
   if (!session || session.tested || session.discovered.length < OBSERVE_MIN || session.askedQuestion === null || !session.selectedProduct) return s;
-  return { ...spendAttention(s, session.customerId, 1), activeSession: { ...session, tested: true,
-    reaction: fitOf(CUSTOMERS[session.customerId], session.selectedProduct).tier } };
+  return spendAttention({ ...s, activeSession: { ...session, tested: true,
+    reaction: fitOf(CUSTOMERS[session.customerId], session.selectedProduct).tier } }, session.customerId, 1);
 }
 
 // 手背试色只看颜色，半脸上妆才看得出她那张脸两小时后会怎么样：多花两分钟，代价是队伍另一头的人在倒数。
@@ -1672,8 +1690,8 @@ export function faceTrialService(s: Campaign): Campaign {
   if (!session || !session.tested || session.faceTrialled || !session.selectedProduct) return s;
   const customer = CUSTOMERS[session.customerId];
   const shown = faceTrialReveal(customer, session.discovered, session.revealed);
-  return { ...spendAttention(s, session.customerId, FACE_TRIAL_MINUTES), activeSession: { ...session,
-    faceTrialled: true, faceTrialRevealed: shown, revealed: shown ? [...new Set([...session.revealed, shown])] : session.revealed } };
+  return spendAttention({ ...s, activeSession: { ...session,
+    faceTrialled: true, faceTrialRevealed: shown, revealed: shown ? [...new Set([...session.revealed, shown])] : session.revealed } }, session.customerId, FACE_TRIAL_MINUTES);
 }
 
 export function respondToRival(s: Campaign, choice: RivalChoice): Campaign {

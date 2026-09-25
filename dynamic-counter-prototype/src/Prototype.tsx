@@ -4,7 +4,7 @@ import {
   addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canLeaveSample, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
   fitOf, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialReveal, floorCustomers, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, PULL_OVER_RETURN, QUESTIONS, canClaim, CLAIM_LABEL, CLAIM_NOTE,
   orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveAsk, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
-  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, visitWord, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
@@ -222,7 +222,7 @@ export default function Prototype() {
     setScreen("consultation");
   };
   const saveSession = (patch: Partial<CustomerSession>) => setCampaign(s => {
-    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, bundle: "single" as BundleId, revealed: [] as Trait[], tested: false, reaction: null, faceTrialled: false, faceTrialRevealed: null as Trait | null, revisions: 0, claimed: false, rivalChoice: null, chat: [] };
+    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, bundle: "single" as BundleId, revealed: [] as Trait[], tested: false, reaction: null, faceTrialled: false, faceTrialRevealed: null as Trait | null, revisions: 0, claimed: false, rivalChoice: null, chat: [], visitMinutes: 0 };
     return { ...s, activeSession: { ...base, ...patch } };
   });
   const advanceFloor = (cost: number) => {
@@ -434,7 +434,7 @@ export default function Prototype() {
       </section>}</main></div>;
   }
 
-  if (screen === "result" && outcome) return <MobileScroll className="app-screen result-scroll"><main className={`sale-result ${outcome.good ? "good" : "risky"}`}><div className="result-light" /><p>DAY {campaign.day} · 收银提示</p><span className="result-seal">{outcome.good ? "✓" : "!"}</span><h1>{outcome.title}</h1><strong>+ ¥{outcome.amount.toLocaleString("zh-CN")}</strong><p className="result-copy">{outcome.body}</p><div className="consequence-list"><span><b>顾客信任</b><em>{relationText(campaign.trust)}</em></span><span><b>订单留痕</b><em>{claimed ? "已登记" : "可能争议"}</em></span><span><b>剩余体力</b><em>{energyWord(campaign.energy)}</em></span></div><button className="primary-action" type="button" onClick={afterResult}>{available.filter(id => id !== customerId).length > 0 ? "回到现场" : "处理闭店事件"}</button></main></MobileScroll>;
+  if (screen === "result" && outcome) return <MobileScroll className="app-screen result-scroll"><main className={`sale-result ${outcome.good ? "good" : "risky"}`}><div className="result-light" /><p>DAY {campaign.day} · 收银提示</p><span className="result-seal">{outcome.good ? "✓" : "!"}</span><h1>{outcome.title}</h1><strong>+ ¥{outcome.amount.toLocaleString("zh-CN")}</strong><p className="result-copy">{outcome.body}</p><p className="result-visit">{visitWord(outcome.minutes, outcome.visitMinutes, outcome.units > 0)}</p><div className="consequence-list"><span><b>顾客信任</b><em>{relationText(campaign.trust)}</em></span><span><b>订单留痕</b><em>{claimed ? "已登记" : "可能争议"}</em></span><span><b>剩余体力</b><em>{energyWord(campaign.energy)}</em></span></div><button className="primary-action" type="button" onClick={afterResult}>{available.filter(id => id !== customerId).length > 0 ? "回到现场" : "处理闭店事件"}</button></main></MobileScroll>;
 
   if (screen === "event") {
     const eventVisual = event.speakerStaff ? STAFF[event.speakerStaff] : null;

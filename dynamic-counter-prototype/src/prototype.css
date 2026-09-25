@@ -310,6 +310,8 @@ button { -webkit-tap-highlight-color:transparent; }
 .sale-result h1 { position:relative; margin:18px 0 2px; color:#fff0d3; font:700 24px 'Noto Serif SC'; }
 .sale-result>strong { color:#f2c778; font:700 26px 'Noto Serif SC'; }
 .result-copy { max-width:290px; margin:14px 0 18px; color:#d0beb0; font-size:9px; line-height:1.7; }
+/* 成交卡上唯一一句时间账：这一位在柜前花掉几分钟。字号跟同屏正文那一档（真机上两句一起抬到 12px，见下面设备那一遍）。 */
+.result-visit { max-width:290px; margin:-8px 0 17px; color:#e6cda1; font-size:9px; line-height:1.6; }
 .consequence-list { width:100%; margin-bottom:17px; overflow:hidden; border:1px solid #ffffff12; border-radius:13px; background:#ffffff06; }
 .consequence-list span { display:flex; justify-content:space-between; padding:9px 11px; border-bottom:1px solid #ffffff0c; }
 .consequence-list span:last-child { border:0; }
@@ -445,6 +447,11 @@ button { -webkit-tap-highlight-color:transparent; }
   .ledger>b,
   .ledger-book>b,
   .question-answer b { font-size:12px; }
+
+  /* 成交卡那两句停在设备框那一档 9px：真机上它们是这一屏最小的字，
+     而"这一单花掉几分钟"正是下一单要不要多上那一格脸的依据。 */
+  .result-copy,
+  .result-visit { font-size:12px; }
 
   .customer-speech span,
   .evening-touch h2,

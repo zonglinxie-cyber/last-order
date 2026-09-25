@@ -4,7 +4,8 @@ import {
   applyDawn, applyFinale, applyTouch, availableCustomers, BUNDLE_MINUTE_HINT, bundleMinutesWord, canLeaveSample, COMPLIANCE_RISK, complianceWord, consultsLeft, CUSTOMERS, dawnNotices, demandBudgetWord, endingTitle,
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
   ADVANCE_COMPLIANCE, ADVANCE_HELD_COMPLIANCE, ADVANCE_HELD_STANDING, ADVANCE_SALE, ADVANCE_TANGKE, advancePocket, dayEvent, settleDayEvent, startNextDay, TANGKE_STOCK_GATE, visibleChoices,
-  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
+  PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale,
+  askService, chooseBundle, closeService, FACE_TRIAL_MINUTES, faceTrialService, observeService, respondToRival, selectServiceProduct, startService, trialService, visitWord, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   morningReview, progressTarget,
   PRICE_GAP, PRICE_PAD_SAMPLES,
   TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign, type CustomerId, type OrderRecord, type ProductId,
@@ -804,4 +805,101 @@ test("那一句真的跟着小票变：同一个沈薇，推持妆和推修护�
   // 旧存档连金额都是估出来的，那一句也只能估：fallback 就是原来写死的"持妆"，一字不改。
   assert.equal(returnMorning("shen", null, 3).line, `沈薇退了那单持妆，说镜头里全是粉感 · −¥${yuan(1_680)}`);
   assert.equal(returnMorning("zhou", null, 4).card, "周姐把会议自拍发到了会员群。持妆暗沉的对比图还在。");
+});
+
+// —— 成交卡上那句时间账（P46）——
+// 下面这些数不是推出来的：先按屏幕字把第 1 天那一单走一遍（沙盘 5199 + 手机版 5200），再逐笔量出来写死在这里。
+function sitDown(id: CustomerId = "shen") { return startService(openFloorState(INITIAL), id); }
+
+test("这一单的分钟一笔一笔记：重复看那一处不再占第二分钟，挑一支不花时间", () => {
+  let s = sitDown();
+  assert.equal(s.activeSession?.visitMinutes, 0, "坐下这一格本身不花分钟");
+  s = observeService(s, "eyes");
+  assert.equal(s.activeSession?.visitMinutes, 1, "第一处线索一分钟");
+  s = observeService(s, "eyes");
+  assert.equal(s.activeSession?.visitMinutes, 1, "回头再看已经看过的那处，不该再占一分钟");
+  s = observeService(s, "cheek");
+  assert.equal(s.activeSession?.visitMinutes, 2);
+  s = askService(s, QUESTIONS.shen[0].label, 0);
+  assert.equal(s.activeSession?.visitMinutes, 3, "开口问一分钟");
+  s = askService(s, QUESTIONS.shen[1].label, 1);
+  assert.equal(s.activeSession?.visitMinutes, 4, "再问一句还是占一分钟");
+  s = selectServiceProduct(s, "soft");
+  assert.equal(s.activeSession?.visitMinutes, 4, "在三支里挑一支不花时间");
+  s = trialService(s);
+  assert.equal(s.activeSession?.visitMinutes, 5, "手背试色一分钟");
+  s = faceTrialService(s);
+  assert.equal(s.activeSession?.visitMinutes, 5 + FACE_TRIAL_MINUTES, `半脸上妆买的是 ${FACE_TRIAL_MINUTES} 分钟，不是 ${FACE_TRIAL_MINUTES + 1} 分钟`);
+});
+
+test("成交卡那句念的是这一位在柜前花掉的分钟，不是连带那一档的分钟", () => {
+  let sold = sitDown();
+  sold = observeService(observeService(sold, "eyes"), "cheek");
+  sold = askService(sold, QUESTIONS.shen[0].label, 0);
+  sold = selectServiceProduct(sold, "soft");
+  sold = trialService(sold);
+  sold = faceTrialService(sold);
+  sold = respondToRival(sold, "clarify");
+  sold = chooseBundle(sold, "pair");
+  const closed = closeService(sold, false, false);
+  assert.ok(closed);
+  assert.equal(closed.outcome.minutes, 2, "连带那一档自己占两分钟：这个数没动，报价单和账本还认它");
+  assert.equal(closed.outcome.units, 2);
+  assert.equal(closed.outcome.visitMinutes, 8);
+  assert.equal(visitWord(2, 8, true), "这一位在柜前花掉 8 分钟，其中开单占 2 分钟");
+
+  let refused = sitDown();
+  refused = observeService(observeService(refused, "eyes"), "cheek");
+  refused = askService(refused, QUESTIONS.shen[0].label, 0);
+  refused = selectServiceProduct(refused, "glow");
+  refused = trialService(refused);
+  refused = respondToRival(refused, "clarify");
+  const declined = closeService(refused, false, false);
+  assert.ok(declined);
+  assert.equal(declined.outcome.units, 0, "推错了方向：这一单没开出来");
+  assert.equal(declined.outcome.visitMinutes, 5);
+  // 同一张卡上面写着「沈薇拒绝成交」，下面就不能说这一单"开"过 —— 那一分钟是收尾，不是开单。
+  assert.equal(visitWord(declined.outcome.minutes, declined.outcome.visitMinutes, declined.outcome.units > 0), "这一位在柜前花掉 5 分钟，其中收尾占 1 分钟");
+});
+
+test("成交卡上那个数，就是当天把柜台另一边那位挤走的分钟数", () => {
+  let s = sitDown();
+  s = observeService(observeService(s, "eyes"), "cheek");
+  s = askService(s, QUESTIONS.shen[0].label, 0);
+  s = selectServiceProduct(s, "soft");
+  s = trialService(s);
+  s = faceTrialService(s);
+  s = respondToRival(s, "clarify");
+  s = chooseBundle(s, "pair");
+  const closed = closeService(s, false, false);
+  assert.ok(closed);
+  assert.equal(closed.outcome.visitMinutes, CUSTOMERS.mei.patience, "为这一位花掉的分钟，正好是梅女士肯等的分钟");
+  assert.equal(closed.campaign.waitMeters.mei, 0);
+  assert.deepEqual(closed.campaign.lost, ["mei"], "第 1 天走掉的是梅女士，不是别人");
+  // 卡上原来只念连带那一档：两分钟挤不走任何一位等着的人，所以那句话教的是"一单很便宜"。
+  assert.ok(closed.outcome.minutes < CUSTOMERS.mei.patience, "只念连带那个数的时候，这一单看起来根本不该有人走");
+
+  let lean = sitDown();
+  lean = observeService(observeService(lean, "eyes"), "cheek");
+  lean = askService(lean, QUESTIONS.shen[0].label, 0);
+  lean = selectServiceProduct(lean, "soft");
+  lean = trialService(lean);
+  lean = respondToRival(lean, "clarify");
+  const kept = closeService(lean, false, false);
+  assert.ok(kept);
+  assert.equal(kept.outcome.visitMinutes, 5);
+  assert.deepEqual(kept.campaign.lost, [], "省掉上妆那一格、连带只开一件，梅女士就还在");
+});
+
+test("旧存档续上的那一单没有逐笔账，那句就退回只念关单那个数", () => {
+  const raw = JSON.parse(JSON.stringify(sitDown()));
+  delete raw.activeSession.visitMinutes;
+  raw.activeSession.discovered = ["eyes", "cheek"];
+  const resumed = parseCampaign(JSON.stringify(raw));
+  assert.equal(resumed?.activeSession?.visitMinutes, 0, "缺字段按 0 起算：宁可少说几分钟，不猜她花过几分钟");
+  assert.equal(visitWord(1, 0, true), "这一单占现场 1 分钟", "没有逐笔账就不说「其中」，免得后半句比前半句大");
+  // 类型不对不是"没这个字段"：和 faceTrialled 一样，写了个不是数字的东西进来，整份存档拒收。
+  const garbage = JSON.parse(JSON.stringify(resumed));
+  garbage.activeSession.visitMinutes = "三分钟";
+  assert.equal(parseCampaign(JSON.stringify(garbage)), null, "读数进来不是数字，就不续这一份档");
 });
