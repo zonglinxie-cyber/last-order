@@ -652,10 +652,12 @@ export function morningReview(s: Campaign): CounterReading | null {
 }
 
 // 活动过半看名单，巡店当天看小样：这两项才是品牌真正在数的东西。
+// 卡顶按「通道 · 主题」写（和第 5 早那条「巡店 · 派样数据」同一副语法）：不挂人名，因为这一张不是罗曼发来的，
+// 是品牌在数名单 —— 而同一屏上面那条「晨会 · 罗曼」念的是进度。两张顶着一样的标签，玩家看见的是"同一封信寄了两遍"。
 export function counterCheck(s: Campaign): CounterReading | null {
   if (s.day === 4) {
-    if (s.members.length >= MEMBER_MIN_FOR_CREDIT) return { key: `roster:${s.day}`, speaker: "晨会 · 罗曼", standing: 4, roman: 3, text: `晨会 · 私域名单 ${s.members.length} 人`, body: `品牌在数企微名单，你手上有 ${s.members.length} 个。罗曼说这些人明年还在。` };
-    if (!s.members.length) return { key: `roster:${s.day}`, speaker: "晨会 · 罗曼", standing: -4, roman: -2, text: "晨会 · 私域名单为空", body: "品牌在数企微名单，你一条都没加。罗曼只问了一句：那这些人以后找谁？" };
+    if (s.members.length >= MEMBER_MIN_FOR_CREDIT) return { key: `roster:${s.day}`, speaker: "晨会 · 私域名单", standing: 4, roman: 3, text: `晨会 · 私域名单 ${s.members.length} 人`, body: `品牌在数企微名单，你手上有 ${s.members.length} 个。罗曼说这些人明年还在。` };
+    if (!s.members.length) return { key: `roster:${s.day}`, speaker: "晨会 · 私域名单", standing: -4, roman: -2, text: "晨会 · 私域名单为空", body: "品牌在数企微名单，你一条都没加。罗曼只问了一句：那这些人以后找谁？" };
     return null;
   }
   if (s.day === 5) {

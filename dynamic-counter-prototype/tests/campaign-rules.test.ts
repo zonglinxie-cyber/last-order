@@ -547,3 +547,28 @@ test("微信里的回音合成一条，名字写在句子前面；柜台那一�
   assert.ok(notes.some(note => note.speaker === "客诉 · 苏蔓" && note.body.includes("婚礼前双颊爆红")), "客诉单独一张卡");
   assert.ok(!notes.some(note => note.speaker === "私域 · 微信" && note.body.includes("婚礼前双颊爆红")), "客诉不并进微信那一条");
 });
+
+// P31：第 4 早那两张卡顶着一模一样的「晨会 · 罗曼」，玩家看见的是"同一封信寄了两遍"。
+// 名单那一张不是罗曼发来的消息，是品牌在数企微名单（P17 已经裁过一次同类的错：规则提示不挂人名）。
+test("第 4 早那两张晨会卡各有各的标签", () => {
+  // 两张都是"晨会念过才有旗"的那一类（`dawnNotices` 认 `morning:4` / `roster:4`），所以种子要带旗。
+  const flags = ["morning:4", "roster:4"];
+  const empty = dawnNotices(campaign({ day: 4, sales: 9_000, members: [], flags }));
+  const full = dawnNotices(campaign({ day: 4, sales: 9_000, members: ["zhao", "anjie"], flags }));
+  for (const [label, notes] of [["名单为空", empty], ["名单有人", full]] as const) {
+    const speakers = notes.map(note => note.speaker);
+    assert.equal(speakers.filter(name => name === "晨会 · 罗曼").length, 1, `${label}：进度那一张才是罗曼念的，不该有两张`);
+    assert.ok(speakers.includes("晨会 · 私域名单"), `${label}：名单那一张要写清楚数的是什么`);
+    assert.equal(new Set(speakers).size, speakers.length, `${label}：同一屏出现两张同名卡 ${speakers.join(" | ")}`);
+  }
+  assert.ok(empty.find(note => note.speaker === "晨会 · 私域名单")!.body.includes("一条都没加"));
+  assert.ok(full.find(note => note.speaker === "晨会 · 私域名单")!.body.includes("2 个"), "名单里几个人写在句子前面");
+  // 清洁路线四个早晨逐个查：这一条挡住"以后又有人共用标签"。坏路线上两张「退货 · 收银」是合法的（两个人各退一单），
+  // 所以"全部告示标签互不相同"只钉在这条真跑得通的路线上，不写成全局不变量。
+  const evenings: Campaign[] = [];
+  runRoute("matched", false, false, false, null, undefined, undefined, false, false, settled => evenings.push(settled));
+  for (const [index, settled] of evenings.entries()) {
+    const speakers = dawnNotices(startNextDay(settled)).map(note => note.speaker);
+    assert.equal(new Set(speakers).size, speakers.length, `第 ${index + 2} 早有两张同名卡：${speakers.join(" | ")}`);
+  }
+});
