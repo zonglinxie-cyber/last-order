@@ -424,6 +424,10 @@ test("唐可那三条按钮写的每一个数引擎都真的动，让单的回�
     const day3 = applyDawn({ ...settled, day: 3, daySales: 0 }).sales - settled.sales;
     const back = applyDawn({ ...settled, day: 4, daySales: 0 }).sales - settled.sales;
     const printed = yuanPrinted(detail);
+    // P40：格子上那句「断货时她肯不肯替你开口」必须和这一格真算出来的那道闸一致（抽屉压到 1 支，只留关系这一道闸）。
+    const promised = /她肯替你开口/.test(detail);
+    assert.equal(canTransferVia({ ...settled, stock: { ...settled.stock, soft: 1 } }, "soft", "tangke"), promised,
+      `${id} 的格子写着「${promised ? "肯" : "不肯"}」，真按下去之后那道闸却是另一个答案：${detail}`);
     assert.ok(printed.length, `${id} 这一格一个数都没写，玩家只能凭一句话下注`);
     assert.ok(printed.every(value => [Math.abs(today), due, Math.abs(back)].includes(value)),
       `${id} 的格子上写了引擎不动的数：${detail}`);

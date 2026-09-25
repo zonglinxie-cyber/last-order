@@ -164,6 +164,14 @@ export const TANGKE_STOCK_GATE = 45;
 // 所以这一笔必须是个定死的数：第 2 晚那三条按钮上的钱要由它生成，否则玩家是在拿一个看得见的数换一句看不见的承诺。
 export const TANG_PAYBACK = 2080;
 
+// 第 2 晚那三条格子给唐可的人情，整个星期只认一处：断货那一屏私下那一支开不开（`TANGKE_STOCK_GATE`）。
+// 加减写成一个量，格子上那句话和 `apply` 用的是同一个量 —— 写两遍就会有一遍是承诺。
+export const SPLIT_TANGKE = 14, BEAT_TANGKE = -5, YIELD_TANGKE = 22;
+
+function borrowGateWord(s: Campaign, tangkeDelta: number): string {
+  return s.relations.tangke + tangkeDelta >= TANGKE_STOCK_GATE ? "断货时她肯替你开口" : "断货时她不会替你开口";
+}
+
 export const INITIAL: Campaign = {
   version: SAVE_VERSION,
   day: 1, sales: 0, daySales: 0, trust: 50, compliance: 55, energy: 100, samples: 8, evidence: 0, standing: 50,
@@ -1031,10 +1039,10 @@ export function dayEvent(s: Campaign): DayEvent {
       speaker: "唐可", speakerStaff: "tangke", speakerCustomer: null, title: "她说这单应该算她的",
       body: "唐可拿出一条上午的咨询记录：小雨先问过她色号，只是当时没有成交。你刚完成了全部试妆。",
       choices: [
-        { id: "split-tang", label: "提出平分", detail: `业绩 −¥${money(xiaoyuOrderAmount(s) / 2)} · 各退一步，这单的一半`, result: "唐可接受了。你少了一点数字，却多了一个愿意交接顾客的人。", apply: st => ({ ...transferXiaoyuOrder(st, .5), relations: { ...st.relations, tangke: st.relations.tangke + 14 }, flags: flag(st, "split-with-tang"), history: history(st, "你与唐可平分了小雨的订单") }) },
-        { id: "beat-tang", label: "拿出服务记录", detail: `按有效接待规则据理力争 · 业绩 ¥${money(xiaoyuOrderAmount(s))} 一分不让`, result: "订单归你。唐可无法反驳，但开始把你视作真正的竞争者。", apply: st => ({ ...st, evidence: st.evidence + 1, relations: { ...st.relations, tangke: st.relations.tangke - 5 }, flags: flag(st, "beat-tang-with-record"), history: history(st, "你用服务记录赢下订单归属") }) },
+        { id: "split-tang", label: "提出平分", detail: `业绩 −¥${money(xiaoyuOrderAmount(s) / 2)} · 各退一步，这单的一半 · ${borrowGateWord(s, SPLIT_TANGKE)}`, result: "唐可接受了。你少了一点数字，却多了一个愿意交接顾客的人。", apply: st => ({ ...transferXiaoyuOrder(st, .5), relations: { ...st.relations, tangke: st.relations.tangke + SPLIT_TANGKE }, flags: flag(st, "split-with-tang"), history: history(st, "你与唐可平分了小雨的订单") }) },
+        { id: "beat-tang", label: "拿出服务记录", detail: `按有效接待规则据理力争 · 业绩 ¥${money(xiaoyuOrderAmount(s))} 一分不让 · ${borrowGateWord(s, BEAT_TANGKE)}`, result: "订单归你。唐可无法反驳，但开始把你视作真正的竞争者。", apply: st => ({ ...st, evidence: st.evidence + 1, relations: { ...st.relations, tangke: st.relations.tangke + BEAT_TANGKE }, flags: flag(st, "beat-tang-with-record"), history: history(st, "你用服务记录赢下订单归属") }) },
         // 这一格买的是"今天归零、第 4 天回一笔大的"：两边的数不写出来，玩家就只能凭一句口头承诺下注。
-        { id: "yield-tang", label: "把单让给她", detail: `业绩 −¥${money(xiaoyuOrderAmount(s))} 全归她 · 第 4 天她转回一单 ¥${money(TANG_PAYBACK)}`, result: "唐可答应欠你一单。这张单不进收银系统，只有她柜上那句口头话，但她的敌意明显下降。", apply: st => ({ ...transferXiaoyuOrder(st, 1), relations: { ...st.relations, tangke: st.relations.tangke + 22 }, flags: flag(st, "tang-owes-order"), history: history(st, "你把小雨的订单让给了唐可") }) },
+        { id: "yield-tang", label: "把单让给她", detail: `业绩 −¥${money(xiaoyuOrderAmount(s))} 归她 · 第 4 天她转回一单 ¥${money(TANG_PAYBACK)} · ${borrowGateWord(s, YIELD_TANGKE)}`, result: "唐可答应欠你一单。这张单不进收银系统，只有她柜上那句口头话，但她的敌意明显下降。", apply: st => ({ ...transferXiaoyuOrder(st, 1), relations: { ...st.relations, tangke: st.relations.tangke + YIELD_TANGKE }, flags: flag(st, "tang-owes-order"), history: history(st, "你把小雨的订单让给了唐可") }) },
       ],
     };
   }

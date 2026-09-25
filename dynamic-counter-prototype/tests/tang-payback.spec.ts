@@ -64,7 +64,10 @@ test("三条各写自己那个数：平分少一半、硬拿一分不让、让�
   await expect(choice(page, "提出平分")).toContainText(`业绩 −¥${money(BOOKED / 2)}`);
   await expect(choice(page, "拿出服务记录")).toContainText(`业绩 ¥${money(BOOKED)} 一分不让`);
   const yieldCard = choice(page, "把单让给她");
-  await expect(yieldCard).toContainText(`业绩 −¥${money(BOOKED)} 全归她`);
+  await expect(yieldCard).toContainText(`业绩 −¥${money(BOOKED)} 归她`);
+  // P40：这一格还决定这一周断货时私下那一支开不开，格子上要当场说出来。
+  await expect(yieldCard).toContainText("断货时她肯替你开口");
+  await expect(choice(page, "拿出服务记录")).toContainText("断货时她不会替你开口");
   await expect(yieldCard).toContainText(`第 4 天她转回一单 ¥${money(TANG_PAYBACK)}`);
   // 让出去的是小雨那一单，不是今天全部的数：写成累计会把这一格读成"今天白干两单"。
   await expect(yieldCard).not.toContainText(money(BASE));
