@@ -83,3 +83,35 @@ test("她答不出的那件事，诉求板不会凭空多出一条", async ({ pa
   expect(await revealed(page), "问偏了不该换来新诉求").toEqual(["natural"]);
   await expect(demand(page, TRAIT_LABELS.wear)).toHaveCount(0);
 });
+
+// P44：她身上那两处线索都不露任何诉求，所以这一屏「她在意」里的一条都不是白来的。
+// 改之前把「东西不是我用」打进去，她会白答最重那一条、把低风险和先稳住一起露出来（还算问对了）。
+test("她自己那句「不是我用」问回去，她答这一句，不答她最重那条答案", async ({ page }) => {
+  await seed(page, { ...INITIAL, day: 3, eventDoneDays: [1, 2] });
+  await open(page, "赵女士", ["神情", "信息"]);
+  const notes = page.locator(".consultation-notes p.customer");
+  expect(await revealed(page), "这两处线索本来什么都不露").toEqual([]);
+  await typeAsk(page, "东西不是我用");
+  await expect(notes.first()).toContainText("不是我用。看我的脸没有用。");
+  for (const question of QUESTIONS.zhao.filter(entry => entry.reveals.length)) {
+    expect(await notes.first().textContent(), "白问那句不许冒充她答过的答案").not.toContain(question.response);
+  }
+  expect(await revealed(page), "认不出她在说哪件事，一条诉求都不许多").toEqual([]);
+  await page.screenshot({ path: "../audit/experience-v2/p44-sandbox-white-ask.png" });
+  // 上面那句是"认得出来"的那一档，兜底落点没被走过。这一句她压根没准备过：白问只能落在一条什么都不露的问题上。
+  await page.getByRole("button", { name: /再问一句/ }).click();
+  await typeAsk(page, "你们几点关门");
+  expect(await revealed(page), "白问那句不许把她最重那条答案的诉求记上").toEqual([]);
+  // 她那一条有用的问题一次露两条（低风险 + 先稳住），所以这两格都要点名 —— 诉求板上还有"没说出口"和"底线"两行，不能只数行数。
+  await expect(demand(page, TRAIT_LABELS.steady)).toHaveCount(0);
+  await expect(demand(page, TRAIT_LABELS.soothe)).toHaveCount(0);
+  await expect(notes.last()).toContainText("走");
+  // 同一屏的反面：她自己说过「我怕的是送错」，照着问回去就该拿到那一句。
+  await page.getByRole("button", { name: /再问一句/ }).click();
+  await typeAsk(page, "我怕的是送错");
+  await expect(notes.last()).toContainText("我怕的是送错，不是看着不够贵。");
+  expect(await revealed(page), "照她的原话问回来，露出的是说出这句话那一格的诉求").toEqual(["soothe"]);
+  await expect(demand(page, TRAIT_LABELS.soothe)).toHaveCount(1);
+  await page.screenshot({ path: "../audit/experience-v2/p44-sandbox-echo-her-words.png" });
+});
+

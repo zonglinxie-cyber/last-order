@@ -78,3 +78,30 @@ test("她答不出的那件事，「她在意」不会凭空多出一条", async
   expect(answer).toContain("走");
   await expect(said(page)).not.toContainText(TRAIT_LABELS.wear);
 });
+
+// P44（手机版）：她身上那两处线索都不露任何诉求，所以「她在意」里多出来的每一条都得是问出来的。
+// 改之前把「东西不是我用」打进去，她会白答最重那一条，把低风险和先稳住一起露出来（还算问对了 +2 信任）。
+test("她那句「不是我用」问回去，她答这一句：「她在意」不会凭空多出两条", async ({ page }) => {
+  await seedSave(page, { day: 3 });
+  await page.getByRole("button", { name: "继续第 3 天" }).click();
+  await page.getByRole("button", { name: "开始营业" }).click();
+  await openConsult(page, "赵女士", ["神情", "信息"]);
+  await expect(said(page)).not.toContainText("她在意");
+  await typeAsk(page, "东西不是我用");
+  await expect(chat(page)).toContainText("不是我用。看我的脸没有用。");
+  for (const question of QUESTIONS.zhao.filter(entry => entry.reveals.length)) {
+    expect(await chat(page).innerText(), "白问那句不许冒充她答过的答案").not.toContain(question.response);
+  }
+  await expect(said(page)).not.toContainText("她在意");
+  await page.screenshot({ path: "../audit/experience-v2/p44-mobile-white-ask.png" });
+  // 上面那句是"认得出来"的那一档，兜底落点没被走过。这一句她压根没准备过：白问只能落在一条什么都不露的问题上。
+  await typeAsk(page, "你们几点关门");
+  await expect(chat(page)).toContainText("我现在就可以走");
+  await expect(said(page), "白问那句不许把她最重那条答案的诉求记进「她在意」").not.toContainText("她在意");
+  // 同一屏的反面：她自己说过「我怕的是送错」，照着问回去就该拿到那一句、多出那一条。
+  await typeAsk(page, "我怕的是送错");
+  await expect(chat(page)).toContainText("我怕的是送错，不是看着不够贵。");
+  await expect(said(page)).toContainText(`她在意：${TRAIT_LABELS.soothe}`);
+  await page.screenshot({ path: "../audit/experience-v2/p44-mobile-echo-her-words.png" });
+});
+

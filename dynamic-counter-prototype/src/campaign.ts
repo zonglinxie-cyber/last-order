@@ -430,18 +430,6 @@ export const RIVAL_INTERRUPTIONS: Record<"shen" | "zhou" | "returning", { headli
   returning: { headline: "陆遥拦在团队助理旁边", quote: "批量单我们也可以做售后。她昨天已经试过了。" },
 };
 
-const NEED_HINTS: Record<CustomerId, RegExp> = {
-  shen: /镜头|粉感|近看|卡粉|自然|妆感|浮粉|补妆/,
-  mei: /明早|眼下|干|疲|精神|修护|干燥|紧绷/,
-  xiaoyu: /闷痘|痘|面试|刺激|一千|不能牺牲/,
-  zhao: /女儿|过敏|成分|礼物|她用|不是我/,
-  anjie: /婚礼|泛红|稳定|敏感|不出错|一周/,
-  returning: /昨天|复现|直播|售后|稳定|团队/,
-  zhou: /暗沉|拍照|会议|发干|对比|一层皮/,
-  duan: /室友|礼物|闷痘|看看|过敏|好骗/,
-  zhou2: /同事|香精|修护|昨天|退/,
-  anjie2: /婚礼|今晚|撑|敬酒|化妆师|灯光|闪光灯|脱妆|掉|一整天|完整|稳定/,
-};
 const PUSH_HINTS = /套装|套组|贵的|最贵|成交|开单|直接买|业绩/;
 const PRICE_HINTS = /预算|多少钱|价格|便宜|打折|能到/;
 
@@ -461,6 +449,22 @@ const DEMAND_HINTS: Record<Trait, RegExp> = {
 const ASK_PUNCTUATION = /[\s，。、？！?；;：:'"“”‘’]/g;
 const stripAsk = (text: string) => text.replace(ASK_PUNCTUATION, "");
 
+// 两段话最长的一段连续相同字。她自己的台词里那些字，玩家原样问回来时靠它对回出处。
+function longestSharedRun(a: string, b: string) {
+  let best = 0;
+  const run = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i += 1) {
+    let diagonal = 0;
+    for (let j = 1; j <= b.length; j += 1) {
+      const previous = run[j];
+      run[j] = a[i - 1] === b[j - 1] ? diagonal + 1 : 0;
+      if (run[j] > best) best = run[j];
+      diagonal = previous;
+    }
+  }
+  return best;
+}
+
 export function typedQuestionIndex(customerId: CustomerId, text: string): number | null {
   const message = text.trim();
   if (!message) return null;
@@ -475,6 +479,18 @@ export function typedQuestionIndex(customerId: CustomerId, text: string): number
     });
     if (verbatim >= 0) return verbatim;
   }
+  // 她自己说出口的那些字就是她的词表，这一条排在按维度猜之前：「会不会暗沉」「脸没精神」这种话不用换成
+  // 维度关键词也该问得回去，落点回到说出这句话的那一条 —— 她答的那句和露出的那条诉求本来就出自同一格。
+  let echo = -1;
+  let echoRun = 3;
+  questions.forEach((question, index) => {
+    const run = longestSharedRun(asked, stripAsk(question.response));
+    if (run > echoRun) {
+      echoRun = run;
+      echo = index;
+    }
+  });
+  if (echo >= 0) return echo;
   const answerable = [...new Set(questions.flatMap(question => question.reveals))];
   const hit = answerable.filter(trait => DEMAND_HINTS[trait].test(message));
   if (hit.length) {
@@ -502,22 +518,10 @@ export function typedQuestionIndex(customerId: CustomerId, text: string): number
   return null;
 }
 
-export function inferUseful(customerId: CustomerId, text: string) {
-  const matched = typedQuestionIndex(customerId, text);
-  if (matched !== null) return Boolean(QUESTIONS[customerId][matched]?.useful);
-  const message = text.trim();
-  if (!message) return false;
-  if (PUSH_HINTS.test(message) && !NEED_HINTS[customerId].test(message)) return false;
-  if (NEED_HINTS[customerId].test(message)) return true;
-  return QUESTIONS[customerId].some(question => question.useful && message.includes(question.label.slice(0, 6)));
-}
-
-export function fallbackReply(customerId: CustomerId, text: string, chipIndex: number | null, useful: boolean) {
-  // 点按钮和打字走的是同一句解析：打字问到的那件事，就该拿到那一件事的回答。
+// 她答的是哪一句、这一句算不算问到她在意的事，只从上面那一条链出：认不出来就是白问。
+export function fallbackReply(customerId: CustomerId, text: string, chipIndex: number | null) {
   const resolved = chipIndex ?? typedQuestionIndex(customerId, text);
-  if (resolved != null) return QUESTIONS[customerId][resolved]?.response ?? CUSTOMERS[customerId].opening;
-  if (useful) return QUESTIONS[customerId].find(question => question.useful)?.response ?? CUSTOMERS[customerId].need;
-  if (/预算|多少钱|套装|套组/.test(text)) return QUESTIONS[customerId].find(question => !question.useful)?.response ?? "别拿价格替代判断。";
+  if (resolved !== null) return QUESTIONS[customerId][resolved]?.response ?? CUSTOMERS[customerId].opening;
   return "你要是只想完成任务，我现在就可以走。";
 }
 
@@ -527,9 +531,13 @@ export function fallbackReply(customerId: CustomerId, text: string, chipIndex: n
 export function resolveAsk(customerId: CustomerId, text: string, chipIndex: number | null = null) {
   const questions = QUESTIONS[customerId];
   const resolved = chipIndex ?? typedQuestionIndex(customerId, text);
-  const useful = resolved !== null ? Boolean(questions[resolved]?.useful) : inferUseful(customerId, text);
-  const index = resolved ?? Math.max(0, questions.findIndex(question => Boolean(question.useful) === useful));
-  return { index, useful, reply: fallbackReply(customerId, text, resolved, useful) };
+  if (resolved !== null) {
+    return { index: resolved, useful: Boolean(questions[resolved]?.useful), reply: fallbackReply(customerId, text, resolved) };
+  }
+  // 认不出她在说哪一件事，就不许把最重那条答案背给她：那一条会顺手露出诉求、还算"问对了"加信任。
+  // 白问只能落在一条本来就不露任何诉求的问题上，代价按问偏算。
+  const blank = Math.max(0, questions.findIndex(question => !question.reveals.length && !question.useful));
+  return { index: blank, useful: false, reply: fallbackReply(customerId, text, null) };
 }
 
 type Payback = {
