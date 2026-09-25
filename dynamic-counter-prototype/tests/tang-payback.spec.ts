@@ -4,7 +4,7 @@
 // 数从哪里来、分岔多少归规则单测管（tests/rescue-rules.test.ts 拿"格子上印的数"对"引擎移动的数"），
 // 这一屏只守两件事：那些数在这一屏读得到、按得到，以及点下去的那一下确实长出了第 4 早那一笔。
 import { expect, test, type Page } from "@playwright/test";
-import { floorCustomers, INITIAL, PRODUCTS, SAVE_KEY, SAVE_VERSION, TANG_PAYBACK, type Campaign } from "../src/campaign";
+import { floorCustomers, INITIAL, PRODUCTS, SAVE_KEY, SAVE_VERSION, TANGKE_STOCK_GATE, TANG_PAYBACK, type Campaign } from "../src/campaign";
 
 const BOOKED = PRODUCTS.soft.price;
 // 柜上还记着周姐的一单：累计业绩比小雨这一单大，格子上那个数才分得清是"这一单"还是"今天全部"。
@@ -115,3 +115,48 @@ for (const [width, height] of [[390, 844], [390, 667], [320, 568]] as const) {
     if (width === 320) await page.screenshot({ path: "../audit/experience-v2/p38-mobile-day2-night-320x568.png" });
   });
 }
+
+// P41：格子上那句「断货时她肯替你开口」是一句承诺，规则层拿 settleDayEvent 之后真按过一次闸
+// （tests/rescue-rules.test.ts 里那条 promised 判据），可 UI 侧从没把"印在按钮上的话"和"后来那一道闸"
+// 用同一条用例对起来。这一条在手机版走完整：那个关系数是这一下点出来的，不是手写的。
+test("点完让单那一格，第 3 天断货那一屏私下那支按得动", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await nightfall(page);
+  await expect(choice(page, "把单让给她")).toContainText("断货时她肯替你开口");
+  await choice(page, "把单让给她").click();
+  const played = await savedState(page);
+  expect(played.relations.tangke, "这一格要把关系推过那道门，否则下面测的是一个根本没开的门").toBeGreaterThanOrEqual(TANGKE_STOCK_GATE);
+  // 第 3 天柜上柔焦一支都没有：段小姐那一单开不出来，两条出路摆在同一屏。
+  // delivered:3 必须一起写上：续档走的是 openFloorState，它会补第 3 早那批两支柔焦，把断货这一屏自己救回去。
+  await seed(page, { ...played, day: 3, daySales: 0, eventDoneDays: [1, 2], dayServed: [], flags: [...played.flags, "delivered:3"], stock: { ...played.stock, soft: 0 } });
+  await page.getByRole("button", { name: "继续第 3 天" }).click();
+  await page.getByRole("button", { name: "开始营业" }).click();
+  // 楼层上先点她本人，dock 那颗「观察段小姐」才是她的：第 1 天默认选中的是沈薇，第 3 天是赵女士。
+  await page.getByRole("button", { name: "查看段小姐" }).click();
+  await page.getByRole("button", { name: "观察段小姐" }).click();
+  await page.getByRole("button", { name: "观察眼神" }).click();
+  await page.getByRole("button", { name: "观察皮肤" }).click();
+  await page.getByRole("button", { name: "真的只是看看吗？" }).click();
+  await page.getByRole("button", { name: /柔焦 ¥980/ }).click();
+  await page.getByRole("button", { name: "为段小姐试用" }).click();
+  // 她自己说过的上限就是 1 件：默认那一档已经开满，断货写在报价单上，不在这排按钮里。
+  await expect(page.locator(".mobile-order-quote").getByText("柜上这一支断了：抽屉里一支柔焦都没有，这一单开不出来")).toBeVisible();
+  await expect(page.locator(".stock-transfer button")).toHaveCount(2);
+  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+  // 门开了就只剩那句话：既没有"她记着哪一格"，也没有"她还没打算"。
+  await expect(privateCall).toBeEnabled();
+  await expect(privateCall).toHaveText("找唐可拿三支 · 2 分钟");
+  const read = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    stock: Record<string, number>; compliance: number; relations: Record<string, number>; waitMeters: Record<string, number>; history: Array<{ text: string }>;
+  }, SAVE_KEY);
+  const before = await read();
+  await page.screenshot({ path: "../audit/experience-v2/p41-mobile-chain-borrow-open.png" });
+  await privateCall.click();
+  const after = await read();
+  expect(after.stock.soft - before.stock.soft, "她肯开口，给的是同一张单的三支").toBe(3);
+  expect(after.compliance - before.compliance, "系统里没有这张单，缺口留在台账上").toBe(-9);
+  expect(after.relations.tangke - before.relations.tangke, "这一支欠下的要记在她头上").toBe(8);
+  expect(before.waitMeters.zhao - after.waitMeters.zhao, "离柜的两分钟从第 3 天排队另一头的赵女士扣").toBe(2);
+  expect(after.history.at(-1)?.text).toContain("系统里没有这张单");
+  await page.screenshot({ path: "../audit/experience-v2/p41-mobile-chain-after-borrow.png" });
+});
