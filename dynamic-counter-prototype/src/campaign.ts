@@ -194,6 +194,13 @@ export const ADVANCE_TANGKE = 6;
 export const ADVANCE_HELD_STANDING = -6;
 export const ADVANCE_HELD_COMPLIANCE = -6;
 
+// 电商比价：她离柜以后才去搜旗舰店。柜台这一天最难接的就是这一击，而她手里能动的只有三样东西，
+// 每一样都各有一代价：票面（品牌价盘 + 《明码标价和禁止价格欺诈规定》第十六、十七条：被比较价要真实有依据、不得提价后打折）、
+// 抽屉里的小样（同规第十八条要求赠品标示品名数量，私下垫过去就是台账上对不上的空位）、以及她有没有你的微信。
+// 差额写在句子里，不写进 sales：按下去哪一格票面都不动，动的只是别的东西。
+export const PRICE_GAP = 280;
+export const PRICE_PAD_SAMPLES = 2;
+
 export const TRAIT_LABELS: Record<Trait, string> = {
   natural: "妆感要轻薄自然",
   correct: "要立刻看得出改善",
@@ -874,6 +881,53 @@ function hasPurchase(s: Campaign, id: CustomerId) {
 // 闭店事件里有些选项要先看关系和名单，界面试的也是这一份。
 export const visibleChoices = (s: Campaign, event: DayEvent) => event.choices.filter(choice => !choice.visible || choice.visible(s));
 
+// 第 3 晚那一击只在她真的从小雨手里卖出过东西之后才成立：没有那一单，就没有那张截图。
+// 格子一律加在数组尾巴上 —— 模拟器在没命中 CLEAN_EVENTS 时取的是 choices[0]，原来那三条的位置不能动。
+function priceCards(s: Campaign): EventChoice[] {
+  if (!hasPurchase(s, "xiaoyu")) return [];
+  const withWechat = s.members.includes("xiaoyu");
+  return [
+    {
+      id: "price-explain",
+      // 名字写进按钮：第 3 晚那张卡的抬头是她们的（赵女士的过敏 / 罗曼催数据），小雨这一格是同一屏上的第二条线。
+      label: "回小雨：不退差，讲价盘",
+      // 名单写进第二行：这句话传不传得出去，按下去之前就看得见（和 P23/P24 那两条"按钮要说清买到什么"同一种写法）。
+      detail: `票面不动 · 说清那 ¥${money(PRICE_GAP)} 是旗舰店券后价 · ${withWechat ? "她在你名单里，这话传得出去" : "她没有你的微信，这话传不出去"}`,
+      result: withWechat
+        ? "她把你说的那段原话转给她妈妈：专柜至少不糊弄人。订单留下了，人也在你名单里。"
+        : "她回了个「哦」。订单留下了，可你没有她的微信——明天她想核对这句话，找不到人。",
+      apply: st => ({ ...st,
+        // 同一句解释，说得出和说得进去是两件事：早上加过她微信的，这句话第二天还有人替你传。
+        trust: clamp(st.trust + (st.members.includes("xiaoyu") ? 9 : 4)),
+        compliance: clamp(st.compliance + 5),
+        evidence: st.evidence + (st.members.includes("xiaoyu") ? 1 : 0),
+        flags: flag(st, "price-explained"), history: history(st, "你按品牌价盘向小雨解释了那张券后价") }),
+    },
+    {
+      id: "price-pad",
+      label: "回小雨：垫两支小样",
+      detail: `样品 −${PRICE_PAD_SAMPLES} · 不登记 · 空位留在你自己台账上`,
+      // 抽屉里没有就不能按：和安姐那两格同一道闸。
+      visible: st => st.samples >= PRICE_PAD_SAMPLES,
+      result: "她说「这样我心里就平衡了」。两支旅行装进了她的包，收银条上什么都没有。",
+      apply: st => ({ ...st, samples: Math.max(0, st.samples - PRICE_PAD_SAMPLES), trust: clamp(st.trust + 3), compliance: clamp(st.compliance - 8), flags: flag(st, "price-padded"), history: history(st, "你拿未登记的小样补了小雨的差价") }),
+    },
+  ];
+}
+
+// 那一晚说的话，第二天得念得到。只往当晚那张卡上补一句，不新增卡片：晨会那一屏的位置是 P29/P30 量出来的。
+function priceEcho(s: Campaign): string {
+  if (hasFlag(s, "price-explained")) return s.members.includes("xiaoyu")
+    ? " 小雨把你说的那段话原样发进了她的面试群：柜台上至少有人肯把价格说清。"
+    : " 小雨没有再回你。你连想补一句的人在哪里都不知道。";
+  if (hasFlag(s, "price-padded")) return " 苏蔓路过抽屉时停了一下，问你那两支旅行装领给谁了。你说不上来。";
+  return "";
+}
+
+// 她那句"少 ¥280"得先被念出来，按钮才有出处。
+const priceAsk = (s: Campaign) => (hasPurchase(s, "xiaoyu")
+  ? ` 同一时间小雨发来旗舰店预售截图：同款到手比你的票面少 ¥${money(PRICE_GAP)}，她问柜台能不能退差。` : "");
+
 export function dayEvent(s: Campaign): DayEvent {
   if (s.day === 1) return {
     speaker: "苏蔓", speakerStaff: "suman", speakerCustomer: null, title: "少了两份热门赠品",
@@ -905,22 +959,25 @@ export function dayEvent(s: Campaign): DayEvent {
     };
   }
   if (s.day === 3) {
+    const price = priceCards(s);
     if (!hasPurchase(s, "zhao")) return {
       speaker: "罗曼", speakerStaff: "roman", speakerCustomer: null, title: "总部还在催修护数据",
-      body: "赵女士没买就走了。罗曼没有骂你，只把区域群的截图转给你：今天这款必须有数。",
+      body: "赵女士没买就走了。罗曼没有骂你，只把区域群的截图转给你：今天这款必须有数。" + priceAsk(s),
       choices: [
         { id: "push-data", label: "用别的订单顶数据", detail: "数字好看，记录不干净", result: "群里安静了。方敏的文件夹里多了一条对不上的数。", apply: st => ({ ...st, compliance: clamp(st.compliance - 10), relations: { ...st.relations, roman: st.relations.roman + 4 }, flags: flag(st, "faked-repair-data"), history: history(st, "你用别的订单顶了修护数据") }) },
         { id: "tell-truth", label: "如实说没做成", detail: "挨复盘，不造假", result: "罗曼让你留下十分钟。她没有帮你圆。", apply: st => ({ ...st, relations: { ...st.relations, roman: st.relations.roman - 4 }, flags: flag(st, "admitted-zhao-miss"), history: history(st, "你向罗曼承认赵女士那单没做成") }) },
         { id: "ask-suman", label: "请苏蔓帮你补一个老客", detail: "人情换数字", result: "苏蔓打了电话。数字有了，人情账也有了。", apply: st => ({ ...st, sales: st.sales + 980, daySales: st.daySales + 980, relations: { ...st.relations, suman: st.relations.suman - 6 }, flags: flag(st, "borrowed-suman-customer"), history: history(st, "你请苏蔓用老客帮你补了数据") }) },
+        ...price,
       ],
     };
     return {
       speaker: "赵女士", speakerStaff: null, speakerCustomer: "zhao", title: "女儿发来一张过敏记录",
-      body: "闭店前，她发来女儿的过敏记录：刚买的新品含有一种曾让女儿过敏的香精。订单已经入账，你现在可以主动联系她换货，也可以保留这笔销售。",
+      body: "闭店前，她发来女儿的过敏记录：刚买的新品含有一种曾让女儿过敏的香精。订单已经入账，你现在可以主动联系她换货，也可以保留这笔销售。" + priceAsk(s),
       choices: [
         { id: "protect-zhao", label: "换低价基础款", detail: "少卖 ¥700，避免已知风险", result: "赵女士松了口气。当天数字下降，但她把你的微信推给了女儿。", apply: st => ({ ...st, sales: Math.max(0, st.sales - 700), daySales: Math.max(0, st.daySales - 700), trust: clamp(st.trust + 12), flags: flag(st, "protected-zhao"), history: history(st, "你主动降低赵女士的客单避免过敏") }) },
         { id: "risk-zhao", label: "解释概率后成交", detail: "让她自己承担选择", result: "订单留下了。你说清了风险，却知道她并没有真正听懂。", apply: st => ({ ...st, trust: clamp(st.trust - 3), compliance: clamp(st.compliance - 3), flags: flag(st, "zhao-risk-sale"), history: history(st, "赵女士知情后仍买下新品") }) },
         { id: "promise-zhao", label: "写下退换承诺", detail: "保留销售，并承诺不适可退", result: "你保住数字，也背上一个有时间戳的售后承诺。", apply: st => ({ ...st, trust: clamp(st.trust + 5), evidence: st.evidence + 1, flags: flag(st, "promise-zhao-return"), history: history(st, "你向赵女士写下无条件退换承诺") }) },
+        ...price,
       ],
     };
   }
@@ -946,7 +1003,7 @@ export function dayEvent(s: Campaign): DayEvent {
   };
   if (s.day === 4 && !hasPurchase(s, "anjie")) return {
     speaker: "苏蔓", speakerStaff: "suman", speakerCustomer: null, title: "没留下的婚礼单",
-    body: "安姐没有在你这里下单。苏蔓收起准备好的旅行装：她跟了我三年。今天没卖成，也不能把原因藏起来。",
+    body: "安姐没有在你这里下单。苏蔓收起准备好的旅行装：她跟了我三年。今天没卖成，也不能把原因藏起来。" + priceEcho(s),
     choices: [
       { id: "record-anjie-miss", label: "如实交接试用记录", detail: "不补销售，不隐瞒风险", result: "苏蔓没有责怪你。她把记录留给下次接待的人，这至少不是一场没人负责的失败。", apply: st => ({ ...st, evidence: st.evidence + 1, flags: flag(st, "recorded-anjie-miss"), history: history(st, "你向苏蔓交接了未成交的婚礼咨询") }) },
       { id: "own-anjie-miss", label: "承认没能接住她", detail: "承担复盘，不伪造订单", result: "苏蔓让你明天一起复盘。她听见你没有拿顾客的敏感当借口。", apply: st => ({ ...st, relations: { ...st.relations, suman: st.relations.suman + 3 }, flags: flag(st, "owned-anjie-miss"), history: history(st, "你承担了婚礼单未成交的复盘") }) },
@@ -955,7 +1012,7 @@ export function dayEvent(s: Campaign): DayEvent {
   };
   if (s.day === 4) return {
     speaker: "安姐", speakerStaff: "suman", speakerCustomer: "anjie", title: "“把赠品都装进去”",
-    body: "她要六套旅行装送伴娘。系统额度只够两套。苏蔓在远处没有说话。",
+    body: "她要六套旅行装送伴娘。系统额度只够两套。苏蔓在远处没有说话。" + priceEcho(s),
     choices: [
       { id: "refuse-gifts", label: "只按额度给两套", detail: "守住规则，可能得罪大客", result: "安姐脸色不好看，但接受了。罗曼第一次在群里公开说你“能守底线”。", apply: st => ({ ...st, compliance: clamp(st.compliance + 12), relations: { ...st.relations, roman: st.relations.roman + 12 }, flags: flag(st, "refused-anjie-gifts"), history: history(st, "你拒绝给安姐超额赠品") }) },
       { id: "give-gifts", label: "私下补足六套", detail: "消耗4份库存，不登记", visible: st => st.samples >= 4, result: "安姐满意离开。盘点表上出现四个无法解释的空位。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 18), relations: { ...st.relations, suman: st.relations.suman + 8 }, flags: flag(st, "gave-anjie-gifts"), history: history(st, "你给安姐四套未登记赠品") }) },

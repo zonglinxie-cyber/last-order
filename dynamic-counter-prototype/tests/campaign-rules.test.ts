@@ -5,6 +5,7 @@ import {
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
   ADVANCE_COMPLIANCE, ADVANCE_HELD_COMPLIANCE, ADVANCE_HELD_STANDING, ADVANCE_SALE, ADVANCE_TANGKE, advancePocket, dayEvent, settleDayEvent, startNextDay, TANGKE_STOCK_GATE, visibleChoices,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
+  PRICE_GAP, PRICE_PAD_SAMPLES,
   TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
@@ -571,4 +572,69 @@ test("第 4 早那两张晨会卡各有各的标签", () => {
     const speakers = dawnNotices(startNextDay(settled)).map(note => note.speaker);
     assert.equal(new Set(speakers).size, speakers.length, `第 ${index + 2} 早有两张同名卡：${speakers.join(" | ")}`);
   }
+});
+
+// —— P32 电商比价：她离柜以后才去搜旗舰店。真实依据是《明码标价和禁止价格欺诈规定》第十六条（被比较价格要真实准确、
+// 有依据）和第十八条（赠品要标示品名、数量）：柜台既改不了票面，也不能拿没登记的赠品垫差价。
+// 所以这一格一分钱都不动 —— 动的只有抽屉里的小样、台账上的合规，和"她有没有你的微信"。
+const dayThreePrice = (patch: Partial<Campaign> = {}) => campaign({ day: 3, daySales: 0, eventDoneDays: [1, 2], flags: ["served:xiaoyu:good"], ...patch });
+const priceOf = (s: Campaign, id: string) => visibleChoices(s, dayEvent(s)).find(choice => choice.id === id);
+
+test("这一格只给真的从小雨手里卖出过东西的人，两条分支都摆，格子接在尾巴上", () => {
+  const roman = dayThreePrice();
+  const zhao = dayThreePrice({ flags: ["served:xiaoyu:good", "served:zhao:good"] });
+  for (const [title, s] of [["罗曼催数据", roman], ["赵女士过敏", zhao]] as const) {
+    const ids = dayEvent(s).choices.map(choice => choice.id);
+    assert.deepEqual(ids.slice(3), ["price-explain", "price-pad"], `${title}：新格子接在原来那三条后面`);
+    assert.ok(dayEvent(s).body.includes(`¥${yuan(PRICE_GAP)}`), `${title}：她那句"少 280"得先被念出来，按钮才有出处`);
+  }
+  // 原来那三条必须还在前三个位置：模拟器没命中 CLEAN_EVENTS 时取的就是 choices[0]。
+  assert.deepEqual(dayEvent(roman).choices.slice(0, 3).map(choice => choice.id), ["push-data", "tell-truth", "ask-suman"]);
+  assert.deepEqual(dayEvent(zhao).choices.slice(0, 3).map(choice => choice.id), ["protect-zhao", "risk-zhao", "promise-zhao"]);
+  assert.equal(priceOf(campaign({ day: 3, eventDoneDays: [1, 2] }), "price-explain"), undefined, "她没买，就没有那张截图");
+  assert.equal(priceOf(campaign({ day: 4, eventDoneDays: [1, 2, 3], flags: ["served:xiaoyu:good"] }), "price-explain"), undefined, "只有第 3 晚摆这一格：晚了两天再问退差，谁都不信");
+});
+
+test("按下去票面一分不动：动的只有小样、合规和台账", () => {
+  const before = dayThreePrice();
+  const explained = settleDayEvent(before, "price-explain");
+  assert.equal(explained.sales, before.sales, "柜台退不了差价，也不许改票面");
+  assert.equal(ledgerSum(explained), ledgerSum(before), "没动钱就不该多出一行 ¥");
+  assert.equal(explained.compliance, before.compliance + 5, "按价盘讲清楚是合规的");
+  assert.equal(explained.trust, before.trust + 4);
+  const padded = settleDayEvent(before, "price-pad");
+  assert.equal(padded.samples, before.samples - PRICE_PAD_SAMPLES);
+  assert.equal(padded.compliance, before.compliance - 8, "没登记的赠品记在合规上：第十八条要标示品名和数量");
+  assert.equal(padded.sales, before.sales, "垫的是货，不是票面");
+  assert.equal(settleDayEvent({ ...before, samples: 1 }, "price-pad").samples, 1, "抽屉里只剩一支就不能按：和安姐那两格同一道闸");
+  // 结局那一屏的因果账要念得到这两句（第五天分组里出现的是当天那句原话）。
+  assert.ok(explained.history.some(entry => entry.text.includes("你按品牌价盘向小雨解释了那张券后价")));
+  assert.ok(padded.history.some(entry => entry.text.includes("你拿未登记的小样补了小雨的差价")));
+});
+
+test("这句话传不传得出去，按下去之前就得看见", () => {
+  const withWechat = dayThreePrice({ members: ["xiaoyu"] });
+  const without = dayThreePrice();
+  const detail = (s: Campaign) => priceOf(s, "price-explain")!.detail;
+  assert.ok(detail(without).includes("没有你的微信"), "空名单要把这一格的代价写在按钮第二行");
+  assert.ok(detail(withWechat).includes("她在你名单里"));
+  assert.notEqual(detail(withWechat), detail(without));
+  const settled = settleDayEvent(withWechat, "price-explain");
+  assert.ok(settled.trust > settleDayEvent(without, "price-explain").trust, "早上加的微信，晚上才有人替你传这句话");
+  assert.equal(settled.evidence, withWechat.evidence + 1, "传出去的那句才是留得下的痕");
+});
+
+test("第 4 晚念得到昨晚的答案，晨会那一屏不因此多一张卡", () => {
+  const nextNight = (s: Campaign) => dayEvent({ ...s, day: 4, eventDoneDays: [1, 2, 3] }).body;
+  const explained = settleDayEvent(dayThreePrice(), "price-explain");
+  const padded = settleDayEvent(dayThreePrice(), "price-pad");
+  const quiet = settleDayEvent(dayThreePrice(), "tell-truth");
+  assert.ok(nextNight(explained).includes("小雨没有再回你"), "没加微信那一种要说得出代价");
+  assert.ok(nextNight(settleDayEvent(dayThreePrice({ members: ["xiaoyu"] }), "price-explain")).includes("面试群"), "传出去那一种也要被看见");
+  assert.ok(nextNight(padded).includes("旅行装领给谁"), "台账上那道空位第二天有人问");
+  assert.ok(!nextNight(quiet).includes("小雨"), "没接这一格的人，第 4 晚不该听见她");
+  // P29/P30 量的那一屏只放得下三条：这一格的答案走的是同一张卡上的一句话，不是第四条告示。
+  const notes = (s: Campaign) => dawnNotices(startNextDay(s)).length;
+  assert.equal(notes(explained), notes(quiet), "第 4 早的告示数不该因为这一格多一条");
+  assert.equal(notes(padded), notes(quiet));
 });
