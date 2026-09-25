@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, FACE_TRIAL_RETURN, INITIAL, LEAVE_SAMPLE_RETURN, PULL_OVER_RETURN, RECORDS_MIN, SAVE_KEY, evidenceWord } from "../src/campaign";
+import { CUSTOMERS, demandBudgetWord, deliveryWord, EXPIRED_SAMPLING, EXPIRED_SAMPLING_NOTICE, FACE_TRIAL_RETURN, INITIAL, LEAVE_SAMPLE_RETURN, PULL_OVER_RETURN, RECORDS_MIN, SAVE_KEY, evidenceWord, transferLabel, type Campaign } from "../src/campaign";
 import { ledgerYuan } from "../tests/ledger-yuan";
 
 // 沙盘把 campaign 原样写进本机存档，所以"这一步到底做了什么"可以直接从存储里读，不用信界面。
@@ -151,10 +151,10 @@ test("one call reopens the drawer, and the other one is 唐可's decision", asyn
   await expect(page.locator(".quote-note")).toHaveText("柜上只剩 2 支，这单最多开到 2 件。");
   const official = page.getByRole("button", { name: "请罗曼开调拨单 · 3 分钟", exact: true });
   await expect(official).toBeEnabled();
-  // 私下拿货不留台账，但要唐可愿意帮你——她这一周还不想。
+  // 私下拿货不留台账，但要唐可愿意帮你——她这一周还不想。第 1 天抢单还是第 2 晚的事，那句不许提前定罪。
   const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
   await expect(privateCall).toBeDisabled();
-  await expect(privateCall).toContainText("唐可不会把货给一个刚跟她抢过单的人");
+  await expect(privateCall).toHaveText("找唐可拿三支 · 2 分钟 · 她还没打算替你压一张没有台账的单");
   const before = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
     stock: Record<string, number>; compliance: number; waitMeters: Record<string, number>;
   }, SAVE_KEY);
@@ -172,6 +172,52 @@ test("one call reopens the drawer, and the other one is 唐可's decision", asyn
   await expect(page.locator(".stock-transfer")).toHaveCount(0);
   await expect(page.locator(".quote-note")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^三件整套/ })).toContainText("¥2,940");
+});
+
+// 上面那一条只钉过私下那一支"按住的样子"。这一条真按一次：沙盘上它给的支数和走系统的一样，
+// 代价是合规掉 9，本子里写着系统里没有这张单，而这笔人情记在唐可头上（+8）。
+test("找唐可拿三支真按下去：三支进抽屉，合规 −9，本子里写着系统里没有这张单", async ({ page }) => {
+  await page.goto("/");
+  await seed(page, { ...INITIAL, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 46 } });
+  await page.reload();
+  await consult(page, "沈薇", "柔焦 ¥980");
+  await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  const triple = page.getByRole("button", { name: /^三件整套/ });
+  await expect(triple).toContainText("¥1,960");
+  await triple.click();
+  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+  await expect(privateCall).toBeEnabled();
+  await expect(privateCall).toHaveText("找唐可拿三支 · 2 分钟");
+  const read = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    stock: Record<string, number>; compliance: number; relations: Record<string, number>; waitMeters: Record<string, number>; history: Array<{ text: string }>;
+  }, SAVE_KEY);
+  const before = await read();
+  await page.screenshot({ path: "../audit/experience-v2/p39-sandbox-borrow-open.png" });
+  await privateCall.click();
+  const after = await read();
+  expect(after.stock.soft - before.stock.soft).toBe(3);
+  expect(after.compliance - before.compliance, "系统里没有这张单，缺口留在合规上").toBe(-9);
+  expect(after.relations.tangke - before.relations.tangke, "这三支算你欠她一笔").toBe(8);
+  expect(before.waitMeters.mei - after.waitMeters.mei, "离柜的两分钟从排队另一头扣").toBe(2);
+  expect(after.history.at(-1)?.text).toContain("系统里没有这张单");
+  await expect(page.locator(".stock-transfer")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^三件整套/ })).toContainText("¥2,940");
+});
+
+// 被她记着的那一格按住时，格子要点得出是哪一格。规则层逐个钉过三种旗子，这一条钉的是沙盘印的就是生成那一句。
+test("第 2 晚那一单没让出去，这一周私下那支写着她记着哪一格", async ({ page }) => {
+  const seeded: Campaign = { ...INITIAL, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 33 }, flags: ["beat-tang-with-record"] };
+  await page.goto("/");
+  await seed(page, seeded);
+  await page.reload();
+  await consult(page, "沈薇", "柔焦 ¥980");
+  await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+  await page.getByRole("button", { name: /^三件整套/ }).click();
+  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+  await expect(privateCall).toBeDisabled();
+  await expect(privateCall).toHaveText(transferLabel(seeded, "soft", "tangke"));
+  await expect(privateCall).toContainText("第 2 晚");
+  await page.screenshot({ path: "../audit/experience-v2/p39-sandbox-borrow-blocked.png" });
 });
 
 test("a saved observation and pending rival resume; a sample does not erase rejection", async ({ page }) => {

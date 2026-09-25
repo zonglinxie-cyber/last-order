@@ -329,9 +329,28 @@ test("调货一周一次、剩到三支才开口，私下拿货要唐可愿意�
   assert.equal(transferStock(called, "soft", "official"), called, "同一支货一周只调一次");
   assert.match(transferLabel(called, "soft", "official"), /柔焦这一周已经调过一次/);
 
-  assert.equal(canTransferVia(low, "soft", "tangke"), false, "唐可起步不认你，不会把货给一个刚跟她抢过单的人");
+  assert.equal(canTransferVia(low, "soft", "tangke"), false, "唐可起步不认你，私下那条路是关着的");
   assert.equal(transferStock(low, "soft", "tangke"), low, "被拒的时候一个数都不该变");
-  assert.match(transferLabel(low, "soft", "tangke"), /唐可不会把货给/);
+  // 起步 38 分本来就够不到那道门，而抢单是第 2 晚的事，这一周还可能根本没跟她抢过。
+  // 所以通用那一句只说"她还不肯替你压一张没有台账的单"，不替玩家认下一桩没发生过的罪。
+  const generic = transferLabel(low, "soft", "tangke");
+  assert.equal(generic, `找唐可拿三支 · ${TRANSFER_MINUTES.tangke} 分钟 · 她还没打算替你压一张没有台账的单`);
+  assert.doesNotMatch(generic, /抢/, `什么都没发生的那一屏，格子上不许写着${generic}`);
+  // 真的被她记着的那三格，各配一句点得出是哪一格的话 —— 光要求"指名"不够，两句互换也还都指了第 2 晚，
+  // 所以每一格各配一个只属于它的关键词。
+  const causes = [
+    ["beat-tang-with-record", /那一单/],
+    ["recorded-lost-xiaoyu", /补的那条记录/],
+    ["lost-xiaoyu-owned", /没追上的人/],
+  ] as const;
+  for (const [cause, own] of causes) {
+    const seen: Campaign = { ...low, flags: [...low.flags, cause] };
+    const label = transferLabel(seen, "soft", "tangke");
+    assert.equal(canTransferVia(seen, "soft", "tangke"), false, `${cause} 之后那道门还是关着，格子不该变成可按`);
+    assert.notEqual(label, generic, `${cause} 按住了她，那句却还停在没指名的一般理由：${label}`);
+    assert.match(label, /第 2 晚/, `${cause} 的那一句要指得出第 2 晚那一格：${label}`);
+    assert.match(label, own, `${cause} 的那一句说的不是这一格发生过的事：${label}`);
+  }
   const friendly: Campaign = { ...low, relations: { ...low.relations, tangke: TANGKE_STOCK_GATE } };
   const borrowed = transferStock(friendly, "soft", "tangke");
   assert.equal(borrowed.stock.soft, 3 + TRANSFER_UNITS, "她肯给，给的是同一张单的三支");

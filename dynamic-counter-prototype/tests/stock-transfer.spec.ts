@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { INITIAL, SAVE_KEY } from "../src/campaign";
+import { INITIAL, SAVE_KEY, SAVE_VERSION, transferLabel, type Campaign } from "../src/campaign";
 
 // 存档夹具从规则里的 INITIAL 生成，抽屉（stock）跟着 SAVE_VERSION 走，不会手写漏字段。
 async function seedSave(page: Page, patch: Record<string, unknown>) {
@@ -39,7 +39,8 @@ test("断货写在报价单上，一通电话把它抹掉，一周只开得出�
   await expect(official).toBeEnabled();
   const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
   await expect(privateCall).toBeDisabled();
-  await expect(privateCall).toContainText("唐可不会把货给一个刚跟她抢过单的人");
+  // 第 1 天：抢单还是第 2 晚的事，这一屏不许替玩家认下一桩没发生过的罪。
+  await expect(privateCall).toHaveText("找唐可拿三支 · 2 分钟 · 她还没打算替你压一张没有台账的单");
   const before = await saved(page);
   await official.click();
   const after = await saved(page);
@@ -102,3 +103,45 @@ for (const [width, height] of [[390, 667], [320, 568]] as const) {
     await expect(page.locator(".stock-transfer")).toHaveCount(0);
   });
 }
+
+// 私下那一支到今天只被钉过"按住的样子"（上面第一条），这一条真按一次：它给的货和走系统的一模一样，
+// 代价是系统里没有这张单，合规掉下来，而这笔人情记在唐可头上。
+test("找唐可拿三支真按下去：三支进抽屉，合规 −9，台账上查不到这张单", async ({ page }) => {
+  await seedSave(page, { stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 46 } });
+  await trialSoftOnShen(page);
+  await page.getByRole("button", { name: /^三件整套/ }).click();
+  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+  await expect(privateCall).toBeEnabled();
+  // 门开了就只剩那句话本身，不再有任何理由挂在按钮上。
+  await expect(privateCall).toHaveText("找唐可拿三支 · 2 分钟");
+  const before = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    stock: Record<string, number>; compliance: number; relations: Record<string, number>; waitMeters: Record<string, number>; history: Array<{ text: string }>;
+  }, SAVE_KEY);
+  await page.screenshot({ path: "../audit/experience-v2/p39-mobile-borrow-open.png" });
+  await privateCall.click();
+  const after = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as {
+    stock: Record<string, number>; compliance: number; relations: Record<string, number>; waitMeters: Record<string, number>; history: Array<{ text: string }>;
+  }, SAVE_KEY);
+  expect(after.stock.soft - before.stock.soft).toBe(3);
+  expect(after.compliance - before.compliance, "系统里没有这张单，缺口留在合规上").toBe(-9);
+  expect(after.relations.tangke - before.relations.tangke, "这三支算你欠她一笔").toBe(8);
+  expect(before.waitMeters.mei - after.waitMeters.mei, "离柜的两分钟从排队另一头扣").toBe(2);
+  expect(after.history.at(-1)?.text).toContain("系统里没有这张单");
+  // 一周只开得出一通：这一行整体收掉，三件整套也回到现货的数。
+  await expect(page.locator(".stock-transfer")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^三件整套/ })).toContainText("3 件 ¥2,940");
+});
+
+// 被她记着的那一格按住的时候，按钮上要点得出是哪一格 —— 同一句通用理由盖住所有人是假话。
+// 规则层已经逐个钉过三种旗子（tests/rescue-rules.test.ts）；这一条钉的是"UI 印出来的就是生成那一句"。
+test("第 2 晚那一单没让出去，这一周的私下那支就写着她记着哪一格", async ({ page }) => {
+  const seeded = { ...INITIAL, version: SAVE_VERSION, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 33 }, flags: ["beat-tang-with-record"] };
+  await seedSave(page, seeded);
+  await trialSoftOnShen(page);
+  await page.getByRole("button", { name: /^三件整套/ }).click();
+  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+  await expect(privateCall).toBeDisabled();
+  await expect(privateCall).toHaveText(transferLabel(seeded as Campaign, "soft", "tangke"));
+  await expect(privateCall).toContainText("第 2 晚");
+  await page.screenshot({ path: "../audit/experience-v2/p39-mobile-borrow-blocked.png" });
+});

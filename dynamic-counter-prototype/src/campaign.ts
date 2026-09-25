@@ -1663,12 +1663,21 @@ export function canTransferVia(s: Campaign, product: ProductId, channel: Transfe
   return canTransfer(s, product) && (channel !== "tangke" || s.relations.tangke >= TANGKE_STOCK_GATE);
 }
 
+// 起步的 38 分本来就够不到那道门，所以这句话在第一天就会被念出来 —— 那时抢单还是第 2 晚的事，
+// 也可能整个星期都没跟她抢过。被按住的理由必须由真发生过的格子生成，不能替玩家认下一桩没发生的罪。
+function tangkeRefusal(s: Campaign): string {
+  if (hasFlag(s, "beat-tang-with-record")) return "她把第 2 晚那一单记着：不会替你压一张没有台账的单";
+  if (hasFlag(s, "recorded-lost-xiaoyu")) return "第 2 晚她看见你事后补的那条记录：不会替你压一张没有台账的单";
+  if (hasFlag(s, "lost-xiaoyu-owned")) return "她还在为第 2 晚没追上的人生气：轮不到替你开口";
+  return "她还没打算替你压一张没有台账的单";
+}
+
 export function transferLabel(s: Campaign, product: ProductId, channel: TransferChannel) {
   const short = PRODUCTS[product].short;
   const head = channel === "official" ? `请罗曼开调拨单 · ${TRANSFER_MINUTES.official} 分钟` : `找唐可拿三支 · ${TRANSFER_MINUTES.tangke} 分钟`;
   if (hasFlag(s, `transfer:${product}`)) return `${head} · ${short}这一周已经调过一次`;
   if (s.stock[product] > TRANSFER_GATE) return `${head} · ${short}还够开一整套连带，先不用为它开口`;
-  if (channel === "tangke" && s.relations.tangke < TANGKE_STOCK_GATE) return `${head} · 唐可不会把货给一个刚跟她抢过单的人`;
+  if (channel === "tangke" && s.relations.tangke < TANGKE_STOCK_GATE) return `${head} · ${tangkeRefusal(s)}`;
   return head;
 }
 
