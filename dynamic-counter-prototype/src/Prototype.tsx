@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
   addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canLeaveSample, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
-  fitOf, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialReveal, floorCustomers, historyByDay, inferUseful, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, PULL_OVER_RETURN, QUESTIONS, canClaim, CLAIM_LABEL, CLAIM_NOTE,
-  orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
+  fitOf, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialReveal, floorCustomers, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, PULL_OVER_RETURN, QUESTIONS, canClaim, CLAIM_LABEL, CLAIM_NOTE,
+  orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveAsk, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
   TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
@@ -245,9 +245,10 @@ export default function Prototype() {
     const message = text.trim();
     if (!message) return;
     const firstAsk = askedQuestion === null;
-    const useful = chipIndex != null ? Boolean(QUESTIONS[customer.id][chipIndex].useful) : inferUseful(customer.id, message);
-    const index = chipIndex ?? (useful ? 0 : 1);
-    const canned = chipIndex != null ? QUESTIONS[customer.id][chipIndex].response : (useful ? QUESTIONS[customer.id].find(question => question.useful)?.response : "你要是只想完成任务，我现在就可以走。") ?? customer.opening;
+    // 打字问的是哪一条、她答哪一句，全在规则里判一次：这里不再自己排"有用的那条排在第 0 格"。
+    const ask = resolveAsk(customer.id, message, chipIndex);
+    const index = ask.index;
+    const canned = ask.reply;
     const playerLine: ChatLine = { role: "player", text: message };
     const customerLine: ChatLine = { role: "customer", text: canned };
     const nextChat = [...chat, playerLine, customerLine].slice(-8);

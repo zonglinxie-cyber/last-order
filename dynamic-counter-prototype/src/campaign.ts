@@ -443,8 +443,68 @@ const NEED_HINTS: Record<CustomerId, RegExp> = {
   anjie2: /婚礼|今晚|撑|敬酒|化妆师|灯光|闪光灯|脱妆|掉|一整天|完整|稳定/,
 };
 const PUSH_HINTS = /套装|套组|贵的|最贵|成交|开单|直接买|业绩/;
+const PRICE_HINTS = /预算|多少钱|价格|便宜|打折|能到/;
+
+// 玩家用自己的话问的时候，问的是"她在意的那件事"，不是按钮上那几个字。
+// 所以按诉求维度各配一套说法（顾客自己会怎么提这件事），再落到她答得出的那一条上：
+// 她答不出这个维度（没有那条问题）就仍然算白问，不替她编一句没准备过的答案。
+const DEMAND_HINTS: Record<Trait, RegExp> = {
+  natural: /自然|妆感|粉感|浮粉|卡粉|假|太厚|厚不厚|一层皮|近看|上镜|镜头|裸妆|清透|通透|看不出化|一层一层|堆/,
+  correct: /遮|痘印|瑕疵|雀斑|立刻|马上|见效|气色|精神|明显|换个脸|换一张脸|对比|灯光|闪光灯|顶灯|照片/,
+  soothe: /泛红|发红|刺|紧绷|发紧|绷|干|脱皮|痒|疼|舒|修护|换季|补水|敏感期|养/,
+  steady: /闷|闭口|痘(?!印)|敏感|过敏|成分|酒精|香精|温和|低风险|复发|刺激|一用就红|出油|两颊|发干/,
+  wear: /撑|持妆|一整天|一天|脱妆|斑驳|花掉|花妆|掉妆|补妆|出汗|下午|晚上|敬酒|完整|不掉|站得住/,
+};
+
+// 打字进来的这句话对应她预设里的哪一条。她同时在意好几件事时，按她自己给过的权重排，
+// 同一条问题可以回答两个维度（她那句台词本来就同时说清了两件事）。
+const ASK_PUNCTUATION = /[\s，。、？！?；;：:'"“”‘’]/g;
+const stripAsk = (text: string) => text.replace(ASK_PUNCTUATION, "");
+
+export function typedQuestionIndex(customerId: CustomerId, text: string): number | null {
+  const message = text.trim();
+  if (!message) return null;
+  const questions = QUESTIONS[customerId];
+  // 最硬的证据是她自己念过的那一句：玩家把某条问题原样打进来，就该落在那一条，
+  // 不能再按维度猜（「她皮肤和你像吗？」里没有"闷痘"两个字，但它就是那一条）。
+  const asked = stripAsk(message);
+  if (asked.length >= 5) {
+    const verbatim = questions.findIndex(question => {
+      const label = stripAsk(question.label);
+      return label.length >= 5 && (label === asked || asked.includes(label) || label.includes(asked));
+    });
+    if (verbatim >= 0) return verbatim;
+  }
+  const answerable = [...new Set(questions.flatMap(question => question.reveals))];
+  const hit = answerable.filter(trait => DEMAND_HINTS[trait].test(message));
+  if (hit.length) {
+    const weight = (trait: Trait) => CUSTOMERS[customerId].demands.find(demand => demand.trait === trait)?.weight ?? 0;
+    const target = hit.sort((a, b) => weight(b) - weight(a))[0];
+    const index = questions.findIndex(question => question.reveals.includes(target));
+    if (index >= 0) return index;
+  }
+  // 她没准备过的那件事，也要把话接对：问「今天要先养皮肤吗」该拿到她自己那句「我今天不是来养皮肤的」，
+  // 而不是通用的"你没听我说话"。这类落点只在不露任何诉求的那条上（reveals 为空），信息一点不多给。
+  const off = (Object.keys(DEMAND_HINTS) as Trait[]).filter(trait => !answerable.includes(trait) && DEMAND_HINTS[trait].test(message));
+  if (off.length) {
+    const refusal = questions.findIndex(question => !question.reveals.length && off.some(trait => DEMAND_HINTS[trait].test(question.label)));
+    if (refusal >= 0) return refusal;
+  }
+  // 价格和她自己防备的那句推销，也认回她准备过的那一条：同一屏上不同人说的不是同一句话。
+  if (PRICE_HINTS.test(message)) {
+    const price = questions.findIndex(question => !question.useful && PRICE_HINTS.test(question.label));
+    if (price >= 0) return price;
+  }
+  if (PUSH_HINTS.test(message)) {
+    const push = questions.findIndex(question => !question.useful && !PRICE_HINTS.test(question.label));
+    if (push >= 0) return push;
+  }
+  return null;
+}
 
 export function inferUseful(customerId: CustomerId, text: string) {
+  const matched = typedQuestionIndex(customerId, text);
+  if (matched !== null) return Boolean(QUESTIONS[customerId][matched]?.useful);
   const message = text.trim();
   if (!message) return false;
   if (PUSH_HINTS.test(message) && !NEED_HINTS[customerId].test(message)) return false;
@@ -453,10 +513,23 @@ export function inferUseful(customerId: CustomerId, text: string) {
 }
 
 export function fallbackReply(customerId: CustomerId, text: string, chipIndex: number | null, useful: boolean) {
-  if (chipIndex != null) return QUESTIONS[customerId][chipIndex]?.response ?? CUSTOMERS[customerId].opening;
+  // 点按钮和打字走的是同一句解析：打字问到的那件事，就该拿到那一件事的回答。
+  const resolved = chipIndex ?? typedQuestionIndex(customerId, text);
+  if (resolved != null) return QUESTIONS[customerId][resolved]?.response ?? CUSTOMERS[customerId].opening;
   if (useful) return QUESTIONS[customerId].find(question => question.useful)?.response ?? CUSTOMERS[customerId].need;
   if (/预算|多少钱|套装|套组/.test(text)) return QUESTIONS[customerId].find(question => !question.useful)?.response ?? "别拿价格替代判断。";
   return "你要是只想完成任务，我现在就可以走。";
+}
+
+// 这一句话问的是她预设里的哪一条：两个 UI 只调这一个函数。
+// 手机版原来在组件里另写了一份（useful ? 0 : 1），于是"用自己的话问出第二条诉求"只在沙盘成立 ——
+// 同一条规则不该有两份判断，落点、露出、答哪句必须一起出自这里。
+export function resolveAsk(customerId: CustomerId, text: string, chipIndex: number | null = null) {
+  const questions = QUESTIONS[customerId];
+  const resolved = chipIndex ?? typedQuestionIndex(customerId, text);
+  const useful = resolved !== null ? Boolean(questions[resolved]?.useful) : inferUseful(customerId, text);
+  const index = resolved ?? Math.max(0, questions.findIndex(question => Boolean(question.useful) === useful));
+  return { index, useful, reply: fallbackReply(customerId, text, resolved, useful) };
 }
 
 type Payback = {
@@ -1542,13 +1615,12 @@ export function askService(s: Campaign, text: string, chipIndex?: number): Campa
   const session = s.activeSession;
   if (!session || session.discovered.length < OBSERVE_MIN || !text.trim() || session.tested) return s;
   const questions = QUESTIONS[session.customerId];
-  const useful = chipIndex == null ? inferUseful(session.customerId, text) : Boolean(questions[chipIndex]?.useful);
-  const index = chipIndex ?? Math.max(0, questions.findIndex(question => Boolean(question.useful) === useful));
-  const response = fallbackReply(session.customerId, text, chipIndex ?? null, useful);
-  const next = applyQuestion(spendAttention(s, session.customerId, 1), session.customerId, index);
-  const revealed = [...new Set([...session.revealed, ...(questions[index]?.reveals ?? [])])];
-  return { ...next, activeSession: { ...session, askedQuestion: index, revealed,
-    chat: [...session.chat, { role: "player" as const, text: text.trim().slice(0, 280) }, { role: "customer" as const, text: response }].slice(-8) } };
+  // 打字进来的这句话先落到她答得出的那一条：问到哪件事就露出哪件事，而不是只分"问对了 / 白问"两档。
+  const ask = resolveAsk(session.customerId, text, chipIndex ?? null);
+  const next = applyQuestion(spendAttention(s, session.customerId, 1), session.customerId, ask.index);
+  const revealed = [...new Set([...session.revealed, ...(questions[ask.index]?.reveals ?? [])])];
+  return { ...next, activeSession: { ...session, askedQuestion: ask.index, revealed,
+    chat: [...session.chat, { role: "player" as const, text: text.trim().slice(0, 280) }, { role: "customer" as const, text: ask.reply }].slice(-8) } };
 }
 
 export function chooseBundle(s: Campaign, bundle: BundleId): Campaign {

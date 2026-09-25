@@ -1,4 +1,4 @@
-import { CUSTOMERS, fallbackReply, inferUseful, type ChatLine, type CueId, type CustomerId } from "./campaign";
+import { CUSTOMERS, resolveAsk, type ChatLine, type CueId, type CustomerId } from "./campaign";
 
 export type ConsultReply = { reply: string; useful: boolean; source: "model" | "fallback" };
 
@@ -9,12 +9,9 @@ export async function requestConsultReply(input: {
   chat: ChatLine[];
   day: number;
 }): Promise<ConsultReply> {
-  const useful = inferUseful(input.customerId, input.playerMessage);
-  const fallback: ConsultReply = {
-    reply: fallbackReply(input.customerId, input.playerMessage, null, useful),
-    useful,
-    source: "fallback",
-  };
+  // 模型没接上时她说哪一句，和柜台屏幕上落点那一条问题是同一个判断：不在这儿再算一遍。
+  const ask = resolveAsk(input.customerId, input.playerMessage);
+  const fallback: ConsultReply = { reply: ask.reply, useful: ask.useful, source: "fallback" };
   if (!import.meta.env?.DEV || import.meta.env.VITE_CONSULT_MODE === "scripted") return fallback;
   const customer = CUSTOMERS[input.customerId];
   const findings = input.discovered.map(id => `${customer.cues[id].label}：${customer.cues[id].finding}`).join("；");
@@ -39,7 +36,7 @@ export async function requestConsultReply(input: {
     const data = await response.json() as { reply?: unknown; useful?: unknown };
     const reply = typeof data.reply === "string" ? data.reply.trim().slice(0, 160) : "";
     if (!reply) return fallback;
-    return { reply, useful: typeof data.useful === "boolean" ? data.useful : useful, source: "model" };
+    return { reply, useful: typeof data.useful === "boolean" ? data.useful : ask.useful, source: "model" };
   } catch {
     return fallback;
   }
