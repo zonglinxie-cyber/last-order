@@ -7,7 +7,8 @@ import {
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   morningReview, progressTarget,
   PRICE_GAP, PRICE_PAD_SAMPLES,
-  TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign,
+  TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign, type CustomerId,
+  canClaim, claimLine, claimQuestion, CLAIM_ASKBACK_TRUST, CLAIM_COMPLIANCE, CLAIM_TRUST, CLAIM_UNITS,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
 
@@ -679,4 +680,72 @@ test("垫货那一格把差的那一截写在按钮上，做到就不出现", ()
   const after = settleDayEvent(dayFour(12_000), "advance-order");
   assert.equal(after.sales, 12_000 + ADVANCE_SALE);
   assert.ok(morningReview({ ...after, day: 5 })!.text.includes(`昨天那条线达成 ${Math.round(after.sales / progressTarget(4) * 100)}%`));
+});
+
+// —— P34 柜台功效宣称：一支只有普通备案的修护精华，嘴上把"两周淡斑"说满。
+// 淡斑属特殊化妆品、要注册才准宣称（条例第 16、17 条），柜台改不了包装，但一句话就能越线。
+// 这三条盯的是：它只多开一支、多出来那一支当场看得见、两次代价各落在自己那一屏（当天合规、隔天她的追问）。
+const claimSeed = (patch: Partial<Campaign> = {}) => campaign({ day: 2, sales: 4_620, daySales: 0, stock: { ...WEEK_ALLOCATION }, ...patch });
+const claimPush = (id: CustomerId, claim: boolean, bundle: BundleId = "single", seed = claimSeed()) => resolveSale(seed, {
+  customerId: id, selectedProduct: "repair", bundle, revealed: [], tested: true, askedQuestion: null,
+  claimed: true, interruption: false, interruptionHandled: false, force: true, claim,
+})!;
+
+test("把话说满只多开一支，而且只在本来多不开走的那一格出现", () => {
+  const plain = claimPush("zhou", false);
+  const over = claimPush("zhou", true);
+  assert.equal(plain.campaign.orders.at(-1)!.units, 1, "硬推一支：她当场不认同，只拿一件");
+  assert.equal(over.campaign.orders.at(-1)!.units, CLAIM_UNITS);
+  assert.equal(over.campaign.sales - plain.campaign.sales, PRODUCTS.repair.price, "多出来的就是那一支的钱，不多不少");
+  assert.equal(over.campaign.compliance, plain.campaign.compliance + CLAIM_COMPLIANCE, "越线的代价当天写在合规上");
+  assert.equal(over.campaign.trust, plain.campaign.trust + CLAIM_TRUST, "她信了，当下这一单确实顺了一点");
+  assert.ok(hasFlag(over.campaign, "claim:zhou:2"), "旗子要带上是谁、哪一天说的");
+  assert.equal(plain.campaign.flags.some(name => name.startsWith("claim:")), false, "没越界就不该有这一行");
+  assert.ok(over.campaign.history.some(entry => entry.text === claimLine("zhou")));
+  // 她本来就要带走两支、或者她的上限只有一支：这一格都不出现——那不是一个选择，是一笔白扣的合规。
+  assert.equal(canClaim(claimSeed(), "zhou", "repair", "single"), true);
+  for (const bundle of ["pair", "set", "bulk"] as BundleId[]) {
+    assert.equal(canClaim(claimSeed(), "zhou", "repair", bundle), false, `${bundle} 那一档本来就多带走，越界不额外买到什么`);
+  }
+  assert.equal(canClaim(claimSeed(), "mei", "repair", "single"), false, "梅女士的上限就是一支");
+  assert.equal(canClaim(claimSeed({ stock: { ...WEEK_ALLOCATION, repair: 1 } }), "zhou", "repair", "single"), false, "柜上只剩一支，话说得再满也开不出第二支");
+  assert.equal(canClaim(claimSeed(), "zhou", "soft", "single"), false, "越的是淡斑那条线，别的支数说法不算");
+  assert.equal(canClaim(claimSeed({ day: 5 }), "zhou", "repair", "single"), false, "最后一天没有『第二天早上』，那两次代价都落不了地");
+});
+
+test("她回家查了备案，问回来是第二天早上的事，而且只问一次", () => {
+  const over = claimPush("zhou", true);
+  // 当天点「回到现场」也走 applyDawn（openFloorState）：旗子上不带日次，就成了下午立刻被追问一次。
+  const sameDay = openFloorState(over.campaign);
+  assert.equal(sameDay.trust, over.campaign.trust, "当天回到现场不该提前扣这一笔");
+  assert.equal(sameDay.flags.some(name => name.startsWith("claim-raised:")), false, "当天不该有回音旗");
+  assert.equal(dawnNotices(sameDay).some(note => note.speaker === "私域 · 微信" && note.body.includes("淡斑")), false, "微信里也还没问回来");
+  const dawned = applyDawn({ ...over.campaign, day: 3 });
+  assert.equal(dawned.trust, over.campaign.trust + CLAIM_ASKBACK_TRUST, "隔天那一句扣在信任上");
+  assert.ok(hasFlag(dawned, "claim-raised:zhou:2"));
+  assert.ok(dawned.history.some(entry => entry.day === 3 && entry.text === claimQuestion("zhou")));
+  const wechat = dawnNotices(dawned).filter(note => note.speaker === "私域 · 微信");
+  assert.equal(wechat.length, 1, "她的追问走微信那一条，不另开卡");
+  assert.ok(wechat[0].body.includes(`${CUSTOMERS.zhou.name}：`), "名字在句子上");
+  assert.ok(wechat[0].body.includes("没有淡斑这项"));
+  // 刷新重跑晨会不会把同一句再扣一遍——和"到货不能双倍"是同一类事故。
+  const again = applyDawn(dawned);
+  assert.equal(again.trust, dawned.trust);
+  assert.equal(again.history.filter(entry => entry.text === claimQuestion("zhou")).length, 1);
+});
+
+test("话说满了她退回来的是两支，账上仍然只有小票和退货那两行", () => {
+  // 沈薇那条回账 fromDay 3：第 2 天说满，第 3 早就退回来。
+  const fromZero = claimSeed({ sales: 0 });
+  const plain = claimPush("shen", false, "single", fromZero);
+  const over = claimPush("shen", true, "single", fromZero);
+  assert.equal(over.campaign.sales - plain.campaign.sales, PRODUCTS.repair.price);
+  const plainDawn = applyDawn({ ...plain.campaign, day: 3 });
+  const overDawn = applyDawn({ ...over.campaign, day: 3 });
+  assert.equal(plain.campaign.sales - plainDawn.sales, PRODUCTS.repair.price, "硬推一支，退货退一支");
+  assert.equal(over.campaign.sales - overDawn.sales, PRODUCTS.repair.price * CLAIM_UNITS, "话说满她带走两支，退回来也是两支");
+  // 多出来的那一支不另开一行说明：退货那条念的就是小票上的金额（paybackCharge 读同一张票）。
+  assert.equal(overDawn.history.filter(entry => MONEY_LINE.test(entry.text)).length, 2, "小票一行、退货一行");
+  assert.equal(ledgerSum(overDawn), overDawn.sales, "两行加起来还是账上那个数");
+  assert.equal(overDawn.orders.filter(order => order.risky).length, 1, "同一单只记一次风险");
 });

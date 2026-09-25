@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { CLAIM_LABEL } from "../src/campaign";
 import { ledgerYuan } from "../tests/ledger-yuan";
 
 const shots = "../audit/experience-v2/";
@@ -37,6 +38,10 @@ test("handbook pauses time, traps focus, and preserves a consultation", async ({
   const progressRule = dialog.locator(".handbook-rules section", { hasText: "04 /" });
   await expect(progressRule, "手册那一节要跟着改口").toContainText("晨会念的是昨天那条线");
   await expect(progressRule, "两条线都得点名，不然只有一个答案").toContainText("今天这条线");
+  // P34 那一格是硬推之外新长出来的一个选择：手册那一节不点名它、不写它后面要还几支，玩家就以为强推是越界唯一的代价。
+  const judgementRule = dialog.locator(".handbook-rules section", { hasText: "02 /" });
+  await expect(judgementRule, "手册没写这一格叫什么").toContainText(CLAIM_LABEL);
+  await expect(judgementRule, "只说有这一格、不写它要还什么").toContainText("退的是两支");
   await page.clock.runFor(60_000);
   await expect(page.locator(".shift-clock strong")).toHaveText("19:00");
   await page.keyboard.press("Shift+Tab");

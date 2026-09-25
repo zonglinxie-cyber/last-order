@@ -289,6 +289,11 @@ button { -webkit-tap-highlight-color:transparent; }
 .close-actions { display:grid; grid-template-columns:.9fr 1.2fr; gap:7px; }
 .close-actions>button:first-child { min-height:42px; border:1px solid #e4c17a61; border-radius:12px; background:#ffffff08; color:#dcc8b2; font-size:8px; }
 .close-actions>button.claimed { background:#dcc0781d; color:#f3d797; }
+/* 越界那一格自己占一行：脚是固定层，理由不能另起一行，所以话和代价钉在同一颗按钮里（P23 的语法）。
+   它在接受拒绝/强推成交下面，是那一排的第三档，不是并排的第三颗 —— 120px 装不下这句 label。 */
+.close-actions>button.claim-action { grid-column:1 / -1; display:grid; gap:2px; min-height:42px; padding:6px 10px; border:1px solid #d8756d61; border-radius:12px; background:#ffffff08; color:#e5a595; text-align:left; }
+.close-actions>button.claim-action b { font-size:8px; font-weight:600; }
+.close-actions>button.claim-action small { color:#c2a87f; font-size:7px; line-height:1.3; }
 
 .sale-result { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px 22px; text-align:center; background:radial-gradient(circle at 50% 32%,#64442e 0,#231512 45%,#120b0a 100%); }
 .sale-result.risky { background:radial-gradient(circle at 50% 32%,#583134 0,#241315 46%,#110a0b 100%); }
@@ -397,6 +402,8 @@ button { -webkit-tap-highlight-color:transparent; }
   .recovery-actions button,
   .recovery-actions b,
   .recovery-actions small,
+  .close-actions>button.claim-action b,
+  .close-actions>button.claim-action small,
   .actor-bubble,
   .actor-tag,
   .floor-feed,
@@ -457,7 +464,8 @@ button { -webkit-tap-highlight-color:transparent; }
   .primary-action,
   /* 脚上那颗「留小样」和它左边那颗一样是手上这一步：34px 是它还在正文里时的尺寸，做成脚之后按的是拇指。 */
   .recovery-actions button,
-  .close-actions>button:first-child { min-height:44px; }
+  .close-actions>button:first-child,
+  .close-actions>button.claim-action { min-height:44px; }
   .text-action { min-height:32px; padding:7px 14px; font-size:11px; }
   .product-options button { min-height:68px; }
   .event-choices button { min-height:64px; }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   advanceFloorTime, addMember, applyTouch, askService, availableCustomers, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, chooseBundle, closeService, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, EXPIRED_SAMPLING,
   dawnNotices, endingTitle, ENERGY_LOCK, energyWord, evidenceWord, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialService, FLOOR_SECONDS_PER_ACTION, hasFlag, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, canLeaveSample, leaveSample,
-  observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, PULL_OVER_RETURN, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp,
+  observeService, OBSERVE_MIN, offerTransfer, openFloorState, orderQuote, parseCampaign, PRODUCTS, progressTarget, pullOver, pullOverLabel, PULL_OVER_RETURN, patienceLeft, REACTIONS, relationText, releaseService, requestStaffHelp, canClaim, CLAIM_LABEL, CLAIM_NOTE,
   respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, SPLIT_WORD, standingWord, structureLine,
   startNextDay, startService, STANDING_RISK, TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, TRAIT_LABELS, trialService, unitsWanted, visibleChoices,
   type BundleId, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome, type TransferChannel,
@@ -106,6 +106,8 @@ export default function CounterGame() {
   const stage = !session || session.discovered.length < OBSERVE_MIN ? 0 : session.askedQuestion === null || askingAgain ? 1 : !session.tested || revising ? 2 : 3;
   // 连带那一排出现的那一屏（和下面把抽屉滚到它的效果读同一个条件）。
   const bundleRowShown = Boolean(session?.tested && !pendingRival && !revising && picked && session.reaction === "positive");
+  // 「把话说满」只在真能多带走一支的时候出现：多不出支数还照收一次合规，那是看不见的陷阱。
+  const claimable = Boolean(session && picked && canClaim(game, session.customerId, picked, session.bundle));
   const chapter = CHAPTER_HOOKS[game.day - 1];
   const eventResponse = game.history.filter(entry => entry.day === game.day && entry.text.startsWith("回应 · ")).at(-1)?.text.slice(5);
   const clockMinutes = 19 * 60 + game.shiftMinutes;
@@ -184,8 +186,8 @@ export default function CounterGame() {
     setGame(next); setFocus(id); setScreen("consultation"); setRevising(false); setAskingAgain(false); setDraft("");
   };
   const ask = (text: string, index?: number) => { setGame(value => askService(value, text, index)); setDraft(""); setAskingAgain(false); };
-  const close = (force = false) => {
-    const result = closeService(game, force);
+  const close = (force = false, claim = false) => {
+    const result = closeService(game, force, claim);
     if (!result) return;
     setGame(result.campaign); setOutcome(result.outcome); setScreen("result"); setRevising(false);
   };
@@ -425,7 +427,7 @@ export default function CounterGame() {
         </div>
         {/* 关单那一排摆在滚动区之外：dock 是一条固定高度的带，成交阶段的内容比它高，跟着一起滚就永远在折线以下。 */}
         {session.tested && !pendingRival && !revising && picked && <div className="closing-buttons">
-          {session.reaction === "negative" ? <><button onClick={() => setRevising(true)}>换一款</button><button disabled={!canLeaveSample(game, customer.id)} onClick={() => setGame(value => leaveSample(value, customer.id))}>留小样 · {game.samples}</button>{canLeaveSample(game, customer.id) && <p>{LEAVE_SAMPLE_RETURN}</p>}<button onClick={() => close(false)}>接受拒绝</button><button className="risk-button" onClick={() => close(true)}>强推成交</button></> : <><button disabled={session.claimed} onClick={() => setGame(value => ({ ...value, activeSession: value.activeSession ? { ...value.activeSession, claimed: true } : null }))}>{session.claimed ? "已登记归属" : "登记我的接待"}</button><button className="gold-button" onClick={() => close()}>提出成交</button>{session.reaction === "mixed" && <button onClick={() => setRevising(true)}>换一款再试</button>}</>}
+          {session.reaction === "negative" ? <><button onClick={() => setRevising(true)}>换一款</button><button disabled={!canLeaveSample(game, customer.id)} onClick={() => setGame(value => leaveSample(value, customer.id))}>留小样 · {game.samples}</button>{canLeaveSample(game, customer.id) && <p>{LEAVE_SAMPLE_RETURN}</p>}<button onClick={() => close(false)}>接受拒绝</button><button className="risk-button" onClick={() => close(true)}>强推成交</button>{claimable && <div className="floor-action"><button className="risk-button" onClick={() => close(true, true)}>{CLAIM_LABEL}</button><small>{CLAIM_NOTE}</small></div>}</> : <><button disabled={session.claimed} onClick={() => setGame(value => ({ ...value, activeSession: value.activeSession ? { ...value.activeSession, claimed: true } : null }))}>{session.claimed ? "已登记归属" : "登记我的接待"}</button><button className="gold-button" onClick={() => close()}>提出成交</button>{session.reaction === "mixed" && <button onClick={() => setRevising(true)}>换一款再试</button>}</>}
         </div>}
         </section>}
         {screen === "result" && outcome && <div className="result-next"><p>{available.length ? "还有 " + available.length + " 位顾客。刚才这单占掉她们 " + outcome.minutes + " 分钟的等待。" : "今天的接待结束了，柜台还有一件事要处理。"}</p><button className="gold-button" onClick={() => { setScreen(available.length ? "floor" : "event"); setFocus(available[0] ?? "suman"); }}>{available.length ? "回到现场" : "处理闭店事件"}</button></div>}

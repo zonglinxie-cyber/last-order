@@ -194,6 +194,22 @@ export const ADVANCE_TANGKE = 6;
 export const ADVANCE_HELD_STANDING = -6;
 export const ADVANCE_HELD_COMPLIANCE = -6;
 
+// P34：柜台上最容易越界的那一句 —— 一支只有普通备案的精华，口头承诺"用两周斑就淡了"。
+// 祛斑美白属特殊化妆品（要注册，不是备案），功效宣称还得出自评价依据；柜台改不了包装，但一句话就能越线。
+// 这一格买的是"当下少痛一点"：她信了，就多带走一支 —— 退货那天翻倍的金额走既有的回账机制，不在这里另记一笔。
+export const CLAIM_PRODUCT: ProductId = "repair";
+export const CLAIM_UNITS = 2;
+export const CLAIM_TRUST = 4;
+export const CLAIM_COMPLIANCE = -12;
+export const CLAIM_ASKBACK_TRUST = -6;
+export const claimLine = (id: CustomerId) => `你口头向${CUSTOMERS[id].name}承诺这瓶能淡斑`;
+export const claimQuestion = (id: CustomerId) => `${CUSTOMERS[id].name}回去查了备案：那支没有淡斑这项`;
+// 两个界面念同一句：按钮要说清买到什么（P23 的语法），越界的代价不能等到成交之后才知道。
+// 出处核对见 audit/research-2026-09/调研与改造方案.md：祛斑美白属特殊化妆品（条例第 16、17 条：要注册，不是备案），
+// 普通备案不得宣称这一项；柜台口头那一句走的是条例第 69 条后段那条通道。
+export const CLAIM_LABEL = "把话说满 · 承诺两周淡斑";
+export const CLAIM_NOTE = "淡斑是注册才准说的功效，这瓶只有备案 · 多带走一支，也退回来两支";
+
 // 电商比价：她离柜以后才去搜旗舰店。柜台这一天最难接的就是这一击，而她手里能动的只有三样东西，
 // 每一样都各有一代价：票面（品牌价盘 + 《明码标价和禁止价格欺诈规定》第十六、十七条：被比较价要真实有依据、不得提价后打折）、
 // 抽屉里的小样（同规第十八条要求赠品标示品名数量，私下垫过去就是台账上对不上的空位）、以及她有没有你的微信。
@@ -261,6 +277,14 @@ export function unitsWanted(customer: Customer, product: ProductId, bundle: Bund
 
 // 强推不看她的预算：她当场把钱付了，退货风险才会记在你名下。但柜上没有的支数，硬推也开不出来。
 export const forcedUnits = (customer: Customer, bundle: BundleId, left = Infinity) => Math.min(BUNDLES[bundle].units, customer.maxUnits, left);
+
+// 把话说满能多开出来的那一支：她信了"两周"，就要带走够用的两支。同样不看预算，理由和硬推一样。
+export const claimUnits = (customer: Customer, left = Infinity) => Math.min(CLAIM_UNITS, customer.maxUnits, left);
+// 这一格只在真能多带走一支时出现：一支都多不出来还照收一次合规，那是看不见的陷阱，不是一格选择。
+// 和第 5 天断货那一屏删掉「等」是同一条判断（restocks）：最后一天没有「第二天早上」，
+// 这句承诺的两次代价 —— 她查备案问回来、退货那天翻倍 —— 都落不了地，所以那天不按这格卖货。
+export const canClaim = (s: Campaign, id: CustomerId, product: ProductId, bundle: BundleId) =>
+  s.day < DAYS.length && product === CLAIM_PRODUCT && claimUnits(CUSTOMERS[id], s.stock[product]) > forcedUnits(CUSTOMERS[id], bundle, s.stock[product]);
 
 // 只有被线索或提问揭示过的诉求才显示给玩家；未揭示的要求仍然参与真实适配度。
 export function revealOf(customer: Customer, discovered: CueId[], revealed: Trait[]) {
@@ -752,6 +776,18 @@ export function applyDawn(s: Campaign): Campaign {
       flags: flag(next, `expired-raised:${id}`), history: history(next, expiredQuestion(id)),
     };
   }
+  // 越界那一句不会当天爆：她回家翻备案、截图发回来，是第二天早上的事（和到期小样同一套节奏）。
+  // 但"第二天"按旗子上那个日次算：`openFloorState` 当天回到现场也走这里，不加这道门就当下午被追问一次。
+  for (const name of [...next.flags]) {
+    if (!name.startsWith("claim:")) continue;
+    const [id, day] = name.slice("claim:".length).split(":");
+    if (next.day <= Number(day)) continue;
+    if (hasFlag(next, `claim-raised:${id}:${day}`)) continue;
+    next = {
+      ...next, trust: clamp(next.trust + CLAIM_ASKBACK_TRUST),
+      flags: flag(next, `claim-raised:${id}:${day}`), history: history(next, claimQuestion(id as CustomerId)),
+    };
+  }
   if (s.day === 4 && hasFlag(s, "tang-owes-order") && !hasFlag(s, "tang-paid-order")) {
     // 她私下转过来这一单不进收银小票：钱只写在账本这一行上，否则累计就是一笔凭空多出来的数。
     const booked = 2080;
@@ -840,6 +876,12 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
     if (!name.startsWith("sample-expired:")) continue;
     const id = name.slice("sample-expired:".length) as CustomerId;
     if (landedToday(s, expiredQuestion(id))) wechat.push(`${CUSTOMERS[id].name}：你那支小样我回家才看到批号，是去年的。脸倒没什么，就是以后不敢随手试了。`);
+  }
+  // 越界那一句走的是同一条通道：她不在柜台上翻脸，是回家翻备案，第二天在微信里问回来。
+  for (const name of s.flags) {
+    if (!name.startsWith("claim:")) continue;
+    const id = name.slice("claim:".length).split(":")[0] as CustomerId;
+    if (landedToday(s, claimQuestion(id))) wechat.push(`${CUSTOMERS[id].name}：我回去搜了备案，那支写的是舒缓，没有淡斑这项。`);
   }
   // 退货和客诉走的是柜台的通道（收银、方敏、罗曼、苏蔓），不和微信混在一条里。
   for (const item of RISKY_RETURNS) {
@@ -1336,6 +1378,8 @@ export function resolveSale(s: Campaign, input: {
   interruption: boolean;
   interruptionHandled: boolean;
   force: boolean;
+  // 把话说满只在硬推那一条路上有意义（她已经被说服时不需要越界），所以它和 force 一样是可选的第三态。
+  claim?: boolean;
   faceTrialled?: boolean;
   rivalChoice?: RivalChoice | null;
 }): { campaign: Campaign; outcome: SaleOutcome } | null {
@@ -1350,8 +1394,11 @@ export function resolveSale(s: Campaign, input: {
   const guarded = !input.interruption || input.interruptionHandled;
   const usefulQuestion = input.askedQuestion !== null && QUESTIONS[customer.id][input.askedQuestion]?.useful;
   const left = s.stock[input.selectedProduct];
+  // 把话说满买到的那一支：她信了"两周"，所以带走两支。越界开出来的钱照样只写一行小票。
+  // 只有那一支普通备案的精华越得了界 —— 粉底说"遮瑕"是装饰效果，不在同一条红线上。
+  const overclaimed = tier === "negative" && input.force && Boolean(input.claim) && input.selectedProduct === CLAIM_PRODUCT;
   const units = tier === "negative"
-    ? input.force ? forcedUnits(customer, input.bundle, left) : 0
+    ? input.force ? (overclaimed ? claimUnits(customer, left) : forcedUnits(customer, input.bundle, left)) : 0
     : unitsWanted(customer, input.selectedProduct, input.bundle, tier, left);
   const sold = units > 0;
   // 断货和推错是两件事：她没买是因为抽屉是空的，不是因为你判断错了，扣分不能共用同一档。
@@ -1360,7 +1407,7 @@ export function resolveSale(s: Campaign, input: {
   const restocks = s.day < DELIVERIES.length && DELIVERIES.slice(s.day).some(batch => batch[input.selectedProduct] > 0);
   // 现货削掉了多少连带，要和"她预算只够"分开说：前者是柜台的锅，后者是她的锅。
   const capped = sold && units < (tier === "negative"
-    ? forcedUnits(customer, input.bundle)
+    ? (overclaimed ? claimUnits(customer) : forcedUnits(customer, input.bundle))
     : unitsWanted(customer, input.selectedProduct, input.bundle, tier));
   // 半脸上过妆，她自己照过镜子：看清了不合适还塞进袋子，就不是判断失误，是明知故犯。
   const knowing = Boolean(input.faceTrialled) && tier === "negative" && sold;
@@ -1370,8 +1417,8 @@ export function resolveSale(s: Campaign, input: {
   const campaign: Campaign = {
     ...s, sales: s.sales + amount, daySales: s.daySales + amount,
     stock: { ...s.stock, [input.selectedProduct]: Math.max(0, left - units) },
-    trust: clamp(s.trust + (blocked ? -2 : tier === "positive" ? 7 : sold ? 1 : -10) + (usefulQuestion ? 4 : -2) + (guarded ? 2 : -6) - (knowing ? 4 : 0)),
-    compliance: clamp(s.compliance + (blocked ? 0 : tier === "positive" ? 1 : sold ? 0 : -5) - (knowing ? 4 : 0)), energy: Math.max(0, s.energy - 14),
+    trust: clamp(s.trust + (blocked ? -2 : tier === "positive" ? 7 : sold ? 1 : -10) + (usefulQuestion ? 4 : -2) + (guarded ? 2 : -6) - (knowing ? 4 : 0) + (overclaimed && sold ? CLAIM_TRUST : 0)),
+    compliance: clamp(s.compliance + (blocked ? 0 : tier === "positive" ? 1 : sold ? 0 : -5) - (knowing ? 4 : 0) + (overclaimed && sold ? CLAIM_COMPLIANCE : 0)), energy: Math.max(0, s.energy - 14),
     evidence: s.evidence + (input.claimed ? 1 : 0) + (!missed.length && !vetoMissed && sold ? 1 : 0),
     dayServed: [...s.dayServed, customer.id], activeSession: null,
     flags: flag(s, `served:${customer.id}:${blocked ? "out-of-stock" : sold ? (tier === "negative" ? "risky" : "good") : "refused"}`),
@@ -1381,6 +1428,12 @@ export function resolveSale(s: Campaign, input: {
       : `${customer.name}拒绝了${item.short}的推荐`),
     orders: sold ? [...s.orders, { day: s.day, customerId: customer.id, product: input.selectedProduct, units, total, amount, shared, risky: tier === "negative" }] : s.orders,
   };
+  // 那句越界的话不动钱，所以它单独占一行：隔天她查了备案回来对质，台账上得念得出是谁、哪一句。
+  // 旗子上带日次（和 `touched:<id>:<day>` 同一套写法）：回音只属于"当天之后"，不然点一下「回到现场」就提前追问一次。
+  if (overclaimed && sold) {
+    campaign.flags = flag(campaign, `claim:${customer.id}:${s.day}`);
+    campaign.history = history(campaign, claimLine(customer.id));
+  }
   if (capped) campaign.history = history(campaign, `抽屉里只剩 ${left} 支${item.short}，这单按现货开`);
   // 被抽屉削掉的那几件不能说成"她预算只够"：那是柜台的缺口，不是她的。
   if (sold && !capped && units < BUNDLES[input.bundle].units && units < customer.maxUnits) {
@@ -1406,6 +1459,7 @@ export function resolveSale(s: Campaign, input: {
                   : `数字立刻好看了 ${total.toLocaleString("zh-CN")} 元，可她最在意的问题没有解决。退货风险已经留在你名下。`)
             : vetoMissed ? "她没有为错误判断买单。你连她在怕什么都没问出来。" : "她没有为这个方向买单。你丢掉一笔销售，但至少记住了这次反应。")
           + (knowing ? " 而且这半张脸你亲手画过：她知道不合适，你也知道。" : "")
+          + (overclaimed && sold ? " 你说出口的那句是「用两周，斑就淡」——淡斑属特殊化妆品，要注册才准宣称，这瓶只有备案。" : "")
           + (shared && sold ? ` 陆遥分走一半，你实际记入 ¥${amount.toLocaleString("zh-CN")}。` : ""))
         + (blocked ? (restocks ? " 下一单之前有三条路：走调拨单、开口找人，或者等大仓下一批补上——如果她还等得起。" : " 下一单之前只剩两条路：走调拨单，或者开口找人。这一支到周末不会再补了。") : ""),
     },
@@ -1502,10 +1556,10 @@ export function respondToRival(s: Campaign, choice: RivalChoice): Campaign {
   return { ...applyRival(s, choice), activeSession: { ...session, rivalChoice: choice, claimed: session.claimed || choice === "record" } };
 }
 
-export function closeService(s: Campaign, force = false) {
+export function closeService(s: Campaign, force = false, claim = false) {
   const session = s.activeSession;
   if (!session?.selectedProduct || !session.tested) return null;
-  return resolveSale(s, { ...session, selectedProduct: session.selectedProduct, force,
+  return resolveSale(s, { ...session, selectedProduct: session.selectedProduct, force, claim,
     interruption: RIVAL_IDS.includes(session.customerId), interruptionHandled: Boolean(session.rivalChoice) });
 }
 
