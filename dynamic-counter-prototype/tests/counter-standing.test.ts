@@ -23,15 +23,15 @@ test("每日进度加起来就是同一个五日目标，不另开记分牌", ()
   assert.equal(progressTarget(99), TARGET, "越界不能读出第二份目标");
 });
 
-test("晨会按累计进度说话，超前加分、落后才提撤柜", () => {
+test("晨会按昨天那条线说话，超前加分、落后才提撤柜", () => {
   const ahead = campaign({ day: 3, sales: 7070 });
   const review = morningReview(ahead)!;
   assert.equal(review.key, "morning:3");
-  assert.ok(review.body.includes("118%"), "念的是到昨天为止的累计");
+  assert.ok(review.body.includes("118%"), "念的是昨天那条线，分子是账上现在的钱");
   const applied = applyDawn(ahead);
   assert.equal(applied.standing, 55);
   assert.equal(applied.relations.roman, 47);
-  assert.ok(applied.history.some(entry => entry.text.includes("累计达成 118%")));
+  assert.ok(applied.history.some(entry => entry.text.includes("昨天那条线达成 118%")));
   assert.ok(dawnNotices(applied).some(note => note.body.includes("区域周会")), "晨会要出现在当天的告示里");
   // 同一天的晨会只念一次。
   assert.equal(applyDawn(applied).standing, 55);

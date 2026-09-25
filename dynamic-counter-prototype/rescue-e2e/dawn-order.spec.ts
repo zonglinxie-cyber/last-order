@@ -54,6 +54,26 @@ for (const [width, height, strict] of [[1280, 800, true], [1280, 720, true], [10
     expect(seen!.atTop[index], `方敏那一句在不滚时只露 ${seen!.atTop[index]}/${seen!.heights[index]}px`).toBe(seen!.heights[index]);
     if (width === 1280 && height === 800) await page.screenshot({ path: "../audit/experience-v2/p29-day5-fangmin-at-top.png" });
   });
+  // P33：落后那一档念的是另一种句子（「昨天那条线 ¥14,000，你只做到 57%…」）。清洁路线第 5 早走的是超前那一档，
+  // 所以另外种一次真跑不到线的状态，把同一批像素再量一遍 —— 换字不该只在不落后的那一早成立。
+  if (strict) test(`落后那一档的晨会卡在 ${width}×${height} 也整条在脚以上`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+      key: SAVE_KEY,
+      value: { ...INITIAL, version: SAVE_VERSION, day: 4, sales: 8_000, daySales: 800, eventDoneDays: [1, 2, 3], dayServed: floorCustomers({ ...INITIAL, day: 4 }) },
+    });
+    await page.reload();
+    await page.getByRole("button", { name: /如实交接试用记录/ }).click();
+    await page.getByRole("button", { name: "进入下一天", exact: true }).click();
+    const seen = await measure(page);
+    expect(seen).not.toBeNull();
+    const index = seen!.text.findIndex(text => text.startsWith("晨会 · 罗曼"));
+    expect(index, "第 5 早没念进度的那一张").toBeGreaterThanOrEqual(0);
+    expect(seen!.text[index], "落后那一早念的是昨天那条线，不是『累计做到多少』").toContain("晨会 · 罗曼昨天那条线 ¥");
+    expect(seen!.text[index], "落后那一早的数字要对着 14,000 那条线").toContain("你只做到 57%");
+    expect(seen!.atTop[index], `晨会那一张只露 ${seen!.atTop[index]}/${seen!.heights[index]}px`).toBe(seen!.heights[index]);
+  });
   for (const evening of evenings) {
     test(`第 ${evening.nextDay} 早的告示顺序在 ${width}×${height} 读得到：回账整条在脚以上`, async ({ page }) => {
       await page.setViewportSize({ width, height });

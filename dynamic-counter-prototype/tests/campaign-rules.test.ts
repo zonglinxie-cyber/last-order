@@ -5,6 +5,7 @@ import {
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
   ADVANCE_COMPLIANCE, ADVANCE_HELD_COMPLIANCE, ADVANCE_HELD_STANDING, ADVANCE_SALE, ADVANCE_TANGKE, advancePocket, dayEvent, settleDayEvent, startNextDay, TANGKE_STOCK_GATE, visibleChoices,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
+  morningReview, progressTarget,
   PRICE_GAP, PRICE_PAD_SAMPLES,
   TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign,
 } from "../src/campaign.ts";
@@ -637,4 +638,45 @@ test("第 4 晚念得到昨晚的答案，晨会那一屏不因此多一张卡",
   const notes = (s: Campaign) => dawnNotices(startNextDay(s)).length;
   assert.equal(notes(explained), notes(quiet), "第 4 早的告示数不该因为这一格多一条");
   assert.equal(notes(padded), notes(quiet));
+});
+
+// —— P33 同一屏两个进度口径。分子含今早到账是 `applyDawn` 末尾故意定的（补录、退货、私域复购都算进进度），
+// 所以错的是那句话自己的说法：写着"累计"，读的却是"到昨天为止"。改完之后两条线各自有名 ——
+// 晨会念「昨天那条线 ¥14,000，你 118%」，第 4 晚那一格写「今天这条线还差 ¥2,000」。
+test("晨会那一句说的是昨天那条线，不是这一周做到哪了", () => {
+  // 第 5 早：昨晚 14,770，今早赵青那一单 1,680 进来 → 账上 16,450。
+  const dawned = applyDawn(campaign({ day: 5, sales: 14_770, flags: ["protected-zhao"] }));
+  assert.equal(dawned.sales - dawned.daySales, 14_770, "今早进来的那一份要能减出来");
+  const review = morningReview(dawned)!;
+  assert.ok(review.text.includes("昨天那条线达成 118%"), `念的应该是昨天那条线：${review.text}`);
+  assert.ok(!review.text.includes("累计") && !review.body.includes("累计"), "『累计』就是那个没交代时点的词");
+  assert.ok(review.body.includes(`¥${yuan(progressTarget(4))}`), "卡片要把那条线的数念出来，玩家才知道 118% 是对着谁算的");
+  // 同一份钱对着今天的线只有 78%：如果哪天有人把分母换成 progressTarget(day)，这一条会红。
+  assert.ok(!review.text.includes("78%") && !review.body.includes("78%"), "晨会念的不是今天那条线");
+  // 四个早晨逐个查：每一早的数字都对着前一天的线。
+  const evenings: Campaign[] = [];
+  runRoute("matched", false, false, false, null, undefined, undefined, false, false, settled => evenings.push(settled));
+  for (const [index, settled] of evenings.entries()) {
+    const brief = startNextDay(settled);
+    const line = morningReview(brief);
+    if (!line) continue;
+    const againstYesterday = Math.round(brief.sales / progressTarget(brief.day - 1) * 100);
+    assert.ok(line.text.includes(`昨天那条线达成 ${againstYesterday}%`), `第 ${index + 2} 早：${line.text}`);
+    assert.ok(!line.text.includes("累计") && !line.body.includes("累计"), `第 ${index + 2} 早又把时点省掉了：${line.body}`);
+  }
+});
+
+test("垫货那一格把差的那一截写在按钮上，做到就不出现", () => {
+  const dayFour = (sales: number) => campaign({ day: 4, sales, eventDoneDays: [1, 2, 3] });
+  const today = progressTarget(4);
+  for (const sales of [9_600, 12_000, 13_020]) {
+    const card = priceOf(dayFour(sales), "advance-order")!;
+    assert.ok(card.detail.includes(`今天这条线还差 ¥${yuan(today - sales)}`), `¥${sales} 那一晚按钮要念出差额：${card.detail}`);
+    assert.ok(today - sales > 0, "这一格只在线没做到时出现，所以念出来的必定是正数");
+  }
+  assert.equal(priceOf(dayFour(14_770), "advance-order"), undefined, "今天这条线做到了，就不该再劝人垫钱");
+  // 垫完那一支，缺口按 980 收：第 5 早晨会念的是垫过之后的账。
+  const after = settleDayEvent(dayFour(12_000), "advance-order");
+  assert.equal(after.sales, 12_000 + ADVANCE_SALE);
+  assert.ok(morningReview({ ...after, day: 5 })!.text.includes(`昨天那条线达成 ${Math.round(after.sales / progressTarget(4) * 100)}%`));
 });

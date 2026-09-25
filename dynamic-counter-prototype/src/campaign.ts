@@ -648,14 +648,17 @@ export const thisWeekPercent = (s: Campaign) => { const need = progressTarget(s.
 export type CounterReading = { key: string; speaker: string; body: string; text: string; standing: number; roman: number };
 
 // 纯函数：只读当前状态、不写 flag，所以 dawnNotices 反复算出的都是同一句话。
+// 分母是昨天那条线，分子是账上现在的钱（含今早到账 —— 见 `applyDawn` 末尾那句注释），所以三个分支都把线说成
+// 「昨天那条线」、把数说成「你账上」：写成「累计 X%」时玩家读到的是"这一周到昨天已经 125%"，而那句话从来不是这个意思，
+// 同一屏下面「自己垫一支走单」又是按今天的线给的（差 ¥2,000）—— 落后与否在一屏里得到两个答案，界面没说为什么。
 export function morningReview(s: Campaign): CounterReading | null {
   if (s.day < 2) return null;
   const need = progressTarget(s.day - 1);
   const done = Math.round((need ? s.sales / need : 1) * 100);
   const base = { key: `morning:${s.day}`, speaker: "晨会 · 罗曼", standing: 0, roman: 0 };
-  if (done >= 100) return { ...base, standing: 5, roman: 2, text: `晨会 · 累计达成 ${done}%，进度在你这边`, body: `罗曼念到累计 ${done}%：${money(need)} 的进度你超前了。区域周会上，她把这个柜位排在前面。` };
-  if (done >= 80) return { ...base, text: `晨会 · 累计达成 ${done}%，差一点`, body: `罗曼没有点名：${money(need)} 的进度你做到 ${done}%，她说还差最后一天的量。` };
-  return { ...base, standing: -8, roman: -3, text: `晨会 · 累计达成 ${done}%，区域开始问柜位`, body: `累计 ${money(need)} 你只做到 ${done}%。罗曼合上表格，说区域在问这个柜位还要不要留。` };
+  if (done >= 100) return { ...base, standing: 5, roman: 2, text: `晨会 · 昨天那条线达成 ${done}%，进度在你这边`, body: `罗曼念的是昨天那条线 ¥${money(need)}：你已经 ${done}%。区域周会上，她把这个柜位排在前面。` };
+  if (done >= 80) return { ...base, text: `晨会 · 昨天那条线达成 ${done}%，差一点`, body: `罗曼没有点名：昨天那条线 ¥${money(need)}，你做到 ${done}%，她说还差最后一天的量。` };
+  return { ...base, standing: -8, roman: -3, text: `晨会 · 昨天那条线达成 ${done}%，区域开始问柜位`, body: `昨天那条线 ¥${money(need)}，你只做到 ${done}%。罗曼合上表格，说区域在问这个柜位还要不要留。` };
 }
 
 // 活动过半看名单，巡店当天看小样：这两项才是品牌真正在数的东西。
@@ -983,10 +986,12 @@ export function dayEvent(s: Campaign): DayEvent {
   }
   // 第 4 晚才给这一格：前三晚的缺口还来得及靠接待补，第四晚已经来不及了 —— 这正是它真实出现的时机。
   // 价目写在按钮第二行（和「迎上去」「留小样」同一种语法）：涨的是小票上的 980，掏的是自己工资里的 686。
+  // 最后那一个是这一格存在的原因：闸按今天的线算（`visible`），所以差额在这里必定是正数，写出来玩家才能把
+  // 上面那条「昨天那条线达成 125%」和这一格放在一起读 —— 两个时点，两条线，不用猜。
   const advanceCard: EventChoice = {
     id: "advance-order",
     label: "自己垫一支走单",
-    detail: `业绩 +¥${money(ADVANCE_SALE)} · 你先掏 ¥${money(advancePocket())} · 台账上多一笔虚增`,
+    detail: `业绩 +¥${money(ADVANCE_SALE)} · 你先掏 ¥${money(advancePocket())} · 今天这条线还差 ¥${money(progressTarget(s.day) - s.sales)} · 台账上多一笔虚增`,
     result: "唐可替你在系统里开了那张单。收银条写着你的名字，货搬进你自己的包。",
     // 两道闸：当晚没结过（`settleDayEvent` 认 eventDoneDays）+ 这一整周没垫过。
     // 注意 `visible` 是按当下状态算的，按下去之后它会翻假 —— 手机版的确认屏因此不能只读 visibleChoices。

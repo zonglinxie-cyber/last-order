@@ -37,7 +37,7 @@ test("第 3 天早上那一遍自查：价写在按钮上，抽屉里的支数�
   await expect(button).toHaveText("查批号 · 到期那批已经下了");
   await expect(button).toBeDisabled();
   await expect(page.locator(".brief-check p")).toHaveText(CHECK_COUNTER_NOTE);
-  await expect(note(page, "品牌 · 巡店")).toHaveCount(0, "办完的事不再念第二遍");
+  await expect(note(page, "品牌 · 巡店"), "办完的事不再念第二遍").toHaveCount(0);
   await expect.poll(() => saved(page, "compliance")).toBe(INITIAL.compliance + EXPIRED_SAMPLING.compliance);
   expect(await saved(page, "samples")).toBe(6);
   expect(await saved(page, "sales")).toBe(6000);

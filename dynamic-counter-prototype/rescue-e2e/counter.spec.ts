@@ -499,7 +499,7 @@ test("the morning read states the settled number once, and a reload does not rep
   await expect(page.locator(".top-score")).toContainText("还差 ¥19,500");
   await expect(page.locator(".rail-target")).toHaveCount(0);
   await expect(page.locator(".target-track")).toHaveCount(0);
-  await expect(page.locator(".floor-journal")).toContainText("晨会 · 累计达成 54%");
+  await expect(page.locator(".floor-journal")).toContainText("晨会 · 昨天那条线达成 54%");
   await page.screenshot({ path: "../audit/experience-v2/morning-standing.png" });
   await page.reload();
   const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}") as typeof INITIAL, SAVE_KEY);

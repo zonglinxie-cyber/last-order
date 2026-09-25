@@ -114,7 +114,7 @@ test("a lost-opportunity route completes all five days without inventing purchas
     if (day > 1) {
       // 开始营业之前就得读到晨会那句话；第 5 天还多一条巡店盘库。
       const morning = page.locator(".shift-intro blockquote").filter({ hasText: "区域在问这个柜位" });
-      await expect(morning).toHaveText(new RegExp(`累计 .*你只做到 0%`), "第 " + day + " 天念的是到昨天为止的累计");
+      await expect(morning, "第 " + day + " 天念的是昨天那条线").toHaveText(new RegExp(`昨天那条线 .*你只做到 0%`));
       if (day === 5) await expect(page.locator(".shift-intro blockquote").filter({ hasText: "你还压着 8 份小样" })).toBeVisible();
       if (day === 2) await page.screenshot({ path: shots + "morning-brief.png" });
       await page.getByRole("button", { name: "开始营业", exact: true }).click();
@@ -127,7 +127,7 @@ test("a lost-opportunity route completes all five days without inventing purchas
     }).toBe(1);
     if (day === 5) {
       await expect(page.getByRole("heading", { name: "柜位在评估表上", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: /把私域名单放在桌上/ })).toHaveCount(0, "一个名单都没留下的人，交不出人数");
+      await expect(page.getByRole("button", { name: /把私域名单放在桌上/ }), "一个名单都没留下的人，交不出人数").toHaveCount(0);
       // 五天没接到人，本子里只剩事件里那两行——她得先看见这件事，才不会以为摊开就能救。
       await expect(page.getByText("只是你的本子摊开来没几行")).toBeVisible();
     }
