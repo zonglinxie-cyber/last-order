@@ -639,7 +639,7 @@ function applySampleReturn(s: Campaign, item: (typeof SAMPLE_RETURNS)[number]): 
   };
 }
 
-// 晨会念的是累计进度：到昨天为止这个柜位应该做到多少，账上实际有多少。
+// 晨会念的是昨天那条线：到昨天为止这个柜位应该做到多少，账上实际有多少。
 export const progressTarget = (throughDay: number) => DAY_TARGETS.slice(0, Math.max(0, Math.min(5, Math.trunc(throughDay)))).reduce((sum, value) => sum + value, 0);
 const money = (value: number) => value.toLocaleString("zh-CN");
 // 晨会看"到昨天为止"，闭店事件看"到今天为止"：同一份进度，两个时点。

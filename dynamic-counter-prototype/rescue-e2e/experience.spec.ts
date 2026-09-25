@@ -32,6 +32,11 @@ test("handbook pauses time, traps focus, and preserves a consultation", async ({
   await page.getByRole("button", { name: "值班手册", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "值班手册" });
   await expect(dialog).toBeVisible();
+  // P33 改了卡片上的口径，手册没跟着改就会变成同一件事的第二个答案。那一节现在得同时点名两条线，
+  // 否则玩家读到「昨天那条线达成 125%」和「今天这条线还差 ¥2,000」，还得自己猜为什么两个数不一样。
+  const progressRule = dialog.locator(".handbook-rules section", { hasText: "04 /" });
+  await expect(progressRule, "手册那一节要跟着改口").toContainText("晨会念的是昨天那条线");
+  await expect(progressRule, "两条线都得点名，不然只有一个答案").toContainText("今天这条线");
   await page.clock.runFor(60_000);
   await expect(page.locator(".shift-clock strong")).toHaveText("19:00");
   await page.keyboard.press("Shift+Tab");
