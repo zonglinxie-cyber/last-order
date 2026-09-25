@@ -204,21 +204,31 @@ test("找唐可拿三支真按下去：三支进抽屉，合规 −9，本子里
   await expect(page.getByRole("button", { name: /^三件整套/ })).toContainText("¥2,940");
 });
 
-// 被她记着的那一格按住时，格子要点得出是哪一格。规则层逐个钉过三种旗子，这一条钉的是沙盘印的就是生成那一句。
-test("第 2 晚那一单没让出去，这一周私下那支写着她记着哪一格", async ({ page }) => {
-  const seeded: Campaign = { ...INITIAL, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 33 }, flags: ["beat-tang-with-record"] };
-  await page.goto("/");
-  await seed(page, seeded);
-  await page.reload();
-  await consult(page, "沈薇", "柔焦 ¥980");
-  await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
-  await page.getByRole("button", { name: /^三件整套/ }).click();
-  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
-  await expect(privateCall).toBeDisabled();
-  await expect(privateCall).toHaveText(transferLabel(seeded, "soft", "tangke"));
-  await expect(privateCall).toContainText("第 2 晚");
-  await page.screenshot({ path: "../audit/experience-v2/p39-sandbox-borrow-blocked.png" });
-});
+// 被她记着的那一格按住时，格子要点得出是哪一格。规则层逐个钉过三种旗子，
+// 沙盘这一处原来也只 seed 了一种 —— 两句台词互换在界面上看不出来（P41 记待办那条），现在三种各跑一遍。
+const TANGKE_CAUSES: Array<{ flag: string; own: RegExp; foreign: RegExp[]; shot: string }> = [
+  { flag: "beat-tang-with-record", own: /那一单/, foreign: [/补的那条记录/, /没追上的人/], shot: "p39-sandbox-borrow-blocked" },
+  { flag: "recorded-lost-xiaoyu", own: /补的那条记录/, foreign: [/那一单/, /没追上的人/], shot: "p42-sandbox-borrow-blocked-record" },
+  { flag: "lost-xiaoyu-owned", own: /没追上的人/, foreign: [/那一单/, /补的那条记录/], shot: "p42-sandbox-borrow-blocked-lost" },
+];
+for (const { flag, own, foreign, shot } of TANGKE_CAUSES) {
+  test(`第 2 晚那一单记的是「${flag}」，私下那支的按钮只写它自己那句`, async ({ page }) => {
+    const seeded: Campaign = { ...INITIAL, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 33 }, flags: [flag] };
+    await page.goto("/");
+    await seed(page, seeded);
+    await page.reload();
+    await consult(page, "沈薇", "柔焦 ¥980");
+    await page.getByRole("button", { name: "让顾客确认需求", exact: true }).click();
+    await page.getByRole("button", { name: /^三件整套/ }).click();
+    const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+    await expect(privateCall).toBeDisabled();
+    await expect(privateCall).toHaveText(transferLabel(seeded, "soft", "tangke"));
+    await expect(privateCall).toContainText("第 2 晚");
+    await expect(privateCall).toContainText(own);
+    for (const other of foreign) await expect(privateCall, `${flag} 那一句里串进了别的格子的理由`).not.toContainText(other);
+    await page.screenshot({ path: `../audit/experience-v2/${shot}.png` });
+  });
+}
 
 test("a saved observation and pending rival resume; a sample does not erase rejection", async ({ page }) => {
   await start(page);

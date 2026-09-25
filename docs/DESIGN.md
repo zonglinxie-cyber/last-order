@@ -1391,9 +1391,29 @@ P38/P39 各记过一次没做的那条：第 2 晚三条格子给唐可的人情
 
 **跑过的**：规则 `ℹ pass 88 / ℹ fail 0`（`/tmp/p41-rules.log`，本轮没动规则与规则单测）；手机版 `npm run test:runtime` → `RUNTIME_EXIT=0`、`108 passed`（P40 之后 107 + 本轮 1）；沙盘 `npm run test:floor` → `FLOOR_EXIT=0`、`171 passed`（170 + 1）；`npm run build` → `BUILD_EXIT=0`；两个 spec 单独 `tsc --noEmit --ignoreConfig --strict --allowImportingTsExtensions --types node` → `TSC_EXIT=0`；P33 那条"解释别写在匹配器上"的 grep 仍 0 命中。`TANGKE_STOCK_GATE`、三个 delta、五日目标与清洁路线逐日累计一字未动。
 
+## P42：把「她记着哪一格」那三种旗子在两个 UI 各跑一遍（2026-09-25）
+
+**要解的那件事**：P39 让「找唐可拿三支」被按住那句由真发生过的旗子生成，规则层逐个钉过三种旗子；但反证 F3 当场量到一个洞 —— **两种台词互换，规则层红，手机版 `7 passed` / 沙盘 `34 passed` 全绿**，因为两个 UI 各只 seed 了一种旗子。这条挂在记待办里三轮没人碰。P41 又发现另一处同类问题的解法（同一条链在两屏各跑一遍），这一轮把同一个办法用在 P39 那条上。
+
+**落点**：`tests/stock-transfer.spec.ts` 与 `rescue-e2e/counter.spec.ts` 里原来那一条「第 2 晚那一单…」改成三种旗子各一遍（`CAUSES` / `TANGKE_CAUSES` 表：`beat-tang-with-record` / `recorded-lost-xiaoyu` / `lost-xiaoyu-owned`）。每一遍钉四件事：按钮按住、印的就是 `transferLabel` 现生成的那一句、带着「第 2 晚」、**只带属于它自己的那个关键词**（`/那一单/`、`/补的那条记录/`、`/没追上的人/`），并且点名不含另外两个。
+
+**为什么非要有"不含另外两个"那一条**：`toHaveText(transferLabel(seeded, …))` 认的是规则现算出来的句子 —— 句子互换之后它照样绿（生成的和被生成的都换了）。只有把关键词按旗子钉死，互换才在界面上红。这正是 P39 当时 F3 漏掉的原因。
+
+**反证**（改完回滚，`diff -q` → `RESTORED_OK_F2`，`git status -- src/campaign.ts` 空）：
+
+| 反证 | 改动 | 结果 |
+| --- | --- | --- |
+| F1 | 用 shell 的 `perl` 互换两句（占位符 `§`） | 两份 exit 1 但**因由不干净**：`-CSD` 之外还有编码问题，插进去的是坏字符。这一条不算有效的反证，只算探针自己坏了 |
+| F1b | 同一条 perl 加 `-CSD` | `grep -c PLACEHOLDER` = 0，`sed` 打出来的还是原句 —— **替换根本没发生**，那次的 `3 passed` 测的是没改过的代码，作废 |
+| F2 | 改用编辑器干净互换 `beat` ↔ `recorded` 两句 | 手机版 `F2_MOBILE_EXIT=1`、沙盘 `F2_SANDBOX_EXIT=1`（各 `1 passed`／2 条红），规则层 `F2_RULES_EXIT=1`（`ℹ pass 88` → `ℹ fail 1`） |
+
+**F1/F1b 要如实记**：中文字面量做 perl 原地替换会被编码层吃掉，"看着红了"可能是探针坏了、"看着绿了"可能是没改到。这一轮起：**改文案类反证一律用编辑器改，改完先 grep 证明改动真的落地，再跑。**
+
+**跑过的**：规则 `ℹ pass 88 / fail 0`（本轮没动规则与规则单测）；手机版 runtime `RUNTIME_EXIT=0` → `110 passed`（P41 之后 108 + 本轮 2）；沙盘 floor `FLOOR_EXIT=0` → `173 passed`（171 + 2）；两个 spec `tsc` → `TSC_EXIT=0`；`npm run test:rules` 与两条 `-g` 局部跑均在回滚后全绿。规则数值、`tangkeRefusal` 的措辞、五日目标与清洁路线累计一字未动。
+
 ## 记待办（本轮只量不做）
 
-- **私下拿货那句指认错的格子，UI 侧没有第二道闸**（P39 反证 F3 量到）：两种旗子的句子互换，规则层红（每格各配了只属于它的关键词），手机版 `7 passed` / 沙盘 `34 passed` 全绿 —— 因为两个 UI 各只 seed 了一种旗子。补法是往两个 UI 各加一屏"另一种旗子"的对照，不专门开一轮，下一轮碰这条屏顺手补。
+~~- **私下拿货那句指认错的格子，UI 侧没有第二道闸**（P39 反证 F3 量到）：两种旗子的句子互换，规则层红（每格各配了只属于它的关键词），手机版 `7 passed` / 沙盘 `34 passed` 全绿 —— 因为两个 UI 各只 seed 了一种旗子。补法是往两个 UI 各加一屏"另一种旗子"的对照，不专门开一轮，下一轮碰这条屏顺手补。~~ → **P42 结掉**：两个 UI 各跑三种旗子（各 `1 passed → 3 passed`），反证 F2（编辑器干净互换两句）现在两屏同时红，规则层也红。
 
 - **几何判据只看竖向，横向出带是截图抓到的**（P34 量到）：`rescue-e2e/overclaim.spec.ts` 现在同时量 `rowOverflow`（行 `scrollWidth − clientWidth`）和 `clip`（往上长时祖先的竖向溢出），但**其余还在跑的几何判据都只量竖向** —— P16 的连带四格、P23 的迎上去、P25 的半脸上妆、P28/P32 的第 3、4 晚那一排。下一轮碰到哪个屏，顺手给它补一条 `rowOverflow ≤ 1`，不专门开一轮扫。
 - ~~**到期小样那条回音少一道日次门**（P34 顺带量到，细节写在上面 P34 那一节）~~ → **P35 结掉**：日次写进旗子（`sample-expired:<id>:<day>`），`applyDawn` 那道门和 P34 的 `claim:` 同一套写法；旧存档不带日次按"今天之前"处理，隔天照样问一次。判据在 `tests/rescue-rules.test.ts`（当天回到现场不扣 / 隔天扣一次 / 重跑不再扣 / 旧格式）+ 手机版 `tests/expiry-check.spec.ts`（两种格式各一屏）。

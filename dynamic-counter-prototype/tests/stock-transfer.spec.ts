@@ -133,15 +133,26 @@ test("找唐可拿三支真按下去：三支进抽屉，合规 −9，台账上
 });
 
 // 被她记着的那一格按住的时候，按钮上要点得出是哪一格 —— 同一句通用理由盖住所有人是假话。
-// 规则层已经逐个钉过三种旗子（tests/rescue-rules.test.ts）；这一条钉的是"UI 印出来的就是生成那一句"。
-test("第 2 晚那一单没让出去，这一周的私下那支就写着她记着哪一格", async ({ page }) => {
-  const seeded = { ...INITIAL, version: SAVE_VERSION, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 33 }, flags: ["beat-tang-with-record"] };
-  await seedSave(page, seeded);
-  await trialSoftOnShen(page);
-  await page.getByRole("button", { name: /^三件整套/ }).click();
-  const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
-  await expect(privateCall).toBeDisabled();
-  await expect(privateCall).toHaveText(transferLabel(seeded as Campaign, "soft", "tangke"));
-  await expect(privateCall).toContainText("第 2 晚");
-  await page.screenshot({ path: "../audit/experience-v2/p39-mobile-borrow-blocked.png" });
-});
+// 规则层逐个钉过三种旗子（tests/rescue-rules.test.ts）；这里钉的是"三种旗子各印自己那句、彼此不串"。
+// 只测一种是不够的：`toHaveText(transferLabel(...))` 认的是规则现生成的那一句，两句台词互换它照样绿 ——
+// P41 之前挂着的那条待办量的就是这个洞（互换在规则层红、在两个 UI 全绿）。
+const CAUSES: Array<{ flag: string; own: RegExp; foreign: RegExp[]; shot: string }> = [
+  { flag: "beat-tang-with-record", own: /那一单/, foreign: [/补的那条记录/, /没追上的人/], shot: "p39-mobile-borrow-blocked" },
+  { flag: "recorded-lost-xiaoyu", own: /补的那条记录/, foreign: [/那一单/, /没追上的人/], shot: "p42-mobile-borrow-blocked-record" },
+  { flag: "lost-xiaoyu-owned", own: /没追上的人/, foreign: [/那一单/, /补的那条记录/], shot: "p42-mobile-borrow-blocked-lost" },
+];
+for (const { flag, own, foreign, shot } of CAUSES) {
+  test(`第 2 晚那一单记的是「${flag}」，私下那支的按钮只写它自己那句`, async ({ page }) => {
+    const seeded = { ...INITIAL, version: SAVE_VERSION, stock: { soft: 2, glow: 4, repair: 7 }, relations: { ...INITIAL.relations, tangke: 33 }, flags: [flag] };
+    await seedSave(page, seeded);
+    await trialSoftOnShen(page);
+    await page.getByRole("button", { name: /^三件整套/ }).click();
+    const privateCall = page.getByRole("button", { name: /^找唐可拿三支 · 2 分钟/ });
+    await expect(privateCall).toBeDisabled();
+    await expect(privateCall).toHaveText(transferLabel(seeded as Campaign, "soft", "tangke"));
+    await expect(privateCall).toContainText("第 2 晚");
+    await expect(privateCall).toContainText(own);
+    for (const other of foreign) await expect(privateCall, `${flag} 那一句里串进了别的格子的理由`).not.toContainText(other);
+    await page.screenshot({ path: `../audit/experience-v2/${shot}.png` });
+  });
+}
