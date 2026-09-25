@@ -362,7 +362,7 @@ export default function Prototype() {
       {saved && <button className="text-action" type="button" onClick={beginNew}>重新开始</button>}
     </section></main></MobileScroll>;
 
-  if (screen === "brief") return <MobileScroll className="app-screen brief-scroll"><main className="brief-screen">
+  if (screen === "brief") return <div className="app-screen brief-page"><MobileScroll className="brief-scroll"><main className="brief-screen">
     <header><span>DAY {campaign.day} / 5</span><b>¥{campaign.sales.toLocaleString("zh-CN")} <small>/ ¥{TARGET.toLocaleString("zh-CN")}</small></b></header>
     <section className="brief-hero"><p>{story.subtitle}</p><h1>{story.title}</h1><div className="day-track">{DAYS.map(d => <i key={d.day} className={d.day < campaign.day ? "done" : d.day === campaign.day ? "now" : ""} />)}</div></section>
     <section className="brief-card"><b>今日现场</b><p>{story.brief}</p><em>{story.threat}</em></section>
@@ -373,8 +373,11 @@ export default function Prototype() {
       <button type="button" disabled={!canCheckCounter(campaign)} onClick={() => setCampaign(s => checkCounter(s))}>{checkCounterLabel(campaign)}</button>
       <p>{CHECK_COUNTER_NOTE}</p>
     </section>}
-    <button className="primary-action" type="button" onClick={() => { openFloor(); setScreen("floor"); }}>开始营业</button>
-  </main></MobileScroll>;
+  </main></MobileScroll>
+    {/* 出口做成脚，和抽屉那颗「提出成交」同一个道理（AGENTS 那条 app-owned fixed chrome 留在 MobileScroll 外面）：
+        P36 量到第 4 早它掉到可见带外 27~34px、第 5 早 87~109px，要滚 66~178px 才按得着，而这一屏没有任何"下面还有"的线索 ——
+        玩家得先猜到这屏能滚。脚不跟着滚，所以五早 × 三档它永远在（滚动区自己拿剩下的，不给脚写魔法高度）。 */}
+    <div className="brief-foot"><button className="primary-action" type="button" onClick={() => { openFloor(); setScreen("floor"); }}>开始营业</button></div></div>;
 
   if (screen === "consultation" && customer) {
     const canTest = discovered.length >= OBSERVE_MIN && askedQuestion !== null && selectedProduct;

@@ -92,38 +92,48 @@ for (const device of ["iphone", "pixel-10"] as const) {
       const card = document.querySelector(".brief-check")!;
       const button = card.querySelector("button")!;
       const note = card.querySelector("p")!;
-      const start = [...document.querySelectorAll(".brief-screen button")].find(node => node.textContent?.includes("开始营业"))!;
+      const start = [...document.querySelectorAll("button")].find(node => node.textContent?.includes("开始营业"))!;
       // 这一屏真正会滚的是 MobileScroll 里那一层（`.brief-scroll` 只是外层 section，量它永远得 0），
-      // 所以从「开始营业」往上找第一个能滚的祖先，别把类名写死成第二份真相。
-      let scroller: HTMLElement | null = start.parentElement;
+      // 所以从"必须滚的那张卡"往上找第一个能滚的祖先，别把类名写死成第二份真相。
+      let scroller: HTMLElement | null = card.parentElement;
       while (scroller && !["auto", "scroll"].includes(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
-      if (!scroller) return null;
-      // 手机壳整体缩放，所以只跟滚动框自己的边比：两个数都在同一屏里，缩放一起消掉。
+      if (!scroller || !start) return null;
+      // 出口的带是它和滚动层共同住在那个框里（P37 之后固定脚与滚动区是兄弟）。出口若还住在滚动层里，共同祖先就是滚动层自己 —— 那正是旧的排法。
+      let page: HTMLElement | null = scroller;
+      while (page && !page.contains(start)) page = page.parentElement;
+      if (!page) return null;
+      // 手机壳整体缩放，所以只跟各自那一框的边比：两个数都在同一屏里，缩放一起消掉。
       const band = scroller.getBoundingClientRect();
+      const pageBand = page.getBoundingClientRect();
+      // 正文可用的那一条下沿：滚动框自己，再被脚的上沿夹一次（脚若浮在滚动区之上，被盖住的那一段要在这里露出来）。
+      const contentBottom = Math.min(band.bottom, start.getBoundingClientRect().top);
       const cut = () => Math.round(Math.max(0,
-        card.getBoundingClientRect().bottom - band.bottom, band.top - card.getBoundingClientRect().top,
-        start.getBoundingClientRect().bottom - band.bottom, band.top - start.getBoundingClientRect().top));
+        card.getBoundingClientRect().bottom - contentBottom, band.top - card.getBoundingClientRect().top,
+        start.getBoundingClientRect().bottom - pageBand.bottom, pageBand.top - start.getBoundingClientRect().top));
       const room = scroller.scrollHeight - scroller.clientHeight;
       const cutAtTop = cut();
       // 手机壳的缩放比例从滚动框自己反推：屏幕像素除以它，才回到版式像素。
       const scale = band.height / scroller.clientHeight;
-      const gap = (start.getBoundingClientRect().top - card.getBoundingClientRect().bottom) / scale;
       scroller.scrollTop = room;
+      // 卡片与出口之间那一口气：滚到底之后，从卡的下沿量到滚动框的下沿 —— 脚钉住之后那条边就是脚的上沿，
+      // 所以这一句量的正是"那句说明会不会被压在按钮头上"。
+      const gap = (contentBottom - card.getBoundingClientRect().bottom) / scale;
       return {
         button: px(button), note: px(note), room, cutAtTop, scrolled: scroller.scrollTop,
-        gap: Math.round(gap),
+        gap: Math.round(gap), pinned: !scroller.contains(start),
         // 滚到底之后新卡和出口都要完整在屏内；没滚之前也不许有哪一个被边吃掉（这一屏本来就不用滚）。
         cutAtBottom: cut(),
         buttonClipped: button.scrollWidth > button.clientWidth + 1 || button.scrollHeight > button.clientHeight + 1,
         cardWide: (card as HTMLElement).scrollWidth > card.clientWidth + 1,
       };
     });
-    expect(seen, "找不到那一屏真正的滚动层").not.toBeNull();
+    expect(seen, "找不到那一屏真正的滚动层，或找不到出口与它同屏的那个框").not.toBeNull();
     expect(seen!.button.h, "按钮回到 44px 以下").toBeGreaterThanOrEqual(44);
     expect(seen!.button.t, "按钮上的价目掉到 12px 正文下限以下").toBeGreaterThanOrEqual(12);
     expect(seen!.note.t, "下面那行说明比正文还小").toBeGreaterThanOrEqual(12);
     expect(seen!.buttonClipped, "字变长了，按钮自己装不下").toBe(false);
     expect(seen!.cardWide, "卡片把这一屏撑出横向滚动条").toBe(false);
+    expect(seen!.pinned, "那颗出口还住在滚动层里：它会跟着滚，第 4 早起就在折线以下").toBe(true);
     expect(seen!.scrolled, `这一屏可滚 ${seen!.room}px 却只滚到 ${seen!.scrolled}px：量的那层不是真在滚的那层`).toBe(seen!.room);
     expect(seen!.cutAtBottom, `滚到底还有 ${seen!.cutAtBottom}px 压在屏幕边上`).toBe(0);
     expect(seen!.cutAtTop, `不滚就有 ${seen!.cutAtTop}px 压在屏幕边上`).toBe(0);

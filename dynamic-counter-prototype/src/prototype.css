@@ -57,6 +57,12 @@ button { -webkit-tap-highlight-color:transparent; }
 .brief-orders { display:grid; grid-template-columns:1fr .45fr; gap:7px; margin:12px 0; }.brief-orders span { display:flex; min-height:52px; flex-direction:column; justify-content:center; padding:8px 10px; border-radius:12px; background:#ffffff08; }.brief-orders small { color:#9f8b7e; font-size:7px; }.brief-orders b { margin-top:3px; color:#efd099; font:600 12px 'Noto Serif SC'; }
 /* 开店前那一遍查批号：代价写在按钮上，买到的东西写在下面一行，两处各说一次。 */
 .brief-check { margin:12px 0 10px; padding:10px 11px; border:1px dashed #6b4f3b; border-radius:12px; background:#ffffff06; }.brief-check button { min-height:44px; padding:8px 12px; border:0; border-radius:9px; background:#2c1f22; color:#f0ca84; font:600 12px 'Noto Serif SC'; text-align:left; }.brief-check button:disabled { color:#8d7a6d; }.brief-check p { margin:6px 0 0; color:#ac9a8e; font-size:12px; line-height:1.6; }
+/* 晨会那一屏拆成两层：滚动区 + 脚（和 `.consultation-dock` 那一对同一写法，AGENTS 那条"app-owned fixed chrome 留在 MobileScroll 外面"）。
+   不给脚写魔法高度 —— 脚 flex:0 0 auto，滚动区 flex:1 1 auto 拿剩下的，所以脚上那颗字变大也不会压到正文，正文变多也不会把脚顶出屏。
+   底色取那一屏渐变最外圈的 #120b0b，脚与正文之间只留一条和抽屉同色的分隔线。 */
+.brief-page { position:absolute; inset:0; display:flex; flex-direction:column; background:#120b0b; }
+.brief-page .brief-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.brief-foot { flex:0 0 auto; padding:8px 16px 15px; border-top:1px solid #826346; background:#120b0b; }
 .counter-background,.customer-portrait { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; user-select:none; }
 .stage-wash { position:absolute; inset:0; background:linear-gradient(180deg,rgba(15,8,9,.74),transparent 18%,transparent 57%,rgba(13,7,7,.74) 78%,#120b0a 100%); pointer-events:none; }
 
