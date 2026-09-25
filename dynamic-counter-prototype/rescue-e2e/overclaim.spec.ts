@@ -77,8 +77,25 @@ for (const size of [[1280, 720], [1280, 800], [1024, 700], [640, 800], [390, 844
         rowOverflow: (() => { const row = node.parentElement; return row ? Math.round(row.scrollWidth - row.clientWidth) : -1; })(),
         noteLines: small ? Math.round(small.offsetHeight / parseFloat(getComputedStyle(small).lineHeight)) : 0,
         px: [button, small].filter(Boolean).map(el => parseFloat(getComputedStyle(el!).fontSize)),
+        // 折行是可以的，折在词中间不行：「承 / 诺」把一句话拆成两个半截，读的人得先把它拼回去。
+        // 记下每一行从原文第几个字起 —— 断点只准落在标签自己已有的那个空格上。
+        labelStarts: (() => {
+          const text = [...button.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
+          if (!text?.textContent) return [];
+          const lines: { top: number; start: number }[] = [];
+          for (let i = 0; i < text.textContent.length; i++) {
+            if (text.textContent[i] === " ") continue; // 行尾被吃掉的那个空格不该被当成一行的开头
+            const range = document.createRange();
+            range.setStart(text, i); range.setEnd(text, i + 1);
+            const rect = range.getBoundingClientRect();
+            const top = Math.round(rect.top);
+            if (!lines.some(line => Math.abs(line.top - top) <= Math.round(rect.height / 2))) lines.push({ top, start: i });
+          }
+          return lines.sort((a, b) => a.top - b.top).map(line => line.start);
+        })(),
       };
     });
+    console.log("P36 LABEL WRAP", size.join("x"), JSON.stringify({ labelStarts: seen.labelStarts, label: seen.label }));
     console.log("P34 SANDBOX GEOMETRY", size.join("x"), JSON.stringify(seen));
     expect(seen.label).toBe(CLAIM_LABEL);
     expect(seen.note, "理由没跟在自己那颗按钮旁边").toBe(CLAIM_NOTE);
@@ -92,6 +109,10 @@ for (const size of [[1280, 720], [1280, 800], [1024, 700], [640, 800], [390, 844
     expect(seen.rowOverflow, "成交那一排横向溢出：这一格被推到屏幕外").toBeLessThanOrEqual(1);
     expect(seen.clip.worst, `往上长出来的那一格把${seen.clip.who}里的内容挤出了可见框`).toBeLessThanOrEqual(1);
     expect(Math.min(...seen.px), "字掉到 12px 以下").toBeGreaterThanOrEqual(12);
+    // 许它折行不等于许它折断（P36）：断点只准落在标签自己已有的那个空格上。
+    // 390×844 那一档量到的是 [0, 8] —— 第二行从「诺」起，"承诺"这个动词被劈成两半。
+    const midPhrase = seen.labelStarts.filter(start => start > 0 && CLAIM_LABEL[start - 1] !== " ");
+    expect(midPhrase, `那一格被折在词中间：第 ${midPhrase.join("、")} 个字起被推到下一行`).toEqual([]);
     await page.screenshot({ path: `../audit/experience-v2/p34-sandbox-closing-${size[0]}x${size[1]}.png` });
   });
 }

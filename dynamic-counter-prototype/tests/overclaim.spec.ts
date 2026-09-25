@@ -57,6 +57,22 @@ for (const device of ["iphone", "pixel-10"] as const) {
         // 竖向判据看不见横向出带（沙盘那一档就是这么翻车的，见本轮验收记录），所以左右也各量一条。
         row: Math.round(row.scrollWidth - row.clientWidth),
         right: Math.round(el.getBoundingClientRect().right - foot.getBoundingClientRect().right),
+        // 折行只准断在标签自己已有的那个空格上：记下每一行从原文第几个字起（和沙盘那一条同一把尺）。
+        labelStarts: (() => {
+          const b = el.querySelector("b")!;
+          const text = [...b.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
+          if (!text?.textContent) return [];
+          const lines: { top: number; start: number }[] = [];
+          for (let i = 0; i < text.textContent.length; i++) {
+            if (text.textContent[i] === " ") continue;
+            const range = document.createRange();
+            range.setStart(text, i); range.setEnd(text, i + 1);
+            const rect = range.getBoundingClientRect();
+            const top = Math.round(rect.top);
+            if (!lines.some(line => Math.abs(line.top - top) <= Math.round(rect.height / 2))) lines.push({ top, start: i });
+          }
+          return lines.sort((a, b2) => a.top - b2.top).map(line => line.start);
+        })(),
       };
     });
     expect(box.height).toBeGreaterThanOrEqual(44);
@@ -66,6 +82,9 @@ for (const device of ["iphone", "pixel-10"] as const) {
     expect(box.self, "脚是固定层，这一格不能掉到抽屉外").toBeLessThanOrEqual(box.foot + 1);
     expect(box.row, "动作那一排横向溢出：这一格被推到手机框外").toBeLessThanOrEqual(1);
     expect(box.right, "整格出到抽屉脚的右沿之外").toBeLessThanOrEqual(1);
+    // 和沙盘那一条同一个判据（P36）：这一句真要折行，只准断在它自己已有的那个空格上，不准断在词中间。
+    const midPhrase = box.labelStarts.filter(start => start > 0 && CLAIM_LABEL[start - 1] !== " ");
+    expect(midPhrase, `标签被折在词中间：第 ${midPhrase.join("、")} 个字起被推到下一行`).toEqual([]);
     await page.screenshot({ path: `../audit/experience-v2/p34-mobile-closing-${device}.png` });
 
     await claim.click();

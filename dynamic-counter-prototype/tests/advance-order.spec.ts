@@ -1,7 +1,8 @@
 // 同一格在手机版：钱数由 campaign.ts 一处出，这里只验它在这一屏按得到、台账和晨会念的是同一份字，
 // 以及第二行多写的那条线会不会把这一格挤出可见带。
 import { expect, test, type Page } from "@playwright/test";
-import { ADVANCE_SALE, advancePocket, floorCustomers, INITIAL, progressTarget, SAVE_KEY, SAVE_VERSION } from "../src/campaign";
+import { ADVANCE_SALE, advancePocket, floorCustomers, INITIAL, progressTarget, SAVE_KEY, SAVE_VERSION, type Campaign } from "../src/campaign";
+import { runRoute } from "./clean-route";
 
 const BEHIND = 12_000;
 const AFTER = BEHIND + ADVANCE_SALE;
@@ -95,3 +96,76 @@ test("追得上进度的人看不见这一格（手机版同一个闸）", async
   await evening(page, { sales: 14_770 });
   await expect(page.locator(".event-choices button").filter({ hasText: "自己垫一支走单" })).toHaveCount(0);
 });
+
+// 桌面设备框是等比缩放的预览，所以这里全部用 getBoundingClientRect（同一把尺）：
+// 不拿 offsetHeight（布局像素）去比矩形 —— P30 那句"390×844 差 23px"就是混了这两把尺量出来的。
+const measureCards = (page: Page) => page.evaluate(() => {
+  const start = [...document.querySelectorAll("button")].find(node => node.textContent?.includes("开始营业")) as HTMLElement;
+  let scroller: HTMLElement | null = start.parentElement;
+  while (scroller && !["auto", "scroll"].includes(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+  if (!scroller) return null;
+  const cards = [...document.querySelectorAll<HTMLElement>(".message-preview")];
+  const band = scroller.getBoundingClientRect();
+  const shown = (node: HTMLElement) => {
+    const r = node.getBoundingClientRect();
+    return Math.round(Math.max(0, Math.min(r.bottom, band.bottom) - Math.max(r.top, band.top)));
+  };
+  const height = (node: HTMLElement) => Math.round(node.getBoundingClientRect().height);
+  const room = scroller.scrollHeight - scroller.clientHeight;
+  const sweep = (node: HTMLElement) => {
+    let ok = 0;
+    for (let y = 0; y <= room; y += 16) { scroller!.scrollTop = y; ok = Math.max(ok, shown(node)); }
+    scroller!.scrollTop = 0;
+    return ok;
+  };
+  const atTop = cards.map(node => shown(node)); // 先量"不滚"，逐条扫完都要归零，否则后面的读数被上一个滚位污染
+  const best = cards.map(node => sweep(node));
+  const exit = { atTop: shown(start), best: sweep(start), h: height(start), over: Math.round(start.getBoundingClientRect().bottom - band.bottom) };
+  return { atTop, best, exit, room, heights: cards.map(node => height(node)), text: cards.map(node => node.querySelector("b")?.textContent ?? "") };
+});
+
+// 晨会那一屏在手机档位的可读判据（P36）：只在这一屏出现一次的那几张 —— 回账、微信里的事、派样数据 ——
+// 不滚就得整条在带内；可以压尾的只有每天都在的那两条例行数字（抽屉里、结局那一屏各还有第二份），
+// 而且任何一张都要滚得到。出口那颗「开始营业」同样滚得到（它离带多远写在验收记录里，单开一轮钉脚）。
+const ROUTINE = ["品牌 · 到货", "日报 · 柜台"];
+const evenings: { nextDay: number; state: Campaign }[] = [];
+runRoute("matched", false, false, false, null, undefined, undefined, false, false, (settled, nextDay) => evenings.push({ nextDay, state: settled }));
+
+// 垫货那一早：第 4 晚走「自己垫一支走单」→ 今日账单 → 进入下一天，才走到那一早。
+const eveningFlow = async (page: Page) => {
+  await evening(page);
+  await advance(page);
+  await page.getByRole("button", { name: "进入下一天" }).click();
+};
+
+const checkMorning = async (page: Page, size: string, label: string) => {
+  const seen = await measureCards(page);
+  expect(seen, "找不到那一屏真正的滚动层").not.toBeNull();
+  seen!.heights.forEach((h, index) => expect(seen!.best[index], `${seen!.text[index]} 滚遍全程也读不完整（${seen!.best[index]}/${h}）`).toBe(h));
+  seen!.text.forEach((speaker, index) => {
+    if (ROUTINE.includes(speaker)) return;
+    expect(seen!.atTop[index], `只在这一屏出现一次的「${speaker}」不滚时只露 ${seen!.atTop[index]}/${seen!.heights[index]}px`).toBe(seen!.heights[index]);
+  });
+  expect(seen!.exit.best, "这一屏唯一的出口滚遍全程也按不着").toBe(seen!.exit.h);
+  console.log("P36 MOBILE MORNING", size, label, JSON.stringify({ atTop: seen!.atTop, heights: seen!.heights, exit: seen!.exit }));
+};
+
+for (const [width, height] of [[390, 844], [390, 667], [320, 568]] as const) {
+  test(`清洁路线五早 + 垫货那一早的卡在 ${width}×${height}：回账整条在带内`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    for (const evening of evenings) {
+      await page.goto("/");
+      await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+        key: SAVE_KEY, value: { ...evening.state, version: SAVE_VERSION },
+      });
+      await page.reload();
+      await page.getByRole("button", { name: `继续第 ${evening.state.day} 天` }).click();
+      await page.getByRole("button", { name: "进入下一天" }).click();
+      await checkMorning(page, `${width}x${height}`, `第${evening.nextDay}早`);
+      if (width === 390 && evening.nextDay === 5) await page.screenshot({ path: "../audit/experience-v2/p36-mobile-morning-390x844.png" });
+    }
+    // 垫货那一早多一张方敏要说明的卡，第 5 早的排法不同：判据不能只在路线干净时成立。
+    await eveningFlow(page);
+    await checkMorning(page, `${width}x${height}`, "垫货第5早");
+  });
+}
