@@ -456,6 +456,10 @@ type Payback = {
   compliance: number;
   relation?: { key: keyof Campaign["relations"]; delta: number };
   text: string;
+  // 台词里可以出现 "{货}"，由她那张小票填上；没有小票（旧存档）才退回 fallback 那一支。
+  // 抱怨本身跟货绑定的那两条另配 variants：退的是修护，就不能念"镜头里全是粉感"。
+  fallback?: ProductId;
+  variants?: Partial<Record<ProductId, { text: string; body: string }>>;
   speaker: string;
   body: string;
 };
@@ -471,10 +475,10 @@ function estimatedOrderAmount(id: CustomerId, tier: FitTier): number {
 const estimatedRiskAmount = (id: CustomerId) => estimatedOrderAmount(id, "negative");
 
 const RISKY_RETURNS: Payback[] = [
-  { id: "shen", resolve: "shen-chargeback", fromDay: 3, trust: -8, compliance: -4, text: "沈薇退了那单持妆，说镜头里全是粉感", speaker: "退货 · 收银", body: "沈薇把持妆退了。她说近看全是粉，不会再帮你带货。" },
+  { id: "shen", resolve: "shen-chargeback", fromDay: 3, trust: -8, compliance: -4, fallback: "glow", text: "沈薇退了那单{货}，说镜头里全是粉感", speaker: "退货 · 收银", body: "沈薇把{货}退了。她说近看全是粉，不会再帮你带货。", variants: { repair: { text: "沈薇退了那单修护，说她第二天还要上镜", body: "沈薇把修护退了。她说这瓶不是当天的妆，不会再帮你带货。" } } },
   { id: "mei", resolve: "mei-chargeback", fromDay: 3, trust: -6, compliance: -3, text: "梅女士客户会面翻车，客诉到专柜", speaker: "客诉 · 方敏", body: "梅女士说你卖的东西让她第二天更显疲态。客诉已记录。" },
   { id: "xiaoyu", resolve: "xiaoyu-chargeback", fromDay: 4, trust: -8, compliance: -4, text: "小雨面试前闷痘，妈妈来退货", speaker: "退货 · 收银", body: "小雨妈妈把那单退了。面试前爆痘的截图也在。" },
-  { id: "zhou", resolve: "zhou-chargeback", fromDay: 4, trust: -6, compliance: -3, text: "周姐会议照片暗沉，她把对比发到了群里", speaker: "客诉 · 罗曼", body: "周姐把会议自拍发到了会员群。持妆暗沉的对比图还在。" },
+  { id: "zhou", resolve: "zhou-chargeback", fromDay: 4, trust: -6, compliance: -3, fallback: "glow", text: "周姐会议照片暗沉，她把对比发到了群里", speaker: "客诉 · 罗曼", body: "周姐把会议自拍发到了会员群。{货}暗沉的对比图还在。", variants: { repair: { text: "周姐退了那单修护，说她等不到第二天", body: "周姐把会议自拍发到了会员群。她要的是当天看得见的变化，这瓶太慢。" } } },
   { id: "zhao", resolve: "zhao-forced-return", fromDay: 5, trust: -10, compliance: -6, text: "赵女士女儿用了你强推的套组，过敏退货", speaker: "退货 · 收银", body: "赵女士说你根本没问女儿。那套礼物已经退回后仓。" },
   { id: "duan", resolve: "duan-chargeback", fromDay: 5, trust: -8, compliance: -4, text: "段小姐室友过敏，礼物单被退回", speaker: "退货 · 收银", body: "段小姐说室友一用就红。礼物单从你名下划走了。" },
   { id: "anjie", resolve: "anjie-blew-up", fromDay: 5, trust: -14, compliance: -10, relation: { key: "suman", delta: -12 }, text: "安姐婚前爆红，苏蔓的三年老客炸了", speaker: "客诉 · 苏蔓", body: "安姐婚礼前双颊爆红。苏蔓三年的老客，因为你的强推套组进了客诉。" },
@@ -525,8 +529,9 @@ export function checkCounterLabel(s: Campaign) {
 const handsExpiredSample = (s: Campaign) => !expiredCleared(s) && s.day >= EXPIRED_SAMPLING.fromDay
   && expiredSamplesGiven(s) < EXPIRED_SAMPLING.units;
 // 一支到期小样只记在一个人身上：抽屉里那批就两支，柜上不能凭空派出一整周。
+// 日次写进旗子，因为"问回来"是第二天的事 —— 当天回到现场不该先扣一遍（见 applyDawn 那道门）。
 const markExpiredSample = (s: Campaign, id: CustomerId): Campaign =>
-  handsExpiredSample(s) ? { ...s, flags: flag(s, `sample-expired:${id}`) } : s;
+  handsExpiredSample(s) ? { ...s, flags: flag(s, `sample-expired:${id}:${s.day}`) } : s;
 export const expiredQuestion = (id: CustomerId) => `${CUSTOMERS[id].name}问起你给的那支小样：批号是去年的`;
 export const EXPIRED_SAMPLING_NOTICE = "活动周过半，巡店要翻化妆品处理记录。抽屉最下面那排小样，批号是去年的。";
 
@@ -561,6 +566,18 @@ export function metersFor(ids: CustomerId[], previous: Campaign["waitMeters"] = 
   return next;
 }
 
+// 退的是哪一支，认的是那张小票，不是排好的台词：同一个人可能被推两种货（P34 之后越界那单退的就是修护）。
+// 旧存档没有 orders 才退回 entry 上写死的那一支 —— 那一句本来就是按它写的。
+export const paybackProductOf = (s: Campaign, id: CustomerId): ProductId | null =>
+  s.orders.find(order => order.customerId === id && order.risky)?.product ?? null;
+
+export function paybackCopy(item: Payback, product: ProductId | null) {
+  const variant = product ? item.variants?.[product] : undefined;
+  if (variant) return variant;
+  const short = product ? PRODUCTS[product].short : item.fallback ? PRODUCTS[item.fallback].short : "";
+  return { text: item.text.replace(/\{货\}/g, short), body: item.body.replace(/\{货\}/g, short) };
+}
+
 // 她这一单要退多少：小票还在就按小票，旧存档没有小票才按当前模型估。
 // 退货当天和第二天早晨念这条的人读的是同一个算式，所以两处都从这里取。
 function paybackCharge(s: Campaign, item: Payback) {
@@ -575,6 +592,7 @@ function applyPayback(s: Campaign, item: Payback): Campaign {
     ? { ...s.relations, [item.relation.key]: s.relations[item.relation.key] + item.relation.delta }
     : s.relations;
   const charged = paybackCharge(s, item);
+  const line = paybackCopy(item, paybackProductOf(s, item.id)).text;
   return {
     ...s,
     sales: Math.max(0, s.sales - charged),
@@ -584,7 +602,7 @@ function applyPayback(s: Campaign, item: Payback): Campaign {
     relations,
     flags: flag(s, item.resolve),
     // 退掉的是真金白银，那一行就得写下退了多少；写的是从大数字上掉下来多少，不是账面应收。
-    history: history(s, receiptLine(item.text, -Math.min(charged, s.sales))),
+    history: history(s, receiptLine(line, -Math.min(charged, s.sales))),
   };
 }
 
@@ -767,13 +785,17 @@ export function applyDawn(s: Campaign): Campaign {
     };
   }
   // 到期那批没当场下架，派出去的人第二天就会问回来：品牌要的是"谁在处理、什么时候处理"，柜上答不上来。
+  // 和越界那一句同一套节奏，所以同一道日次门：`openFloorState` 当天回到现场也走这里，不加就当下午被追问一次。
+  // 旧存档那面旗不带日次 —— 按 0 处理，那本来就是"今天之前派出去"的意思。
   for (const name of [...next.flags]) {
     if (!name.startsWith("sample-expired:")) continue;
-    const id = name.slice("sample-expired:".length) as CustomerId;
-    if (hasFlag(next, `expired-raised:${id}`)) continue;
+    const [id, stamped] = name.slice("sample-expired:".length).split(":");
+    const day = Number(stamped ?? 0);
+    if (next.day <= day) continue;
+    if (hasFlag(next, `expired-raised:${id}:${day}`)) continue;
     next = {
       ...next, trust: clamp(next.trust - EXPIRED_SAMPLING.penalty), compliance: clamp(next.compliance - EXPIRED_SAMPLING.penalty),
-      flags: flag(next, `expired-raised:${id}`), history: history(next, expiredQuestion(id)),
+      flags: flag(next, `expired-raised:${id}:${day}`), history: history(next, expiredQuestion(id as CustomerId)),
     };
   }
   // 越界那一句不会当天爆：她回家翻备案、截图发回来，是第二天早上的事（和到期小样同一套节奏）。
@@ -874,7 +896,7 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   // 到期小样不是当场翻脸，是台账上答不上来：她只问一句，而这一句让品牌看见你没在处理。
   for (const name of s.flags) {
     if (!name.startsWith("sample-expired:")) continue;
-    const id = name.slice("sample-expired:".length) as CustomerId;
+    const id = name.slice("sample-expired:".length).split(":")[0] as CustomerId;
     if (landedToday(s, expiredQuestion(id))) wechat.push(`${CUSTOMERS[id].name}：你那支小样我回家才看到批号，是去年的。脸倒没什么，就是以后不敢随手试了。`);
   }
   // 越界那一句走的是同一条通道：她不在柜台上翻脸，是回家翻备案，第二天在微信里问回来。
@@ -885,7 +907,11 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
   }
   // 退货和客诉走的是柜台的通道（收银、方敏、罗曼、苏蔓），不和微信混在一条里。
   for (const item of RISKY_RETURNS) {
-    if (hasFlag(s, item.resolve) && landedToday(s, item.text)) notes.push({ speaker: item.speaker, body: item.body });
+    if (!hasFlag(s, item.resolve)) continue;
+    // 台账那一行和晨会这一张卡认的是同一条生成式（`memberRepeatLine` 那条先例）：
+    // 台词按小票上那一支生成，两处各写一遍就会在第二天早上错开。
+    const copy = paybackCopy(item, paybackProductOf(s, item.id));
+    if (landedToday(s, copy.text)) notes.push({ speaker: item.speaker, body: copy.body });
   }
   for (const item of SAMPLE_RETURNS) {
     if (hasFlag(s, item.resolve) && landedToday(s, item.text)) wechat.push(`${CUSTOMERS[item.id].name}：${item.body}`);

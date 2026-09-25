@@ -450,7 +450,7 @@ test("到期那批派出去两个人就到头：第二天她问回来，钱一�
   // leaveSample 不分人在不在柜上（她只要抽屉里还有），所以第三支拿"今天根本没来的沈薇"来试上限。
   const handed = handOut(day3open(), ["zhao", "duan", "shen"]);
   assert.deepEqual(handed.flags.filter(name => name.startsWith("sample-expired:")),
-    ["sample-expired:zhao", "sample-expired:duan"], "抽屉里那批就两支，第三支不是这一批的");
+    ["sample-expired:zhao:3", "sample-expired:duan:3"], "抽屉里那批就两支，第三支不是这一批的；旗子上带的是哪一天派出去的");
   const dawn = applyDawn({ ...handed, day: 4 });
   assert.equal(dawn.compliance, handed.compliance - 8, "一支扣四分，两支扣八分");
   assert.equal(dawn.trust, handed.trust - 8, "她以后不敢随手试——这一笔扣的是信任");
@@ -471,6 +471,29 @@ test("到期那批派出去两个人就到头：第二天她问回来，钱一�
   const cleanDawn = applyDawn({ ...checkedOut, day: 4 });
   assert.equal(cleanDawn.compliance, checkedOut.compliance);
   assert.equal(dawnNotices(cleanDawn).filter(note => note.body.includes("批号")).length, 0);
+});
+
+test("那句问回来是第二天的事：当天回到现场不问，隔天只问一次，旧存档不带日次也算昨天", () => {
+  // 和 P34 越界那一句同一道门：`openFloorState` 当天回到现场也会过一次 applyDawn。
+  const handed = handOut(day3open(), ["zhao", "duan"]);
+  const sameDay = openFloorState(handed);
+  assert.equal(sameDay.compliance, handed.compliance, "她回家才看到批号，不是当天下午就翻脸");
+  assert.equal(sameDay.trust, handed.trust);
+  // 只数问回来那一行：晨会本身每天要在台账上写一条读数，那不是这一条要量的东西。
+  assert.equal(sameDay.history.filter(row => row.text.includes("批号")).length, 0, "不问就不该有那一行");
+  const morning = openFloorState({ ...sameDay, day: 4 });
+  assert.equal(morning.compliance, handed.compliance - EXPIRED_SAMPLING.penalty * 2, "隔到第二天，两个人各问一次");
+  assert.deepEqual(morning.flags.filter(name => name.startsWith("expired-raised:")).sort(),
+    ["expired-raised:duan:3", "expired-raised:zhao:3"], "问过的那一发按旗子上那个日次记账");
+  const again = openFloorState(morning);
+  assert.equal(again.compliance, morning.compliance, "同一天再进一次现场，不能问第三遍");
+  assert.equal(again.history.filter(row => row.text.includes("批号")).length, 2, "两个人各问一句，也就两行");
+  // 旧存档那面旗不带日次：按"今天之前派出去"处理，第二天照问 —— 改了格式不能吞掉一次后果。
+  const legacy = { ...INITIAL, day: 4, flags: ["sample-expired:mei"] };
+  const legacyDawn = applyDawn(legacy);
+  assert.equal(legacyDawn.compliance, legacy.compliance - EXPIRED_SAMPLING.penalty, "不带日次的旧旗也要问回来一次");
+  assert.ok(legacyDawn.flags.includes("expired-raised:mei:0"));
+  assert.equal(applyDawn(legacyDawn).compliance, legacyDawn.compliance, "问过一次就是一过");
 });
 
 test("查这一遍值多少钱：整周量，钱不会因为它变多，分钟会扣人", () => {

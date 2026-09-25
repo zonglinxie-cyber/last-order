@@ -7,7 +7,7 @@ import {
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   morningReview, progressTarget,
   PRICE_GAP, PRICE_PAD_SAMPLES,
-  TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign, type CustomerId,
+  TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign, type CustomerId, type OrderRecord, type ProductId,
   canClaim, claimLine, claimQuestion, CLAIM_ASKBACK_TRUST, CLAIM_COMPLIANCE, CLAIM_TRUST, CLAIM_UNITS,
 } from "../src/campaign.ts";
 import { bestFit, herCap, playCustomer, runRoute } from "./clean-route.ts";
@@ -748,4 +748,60 @@ test("话说满了她退回来的是两支，账上仍然只有小票和退货�
   assert.equal(overDawn.history.filter(entry => MONEY_LINE.test(entry.text)).length, 2, "小票一行、退货一行");
   assert.equal(ledgerSum(overDawn), overDawn.sales, "两行加起来还是账上那个数");
   assert.equal(overDawn.orders.filter(order => order.risky).length, 1, "同一单只记一次风险");
+});
+
+// —— P35 退的是哪一支，认的是那张小票。`risky` 只在 fit 为 negative 那一档才记进 orders（resolveSale 末尾），
+// 所以同一个人整周可能被推两种货（沈薇：持妆 / 修护），而原来两条台词把品类写死在文字里：
+// 晨会卡上念着"沈薇退了那单持妆"，账上退的却是 ¥1,680 的修护。
+// 判据两条：新落的那两处不许出现小票以外的品类名；旧存档（根本没有 orders 可认）那两句一字不改。
+const RETURN_SCHEDULE: Array<[CustomerId, number]> = [["shen", 3], ["mei", 3], ["xiaoyu", 4], ["zhou", 4], ["zhao", 5], ["duan", 5], ["anjie", 5], ["zhou2", 5]];
+const RETURN_SPEAKERS = new Set(["退货 · 收银", "客诉 · 方敏", "客诉 · 罗曼", "客诉 · 苏蔓"]);
+const negativeFits = (id: CustomerId) => PRODUCT_IDS.filter(product => fitOf(CUSTOMERS[id], product).tier === "negative");
+
+// 那一早落到柜台上的一切。金额按规则自己的口径：有小票按票面，没小票按"推错方向里最贵的一支"估。
+function returnMorning(id: CustomerId, product: ProductId | null, fromDay: number) {
+  const charge = product ? PRODUCTS[product].price : Math.max(...negativeFits(id).map(item => PRODUCTS[item].price));
+  const order: OrderRecord | null = product
+    ? { day: fromDay - 1, customerId: id, product, units: 1, total: charge, amount: charge, shared: false, risky: true } : null;
+  const dawned = applyDawn(campaign({ day: fromDay, sales: charge, daySales: 0, flags: [`served:${id}:risky`], orders: order ? [order] : [] }));
+  const lines = dawned.history.filter(entry => entry.text.endsWith(`· −¥${yuan(charge)}`));
+  assert.equal(lines.length, 1, `${CUSTOMERS[id].name} 第 ${fromDay} 早该正好落一条退 ¥${charge} 的行：0 条是没退，2 条是种子撞上了别的因果`);
+  const cards = dawnNotices(dawned).filter(note => RETURN_SPEAKERS.has(note.speaker));
+  assert.equal(cards.length, 1, `${CUSTOMERS[id].name} 的退货只在柜台那一道念成一张卡`);
+  return { line: lines[0].text, card: cards[0].body };
+}
+
+test("退的那一支只从小票上认：同一个人被推过两种货，台账和晨会卡都不许念错品类", () => {
+  for (const [id, fromDay] of RETURN_SCHEDULE) {
+    const negatives = negativeFits(id);
+    assert.ok(negatives.length >= 1, `${CUSTOMERS[id].name} 得有一种推错的方向，否则这一条测不到东西`);
+    for (const product of negatives) {
+      const seen = returnMorning(id, product, fromDay);
+      for (const [where, text] of [["台账那一行", seen.line], ["晨会那张卡", seen.card]] as const) {
+        for (const other of PRODUCT_IDS) {
+          if (other === product) continue;
+          assert.equal(text.includes(PRODUCTS[other].short), false,
+            `${CUSTOMERS[id].name}退的是${PRODUCTS[product].short}，${where}却念了${PRODUCTS[other].short}：${text}`);
+        }
+      }
+    }
+  }
+});
+
+test("那一句真的跟着小票变：同一个沈薇，推持妆和推修护退回来念的是两句话", () => {
+  assert.deepEqual(negativeFits("shen").slice().sort(), ["glow", "repair"], "这条测的就是能被推两种货的那个人");
+  const wear = returnMorning("shen", "glow", 3);
+  const repair = returnMorning("shen", "repair", 3);
+  assert.ok(wear.line.includes("退了那单持妆") && wear.card.includes("近看全是粉"), "有票、票上就是持妆：那一句还是原来那一句");
+  assert.ok(repair.line.includes("退了那单修护"), "台账念的是票上那一支");
+  assert.equal(repair.line.includes("粉感"), false, "修护不是粉，那句抱怨不成立");
+  assert.ok(repair.card.includes("不是当天的妆"), "她退修护时给的理由是这瓶不当天的妆");
+  // 周姐那一句的品类原来写在正文里（"持妆暗沉的对比图"），台账那一行反倒不带品类：两处各写一遍就会有一处念错。
+  assert.ok(returnMorning("zhou", "glow", 4).card.includes("持妆暗沉的对比图"));
+  const zhouRepair = returnMorning("zhou", "repair", 4);
+  assert.equal(zhouRepair.card.includes("持妆"), false, "退的是修护，就没有持妆暗沉这回事");
+  assert.ok(zhouRepair.card.includes("这瓶太慢"));
+  // 旧存档连金额都是估出来的，那一句也只能估：fallback 就是原来写死的"持妆"，一字不改。
+  assert.equal(returnMorning("shen", null, 3).line, `沈薇退了那单持妆，说镜头里全是粉感 · −¥${yuan(1_680)}`);
+  assert.equal(returnMorning("zhou", null, 4).card, "周姐把会议自拍发到了会员群。持妆暗沉的对比图还在。");
 });

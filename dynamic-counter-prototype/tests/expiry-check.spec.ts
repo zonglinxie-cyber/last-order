@@ -64,6 +64,19 @@ test("不查的那一支第二天问回来：晨会念一句、台账扣四分�
   await page.screenshot({ path: "../audit/experience-v2/p20-mobile-complaint-day4.png" });
 });
 
+// P35：旗子上写的是"哪一天派出去的"，所以"第二天"是相对那一发的日次，不是相对晨会那一天。
+// 上面那条走的是不带日次的旧格式（老玩家存档就长这样，界面上也得照样问回来），这一条走规则现在写的新格式。
+test("同一早过晨会不会提前问：那一句要到第二天才从微信上回来", async ({ page }) => {
+  await page.clock.install();
+  await toMorning(page, { day: 3, sales: 6000, daySales: 0, eventDoneDays: [1, 2], compliance: 60, flags: ["sample:zhao", "sample-expired:zhao:3"] });
+  await expect(note(page, "赵女士："), "当天回到晨会，她还没回家看到批号").toHaveCount(0);
+  expect(await saved(page, "compliance"), "没问回来就不扣这一笔").toBe(60);
+  await toMorning(page, { day: 4, sales: 6000, daySales: 0, eventDoneDays: [1, 2, 3], compliance: 60, flags: ["sample:zhao", "sample-expired:zhao:3"] });
+  await expect(note(page, "赵女士：")).toContainText("是去年的");
+  await expect.poll(() => saved(page, "compliance")).toBe(56);
+  expect(await saved(page, "sales"), "这一笔动的不是钱").toBe(6000);
+});
+
 // 手机壳是固定尺寸再整体缩放到窗口里（PhoneFrame 的 getDeviceScale），所以换浏览器视口并不换版式：
 // 真正的两种宽度是两块屏（iPhone 393×852 / Pixel 427×952）。这里按布局像素量，一块一块过。
 for (const device of ["iphone", "pixel-10"] as const) {

@@ -83,6 +83,24 @@ test("forcing Anjie comes back as a wedding-week chargeback", async ({ page }) =
   await expect(page.getByText("¥10,720")).toBeVisible();
 });
 
+// 上面那条是"没有小票可认"的旧存档；这一条是有票的：票上写修护，卡上就不许念持妆（沙盘那条读的是同一份 dawnNotices）。
+test("有票的时候念票上那一支：沈薇退修护，晨会卡里不出现持妆", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate((state) => localStorage.setItem("last-order-campaign-v1", JSON.stringify(state)), {
+    ...baseSave, day: 3, flags: ["served:shen:risky"],
+    orders: [{ day: 2, customerId: "shen", product: "repair", units: 1, total: 1_680, amount: 1_680, shared: false, risky: true }],
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "继续第 3 天" }).click();
+  const card = page.locator(".message-preview").filter({ hasText: "沈薇把" });
+  await expect(card).toContainText("沈薇把修护退了");
+  // 抽屉那一栏本来就写着"持妆"，所以只否这一张卡，不否整屏。
+  await expect(card).not.toContainText("持妆");
+  await expect(card).not.toContainText("粉");
+  await expect(page.getByText("¥10,320")).toBeVisible();
+  await page.screenshot({ path: "../audit/experience-v2/p35-mobile-refund-copy-day3.png" });
+});
+
 test("a sample left after a refusal returns as a repurchase only if that evening followed up", async ({ page }) => {
   await page.goto("/");
   await page.evaluate((state) => localStorage.setItem("last-order-campaign-v1", JSON.stringify(state)), {
