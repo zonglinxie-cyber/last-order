@@ -384,6 +384,40 @@ test("transferring a risky order only refunds the share still credited to you", 
   assert.equal(refunded.sales, 0);
 });
 
+// 第 2 晚那三条按钮上的钱是玩家下注前唯一看得见的数（P38）。这里不对文案，对的是"格子上印出来的数"
+// 和"引擎真的移动的那个数"：改数不改文案、改文案不改数、把回账写错一天，都会红。
+const yuanPrinted = (text: string) => [...text.matchAll(/¥([\d,]+)/g)].map(row => Number(row[1].replace(/,/g, "")));
+
+test("唐可那三条按钮写的每一个数引擎都真的动，让单的回账只落在第 4 早", () => {
+  const sold = closeService(consult({ ...INITIAL, day: 2, waitMeters: { xiaoyu: 8, zhou: 8 } }, "xiaoyu"))!.campaign;
+  // 柜上还有别人的一单：累计业绩比小雨这一单大，格子上才混得清"这一单的钱"和"今天的钱"。
+  const other = { day: 2, customerId: "zhou" as const, product: "soft" as const, units: 1, total: PRODUCTS.soft.price, amount: PRODUCTS.soft.price, shared: false, risky: false };
+  const busy: Campaign = {
+    ...sold, sales: sold.sales + other.amount, daySales: sold.daySales + other.amount, orders: [...sold.orders, other],
+  };
+  const due = busy.orders.find(order => order.customerId === "xiaoyu")!.amount;
+  assert.ok(busy.sales > due, "累计业绩要比这一单大，否则两个来源的数在这里分不开");
+  for (const id of ["split-tang", "beat-tang", "yield-tang"] as const) {
+    const detail = dayEvent(busy).choices.find(choice => choice.id === id)!.detail;
+    const settled = settleDayEvent(busy, id);
+    const today = settled.sales - busy.sales;
+    // 回账只认旗子和日次：第 3 早必须先什么都不能动，"第 4 天"那三个字才是真话。
+    const day3 = applyDawn({ ...settled, day: 3, daySales: 0 }).sales - settled.sales;
+    const back = applyDawn({ ...settled, day: 4, daySales: 0 }).sales - settled.sales;
+    const printed = yuanPrinted(detail);
+    assert.ok(printed.length, `${id} 这一格一个数都没写，玩家只能凭一句话下注`);
+    assert.ok(printed.every(value => [Math.abs(today), due, Math.abs(back)].includes(value)),
+      `${id} 的格子上写了引擎不动的数：${detail}`);
+    if (today !== 0) assert.ok(printed.includes(Math.abs(today)), `${id} 今天动了 ¥${Math.abs(today)}，格子上却没写：${detail}`);
+    assert.equal(day3, 0, `${id} 的回账不能提前到第 3 早`);
+    if (back === 0) assert.doesNotMatch(detail, /第 [345] 天/, `${id} 后面不回钱，格子上不许承诺第几天：${detail}`);
+    else {
+      assert.ok(printed.includes(Math.abs(back)), `${id} 第 4 早回来 ¥${Math.abs(back)}，格子上却没写：${detail}`);
+      assert.match(detail, /第 4 天/, `${id} 的回账在早一天，"第 4 天"那三个字就是假的`);
+    }
+  }
+});
+
 test("legacy purchases keep their event and transferred refund liability without an orders field", () => {
   const booked = PRODUCTS.glow.price;
   const legacy: Campaign = { ...INITIAL, day: 2, sales: booked, daySales: booked, dayServed: ["xiaoyu"], flags: ["served:xiaoyu:risky"] };

@@ -160,6 +160,9 @@ export const TRANSFER_GATE = 3;
 export const TRANSFER_MINUTES = { official: 3, tangke: 2 } as const;
 // 唐可自己也在冲数：她愿意把货给一个她认的人，不愿意给一个刚抢过单的人。
 export const TANGKE_STOCK_GATE = 45;
+// 让单换回来的那一单伴娘妆（第 4 早进账）。她替开的那张单不走收银小票，只写在账本这一行上，
+// 所以这一笔必须是个定死的数：第 2 晚那三条按钮上的钱要由它生成，否则玩家是在拿一个看得见的数换一句看不见的承诺。
+export const TANG_PAYBACK = 2080;
 
 export const INITIAL: Campaign = {
   version: SAVE_VERSION,
@@ -812,7 +815,7 @@ export function applyDawn(s: Campaign): Campaign {
   }
   if (s.day === 4 && hasFlag(s, "tang-owes-order") && !hasFlag(s, "tang-paid-order")) {
     // 她私下转过来这一单不进收银小票：钱只写在账本这一行上，否则累计就是一笔凭空多出来的数。
-    const booked = 2080;
+    const booked = TANG_PAYBACK;
     next = { ...next, sales: next.sales + booked, daySales: next.daySales + booked, flags: flag(next, "tang-paid-order"), history: history(next, receiptLine("唐可把一单伴娘妆转到你名下", booked)) };
   }
   if (s.day === 5 && hasFlag(s, "protected-zhao") && !hasFlag(s, "zhao-daughter-order")) {
@@ -936,10 +939,15 @@ export function dawnNotices(s: Campaign): DawnNotice[] {
 
 // Ownership changes alter the credited order too, so future chargebacks never
 // refund a colleague's share. Keep the original receipt total for the ledger.
+// 这单此刻记在你名下多少，第 2 晚那三条按钮上写的就是多少：钱由下面这个数动，字也由同一个数生成。
+function xiaoyuOrderAmount(s: Campaign): number {
+  const order = s.orders.find(order => order.customerId === "xiaoyu");
+  return order?.amount ?? (hasFlag(s, "served:xiaoyu:good") ? estimatedOrderAmount("xiaoyu", "positive") : hasFlag(s, "served:xiaoyu:risky") ? estimatedRiskAmount("xiaoyu") : 0);
+}
+
 function transferXiaoyuOrder(s: Campaign, fraction: number): Campaign {
   const order = s.orders.find(order => order.customerId === "xiaoyu");
-  const amount = order?.amount ?? (hasFlag(s, "served:xiaoyu:good") ? estimatedOrderAmount("xiaoyu", "positive") : hasFlag(s, "served:xiaoyu:risky") ? estimatedRiskAmount("xiaoyu") : 0);
-  const transferred = amount * fraction;
+  const transferred = xiaoyuOrderAmount(s) * fraction;
   return { ...s, sales: Math.max(0, s.sales - transferred), daySales: s.daySales - transferred,
     orders: s.orders.map(item => item === order ? { ...item, amount: item.amount - transferred, shared: true } : item) };
 }
@@ -1023,9 +1031,10 @@ export function dayEvent(s: Campaign): DayEvent {
       speaker: "唐可", speakerStaff: "tangke", speakerCustomer: null, title: "她说这单应该算她的",
       body: "唐可拿出一条上午的咨询记录：小雨先问过她色号，只是当时没有成交。你刚完成了全部试妆。",
       choices: [
-        { id: "split-tang", label: "提出平分", detail: "各退一步，转出这单实际入账的一半", result: "唐可接受了。你少了一点数字，却多了一个愿意交接顾客的人。", apply: st => ({ ...transferXiaoyuOrder(st, .5), relations: { ...st.relations, tangke: st.relations.tangke + 14 }, flags: flag(st, "split-with-tang"), history: history(st, "你与唐可平分了小雨的订单") }) },
-        { id: "beat-tang", label: "拿出服务记录", detail: "按有效接待规则据理力争", result: "订单归你。唐可无法反驳，但开始把你视作真正的竞争者。", apply: st => ({ ...st, evidence: st.evidence + 1, relations: { ...st.relations, tangke: st.relations.tangke - 5 }, flags: flag(st, "beat-tang-with-record"), history: history(st, "你用服务记录赢下订单归属") }) },
-        { id: "yield-tang", label: "把单让给她", detail: "换她下次交接一个高客", result: "唐可答应欠你一单。口头承诺没有证据，但她的敌意明显下降。", apply: st => ({ ...transferXiaoyuOrder(st, 1), relations: { ...st.relations, tangke: st.relations.tangke + 22 }, flags: flag(st, "tang-owes-order"), history: history(st, "你把小雨的订单让给了唐可") }) },
+        { id: "split-tang", label: "提出平分", detail: `业绩 −¥${money(xiaoyuOrderAmount(s) / 2)} · 各退一步，这单的一半`, result: "唐可接受了。你少了一点数字，却多了一个愿意交接顾客的人。", apply: st => ({ ...transferXiaoyuOrder(st, .5), relations: { ...st.relations, tangke: st.relations.tangke + 14 }, flags: flag(st, "split-with-tang"), history: history(st, "你与唐可平分了小雨的订单") }) },
+        { id: "beat-tang", label: "拿出服务记录", detail: `按有效接待规则据理力争 · 业绩 ¥${money(xiaoyuOrderAmount(s))} 一分不让`, result: "订单归你。唐可无法反驳，但开始把你视作真正的竞争者。", apply: st => ({ ...st, evidence: st.evidence + 1, relations: { ...st.relations, tangke: st.relations.tangke - 5 }, flags: flag(st, "beat-tang-with-record"), history: history(st, "你用服务记录赢下订单归属") }) },
+        // 这一格买的是"今天归零、第 4 天回一笔大的"：两边的数不写出来，玩家就只能凭一句口头承诺下注。
+        { id: "yield-tang", label: "把单让给她", detail: `业绩 −¥${money(xiaoyuOrderAmount(s))} 全归她 · 第 4 天她转回一单 ¥${money(TANG_PAYBACK)}`, result: "唐可答应欠你一单。这张单不进收银系统，只有她柜上那句口头话，但她的敌意明显下降。", apply: st => ({ ...transferXiaoyuOrder(st, 1), relations: { ...st.relations, tangke: st.relations.tangke + 22 }, flags: flag(st, "tang-owes-order"), history: history(st, "你把小雨的订单让给了唐可") }) },
       ],
     };
   }
