@@ -6,6 +6,25 @@ import {
   type CustomerId, type Trait,
 } from "../src/campaign.ts";
 
+// P45：认不出她在说哪件事时那句"白问"台词，以前十个人共用系统的一句话。P44 补上落点之后这条更扎眼 ——
+// 探针里 36 条真实话术有 6 条（17%）走到这里，全柜念的是同一句。这里把十句原话写死，
+// 好让「两个人的台词互换」「退回共用那句」这两种改动能红（读同一个生成器是自证的）。
+const DEFLECTION_TRUTH: Record<CustomerId, string> = {
+  shen: "这句不在我要问的里面。你要是只会念话术，我去对面。",
+  mei: "我表上只剩几分钟了，这句先跳过。",
+  xiaoyu: "我没说过要这个。我今天的钱不往这儿花。",
+  zhao: "这话你该去问我女儿，我说不来这些。",
+  anjie: "今天这事不能靠猜。你先把我的话听完。",
+  returning: "团队在等我有凭据的答复，这句不算。",
+  zhou: "我是对比来的，这句回答不了我。",
+  duan: "我就是来看看，你别绕我。",
+  zhou2: "这回不是我自用，你别按我这张脸说。",
+  anjie2: "今晚这张脸不能试错。这话我不接。",
+};
+
+// 十个人都认不出的一句玩家话 —— 用来反复量"白问那句到底是谁说的"。
+const WHITE = "外面在下雨";
+
 // P44：「问到她在意的事」只剩一个来源 —— 她预设里真有一条对得上的问题。
 // 以前这里另有一套 NEED_HINTS 宽松判定，认不出落点也照样算"问对了"。
 test("need-focused questions count as useful", () => {
@@ -18,7 +37,8 @@ test("fallback replies stay in character", () => {
   assert.match(fallbackReply("shen", "你最怕镜头看到什么？", 0), /粉感|没化妆/);
   // P43：她防备的是"推套装"这件事，那就答她自己那句，不再拿一句通用骂人话盖住所有人。
   assert.equal(fallbackReply("shen", "直接开套组吧", null), QUESTIONS.shen[2].response);
-  assert.match(fallbackReply("shen", "随便看看就好", null), /走|任务/);
+  // P45：她防备的是"念话术"这件事，白问那句也是她自己那句，不再是全柜共用的一句。
+  assert.equal(fallbackReply("shen", "随便看看就好", null), DEFLECTION_TRUTH.shen);
 });
 
 // 玩家打字问的是"她在意的那件事"，不是按钮上那几个字。旧口径探针量到 32 条真实话术只有 13 条
@@ -73,7 +93,7 @@ test("十个人身上，她答得出的维度没有一条是只能点按钮才�
 test("她答不出的维度不冒充答案，价格与推销各回她自己那句", () => {
   assert.equal(typedQuestionIndex("shen", "会不会闷痘？"), null);
   assert.equal(typedQuestionIndex("anjie", "能立刻看得出效果吗"), null);
-  assert.match(fallbackReply("shen", "会不会闷痘？", null), /走|任务/);
+  assert.equal(fallbackReply("shen", "会不会闷痘？", null), DEFLECTION_TRUTH.shen);
   assert.equal(typedQuestionIndex("mei", "预算能到两千吗？"), 1);
   assert.equal(resolveAsk("mei", "预算能到两千吗？").useful, false);
   assert.equal(typedQuestionIndex("zhou", "要不要直接上套组？"), 1);
@@ -213,6 +233,39 @@ test("只撞上她句子里两三个字，不算把她那句话问回来", () =>
     const ask = resolveAsk(id, text);
     assert.equal(ask.useful, false, `${CUSTOMERS[id].name} 被偶然重叠问了一句，不能算"问对了"`);
     assert.equal(QUESTIONS[id][ask.index].reveals.length, 0, `${CUSTOMERS[id].name} 偶然重叠那句不许露出任何一条诉求`);
+  }
+});
+
+// P45：白问那一格十句各是各的。钉四条 —— 是她的原话（写死的，不是读同一个生成器）、不冒充她或别人准备过的
+// 任何一句、念不出诉求板上的词、也不会被她自己的词表认回去（否则她挡回来那句反倒算"问对了"）。
+test("认不出她在说哪件事，她挡回来那句是她自己的话", () => {
+  const ids = Object.keys(QUESTIONS) as CustomerId[];
+  assert.equal(ids.length, Object.keys(DEFLECTION_TRUTH).length, "新增顾客要连她那句白问台词一起补");
+  assert.equal(new Set(ids.map(id => DEFLECTION_TRUTH[id])).size, ids.length, "十个人不能共用一句");
+  const prepared = new Set(ids.flatMap(id => QUESTIONS[id].map(question => question.response)));
+  // 她挡你这句话不能顺手把诉求说出来：这些是诉求板上那几个维度自己的用词。
+  const demandWords = ["粉感", "遮瑕", "泛红", "闷痘", "持妆", "轻薄", "刺激", "斑驳"];
+  for (const id of ids) {
+    const customer = CUSTOMERS[id];
+    const speech = DEFLECTION_TRUTH[id];
+    assert.equal(fallbackReply(id, WHITE, null), speech, `${customer.name} 白问那句要念她自己那一句`);
+    assert.equal(resolveAsk(id, WHITE).reply, speech, `${customer.name} 界面读 resolveAsk 也要拿到她自己那一句`);
+    for (const other of ids) {
+      if (other === id) continue;
+      assert.notEqual(speech, DEFLECTION_TRUTH[other], `${customer.name} 那句和 ${CUSTOMERS[other].name} 那句撞了`);
+    }
+    assert.equal(prepared.has(speech), false, `${customer.name} 的白问句是某个人准备过的答案`);
+    assert.notEqual(speech, customer.opening, `${customer.name} 白问句和开场白一模一样`);
+    assert.notEqual(speech, customer.lostLine, `${customer.name} 白问句和"她走掉"那句一模一样`);
+    for (const word of demandWords) {
+      assert.equal(speech.includes(word), false, `${customer.name} 挡回来那句念出了诉求词「${word}」`);
+    }
+    for (const label of Object.values(TRAIT_LABELS)) {
+      assert.equal(speech.includes(label), false, `${customer.name} 挡回来那句念出了诉求板上整句「${label}」`);
+    }
+    assert.equal(typedQuestionIndex(id, speech), null,
+      `${customer.name} 自己的白问句被她自己的词表认回去了，那句会被算成"问对了"`);
+    assert.equal(resolveAsk(id, WHITE).useful, false, `${customer.name} 白问那句不能算问对了`);
   }
 });
 

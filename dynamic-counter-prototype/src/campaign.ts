@@ -44,6 +44,8 @@ export type Customer = {
   mapVariant: "young" | "mature";
   patience: number;
   lostLine: string;
+  // 玩家问到她没准备过的那件事时，她自己那句 —— 十个人不能共用一句。
+  deflection: string;
   rival: boolean;
   cues: Record<CueId, { label: string; finding: string; reveals: Trait[] }>;
 };
@@ -337,7 +339,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "先说好，我不缺粉底。要是又是品牌话术，我就去对面了。", need: "镜头近看不浮粉，补妆后也不能厚重",
     demands: [{ trait: "natural", want: 2, weight: 3 }, { trait: "steady", want: 1, weight: 2 }, { trait: "correct", want: 1, weight: 1 }],
     veto: { trait: "natural", below: 2, note: "一厚就卡粉，镜头里全是粉感" }, budget: 3200, maxUnits: 3, mapVariant: "young",
-    patience: 8, lostLine: "陆遥带沈薇去了维珞", rival: true,
+    patience: 8, lostLine: "陆遥带沈薇去了维珞", deflection: "这句不在我要问的里面。你要是只会念话术，我去对面。", rival: true,
     cues: { eyes: { label: "眼下", finding: "已有薄薄卡纹，继续叠高遮瑕会显疲态。", reveals: ["natural"] }, cheek: { label: "脸颊", finding: "妆面基本完整，她真正介意的是镜头里的粉感。", reveals: ["natural"] }, nose: { label: "鼻翼", finding: "局部微红出油，需要轻薄分区处理。", reveals: ["steady"] } },
   },
   mei: {
@@ -345,7 +347,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "我明早要见客户，脸看起来很累。别给我推荐一整套。", need: "快速改善干燥疲态，明早能直接用",
     demands: [{ trait: "soothe", want: 2, weight: 3 }, { trait: "steady", want: 1, weight: 2 }, { trait: "correct", want: 1, weight: 1 }],
     budget: 1800, maxUnits: 1, mapVariant: "mature",
-    patience: 8, lostLine: "梅女士看了看表，已经赶去地铁", rival: false,
+    patience: 8, lostLine: "梅女士看了看表，已经赶去地铁", deflection: "我表上只剩几分钟了，这句先跳过。", rival: false,
     cues: { eyes: { label: "眼下", finding: "干纹明显，厚粉底会让疲态更重。", reveals: ["soothe"] }, cheek: { label: "脸颊", finding: "缺水和光泽断层，修护打底比遮盖更重要。", reveals: ["soothe"] }, nose: { label: "鼻翼", finding: "没有明显出油，控油型产品会加重紧绷。", reveals: ["steady"] } },
   },
   xiaoyu: {
@@ -353,7 +355,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "我只有一千块预算。最近爆痘，但明天面试想看起来精神一点。", need: "不刺激痘肌，在预算内改善气色",
     demands: [{ trait: "steady", want: 2, weight: 3 }, { trait: "natural", want: 1, weight: 2 }, { trait: "correct", want: 1, weight: 1 }],
     veto: { trait: "steady", below: 2, note: "活跃痘正在冒，闷一下就爆" }, budget: 1000, maxUnits: 1, mapVariant: "young",
-    patience: 8, lostLine: "小雨被中庭的小样台叫走了", rival: false,
+    patience: 8, lostLine: "小雨被中庭的小样台叫走了", deflection: "我没说过要这个。我今天的钱不往这儿花。", rival: false,
     cues: { eyes: { label: "眼下", finding: "睡眠不足带来暗沉，但不需要重度遮瑕。", reveals: ["natural"] }, cheek: { label: "脸颊", finding: "有活跃痘和轻微敏感，厚重持妆容易闷痘。", reveals: ["steady"] }, nose: { label: "鼻翼", finding: "T区出油、两颊不油，适合分区轻薄上妆。", reveals: ["steady"] } },
   },
   zhao: {
@@ -361,7 +363,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "我女儿总说脸红、用什么都刺。你别看我，东西是买给她的。", need: "为敏感肌女儿选低风险礼物，并保留退换余地",
     demands: [{ trait: "steady", want: 2, weight: 3 }, { trait: "soothe", want: 2, weight: 2 }],
     veto: { trait: "soothe", below: 2, note: "女儿对香精起反应，先要稳住" }, budget: 1800, maxUnits: 1, mapVariant: "mature",
-    patience: 8, lostLine: "赵女士说再问问女儿，已经离开专柜", rival: false,
+    patience: 8, lostLine: "赵女士说再问问女儿，已经离开专柜", deflection: "这话你该去问我女儿，我说不来这些。", rival: false,
     cues: { eyes: { label: "神情", finding: "她一直看价签，不是不舍得，而是怕买错。", reveals: [] }, cheek: { label: "信息", finding: "观察她的皮肤不能代替询问女儿的使用史。", reveals: [] }, nose: { label: "细节", finding: "她手里有女儿发来的过敏成分截图。", reveals: ["steady"] } },
   },
   anjie: {
@@ -369,7 +371,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "婚礼还有一周，我要一套绝对不出错的。预算不是问题。", need: "先稳定敏感泛红，再做轻薄婚礼妆；不能冒险换全套",
     demands: [{ trait: "soothe", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }, { trait: "correct", want: 2, weight: 1 }],
     veto: { trait: "soothe", below: 2, note: "临婚前不能冒刺激风险" }, budget: 7000, maxUnits: 4, mapVariant: "young",
-    patience: 10, lostLine: "安姐让苏蔓接手，这笔单离开了你", rival: false,
+    patience: 10, lostLine: "安姐让苏蔓接手，这笔单离开了你", deflection: "今天这事不能靠猜。你先把我的话听完。", rival: false,
     cues: { eyes: { label: "眼下", finding: "焦虑和睡眠不足明显，当前状态不适合叠加新品。", reveals: ["soothe"] }, cheek: { label: "脸颊", finding: "双颊正在泛红，强持妆套组存在刺激风险。", reveals: ["soothe"] }, nose: { label: "表达", finding: "她强调“绝对不出错”，安全感比客单更重要。", reveals: ["steady"] } },
   },
   returning: {
@@ -377,7 +379,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "昨天那次试妆直播间都在问。我要给团队订一批，但你得保证不是昙花一现。", need: "一整场直播稳定复现轻薄效果，并给出有记录的售后承诺",
     demands: [{ trait: "natural", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }, { trait: "correct", want: 1, weight: 1 }, { trait: "wear", want: 1, weight: 1 }],
     veto: { trait: "steady", below: 1, note: "直播近景经不起厚妆" }, budget: 4200, maxUnits: 4, mapVariant: "young",
-    patience: 10, lostLine: "沈薇说团队先去维珞看同款", rival: true,
+    patience: 10, lostLine: "沈薇说团队先去维珞看同款", deflection: "团队在等我有凭据的答复，这句不算。", rival: true,
     cues: { eyes: { label: "眼下", finding: "昨天的卡纹没有加重，说明轻薄方案有效。", reveals: ["natural"] }, cheek: { label: "反馈", finding: "妆面到现在还稳，她现在观察的是你是否守承诺。", reveals: ["natural", "wear"] }, nose: { label: "机会", finding: "订单来自信任复购，而不是一次高压推销。", reveals: ["steady"] } },
   },
   zhou: {
@@ -385,7 +387,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "对面说你们家持妆会暗沉。我开会要拍照，给我一个能站得住的理由。", need: "会议拍照不暗沉，但不能厚到像换了一层皮",
     demands: [{ trait: "natural", want: 2, weight: 2 }, { trait: "correct", want: 2, weight: 1 }, { trait: "steady", want: 2, weight: 2 }, { trait: "wear", want: 1, weight: 1 }],
     veto: { trait: "natural", below: 2, note: "不能厚到像换了一层皮" }, budget: 2100, maxUnits: 2, mapVariant: "young",
-    patience: 8, lostLine: "陆遥用一盘试色把周姐接到了维珞", rival: true,
+    patience: 8, lostLine: "陆遥用一盘试色把周姐接到了维珞", deflection: "我是对比来的，这句回答不了我。", rival: true,
     cues: { eyes: { label: "眼下", finding: "细纹不多，真正的风险是下午两颊发干。", reveals: ["natural"] }, cheek: { label: "脸颊", finding: "底妆到下午就开始斑驳，可她一厚就显得假。", reveals: ["steady", "wear"] }, nose: { label: "鼻翼", finding: "T区微油，不适合整脸厚持妆。", reveals: ["steady"] } },
   },
   duan: {
@@ -393,7 +395,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "我就是看看。不一定买。你们别围上来。", need: "给易闷痘的室友选对礼物，而不是把自己变成业绩",
     demands: [{ trait: "steady", want: 2, weight: 3 }, { trait: "natural", want: 2, weight: 2 }, { trait: "correct", want: 1, weight: 1 }],
     veto: { trait: "steady", below: 2, note: "室友比她更容易闷痘" }, budget: 1100, maxUnits: 1, mapVariant: "young",
-    patience: 8, lostLine: "段小姐去中庭领了别的品牌小样", rival: false,
+    patience: 8, lostLine: "段小姐去中庭领了别的品牌小样", deflection: "我就是来看看，你别绕我。", rival: false,
     cues: { eyes: { label: "眼神", finding: "她在看你，也在看有没有人准备强推。", reveals: [] }, cheek: { label: "皮肤", finding: "她自己并不敏感，但选品不能按她的脸来。", reveals: ["natural"] }, nose: { label: "手机", finding: "相册里是室友的过敏记录，不是她的自拍。", reveals: ["steady"] } },
   },
   zhou2: {
@@ -401,7 +403,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "昨天那款我用了。同事问有没有修护，让我今天顺便看。", need: "给同事带低刺激修护，同时确认自己不会暗沉",
     demands: [{ trait: "steady", want: 2, weight: 3 }, { trait: "soothe", want: 2, weight: 2 }],
     veto: { trait: "soothe", below: 2, note: "同事一用香精就红" }, budget: 1800, maxUnits: 1, mapVariant: "young",
-    patience: 9, lostLine: "周姐说同事先去对面问同款", rival: false,
+    patience: 9, lostLine: "周姐说同事先去对面问同款", deflection: "这回不是我自用，你别按我这张脸说。", rival: false,
     cues: { eyes: { label: "眼下", finding: "昨天的干纹没有加重，说明轻薄方案有效。", reveals: [] }, cheek: { label: "状态", finding: "她自己稳定，真正的新问题是同事的敏感。", reveals: ["soothe"] }, nose: { label: "清单", finding: "备忘录写着：无香精、要能退。", reveals: ["steady"] } },
   },
   // 她是全柜唯一把「持妆」当作正解的人，也是唯一被允许厚妆的人：前提是第 4 天先把她皮肤稳住。
@@ -411,7 +413,7 @@ export const CUSTOMERS: Record<CustomerId, Customer> = {
     opening: "婚礼在今晚。上周你让我先别叠新品，今天脸是稳的。现在我要的是从早上撑到敬酒。", need: "皮肤已经稳住，要带妆十几个小时、强灯光和闪光灯下依然完整的妆面",
     demands: [{ trait: "wear", want: 2, weight: 3 }, { trait: "correct", want: 2, weight: 2 }, { trait: "steady", want: 1, weight: 1 }],
     budget: 2600, maxUnits: 2, mapVariant: "young",
-    patience: 10, lostLine: "安姐的化妆师提前到了，她只能走了", rival: false,
+    patience: 10, lostLine: "安姐的化妆师提前到了，她只能走了", deflection: "今晚这张脸不能试错。这话我不接。", rival: false,
     cues: { eyes: { label: "眼下", finding: "上周的干纹平了，眼下不再卡粉。今天的问题不是皮肤。", reveals: ["steady"] }, cheek: { label: "脸颊", finding: "双颊不泛红，她现在承得住遮盖力强的底妆。", reveals: ["wear"] }, nose: { label: "灯光", finding: "她手机里是宴会厅的顶光和闪光灯照片，薄涂在那些照片里等于没化。", reveals: ["correct"] } },
   },
 };
@@ -522,7 +524,8 @@ export function typedQuestionIndex(customerId: CustomerId, text: string): number
 export function fallbackReply(customerId: CustomerId, text: string, chipIndex: number | null) {
   const resolved = chipIndex ?? typedQuestionIndex(customerId, text);
   if (resolved !== null) return QUESTIONS[customerId][resolved]?.response ?? CUSTOMERS[customerId].opening;
-  return "你要是只想完成任务，我现在就可以走。";
+  // 白问不露任何诉求，但也不能十个人念同一句：这句是她的，不是系统的。
+  return CUSTOMERS[customerId].deflection;
 }
 
 // 这一句话问的是她预设里的哪一条：两个 UI 只调这一个函数。

@@ -2,7 +2,7 @@
 // 沙盘那一份（rescue-e2e/typed-demand.spec.ts）钉的是诉求板；这一份钉的是她脸上那一屏的两句：
 // 手记里她答的那一句，和 `.demand-said` 那句「她在意：…」。刷新后还得在，因为 revealed 是存档里的字段。
 import { expect, test, type Page } from "@playwright/test";
-import { INITIAL, QUESTIONS, TRAIT_LABELS } from "../src/campaign";
+import { CUSTOMERS, INITIAL, QUESTIONS, TRAIT_LABELS, type CustomerId } from "../src/campaign";
 
 async function seedSave(page: Page, patch: Record<string, unknown> = {}) {
   await page.goto("/");
@@ -23,6 +23,12 @@ async function typeAsk(page: Page, text: string) {
 
 const said = (page: Page) => page.locator(".demand-said");
 const chat = (page: Page) => page.getByLabel("接待对话");
+
+// P45：白问那句十句各是各的。手机这一屏拿到的要念她自己的原话（写死的那句，读 deflection 字段是循环自证），
+// 且不是另外九句里的任何一句 —— 两个人的台词互换要在这里红。
+const otherDeflections = (id: CustomerId) => (Object.keys(CUSTOMERS) as CustomerId[])
+  .filter(other => other !== id)
+  .map(other => CUSTOMERS[other].deflection);
 
 // 她脸上那两处都只指向"先稳住"，第二条（不闷痘）只有问得出来才看得到。
 test("打字问出第二条诉求：她答那句，「她在意」多那一条，刷新还在", async ({ page }) => {
@@ -75,7 +81,8 @@ test("她答不出的那件事，「她在意」不会凭空多出一条", async
   for (const question of QUESTIONS.duan) {
     expect(answer, "问偏了不该拿她准备过的另一句顶上去").not.toContain(question.response);
   }
-  expect(answer).toContain("走");
+  expect(answer).toContain("我就是来看看，你别绕我。");
+  for (const other of otherDeflections("duan")) expect(answer, "这句不是段小姐的话").not.toContain(other);
   await expect(said(page)).not.toContainText(TRAIT_LABELS.wear);
 });
 
@@ -96,7 +103,11 @@ test("她那句「不是我用」问回去，她答这一句：「她在意」�
   await page.screenshot({ path: "../audit/experience-v2/p44-mobile-white-ask.png" });
   // 上面那句是"认得出来"的那一档，兜底落点没被走过。这一句她压根没准备过：白问只能落在一条什么都不露的问题上。
   await typeAsk(page, "你们几点关门");
-  await expect(chat(page)).toContainText("我现在就可以走");
+  await expect(chat(page)).toContainText("这话你该去问我女儿，我说不来这些。");
+  for (const other of otherDeflections("zhao")) {
+    await expect(chat(page), "这句不是赵女士的话").not.toContainText(other);
+  }
+  await page.screenshot({ path: "../audit/experience-v2/p45-mobile-white-ask-her-own-line.png" });
   await expect(said(page), "白问那句不许把她最重那条答案的诉求记进「她在意」").not.toContainText("她在意");
   // 同一屏的反面：她自己说过「我怕的是送错」，照着问回去就该拿到那一句、多出那一条。
   await typeAsk(page, "我怕的是送错");

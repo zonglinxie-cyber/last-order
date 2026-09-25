@@ -2,7 +2,7 @@
 // 规则层（tests/consult-chat.test.ts）钉的是解析本身；这两条钉的是玩家那一屏：
 // 打字问到哪件事，她答那句、诉求板就多出那一条 —— 观察给她的那一条不能替打字充数。
 import { expect, test, type Page } from "@playwright/test";
-import { CUSTOMERS, INITIAL, QUESTIONS, SAVE_KEY, TRAIT_LABELS, type Campaign } from "../src/campaign";
+import { CUSTOMERS, INITIAL, QUESTIONS, SAVE_KEY, TRAIT_LABELS, type Campaign, type CustomerId } from "../src/campaign";
 
 async function seed(page: Page, value: Campaign) {
   await page.goto("/");
@@ -32,6 +32,12 @@ async function typeAsk(page: Page, text: string) {
 }
 
 const demand = (page: Page, label: string) => page.locator(".demand-board p").filter({ hasText: label });
+
+// P45：白问那句十句各是各的。界面这一屏拿到的要念她自己的原话（写死的那句，读 deflection 字段是循环自证），
+// 而且不是另外九句里的任何一句 —— 两个人的台词互换要在这里红。
+const otherDeflections = (id: CustomerId) => (Object.keys(CUSTOMERS) as CustomerId[])
+  .filter(other => other !== id)
+  .map(other => CUSTOMERS[other].deflection);
 
 // 梅女士脸上那两处都只指向"先稳住"，第二条（不闷痘）只有问得出来才看得到。
 test("打字问出她答得出的第二条：她答那句，诉求板多那一条", async ({ page }) => {
@@ -78,7 +84,9 @@ test("她答不出的那件事，诉求板不会凭空多出一条", async ({ pa
   for (const question of QUESTIONS.duan) {
     expect(said, "问偏了不该拿她准备过的另一句顶上去").not.toContain(question.response);
   }
-  expect(said).toContain("走");
+  // 以前这里是全柜共用的一句"我现在就可以走"；P45 起她挡回来说的是自己的话。
+  expect(said).toContain("我就是来看看，你别绕我。");
+  for (const other of otherDeflections("duan")) expect(said, "这句不是段小姐的话").not.toContain(other);
   await expect(notes).not.toContainText(CUSTOMERS.duan.cues.nose.finding);
   expect(await revealed(page), "问偏了不该换来新诉求").toEqual(["natural"]);
   await expect(demand(page, TRAIT_LABELS.wear)).toHaveCount(0);
@@ -105,7 +113,11 @@ test("她自己那句「不是我用」问回去，她答这一句，不答她�
   // 她那一条有用的问题一次露两条（低风险 + 先稳住），所以这两格都要点名 —— 诉求板上还有"没说出口"和"底线"两行，不能只数行数。
   await expect(demand(page, TRAIT_LABELS.steady)).toHaveCount(0);
   await expect(demand(page, TRAIT_LABELS.soothe)).toHaveCount(0);
-  await expect(notes.last()).toContainText("走");
+  expect(await notes.last().textContent(), "白问那句要念她自己的话").toContain("这话你该去问我女儿，我说不来这些。");
+  for (const other of otherDeflections("zhao")) {
+    expect(await notes.last().textContent(), "这句不是赵女士的话").not.toContain(other);
+  }
+  await page.screenshot({ path: "../audit/experience-v2/p45-sandbox-white-ask-her-own-line.png" });
   // 同一屏的反面：她自己说过「我怕的是送错」，照着问回去就该拿到那一句。
   await page.getByRole("button", { name: /再问一句/ }).click();
   await typeAsk(page, "我怕的是送错");
