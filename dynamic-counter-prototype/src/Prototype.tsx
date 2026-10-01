@@ -453,9 +453,12 @@ export default function Prototype() {
     const trusted = campaign.trust >= 55;
     const title = endingTitle(campaign);
     const counter = counterVerdict(campaign);
-    return <MobileScroll className="app-screen finale-scroll"><main className="finale-screen"><p>新品活动周 · 最终档案</p><h1>{title}</h1><div className="final-score"><span>销售</span><b>¥{campaign.sales.toLocaleString("zh-CN")}</b><small>{salesWin ? "完成五日目标" : "未完成五日目标"}</small></div><p className="week-structure">{structureLine(campaign)}</p><section className="ending-copy"><p>{salesWin ? "你证明了自己能成交。" : "罗曼没有给你漂亮的数字评价。"}{safe ? "合规记录没有把你单独钉在缺口上。" : "但赠品与订单记录已经构成一条危险的线。"}</p><p>{trusted ? "沈薇和几位顾客仍愿意直接找你。" : "顾客记得你卖出去的东西，却未必相信你会负责到底。"}</p><p>苏蔓：{relationText(campaign.relations.suman)}；唐可：{relationText(campaign.relations.tangke)}。</p><p className="counter-verdict"><b>柜位 · {counter.label}</b>{counter.body}</p></section>
+    return <div className="app-screen finale-page"><MobileScroll className="finale-scroll"><main className="finale-screen"><p>新品活动周 · 最终档案</p><h1>{title}</h1><div className="final-score"><span>销售</span><b>¥{campaign.sales.toLocaleString("zh-CN")}</b><small>{salesWin ? "完成五日目标" : "未完成五日目标"}</small></div><p className="week-structure">{structureLine(campaign)}</p><section className="ending-copy"><p>{salesWin ? "你证明了自己能成交。" : "罗曼没有给你漂亮的数字评价。"}{safe ? "合规记录没有把你单独钉在缺口上。" : "但赠品与订单记录已经构成一条危险的线。"}</p><p>{trusted ? "沈薇和几位顾客仍愿意直接找你。" : "顾客记得你卖出去的东西，却未必相信你会负责到底。"}</p><p>苏蔓：{relationText(campaign.relations.suman)}；唐可：{relationText(campaign.relations.tangke)}。</p><p className="counter-verdict"><b>柜位 · {counter.label}</b>{counter.body}</p></section>
       <section className="ledger-book" aria-label="五日因果账本"><b>五日因果账本</b>{ledger.map(group => <div className="ledger-day" key={group.day}><span>DAY {group.day} · {group.title}</span>{group.items.map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</div>)}</section>
-      <blockquote>真正的最后一单，不是付款成功的那一刻，而是它回来找你的那一天。</blockquote><button className="primary-action" type="button" onClick={resetGame}>重新开始 · 换一种活法</button></main></MobileScroll>;
+      <blockquote>真正的最后一单，不是付款成功的那一刻，而是它回来找你的那一天。</blockquote></main></MobileScroll>
+    {/* 唯一的出口钉成脚：59 行的账本把它埋在滚动区底下 1000+ 设计像素（实测 390×844 那颗按钮 top 1696、滚动带底 707），
+        能滚到但没有任何"下面还有"的线索。与 P37 晨会「滚动区 + 脚」同一副语法；引文留在账本尾巴上 —— 它是收束，不是动作。 */}
+    <div className="finale-foot"><button className="primary-action" type="button" onClick={resetGame}>重新开始 · 换一种活法</button></div></div>;
   }
 
   const latestLost = campaign.lost.at(-1);

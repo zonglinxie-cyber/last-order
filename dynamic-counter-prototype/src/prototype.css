@@ -63,6 +63,11 @@ button { -webkit-tap-highlight-color:transparent; }
 .brief-page { position:absolute; inset:0; display:flex; flex-direction:column; background:#120b0b; }
 .brief-page .brief-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
 .brief-foot { flex:0 0 auto; padding:8px 16px 15px; border-top:1px solid #826346; background:#120b0b; }
+/* 结局那一屏同一副语法：五日账本（实测 59 行、滚动余量 1553 设计像素）把唯一的出口埋在带底一千多像素以下，
+   能滚到但没有任何"下面还有"的线索 —— 出口钉成脚，账本照常滚。底色对 `.finale-screen` 渐变的最外圈。 */
+.finale-page { position:absolute; inset:0; display:flex; flex-direction:column; background:#10090a; }
+.finale-page .finale-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.finale-foot { flex:0 0 auto; padding:8px 16px 15px; border-top:1px solid #826346; background:#10090a; }
 .counter-background,.customer-portrait { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; user-select:none; }
 .stage-wash { position:absolute; inset:0; background:linear-gradient(180deg,rgba(15,8,9,.74),transparent 18%,transparent 57%,rgba(13,7,7,.74) 78%,#120b0a 100%); pointer-events:none; }
 
