@@ -3,8 +3,8 @@ import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileD
 import {
   addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canLeaveSample, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
   fitOf, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialReveal, floorCustomers, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, PULL_OVER_RETURN, QUESTIONS, canClaim, CLAIM_LABEL, CLAIM_NOTE,
-  orderQuote, OBSERVE_MIN, offerTransfer, REACTIONS, relationText, resolveAsk, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
-  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, unitsWanted, visibleChoices, visitWord, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+  orderQuote, offerTransfer, REACTIONS, relationText, resolveAsk, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
+  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, trialGate, trialGateWord, unitsWanted, visibleChoices, visitWord, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
@@ -381,7 +381,9 @@ export default function Prototype() {
     <div className="brief-foot"><button className="primary-action" type="button" onClick={() => { openFloor(); setScreen("floor"); }}>开始营业</button></div></div>;
 
   if (screen === "consultation" && customer) {
-    const canTest = discovered.length >= OBSERVE_MIN && askedQuestion !== null && selectedProduct;
+    // 差哪一格由 campaign.ts 判一次：那颗按钮按不动的时候，按钮自己就是那句理由。
+    const trialStep = trialGate({ discovered, askedQuestion, selectedProduct, tested });
+    const canTest = trialStep === "ready";
     const currentReaction = reaction && selectedProduct ? REACTIONS[selectedProduct][reaction] : null;
     const otherMeter = waitingOther ? campaign.waitMeters[waitingOther] ?? CUSTOMERS[waitingOther].patience : null;
     const pendingRival = interruption && !interruptionHandled;
@@ -429,7 +431,7 @@ export default function Prototype() {
       </MobileScroll>
         {/* 手上这一步做什么，做成抽屉的脚：它是 MobileScroll 之外的同级固定层，不跟着滚，所以断货那一屏也永远按得到「提出成交」。
             高度、代价与量法都写在 prototype.css 那一段注释里。 */}
-        <div className="consultation-foot">{!tested ? <button className="primary-action" type="button" disabled={!canTest} onClick={tryProduct}>{canTest ? `为${customer.name}试用` : discovered.length < 2 ? "先观察两处面部线索" : askedQuestion === null ? "再问一个关键问题" : "选择产品开始试用"}</button> : reaction === "negative" ? <div className="recovery-actions"><button type="button" onClick={sendSample} disabled={!canLeaveSample(campaign, customer.id)}>留小样 · {campaign.samples}</button><b>反应不对：换一款，或承担拒绝风险</b>{canLeaveSample(campaign, customer.id) && <small>{LEAVE_SAMPLE_RETURN}</small>}</div> : null}
+        <div className="consultation-foot">{!tested ? <button className="primary-action" type="button" disabled={!canTest} onClick={tryProduct}>{trialGateWord(trialStep) ?? `为${customer.name}试用`}</button> : reaction === "negative" ? <div className="recovery-actions"><button type="button" onClick={sendSample} disabled={!canLeaveSample(campaign, customer.id)}>留小样 · {campaign.samples}</button><b>反应不对：换一款，或承担拒绝风险</b>{canLeaveSample(campaign, customer.id) && <small>{LEAVE_SAMPLE_RETURN}</small>}</div> : null}
         {tested && reaction === "negative" ? <div className="close-actions negative-close"><button type="button" onClick={() => closeSale(false)}>接受拒绝</button><button className="primary-action" type="button" onClick={() => closeSale(true)}>强推成交</button>{selectedProduct && canClaim(campaign, customer.id, selectedProduct, bundle) ? <button className="claim-action" type="button" onClick={() => closeSale(true, true)}><b>{CLAIM_LABEL}</b><small>{CLAIM_NOTE}</small></button> : null}</div> : tested ? <div className="close-actions"><button className={claimed ? "claimed" : ""} type="button" onClick={() => { setClaimed(!claimed); saveSession({ claimed: !claimed }); }}>{claimed ? "已登记归属" : "登记我的接待"}</button><button className="primary-action" type="button" onClick={() => closeSale(false)}>提出成交</button></div> : null}</div>
       </section>}</main></div>;
   }

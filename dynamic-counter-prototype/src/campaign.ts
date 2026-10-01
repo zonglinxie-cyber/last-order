@@ -1666,11 +1666,24 @@ export function selectServiceProduct(s: Campaign, id: ProductId): Campaign {
     selectedProduct: id, tested: false, reaction: null, faceTrialled: false, revisions: session.revisions + (session.tested ? 1 : 0) } };
 }
 
+// 试用这一步还差哪一格。原来三处各写一遍：规则的守卫、沙盘那颗 `disabled`、手机版 JSX 里的三元。
+// 收在一处之后，"按不动"和"为什么按不动"不可能再各说各的。`tried` 是沙盘换款那一格（她反应不对、你还没挑新一支）。
+export type TrialGate = "observe" | "ask" | "pick" | "tried" | "ready";
+export const trialGate = (s: Pick<CustomerSession, "discovered" | "askedQuestion" | "selectedProduct" | "tested">): TrialGate =>
+  s.discovered.length < OBSERVE_MIN ? "observe" : s.askedQuestion === null ? "ask"
+    : s.selectedProduct === null ? "pick" : s.tested ? "tried" : "ready";
+// 金色那颗变灰、文案一个字不改，第一次玩的人只会再按一次同一颗：按不动的那颗要自己说出差哪一步。
+export const TRIAL_GATE_WORD: Record<Exclude<TrialGate, "ready">, string> = {
+  observe: "先观察两处面部线索", ask: "再问一个关键问题", pick: "选择产品开始试用", tried: "换一支再试",
+};
+export const trialGateWord = (gate: TrialGate) => gate === "ready" ? null : TRIAL_GATE_WORD[gate];
+
 export function trialService(s: Campaign): Campaign {
   const session = s.activeSession;
-  if (!session || session.tested || session.discovered.length < OBSERVE_MIN || session.askedQuestion === null || !session.selectedProduct) return s;
+  if (!session || trialGate(session) !== "ready") return s;
   return spendAttention({ ...s, activeSession: { ...session, tested: true,
-    reaction: fitOf(CUSTOMERS[session.customerId], session.selectedProduct).tier } }, session.customerId, 1);
+    // 挑了哪一支由 `trialGate` 判（不为 "ready" 时上面已经返回），这里只是 TS 看不穿那一步。
+    reaction: fitOf(CUSTOMERS[session.customerId], session.selectedProduct!).tier } }, session.customerId, 1);
 }
 
 // 手背试色只看颜色，半脸上妆才看得出她那张脸两小时后会怎么样：多花两分钟，代价是队伍另一头的人在倒数。

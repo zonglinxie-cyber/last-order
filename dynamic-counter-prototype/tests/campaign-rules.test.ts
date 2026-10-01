@@ -5,7 +5,7 @@ import {
   ENERGY_LOCK, energyWord, evidenceWord, fitOf, floorCustomers, hasFlag, hasRecords, history, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, ledgerSum, openFloorState, parseCampaign,
   ADVANCE_COMPLIANCE, ADVANCE_HELD_COMPLIANCE, ADVANCE_HELD_STANDING, ADVANCE_SALE, ADVANCE_TANGKE, advancePocket, dayEvent, settleDayEvent, startNextDay, TANGKE_STOCK_GATE, visibleChoices,
   PRODUCTS, QUESTIONS, RECORDS_MIN, resolveSale,
-  askService, chooseBundle, closeService, FACE_TRIAL_MINUTES, faceTrialService, observeService, respondToRival, selectServiceProduct, startService, trialService, visitWord, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
+  askService, chooseBundle, closeService, FACE_TRIAL_MINUTES, faceTrialService, observeService, respondToRival, selectServiceProduct, startService, trialGate, trialGateWord, trialService, visitWord, RIVAL_INTERRUPTIONS, SAMPLE_RETURN_SALE, SAVE_VERSION, STANDING_RISK, TARGET, DELIVERIES, FIRST_DAY_STOCK, deliveryWord, TRANSFER_UNITS, WEEK_ALLOCATION, touchThreads,
   morningReview, progressTarget,
   PRICE_GAP, PRICE_PAD_SAMPLES,
   TOUCHES_PER_EVENING, touchesLeft, structureLine, weekStructure, type BundleId, type Campaign, type CustomerId, type OrderRecord, type ProductId,
@@ -902,4 +902,58 @@ test("旧存档续上的那一单没有逐笔账，那句就退回只念关单�
   const garbage = JSON.parse(JSON.stringify(resumed));
   garbage.activeSession.visitMinutes = "三分钟";
   assert.equal(parseCampaign(JSON.stringify(garbage)), null, "读数进来不是数字，就不续这一份档");
+});
+
+// —— P47：试用那一格的闸门只判一次（两个 UI 的按钮都读它）——
+// 这四句是屏幕上真正出现的字：沙盘与手机版各有一屏 e2e 逐字比过，不是这里推出来的。
+const GATE_WORDS = { observe: "先观察两处面部线索", ask: "再问一个关键问题", pick: "选择产品开始试用", tried: "换一支再试" } as const;
+
+test("差哪一步只由 trialGate 判一次：四格各说各的那一句，齐了才 null", () => {
+  let s = sitDown();
+  assert.equal(trialGate(s.activeSession!), "observe");
+  assert.equal(trialGateWord("observe"), GATE_WORDS.observe);
+  s = observeService(s, "eyes");
+  assert.equal(trialGate(s.activeSession!), "observe", "只看了一处还不够 —— OBSERVE_MIN 是两处，闸门不能自己放宽");
+  s = observeService(s, "cheek");
+  assert.equal(trialGate(s.activeSession!), "ask");
+  s = askService(s, QUESTIONS.shen[0].label, 0);
+  assert.equal(trialGate(s.activeSession!), "pick");
+  s = selectServiceProduct(s, "soft");
+  assert.equal(trialGate(s.activeSession!), "ready", "看够、问过、挑了一支 —— 该按得动了");
+  assert.equal(trialGateWord("ready"), null, "ready 时不许再挤出一句理由");
+  s = trialService(s);
+  assert.equal(trialGate(s.activeSession!), "tried", "这一支已经试过：按钮要说的是换一支，不是再按一次同一颗");
+  const words = Object.values(GATE_WORDS);
+  assert.equal(new Set(words).size, words.length, "四句必须各不相同 —— 都写成『先做下一步』等于没说");
+  // P9 那条老规矩：点位念的是她自己给的那句（灯光 / 清单 / 手机），不许把眼下 / 脸颊 / 鼻翼写进按钮。
+  for (const word of words) assert.equal(/眼下|脸颊|鼻翼/.test(word), false, `那句把点位写死了：${word}`);
+});
+
+test("闸门没开的那几格，trialService 一个字段都不动（按钮的 disabled 与规则同源）", () => {
+  const oneCue = observeService(sitDown(), "eyes");
+  const twoCues = observeService(oneCue, "cheek");
+  const asked = askService(twoCues, QUESTIONS.shen[0].label, 0);
+  const closed = [sitDown(), oneCue, twoCues, asked, trialService(selectServiceProduct(asked, "soft"))];
+  assert.deepEqual(closed.map(s => trialGate(s.activeSession!)), ["observe", "observe", "ask", "pick", "tried"], "这五份状态各差一格，四句理由都要有用武之地");
+  for (const s of closed) {
+    assert.notEqual(trialGate(s.activeSession!), "ready", "这一份状态本该按不动");
+    assert.equal(trialService(s), s, "按不动的那一步不许偷偷改状态");
+    assert.equal(trialService(s).activeSession?.visitMinutes, s.activeSession!.visitMinutes, "更不许偷偷记分钟");
+  }
+  const open = selectServiceProduct(asked, "soft");
+  const before = open.activeSession!.visitMinutes;
+  const tried = trialService(open);
+  assert.equal(tried.activeSession!.tested, true, "闸门开了就该真的试出去");
+  assert.equal(tried.activeSession!.visitMinutes, before + 1, "这一步花一分钟，写在同一处");
+});
+
+test("换一支等于重新上脸：闸门从 tried 回到 ready，只挑不换那一支仍是 tried", () => {
+  let s = selectServiceProduct(askService(observeService(observeService(sitDown(), "eyes"), "cheek"), QUESTIONS.shen[0].label, 0), "soft");
+  s = trialService(s);
+  assert.equal(trialGate(s.activeSession!), "tried");
+  const same = selectServiceProduct(s, "soft");
+  assert.equal(trialGate(same.activeSession!), "tried", "挑了同一支不算换款 —— 别把闸门重新开一次好让同一支试第二遍");
+  const swapped = selectServiceProduct(s, "repair");
+  assert.equal(trialGate(swapped.activeSession!), "ready", "换一支就要能重新上脸");
+  assert.equal(trialService(swapped).activeSession!.reaction, fitOf(CUSTOMERS.shen, "repair").tier, "重面试的是新一支的反应");
 });
