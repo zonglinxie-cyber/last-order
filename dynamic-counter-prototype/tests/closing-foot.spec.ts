@@ -68,7 +68,7 @@ async function toNegative(page: Page) {
   if (await interruption.count()) await interruption.click();
 }
 
-for (const [width, height] of [[390, 667], [320, 568]] as const) {
+for (const [width, height] of [[390, 844], [390, 667], [320, 568]] as const) {
   test(`断货那一屏在 ${width}×${height}：脚不跟着滚，报价与第一行调货不滚就在`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await seedSave(page, { stock: { soft: 1, glow: 4, repair: 7 } });
