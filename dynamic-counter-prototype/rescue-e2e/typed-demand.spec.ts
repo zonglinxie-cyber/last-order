@@ -127,3 +127,25 @@ test("她自己那句「不是我用」问回去，她答这一句，不答她�
   await page.screenshot({ path: "../audit/experience-v2/p44-sandbox-echo-her-words.png" });
 });
 
+// P52（沙盘）：「会不会闷痘」本来就是她鼻翼那处线索露的事——以前落空白格念挡回，现在有一条真问题接得住。
+// 反过来「遮瑕」是她留着没说的那条：话接得住（她自己那句，不是挡回），但诉求板不许多一条。
+test("沈薇被问闷痘答她那句、诉求板多低风险；被问遮瑕接得住但不露她留着的那条", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "开始新品活动周", exact: true }).click();
+  await page.getByRole("button", { name: "开始营业", exact: true }).click();
+  await page.getByRole("button", { name: "暂停", exact: true }).click();
+  await open(page, "沈薇", ["眼下", "脸颊"]);
+  expect(await revealed(page)).toEqual(["natural"]);
+  const notes = page.locator(".consultation-notes p.customer");
+  await typeAsk(page, "带妆久了会不会闷痘");
+  await expect(notes.filter({ hasText: "T区到下午就闷" })).toHaveCount(1);
+  await expect(demand(page, TRAIT_LABELS.steady)).toHaveCount(1);
+  expect(await revealed(page), "打字问到闷痘露出的是她本来就有的那条").toEqual(["natural", "steady"]);
+  await page.getByRole("button", { name: /再问一句/ }).click();
+  await typeAsk(page, "能遮住痘印吗");
+  await expect(notes.filter({ hasText: "盖住不难，盖完还是我这张脸才难。" })).toHaveCount(1);
+  expect(await notes.last().textContent(), "她留着没说的那条不许被一句挡回顶替").not.toContain(CUSTOMERS.shen.deflection);
+  expect(await revealed(page), "她没准备答的那条不许凭空露出来").toEqual(["natural", "steady"]);
+  await page.screenshot({ path: "../audit/experience-v2/p52-sandbox-typed-shen.png" });
+});
+

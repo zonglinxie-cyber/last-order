@@ -323,12 +323,24 @@ export function unknownDemands(customer: Customer, traits: Set<Trait>) {
 }
 
 export const QUESTIONS: Record<CustomerId, Array<{ label: string; response: string; useful: boolean; reveals: Trait[] }>> = {
-  shen: [{ label: "你最怕镜头看到什么？", response: "近看有粉感。不卡粉只是底线，我要像没化妆。", useful: true, reveals: ["natural"] }, { label: "预算大概多少？", response: "预算不是问题，别拿价格替代判断。", useful: false, reveals: [] }, { label: "要不要直接看套装？", response: "我刚说了不缺粉底。你也没听我说话？", useful: false, reveals: [] }],
-  mei: [{ label: "明早最想改善哪里？", response: "眼下干、脸没精神，但我不想遮成一张面具。", useful: true, reveals: ["soothe"] }, { label: "预算能到两千吗？", response: "我只有十分钟，你先告诉我什么真的有用。", useful: false, reveals: [] }, { label: "平时用高遮瑕吗？", response: "几乎不用，越厚越显累。", useful: true, reveals: ["steady"] }],
+  shen: [{ label: "你最怕镜头看到什么？", response: "近看有粉感。不卡粉只是底线，我要像没化妆。", useful: true, reveals: ["natural"] }, { label: "预算大概多少？", response: "预算不是问题，别拿价格替代判断。", useful: false, reveals: [] }, { label: "要不要直接看套装？", response: "我刚说了不缺粉底。你也没听我说话？", useful: false, reveals: [] },
+    // 鼻翼那处线索已经露「出油/闷」，这件事本来就问得到，只是以前没有一条问题接得住。
+    { label: "带妆久了会不会闷痘？", response: "T区到下午就闷，厚一点第二天准出事。", useful: true, reveals: ["steady"] },
+    // 「上镜要遮得住」是她留着没说的一条：话要接得住，但这一条不露（问偏照算）。
+    { label: "遮瑕力够不够？", response: "盖住不难，盖完还是我这张脸才难。", useful: false, reveals: [] }],
+  mei: [{ label: "明早最想改善哪里？", response: "眼下干、脸没精神，但我不想遮成一张面具。", useful: true, reveals: ["soothe"] }, { label: "预算能到两千吗？", response: "我只有十分钟，你先告诉我什么真的有用。", useful: false, reveals: [] }, { label: "平时用高遮瑕吗？", response: "几乎不用，越厚越显累。", useful: true, reveals: ["steady"] },
+    // 「厚不厚」问的是她没有的那条诉求：接得住这句话（比挡一句像人），但不露任何诉求。
+    { label: "涂上去会不会太厚？", response: "厚不怕，怕的是浮在脸上——十分钟就得服帖。", useful: false, reveals: [] }],
   xiaoyu: [{ label: "预算里最不能牺牲什么？", response: "别闷痘。我宁愿少买，也不想面试前爆更多。", useful: true, reveals: ["steady"] }, { label: "要不要咬牙上套装？", response: "我说了只有一千。高端柜也不听预算吗？", useful: false, reveals: [] }, { label: "明天是什么场合？", response: "第一次正式面试，想精神，但不想像换了张脸。", useful: true, reveals: ["correct"] }],
   zhao: [{ label: "女儿用过什么会不舒服？", response: "她发了过敏成分截图，我差点忘了给你看。", useful: true, reveals: ["steady", "soothe"] }, { label: "您自己喜欢哪一款？", response: "不是我用。看我的脸没有用。", useful: false, reveals: [] }, { label: "礼物一定要显得贵吗？", response: "我怕的是送错，不是看着不够贵。", useful: true, reveals: ["soothe"] }],
-  anjie: [{ label: "婚礼前皮肤最近稳定吗？", response: "这两天突然泛红。越临近越不敢出错。", useful: true, reveals: ["soothe"] }, { label: "预算上限是多少？", response: "预算不是问题，出问题才是。", useful: false, reveals: [] }, { label: "要不要新品整套？", response: "苏蔓说你会判断，不是只会推套装。", useful: false, reveals: [] }],
-  returning: [{ label: "昨天最满意哪一点？", response: "不是遮住了，是直播近看也没粉感。我要能稳定复现。", useful: true, reveals: ["natural"] }, { label: "团队预算能加吗？", response: "先证明效果稳定，再谈加预算。", useful: false, reveals: [] }, { label: "要不要直接按昨天开单？", response: "你如果连售后都不问，我为什么批量买？", useful: false, reveals: [] }],
+  anjie: [{ label: "婚礼前皮肤最近稳定吗？", response: "这两天突然泛红。越临近越不敢出错。", useful: true, reveals: ["soothe"] }, { label: "预算上限是多少？", response: "预算不是问题，出问题才是。", useful: false, reveals: [] }, { label: "要不要新品整套？", response: "苏蔓说你会判断，不是只会推套装。", useful: false, reveals: [] },
+    // 「会不会出错」就是她那处线索念的安全感（低风险），脸上看得到、嘴里也问得到才一致。
+    { label: "婚礼当天最怕出什么状况？", response: "就怕泛红压不住，闪光灯一亮两颊全红。", useful: true, reveals: ["steady"] },
+    // 「立刻见效」是她留着没说的那条：接得住这句问法，但不在问题里露出来。
+    { label: "能不能立刻见效？", response: "见效快的都猛，这几天我赌不起刺激。", useful: false, reveals: [] }],
+  returning: [{ label: "昨天最满意哪一点？", response: "不是遮住了，是直播近看也没粉感。我要能稳定复现。", useful: true, reveals: ["natural"] }, { label: "团队预算能加吗？", response: "先证明效果稳定，再谈加预算。", useful: false, reveals: [] }, { label: "要不要直接按昨天开单？", response: "你如果连售后都不问，我为什么批量买？", useful: false, reveals: [] },
+    // 她自己那句「稳定复现」就是她回来要的东西：把这句话原样问回来，该落在一条真问题上。
+    { label: "能不能照昨天一模一样复现？", response: "我要的就是这个——能一模一样复现，团队才谈得上批量。", useful: true, reveals: ["wear"] }],
   zhou: [{ label: "对面说的持妆你信吗？", response: "我怕下午暗沉斑驳。开会要拍照片，但不能看起来像换了一层皮。", useful: true, reveals: ["natural", "wear"] }, { label: "要不要直接上套组？", response: "我是来对比的，不是来被完成任务的。", useful: false, reveals: [] }, { label: "皮肤最近是不是发干？", response: "下午T区还出油，两颊已经紧了。你们怎么没人先问这个。", useful: true, reveals: ["steady"] }],
   duan: [{ label: "真的只是看看吗？", response: "室友过生日。我想买对，但我不想被说成好骗。", useful: true, reveals: ["natural"] }, { label: "要不要先领小样？", response: "中庭已经发过了。我缺的是判断，不是袋子。", useful: false, reveals: [] }, { label: "她皮肤和你像吗？", response: "她比我还容易闷痘。别推荐我自己都不敢用的。", useful: true, reveals: ["steady"] }],
   zhou2: [{ label: "昨天那款同事怎么说？", response: "她问有没有修护。我自己倒还想再确认会不会暗沉。", useful: true, reveals: ["soothe"] }, { label: "要不要直接按昨天开？", response: "昨天是我自己。今天是给同事带，别想当然。", useful: false, reveals: [] }, { label: "她最怕什么成分？", response: "香精。她上次用完一红就是这个。", useful: true, reveals: ["steady"] }],
@@ -450,8 +462,8 @@ const DEMAND_HINTS: Record<Trait, RegExp> = {
   natural: /自然|妆感|粉感|浮粉|卡粉|假|太厚|厚不厚|一层皮|近看|上镜|镜头|裸妆|清透|通透|看不出化|一层一层|堆/,
   correct: /遮|痘印|瑕疵|雀斑|立刻|马上|见效|气色|精神|明显|换个脸|换一张脸|对比|灯光|闪光灯|顶灯|照片/,
   soothe: /泛红|发红|刺|紧绷|发紧|绷|干|脱皮|痒|疼|舒|修护|换季|补水|敏感期|养/,
-  steady: /闷|闭口|痘(?!印)|敏感|过敏|成分|酒精|香精|温和|低风险|复发|刺激|一用就红|出油|两颊|发干/,
-  wear: /撑|持妆|一整天|一天|脱妆|斑驳|花掉|花妆|掉妆|补妆|出汗|下午|晚上|敬酒|完整|不掉|站得住/,
+  steady: /闷|闭口|痘(?!印)|敏感|过敏|成分|酒精|香精|温和|低风险|复发|刺激|一用就红|出油|两颊|发干|出错/,
+  wear: /撑|持妆|一整天|一天|脱妆|斑驳|花掉|花妆|掉妆|补妆|出汗|下午|晚上|敬酒|完整|不掉|站得住|一模一样|复现/,
 };
 
 // 打字进来的这句话对应她预设里的哪一条。她同时在意好几件事时，按她自己给过的权重排，

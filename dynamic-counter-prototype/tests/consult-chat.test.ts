@@ -46,6 +46,12 @@ test("fallback replies stay in character", () => {
 // 这里钉的是反过来那一条：她答得出的每个维度，都要有一句话术打得到。
 const TYPED: Array<[CustomerId, string, Trait]> = [
   ["shen", "上镜会不会显得假？", "natural"],
+  // P52：鼻翼线索已经露「出油/闷」，这句话原来落空白格；现在有一条真问题接得住。
+  ["shen", "会不会闷痘，我怕爆痘", "steady"],
+  // P52：婚礼那天「会不会出错」就是她那处线索念的安全感。
+  ["anjie", "婚礼当天会不会出错", "steady"],
+  // P52：她说过「我要能稳定复现」，原样问回来要落在一条真问题上，不算白问。
+  ["returning", "能不能照昨天一模一样复现", "wear"],
   ["mei", "我这种一到下午脸就绷，能用吗？", "soothe"],
   ["mei", "脸上有痘，用这个会不会闷出来更多？", "steady"],
   ["xiaoyu", "能不能遮一下痘印", "correct"],
@@ -90,10 +96,27 @@ test("十个人身上，她答得出的维度没有一条是只能点按钮才�
 });
 
 // 她没准备过的那件事不能被"认出来"：宁可她说没接上话，也不能拿另一条不相干的答案冒充她答了。
+// P52 之后「会不会闷痘」「能立刻见效」都落到一条准备好的问题：沈薇的闷痘问得到（鼻翼那处线索本来就露它）；
+// 「立刻见效」「遮瑕力」落在一条什么都不露的拒答上 —— 话接得住，但留着没说的那条诉求不在问题里给出去。
 test("她答不出的维度不冒充答案，价格与推销各回她自己那句", () => {
-  assert.equal(typedQuestionIndex("shen", "会不会闷痘？"), null);
-  assert.equal(typedQuestionIndex("anjie", "能立刻看得出效果吗"), null);
-  assert.equal(fallbackReply("shen", "会不会闷痘？", null), DEFLECTION_TRUTH.shen);
+  assert.equal(typedQuestionIndex("shen", "会不会闷痘？"), 3);
+  assert.equal(resolveAsk("shen", "会不会闷痘？").useful, true);
+  assert.deepEqual(QUESTIONS.shen[3].reveals, ["steady"]);
+  assert.equal(typedQuestionIndex("shen", "能遮住痘印吗"), 4);
+  assert.equal(resolveAsk("shen", "能遮住痘印吗").useful, false, "接得住不等于问对：那条诉求她留着没说");
+  assert.equal(QUESTIONS.shen[4].reveals.length, 0);
+  assert.equal(fallbackReply("shen", "能遮住痘印吗", null), QUESTIONS.shen[4].response);
+  assert.equal(typedQuestionIndex("anjie", "能立刻看得出效果吗"), 4);
+  assert.equal(resolveAsk("anjie", "能立刻看得出效果吗").useful, false);
+  assert.equal(QUESTIONS.anjie[4].reveals.length, 0);
+  // 梅女士没有「自然」那条诉求：「厚不厚」落在她自己那句拒答上，不凭空多露一条。
+  assert.equal(typedQuestionIndex("mei", "涂上去会不会太厚"), 3);
+  assert.equal(resolveAsk("mei", "涂上去会不会太厚").useful, false);
+  assert.equal(QUESTIONS.mei[3].reveals.length, 0);
+  assert.equal(fallbackReply("mei", "厚不厚", null), QUESTIONS.mei[3].response);
+  // 她还是有一句"没接住"的话：真认不出来的仍然落空白格、念她自己的挡回。
+  assert.equal(typedQuestionIndex("shen", "今天商场人真多"), null);
+  assert.equal(fallbackReply("shen", "外面在下雨", null), DEFLECTION_TRUTH.shen);
   assert.equal(typedQuestionIndex("mei", "预算能到两千吗？"), 1);
   assert.equal(resolveAsk("mei", "预算能到两千吗？").useful, false);
   assert.equal(typedQuestionIndex("zhou", "要不要直接上套组？"), 1);

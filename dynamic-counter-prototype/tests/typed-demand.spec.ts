@@ -116,3 +116,23 @@ test("她那句「不是我用」问回去，她答这一句：「她在意」�
   await page.screenshot({ path: "../audit/experience-v2/p44-mobile-echo-her-words.png" });
 });
 
+// P52（手机版）：同一件事在手机上要用同一只手摸到——「闷痘」她答得出且露诉求；
+// 「遮瑕」落在她自己那句接得住的拒答上，挡回那句不许顶替，留着没说的那条也不凭空露出来。
+test("沈薇被问闷痘答她那句、「她在意」多低风险；被问遮瑕接得住但不露她留着的那条", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "开始新品活动周" }).click();
+  await page.getByRole("button", { name: "开始营业" }).click();
+  await openConsult(page, "沈薇", ["眼下", "脸颊"]);
+  await expect(said(page)).toContainText(TRAIT_LABELS.natural);
+  await typeAsk(page, "带妆久了会不会闷痘");
+  await expect(chat(page)).toContainText("T区到下午就闷");
+  await expect(said(page)).toContainText(TRAIT_LABELS.steady);
+  await typeAsk(page, "能遮住痘印吗");
+  await expect(chat(page)).toContainText("盖住不难，盖完还是我这张脸才难。");
+  expect(await chat(page).innerText(), "挡回那句不许顶替她准备好的拒答").not.toContain(CUSTOMERS.shen.deflection);
+  await expect(said(page), "她留着没说的那条不许凭空露出来").not.toContainText(TRAIT_LABELS.correct);
+  await page.screenshot({ path: "../audit/experience-v2/p52-mobile-typed-shen.png" });
+});
+
