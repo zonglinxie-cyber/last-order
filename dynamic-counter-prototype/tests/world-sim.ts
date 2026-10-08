@@ -11,7 +11,8 @@ import {
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
-import type { Festival, Person, PersonId, Slot, Storylet, World } from "../src/world/types.ts";
+import { INSTANT_KINDS, resolveRequestChoice } from "../src/world/requests.ts";
+import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
 import { PRODUCTS, type ProductId } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
@@ -91,6 +92,16 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
   }
 }
 
+/** 当场可答的委托（唐可借小样）各风格怎么选：老实做人和经营关系的都借，硬推的舍不得。 */
+function answerRequests(style: Style, w: World, people: Person[]): World {
+  for (const req of w.requests.filter(r => r.state === "open" && INSTANT_KINDS.includes(r.kind))) {
+    if (style === "pushy") w = resolveRequestChoice(w, people, req.id, false);
+    else if (style === "random") { let x: number; [x, w] = simDraw(w); w = resolveRequestChoice(w, people, req.id, x < 0.5); }
+    else w = resolveRequestChoice(w, people, req.id, w.samples >= (req.n ?? 1));
+  }
+  return w;
+}
+
 function takeTurns(style: Style, w: World, people: Person[]): World {
   for (let n = 0; n < ACTIONS_PER_SLOT; n++) {
     let action: { call: VerbCall; args?: VerbArgs } | null;
@@ -111,6 +122,7 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
       w = beginSlot(w, people, festivals);
+      w = answerRequests(style, w, people); // 开门提的当场类委托，先答了再抽卡做动作
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
@@ -179,6 +191,17 @@ const resultOf = (style: Style, seed: string, w: World): Result => {
 const results: Result[] = [];
 /** 自主社交动作的发生次数：每跑完一季记一行（exn: 计数换季自动清零，一行就是一季）。 */
 const exTallies: Array<{ style: Style; tally: Record<string, number> }> = [];
+/** 委托结算：每季一行（状态 -> 次数），再加每模板的明细。 */
+const reqTallies: Array<{ style: Style; tally: Record<RequestState, number>; byKind: Record<string, Record<RequestState, number>> }> = [];
+const tallyRequests = (w: World): { tally: Record<RequestState, number>; byKind: Record<string, Record<RequestState, number>> } => {
+  const tally = { open: 0, done: 0, failed: 0, declined: 0, void: 0 } as Record<RequestState, number>;
+  const byKind: Record<string, Record<RequestState, number>> = {};
+  for (const r of w.requests) {
+    tally[r.state]++;
+    (byKind[r.kind] ??= { open: 0, done: 0, failed: 0, declined: 0, void: 0 })[r.state]++;
+  }
+  return { tally, byKind };
+};
 /** 第 2 季起每季一格：结局与"相对上一季谁倒戈了"。 */
 const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 for (const style of STYLES) {
@@ -186,11 +209,13 @@ for (const style of STYLES) {
     const seed = `sim-${i}`;
     let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1));
     exTallies.push({ style, tally: exchangeTally(w) });
+    reqTallies.push({ style, ...tallyRequests(w) });
     let s = seasonSummary(w, people);
     results.push(resultOf(style, seed, w));
     for (let k = 2; k <= SEASON_COUNT; k++) {
       w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k));
       exTallies.push({ style, tally: exchangeTally(w) });
+      reqTallies.push({ style, ...tallyRequests(w) });
       const next = seasonSummary(w, people);
       const bag = (later[k - 2] ??= { season: k, results: [], flips: [] });
       bag.results.push(resultOf(style, seed, w));
@@ -225,13 +250,14 @@ for (const style of STYLES) {
 }
 
 console.log("\n个人线走到终点（end≥1）:");
-for (const id of ["shen", "anjie", "luyao", "suman"] as const) {
+for (const id of ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo"] as const) {
   const bits = STYLES.map(style => {
     const rs = results.filter(r => r.style === style);
     const n = rs.filter(r => ended(r, id)).length;
     return `${style} ${n}/${N}`;
   });
-  console.log(`  ${id.padEnd(8)} ${bits.join(" · ")}`);
+  const ends = [1, 2, 3, 4].map(n => `end=${n} ${results.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+  console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · ${ends}`);
 }
 
 // 每个种子里结局更好的风格是谁（rank 越小越好）；并列都算赢。
@@ -247,6 +273,29 @@ console.log(`\n按种子算账（结局更好者赢，并列都算）: ${STYLES.
 console.log(dominant.length
   ? `⚠ ${dominant.join(",")} 在所有种子上都最优 —— 规则可能写坏了`
   : `没有哪种风格在所有种子上都最优`);
+
+// 每日委托：每种风格说到做到的比例（作废与还没到期的不算进分母）。
+console.log("\n每日委托（done / 已结算，未到期与作废不计）:");
+for (const style of STYLES) {
+  const rows = reqTallies.filter(r => r.style === style);
+  const sum = (pick: (t: (typeof rows)[number]["tally"]) => number) => rows.reduce((a, r) => a + pick(r.tally), 0);
+  const done = sum(t => t.done), failed = sum(t => t.failed), declined = sum(t => t.declined);
+  const open = sum(t => t.open), vd = sum(t => t.void);
+  const settled = done + failed + declined;
+  console.log(`  ${style.padEnd(8)} ${settled ? `${Math.round(done * 100 / settled)}%` : "-"}`
+    + `（done ${done} · failed ${failed} · declined ${declined} · 未到期 ${open} · 作废 ${vd}）`);
+}
+const REQ_KINDS = ["quota", "keep", "samples", "pair", "clean", "rebook"] as const;
+console.log("  分模板（各风格 done/已结算）:");
+for (const kind of REQ_KINDS) {
+  const bits = STYLES.map(style => {
+    const rows = reqTallies.filter(r => r.style === style).map(r => r.byKind[kind]).filter(Boolean);
+    const sum = (s: RequestState) => rows.reduce((a, t) => a + (t?.[s] ?? 0), 0);
+    const settled = sum("done") + sum("failed") + sum("declined");
+    return `${style} ${settled ? `${Math.round(sum("done") * 100 / settled)}%(${sum("done")}/${settled})` : "-"}`;
+  });
+  console.log(`    ${kind.padEnd(8)} ${bits.join(" · ")}`);
+}
 
 // 自主社交动作：每种动作一季平均发生几次（跨种子、跨季平均）。
 console.log("\n自主社交（每种动作一季平均几次）:");
@@ -308,6 +357,23 @@ for (const { season, results: rs2, flips } of later) {
       return `${ids.length} 人次 / ${fs.filter(f => f[key].length).length} 个种子${names ? `（${names}）` : ""}`;
     };
     console.log(`  ${style.padEnd(8)} 盟友→仇人 ${tally("allyToEnemy")} · 仇人→盟友 ${tally("enemyToAlly")}`);
+  }
+  console.log("个人线走到终点（end≥1）:");
+  for (const id of ["tangke", "roman", "fangmin", "qiaowan"] as const) {
+    const bits = STYLES.map(style => {
+      const rs = rs2.filter(r => r.style === style);
+      const n = rs.filter(r => (r.arcs[id]?.end ?? 0) >= 1).length;
+      return `${style} ${n}/${N}`;
+    });
+    const all = rs2.filter(r => (r.arcs[id]?.end ?? 0) >= 1).length;
+    const ends = [1, 2, 3, 4].map(n => `end=${n} ${rs2.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+    console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · 合计 ${all}/${rs2.length} · ${ends}`);
+  }
+  console.log("第 2 季新结局:");
+  for (const id of ["names-stay", "own-sentence", "file-and-sheet"]) {
+    const hits = rs2.filter(r => r.ending === id);
+    const styles = STYLES.filter(style => hits.some(r => r.style === style));
+    console.log(`  ${id.padEnd(16)} ${hits.length}/${rs2.length}（${styles.join(", ") || "无"}）`);
   }
 }
 

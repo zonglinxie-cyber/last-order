@@ -34,6 +34,21 @@ test("每个结局都能构造出来，更好的条件优先", () => {
       qualities: { "arc:shen:end": 1, "arc:anjie:end": 1 },
       opinion: { shen: 20, anjie: 20 },
     })],
+    ["names-stay", at({
+      compliance: 40, standing: 42, money: 8000,
+      qualities: { "arc:tangke:end": 2, "arc:suman:end": 1 },
+      opinion: { suman: 20, tangke: 5 },
+    })],
+    ["own-sentence", at({
+      compliance: 45, standing: 46, money: 8000,
+      qualities: { "arc:qiaowan:end": 1, "arc:roman:end": 1, "arc:shen:end": 4 },
+      opinion: { qiaowan: 10, roman: 10, shen: 10 },
+    })],
+    ["file-and-sheet", at({
+      compliance: 45, standing: 46, money: 9000,
+      qualities: { "arc:fangmin:end": 1, "arc:roman:end": 2, "arc:shen:end": 4, "arc:anjie:end": 4 },
+      opinion: { fangmin: 15, roman: 5 },
+    })],
     ["folder-follows", at({
       compliance: 70, standing: 65, money: 35000,
       opinion: { fangmin: 50 },
@@ -90,7 +105,15 @@ test("每个结局都能构造出来，更好的条件优先", () => {
   });
   const top = seasonEnding(bothAndFolder, PEOPLE);
   assert.equal(top.id, "both-kept");
-  assert.ok(rank(top.id) < rank("folder-follows"));
+  assert.ok(rank(top.id) < rank("names-stay"));
+  assert.ok(rank("names-stay") < rank("folder-follows"));
+
+  const bothAndNames = at({
+    compliance: 50, standing: 60, money: 20000,
+    qualities: { "arc:shen:end": 1, "arc:anjie:end": 1, "arc:tangke:end": 2, "arc:suman:end": 1 },
+    opinion: { shen: 20, anjie: 20, suman: 20 },
+  });
+  assert.equal(seasonEnding(bothAndNames, PEOPLE).id, "both-kept");
 
   const teamAndBooks = at({
     compliance: 55, standing: 64, money: 45000,

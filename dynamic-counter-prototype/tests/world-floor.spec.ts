@@ -107,6 +107,25 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".serve-said")).not.toContainText("温和点就行");
     });
 
+    test("新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度", async ({ page }) => {
+      await enter(page, envelope({ day: 2, slot: 0, requests: [{
+        id: "req:2:clean:fangmin", kind: "clean", by: "fangmin", day: 2, due: 2,
+        state: "open", text: "今天一天，一单都别硬推", reward: "方敏在台账上记你一笔",
+      }] }));
+      const card = page.locator(".world-requests");
+      await expect(card).toBeVisible();
+      await expect(card).toContainText("今天的请求");
+      await expect(card).toContainText("方敏");
+      await expect(card).toContainText("别硬推");
+      await card.getByRole("button", { name: "知道了" }).click();
+      await expect(card).toHaveCount(0);
+      // 「现场」栏的小标记还在，点开能看到这条的进度。
+      await expect(page.locator(".req-chip")).toContainText("委托 0/1");
+      await page.getByRole("button", { name: "查看委托进度" }).click();
+      await expect(page.locator(".world-requests")).toContainText("委托 0/1");
+      await expect(page.locator(".world-requests")).toContainText("今天打烊前");
+    });
+
     test("说书人抽到卡能选，结果念一句", async ({ page }) => {
       await saveWorld(page, cardEnvelope());
       await page.goto("/?mode=world");
@@ -132,6 +151,55 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("button", { name: /进入第 2 天/ }).click();
       await dismissCard(page);
       await expect(page.locator(".world-bar-info")).toContainText("第 2 天");
+    });
+
+    test("季末回顾：高光时刻、你的人、底部三颗按钮都在且点得中", async ({ page }) => {
+      // 第 28 天打完的档：ui.screen="season" 直接落在季末屏。
+      await enter(page, envelope({
+        day: 29, money: 24_000, standing: 66, compliance: 58,
+        opinion: { suman: 50, mei: 45, luyao: -40 },
+        opinionAtSeasonStart: { suman: 20, mei: 10 },
+        statsAtSeasonStart: { standing: 50, compliance: 55 },
+        memories: [
+          { day: 12, holder: "mei", subject: "player", act: "kept-secret", valence: 2 },
+          { day: 8, holder: "suman", subject: "player", act: "honest-advice", valence: 1 },
+        ],
+        log: [
+          { day: 5, slot: 1, text: "梅女士试了柔焦精华，带走 3 件，进账 ¥5,040。", who: ["mei"] },
+          { day: 9, slot: 0, text: "苏蔓在罗曼面前替你说了句好话：「她靠得住。」", who: ["suman", "roman"] },
+          { day: 14, slot: 2, text: "梅女士加了你微信。", who: ["mei"] },
+        ],
+      }, { screen: "season" }));
+      const recap = page.locator(".world-recap");
+      await expect(recap).toBeVisible();
+      await expect(recap).toContainText("这一季的高光");
+      expect(await recap.locator(".recap-timeline li").count()).toBeGreaterThanOrEqual(1);
+      // 「你的人」里至少一位：看法 ≥40 的两位都在，理由是她们记着你那件最重的事。
+      await expect(recap).toContainText("你的人");
+      const allies = recap.locator(".recap-people").first();
+      await expect(allies).toContainText("苏蔓");
+      await expect(allies).toContainText("梅女士");
+      await expect(allies).toContainText("记着你替她保守了秘密");
+
+      // 回顾页不许横向溢出。
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+
+      // 三颗按钮钉在可视区底部，哪颗都点得中（自己的 elementFromPoint 命中）。
+      const foot = page.locator(".report-foot");
+      await expect(foot).toBeVisible();
+      for (const name of ["档案", "进入第 2 季", "重开一季"]) {
+        const btn = foot.getByRole("button", { name });
+        await expect(btn).toBeVisible();
+        const box = await btn.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        const hit = await btn.evaluate(el => {
+          const r = el.getBoundingClientRect();
+          const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return t === el || el.contains(t);
+        });
+        expect(hit, `${name} 应能被点中`).toBe(true);
+      }
     });
 
     test("季末能进第 2 季：天数回到 1、看法收一半还在", async ({ page }) => {

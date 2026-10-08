@@ -4,16 +4,33 @@
 // 规则口径见 docs/人情场设计.md；读的是 engine 写进 World 的 quality 旗，不改引擎。
 import { ENDINGS } from "./ending.ts";
 import { PEOPLE } from "./content/index.ts";
-import type { PersonId, World } from "./types.ts";
+import type { PersonId, Storylet, World } from "./types.ts";
 
 export const WORLD_PROGRESS_KEY = "last-order-world-progress-v1";
 export const WORLD_PROGRESS_VERSION = 1;
 
-/** 四条个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~4 个）。 */
-export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman"];
+/** 个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~4 个）。
+ *  沈薇到米朵这八条第 1 季就能开始；唐可、罗曼、方敏、乔晚从第 2 季才开。 */
+export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo", "tangke", "roman", "fangmin", "qiaowan"];
 
 const PERSON_IDS = new Set<PersonId>(PEOPLE.map(p => p.id));
 const ENDING_IDS = new Set<string>(ENDINGS.map(e => e.id));
+
+/** 落点标题：从对应「arc-<id>-end」卡里那个 set 到这一档的选项 label 现取，内容改了标签跟着走。
+    档案（WorldArchive）和季末回顾（recap.ts）都读这一个取法，不各写一份。 */
+export function arcLandings(storylets: Storylet[], id: PersonId): Array<{ landing: number; title: string }> {
+  const out: Array<{ landing: number; title: string }> = [];
+  for (const card of storylets) {
+    for (const choice of card.choices) {
+      for (const effect of choice.effects) {
+        if ("quality" in effect && effect.quality === `arc:${id}:end` && typeof effect.set === "number") {
+          if (!out.some(x => x.landing === effect.set)) out.push({ landing: effect.set, title: choice.label });
+        }
+      }
+    }
+  }
+  return out.sort((a, b) => a.landing - b.landing);
+}
 
 export type WorldProgress = {
   version: number;
