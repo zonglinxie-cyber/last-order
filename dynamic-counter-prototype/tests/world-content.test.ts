@@ -2,10 +2,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CUSTOMERS } from "../src/campaign.ts";
-import { FESTIVALS } from "../src/world/content/festivals.ts";
+import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { STORYLETS } from "../src/world/content/storylets.ts";
-import { PLAYER, type Cond, type Effect, type Ref, type Temper } from "../src/world/types.ts";
+import { drawStorylet, newWorld, nextSeason } from "../src/world/engine.ts";
+import { PLAYER, type Cond, type Effect, type Ref, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
 const TEMPERS: Temper[] = ["face", "wary", "warm", "gossip", "thrifty", "hasty", "loyal", "proud", "shy"];
@@ -157,6 +158,38 @@ test("一季 28 天里有 520、618、七夕", () => {
   for (const need of ["520", "618", "qixi"]) assert.ok(ids.includes(need), need);
   for (const festival of FESTIVALS) {
     assert.ok(festival.fromDay >= 1 && festival.toDay <= SEASON_DAYS && festival.fromDay <= festival.toDay, festival.id);
+  }
+});
+
+test("节日按季取：第 1 季照旧，第 2 季双 11 / 双 12 / 年终盘点，第 3 季起循环", () => {
+  assert.deepEqual(festivalsFor(1), FESTIVALS, "第 1 季就是 FESTIVALS");
+  const two = festivalsFor(2).map(f => f.id);
+  for (const need of ["double11", "double12", "yearend"]) assert.ok(two.includes(need), need);
+  assert.equal(new Set(two).size, two.length, "第 2 季节日 id 不重复");
+  for (const festival of festivalsFor(2)) {
+    assert.ok(festival.fromDay >= 1 && festival.toDay <= SEASON_DAYS && festival.fromDay <= festival.toDay, festival.id);
+  }
+  assert.deepEqual(festivalsFor(3), festivalsFor(1), "第 3 季循环回第 1 季");
+  assert.deepEqual(festivalsFor(4), festivalsFor(2), "第 4 季循环回第 2 季");
+});
+
+test("个人线走到终点的，换季以后那条线的卡不再抽得到", () => {
+  // 四条个人线全走到落点：arc:<id>:end 跟着换季带过去，下一季所有 arc 卡都该被条件挡住。
+  const ended = {
+    ...newWorld("arc-done", PEOPLE),
+    day: 28,
+    qualities: {
+      "arc:shen": 3, "arc:shen:end": 2, "arc:anjie": 3, "arc:anjie:end": 4,
+      "arc:luyao": 3, "arc:luyao:end": 1, "arc:suman": 3, "arc:suman:end": 3,
+    },
+  };
+  const w: World = nextSeason(ended, PEOPLE);
+  assert.equal(w.day, 1, "换季后天数回到 1");
+  const all = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone]));
+  for (let i = 0; i < 20; i++) {
+    const { drawn } = drawStorylet({ ...w, seed: `arc-done-${i}`, present: { ...all } }, PEOPLE, STORYLETS);
+    assert.ok(!drawn || drawn.storylet.kind !== "arc",
+      `第 2 季还抽到了已终结的个人线 ${drawn?.storylet.id}`);
   }
 });
 

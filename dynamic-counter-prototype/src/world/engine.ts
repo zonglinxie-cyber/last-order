@@ -206,7 +206,7 @@ const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
 
 export function newWorld(seed: string, _people: Person[]): World {
   return {
-    seed, day: 1, slot: 0, money: 0,
+    seed, season: 1, day: 1, slot: 0, money: 0,
     standing: START_STANDING, compliance: START_COMPLIANCE,
     energy: ENERGY_PER_DAY, samples: START_SAMPLES,
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
@@ -1019,6 +1019,44 @@ export function endDay(world: World, people: Person[]): World {
   return say(w, `—— 第 ${w.day} 天 ——`);
 }
 
+// —— 换季 ——
+
+/** 跨季留下的 quality：个人线进度与落点（arc:*）、秘密这条线已经发生的事实
+ * （知道/答应过/说出去了/被事主对上了 —— secret-* 那一族）、微信（wechat:*）。
+ * 按天算的（away:/bought:/handoff-sale:/standing:social-day）、按季计的（served:、
+ * storyteller:heat）都清零 —— 天数回到 1，那些数再留着会骗过当天的判断。 */
+const CARRIED_QUALITY = ["arc:", "wechat:", "secret-"] as const;
+const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
+
+/** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。
+ *  账上的钱、手里的精力小样、还没赴的约都清零 —— 那是上一季的事。
+ *  世界之外的人（名单里已经没有的 id）连同关于她的看法、关系和记忆一起放下。 */
+export function nextSeason(world: World, people: Person[]): World {
+  const roster = new Set(people.map(p => p.id));
+  const bothKnown = (key: string) => key.split(">").every(id => roster.has(id));
+  const opinion: Record<PersonId, number> = {};
+  for (const [id, v] of Object.entries(world.opinion))
+    if (roster.has(id)) opinion[id] = Math.trunc(v / 2);
+  const bonds: Record<string, number> = {};
+  for (const [key, v] of Object.entries(world.bonds)) if (bothKnown(key)) bonds[key] = v;
+  const bondKinds: Record<string, BondKind> = {};
+  for (const [key, kind] of Object.entries(world.bondKinds ?? {})) if (bothKnown(key)) bondKinds[key] = kind;
+  const qualities: Record<string, number> = {};
+  for (const [key, v] of Object.entries(world.qualities)) if (carriedAcrossSeasons(key)) qualities[key] = v;
+  const season = world.season + 1;
+  return {
+    seed: world.seed, season, day: 1, slot: 0, money: 0,
+    standing: Math.round(START_STANDING + (world.standing - START_STANDING) / 2),
+    compliance: Math.round(START_COMPLIANCE + (world.compliance - START_COMPLIANCE) / 2),
+    energy: ENERGY_PER_DAY, samples: START_SAMPLES,
+    opinion, bonds, bondKinds,
+    memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
+    qualities, present: {}, touched: [], rngCalls: world.rngCalls,
+    appointments: [], fired: {},
+    log: [{ day: 1, slot: 0, text: `第 ${season} 季开始。` }],
+  };
+}
+
 // —— 一季盘点 ——
 
 export type SeasonSummary = {
@@ -1070,6 +1108,7 @@ export function parseWorld(data: unknown): World | null {
   if (!isRecord(raw) || raw.version !== WORLD_SAVE_VERSION || !isRecord(raw.world)) return null;
   const w = raw.world;
   if (!isStr(w.seed) || !isInt(w.day) || w.day < 1) return null;
+  if (w.season !== undefined && (!isInt(w.season) || w.season < 1)) return null;
   if (!isInt(w.slot) || w.slot < 0 || w.slot > 3) return null;
   for (const k of ["money", "standing", "compliance", "energy", "samples", "rngCalls"] as const)
     if (!isNum(w[k])) return null;
@@ -1094,5 +1133,6 @@ export function parseWorld(data: unknown): World | null {
     && ((l as LogEntry).who === undefined || isStrArray((l as LogEntry).who)))) return null;
   const world = w as unknown as World;
   world.bondKinds ??= {};
+  world.season ??= 1; // 旧存档没有这个字段：那是第一季写的
   return world;
 }

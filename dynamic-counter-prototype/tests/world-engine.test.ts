@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
-  evalCond, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, opinionOf, parseWorld,
+  evalCond, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld,
   related, resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
@@ -316,6 +316,92 @@ test("存档：序列化往返一致，坏档整份拒收", () => {
   const wrongType = JSON.parse(serializeWorld(w));
   wrongType.world.memories = [{ day: 1, holder: "x", subject: "player", act: "a", valence: 3 }];
   assert.equal(parseWorld(JSON.stringify(wrongType)), null, "valence 越界拒收");
+});
+
+test("存档：旧档没有 season 按第 1 季读，乱写拒收", () => {
+  const w = newWorld("old-save", PEOPLE);
+  const old = JSON.parse(serializeWorld(w));
+  delete old.world.season;
+  assert.equal(parseWorld(JSON.stringify(old))?.season, 1, "旧档缺字段按 1 读");
+
+  const two = nextSeason(w, PEOPLE);
+  assert.equal(parseWorld(serializeWorld(two))?.season, 2, "season 跟着存档往返");
+
+  const bad = JSON.parse(serializeWorld(w));
+  bad.world.season = 0;
+  assert.equal(parseWorld(JSON.stringify(bad)), null, "season 0 拒收");
+  bad.world.season = "two";
+  assert.equal(parseWorld(JSON.stringify(bad)), null, "season 不是整数拒收");
+});
+
+test("换季：看法往 0 收一半，关系网原样带走，只留大事", () => {
+  let w = newWorld("season-turn", PEOPLE);
+  w = {
+    ...w,
+    day: 28, slot: 3, money: 12_000, standing: 80, compliance: 30,
+    energy: 12, samples: 0, festival: "qixi",
+    opinion: { mei: 45, shen: -25, ghost: 60 },
+    bonds: { "mei>shen": 12, "peng>zhao": -35, "mei>ghost": 8 },
+    bondKinds: { "mei>shen": "friend", "peng>zhao": "rival", "mei>ghost": "fan" },
+    memories: [
+      { day: 3, holder: "mei", subject: PLAYER, act: "honest-advice", valence: 2 },
+      { day: 4, holder: "mei", subject: PLAYER, act: "got-sample", valence: 1 },
+      { day: 5, holder: "shen", subject: PLAYER, act: "hard-sell", valence: -2, heardFrom: "he" },
+      { day: 6, holder: "ghost", subject: PLAYER, act: "honest-advice", valence: 2 },
+      { day: 7, holder: "qiu", subject: PLAYER, act: "greeted", valence: 0 },
+    ],
+    qualities: {
+      "arc:mei": 2, "arc:mei:end": 1, "arc:luyao:clash": 2,
+      "secret-known:qiu": 1, "secret-kept:qiu": 1, "secret-out:zhao": 1,
+      "wechat:mei": 1, "away:mei": 28, "bought:mei": 27, "served:mei": 3,
+      "storyteller:heat": 1.5, "standing:social-day": 28, "handoff-sale:suman:12": 1,
+    },
+    appointments: [{ day: 30, slot: 1, person: "mei", reason: "visit" }],
+    fired: { "st-quiet-day": 4 },
+    present: { mei: "counter" }, touched: ["mei"],
+    rngCalls: 777, log: [{ day: 28, slot: 3, text: "旧季最后一条" }],
+  };
+  const n = nextSeason(w, PEOPLE);
+
+  assert.equal(n.season, 2);
+  assert.equal(n.day, 1, "天数回到 1");
+  assert.equal(n.slot, 0);
+  assert.equal(n.money, 0, "钱清零");
+  assert.equal(n.energy, 100);
+  assert.equal(n.samples, 8);
+  assert.equal(n.standing, 65, "柜位往起点收一半：80 → 65");
+  assert.equal(n.compliance, 43, "台账往起点收一半：30 → 43");
+  assert.equal(n.festival, undefined, "节日是季内的，下一季重新算");
+  assert.equal(n.rngCalls, 777, "抽数接着走，新一季不重播同一串");
+
+  assert.equal(n.opinion.mei, 22, "45 往 0 收一半");
+  assert.equal(n.opinion.shen, -12, "-25 往 0 收一半");
+  assert.ok(!("ghost" in n.opinion), "名单之外的人不带过去");
+  assert.equal(n.bonds["mei>shen"], 12, "NPC 之间的冷暖原样带走");
+  assert.equal(n.bonds["peng>zhao"], -35);
+  assert.equal(n.bondKinds?.["mei>shen"], "friend", "关系种类也带走");
+  assert.ok(!("mei>ghost" in n.bonds), "有一头不在名单里的关系放下");
+
+  assert.deepEqual(n.memories.map(m => `${m.holder}:${m.act}`).sort(), ["mei:honest-advice", "shen:hard-sell"],
+    "只有 valence ±2 的大事记得住");
+  assert.equal(n.memories.find(m => m.holder === "shen")?.heardFrom, "he", "听谁说的也留下");
+
+  for (const keep of ["arc:mei", "arc:mei:end", "arc:luyao:clash",
+    "secret-known:qiu", "secret-kept:qiu", "secret-out:zhao", "wechat:mei"])
+    assert.equal(n.qualities[keep], w.qualities[keep], `${keep} 带过去`);
+  for (const drop of ["away:mei", "bought:mei", "served:mei",
+    "storyteller:heat", "standing:social-day", "handoff-sale:suman:12"])
+    assert.ok(!(drop in n.qualities), `${drop} 按天/按季算，清零`);
+
+  assert.equal(n.appointments.length, 0, "没赴的约不带过去");
+  assert.deepEqual(n.fired, {}, "卡的触发记录清零");
+  assert.deepEqual(n.present, {});
+  assert.deepEqual(n.touched, []);
+  assert.equal(n.log.length, 1);
+  assert.ok(n.log[0]!.text.includes("第 2 季开始"), `开季要写一条：${n.log[0]?.text}`);
+
+  // 换季后的世界本身是合法的存档形态。
+  assert.deepEqual(parseWorld(serializeWorld(n)), n);
 });
 
 test("一季盘点：盟友、仇人、个人线落点", () => {

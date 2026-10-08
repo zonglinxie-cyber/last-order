@@ -100,6 +100,8 @@ export type LogEntry = { day: number; slot: Slot; text: string; who?: PersonId[]
 
 export type World = {
   seed: string;
+  /** 第几季：从 1 起，nextSeason +1。旧存档缺这个字段按 1 读。 */
+  season: number;
   day: number;
   slot: Slot;
   money: number;

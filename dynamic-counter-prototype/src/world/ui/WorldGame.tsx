@@ -7,12 +7,12 @@ import { demandBudgetWord, PRODUCTS, TRAIT_LABELS, type Customer, type ProductId
 import { asset } from "../../base.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  drawStorylet, endDay, newWorld, parseWorld, resolveServe, seasonSummary, substitute,
+  drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, seasonSummary, substitute,
   verbOptions, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
-import type { Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
-import { PEOPLE, STORYLETS, FESTIVALS } from "../content/index.ts";
+import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
+import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { WebView } from "./WebView.tsx";
@@ -65,13 +65,13 @@ const restore = (): { world: World; ui: UiState } | null => {
 // —— 每个时段开头：落位 → 说书人抽一张。在场的人自己互动（传话、陆遥抢客）放在时段末，
 //     先让玩家动手：你这个时段没顾上的人，陆遥才带得走。
 const runPipeline = (w: World): { world: World; drawn: DrawnStorylet | null } => {
-  const next = beginSlot(w, PEOPLE, FESTIVALS);
+  const next = beginSlot(w, PEOPLE, festivalsFor(w.season));
   const r = drawStorylet(next, PEOPLE, STORYLETS);
   return { world: r.world, drawn: r.drawn };
 };
 
 const nameOf = (id: PersonId) => PEOPLE.find(p => p.id === id)?.name ?? id;
-const festivalName = (id?: string) => FESTIVALS.find(f => f.id === id)?.name;
+const festivalName = (festivals: Festival[], id?: string) => festivals.find(f => f.id === id)?.name;
 const shorten = (text: string) => (text.length > 30 ? `${text.slice(0, 29)}…` : text);
 const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
 
@@ -217,6 +217,15 @@ export default function WorldGame() {
     setWorld(w); setPending(drawn); setReport(null);
     setPhase("play");
   };
+  // 季末「进入第 N+1 季」：人和关系网带过去，天数回到 1，从开季那个上午接着玩。
+  const startNextSeason = () => {
+    const next = nextSeason(world, PEOPLE);
+    setDayBase({ day: next.day, money: next.money, opinion: { ...next.opinion } });
+    const { world: w, drawn } = runPipeline(next);
+    setWorld(w); setPending(drawn); setReport(null);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
+    setPhase("play");
+  };
 
   // —— 楼层上的动作 ——
   const apply = (call: VerbCall) => {
@@ -299,7 +308,7 @@ export default function WorldGame() {
         <h1>人情场</h1>
         <p className="world-intro-copy">商场一层是一整张人情网。你在柜上怎么待一个人，会顺着这张网传出去。没有关卡，一季 28 天，看看最后谁还会回来。</p>
         <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
-          {boot ? `继续 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
+          {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
         </button>
         {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}
       </section>
@@ -311,7 +320,7 @@ export default function WorldGame() {
     const arcRows = Object.entries(s.arcs).filter(([, arc]) => Object.keys(arc).length);
     return <div className="app-screen world-app world-report-page">
       <MobileScroll className="world-report-scroll"><main className="world-report">
-        <p className="report-eyebrow">一季 · {SEASON_DAYS} 天散场</p>
+        <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
         <h1>这一季散场了</h1>
         <div className="report-numbers">
           <span><small>这一季进账</small><b>{yuan(s.money)}</b></span>
@@ -331,7 +340,10 @@ export default function WorldGame() {
           {arcRows.length ? arcRows.map(([id, arc]) => <p key={id}><b>{nameOf(id)}</b>：{Object.entries(arc).map(([k, v]) => `${k} · ${v}`).join("，")}</p>) : <p>谁的线都没走起来。</p>}
         </section>
       </main></MobileScroll>
-      <div className="report-foot"><button className="world-primary" type="button" onClick={startNew}>再开一季</button></div>
+      <div className="report-foot">
+        <button className="world-primary" type="button" onClick={startNextSeason}>进入第 {world.season + 1} 季</button>
+        <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
+      </div>
     </div>;
   }
 
@@ -375,7 +387,7 @@ export default function WorldGame() {
   return <div className="app-screen world-app">
     <header className="world-bar">
       <div className="world-bar-info">
-        <b>第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(world.festival)}` : ""}</b>
+        <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
         <span>{yuan(world.money)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
       </div>
       <button className="world-web-btn" type="button" aria-label="人情网" onClick={() => setWebOpen(true)}>人情网</button>
