@@ -1359,7 +1359,7 @@ export const STORYLETS_SEASON2: Storylet[] = [
           { opinion: "$a", delta: -2 }, { opinion: "$b", delta: -2 },
           { remember: { holder: "$a", act: "copied-line", valence: -2, subject: "player" } },
         ],
-        result: "乔晚还在背。{$b}听到的错处，算在你交给她的那句上。",
+        result: "乔晚还在背。{$b}听到的错处，算在你交给乔晚的那句上。",
       },
       {
         label: "晚班的句子归苏蔓",
