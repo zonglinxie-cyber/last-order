@@ -133,7 +133,7 @@ test("进度落后时闭店事件问的是柜位，不是储备人选", () => {
 });
 
 test("报价、存档和柜位数字互不复用：新字段被校验", () => {
-  assert.equal(SAVE_VERSION, 6);
+  assert.equal(SAVE_VERSION, 7);
   const restored = parseCampaign(JSON.stringify({ ...INITIAL, members: ["shen", "nobody", "shen"], standing: 62 }))!;
   assert.deepEqual(restored.members, ["shen"]);
   assert.equal(restored.standing, 62);

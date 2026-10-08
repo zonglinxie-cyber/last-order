@@ -1,0 +1,61 @@
+/* 对抗局（?mode=match）：接待面整份继承 duel.css 的 .duel-* 选择器，
+   这里只写楼层队列、陆遥状态条、迷你比分和结算比分板这几块新增件。 */
+@import url("./duel.css");
+
+/* ---------- 楼层：陆遥状态条压在柜台画左上，队列仍是底部一排 ---------- */
+.match-floor-page { overflow:hidden; }
+.match-floor { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.match-head { gap:6px; }
+.match-head-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.match-head-row .duel-eyebrow { flex:1 1 auto; }
+.match-score { display:flex; gap:10px; padding:4px 10px; border:1px solid #f1cf8644; border-radius:10px; background:#100a0ccc; }
+.match-score span { font-size:12px; color:#b3a08c; white-space:nowrap; }
+.match-score b { font-size:12px; color:#f6e7c8; font-weight:700; }
+.match-score .match-rival-score b { color:#e5a595; }
+
+.match-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; border-top:1px solid #ffffff14; }
+.match-rival {
+  position:absolute; z-index:3; left:12px; top:calc(10px + var(--top-inset));
+  display:flex; align-items:center; gap:10px; padding:6px 12px 6px 6px;
+  border:1px solid #e5a59544; border-radius:40px; background:#140b0be8; box-shadow:0 8px 20px #0008;
+}
+.match-rival img { width:40px; height:40px; border-radius:50%; object-fit:cover; object-position:50% 20%; }
+.match-rival-info { display:flex; flex-direction:column; gap:1px; }
+.match-rival-info b { font-size:12px; color:#f0c9c0; }
+.match-rival-info span { font-size:12px; color:#b3a08c; }
+.match-rival-ticks { display:flex; gap:3px; margin-top:2px; }
+.match-rival-ticks em { width:10px; height:5px; border-radius:3px; background:#e5a595; }
+.match-rival-ticks em.used { background:#4a3033; }
+.match-rival-sales { font-size:13px; color:#e5a595; font-weight:700; }
+
+/* 一排 6~8 位站不下：收成两行小立牌，仍是同一条柜台队伍。 */
+.match-stage-row { gap:10px; flex-wrap:wrap; align-content:flex-end; }
+.match-stander img { width:74px; height:96px; border-radius:40px 40px 8px 8px; }
+.match-stander .duel-stander-tag { padding:5px 9px; margin-top:-12px; }
+.match-stander .duel-stander-tag em { max-width:96px; }
+/* 被陆遥锁定的那位还站着，只是点不动、名牌换成她的措辞。 */
+.match-stander.locked img { filter:saturate(.55) brightness(.8); }
+.match-stander.locked .duel-stander-tag { border-color:#e5a59577; }
+.match-stander.locked .duel-stander-tag em { color:#e5a595; }
+
+.match-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.match-feed { flex:1 1 auto; min-width:0; font-size:12px; color:#9b8d80; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---------- 接待屏：顶部右角塞一行陆遥动线，其余与 duel 一致 ---------- */
+.match-mini { flex:none; font-size:12px; color:#e5a595; font-style:normal; }
+
+/* ---------- 结算：两块比分板 ---------- */
+.match-summary .duel-eyebrow { align-self:flex-start; }
+.match-scoreboard { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.match-scoreboard div { display:flex; flex-direction:column; gap:2px; padding:10px 12px; border:1px solid #ffffff1a; border-radius:12px; background:#ffffff06; }
+.match-scoreboard div.win { border-color:#f1cf86aa; background:#f1cf8612; }
+.match-scoreboard span { font-size:12px; color:#b3a08c; }
+.match-scoreboard b { font-size:20px; color:#f6e7c8; }
+.match-scoreboard div:last-child b { color:#e5a595; }
+.match-scoreboard div.win b { color:#ffd98a; }
+.match-scoreboard small { font-size:12px; color:#9b8d80; }
+
+@media (max-height: 640px) {
+  .match-stander img { width:60px; height:80px; }
+  .match-rival { top:calc(6px + var(--top-inset)); }
+}

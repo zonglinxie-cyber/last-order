@@ -53,6 +53,16 @@
 
 参考了 [Little Ritual](https://developers.openai.com/showcase/little-ritual) 的移动送达循环、[Codex Pet Arena](https://developers.openai.com/showcase/codex-pet-arena) 的即时竞争与阶段变化。调研依据是案例页与开发过程，未把外站演示当作本项目的测试证据。
 
+## 三种试验玩法（手机版入口）
+
+同一个规则引擎上的三种换玩法，都在手机 PWA 那一侧，主入口的五日剧情不受影响：
+
+- **七日周目** `/?mode=run`：从顾客池按种子抽每周阵容，五天之间有增幅三选一，目标按池子折算，可无限开下一周。规则在 `dynamic-counter-prototype/src/run.ts`，存档 `last-order-run-v1`。
+- **速诊** `/?mode=blitz`：4 分钟一局、最多 3 回合接待一人的计分模式，读人-出牌-试用-报价循环压到最短。规则在 `src/blitz.ts`，存档 `last-order-blitz-v1`，最高纪录 `last-order-blitz-best`。
+- **对抗局** `/?mode=match`：玩家与陆遥同抢一天的队列，她的成交由确定性策略驱动、与玩家同路径入账。规则在 `src/match.ts`，战绩 `last-order-match-v1` / `last-order-match-best`。
+
+三种玩法的接待都复用 `duel.ts` 的牌局层、`campaign.ts` 的入账路径，不另起经济。
+
 ## 本机运行
 
 ```bash

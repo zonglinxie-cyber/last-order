@@ -77,6 +77,12 @@ export type Campaign = {
   floorSeconds: number;
   orders: OrderRecord[];
   finished: boolean;
+  // ?mode=run 的周目覆盖：week 替换本周排程（五天 DayStory），target 替换本周目标。
+  // canonical 五日章节两个字段都不写，weekOf/targetOf 回落到 DAYS/TARGET。
+  week?: DayStory[];
+  target?: number;
+  // 周目的种子（"week-<周目>:<索引>"）随存档走，下一周由它推出。
+  runSeed?: string;
 };
 
 export type EventChoice = {
@@ -111,7 +117,9 @@ export type DawnNotice = { speaker: string; body: string };
 
 export const SAVE_KEY = "last-order-campaign-v1";
 // 5 → 6：stock 的含义从"整周配货"变成"到今天早上为止到过的货"。字段没变，但一份 v5 存档过了新晨会会拿到超出配货的一批（量出来是柔焦 11、修护 9），所以整份拒收，不做合并。
-export const SAVE_VERSION = 6;
+// 6 → 7：存档多了三个可选字段（week / target / runSeed），week 里的 DayStory 要逐项校验；
+// v6 没有这些字段，把一份缺排程的周目当 canonical 五天续下去会串档，所以整份拒收，不做合并。
+export const SAVE_VERSION = 7;
 export const TARGET = 21_000;
 export const ENERGY_LOCK = 18;
 export const RIVAL_IDS: CustomerId[] = ["shen", "returning", "zhou"];
@@ -305,7 +313,7 @@ export const claimUnits = (customer: Customer, left = Infinity) => Math.min(CLAI
 // 和第 5 天断货那一屏删掉「等」是同一条判断（restocks）：最后一天没有「第二天早上」，
 // 这句承诺的两次代价 —— 她查备案问回来、退货那天翻倍 —— 都落不了地，所以那天不按这格卖货。
 export const canClaim = (s: Campaign, id: CustomerId, product: ProductId, bundle: BundleId) =>
-  s.day < DAYS.length && product === CLAIM_PRODUCT && claimUnits(CUSTOMERS[id], s.stock[product]) > forcedUnits(CUSTOMERS[id], bundle, s.stock[product]);
+  s.day < weekOf(s).length && product === CLAIM_PRODUCT && claimUnits(CUSTOMERS[id], s.stock[product]) > forcedUnits(CUSTOMERS[id], bundle, s.stock[product]);
 
 // 只有被线索或提问揭示过的诉求才显示给玩家；未揭示的要求仍然参与真实适配度。
 export function revealOf(customer: Customer, discovered: CueId[], revealed: Trait[]) {
@@ -445,6 +453,11 @@ export const DAYS: DayStory[] = [
   { day: 4, title: "婚礼前一周", subtitle: "最大的一单，最脆弱的人", brief: "安姐是苏蔓维护三年的老客。她点名让你试妆。若你前两天接住了周姐，她会带着同事的需求回来。", threat: "高客单、老客归属、敏感风险同时出现", customers: ["anjie"] },
   { day: 5, title: "最后一单", subtitle: "复购、售后与盘点同时到来", brief: "区域经理提前巡店。沈薇带着直播团队回来下单，后仓却在查五天前的赠品缺口。若第 4 天你先稳住了安姐的皮肤，她会赶在化妆师之前回来要当天的妆。今天每条记录都会连起来。", threat: "成交只是开端；旧选择正在返回现场", customers: ["returning"] },
 ];
+
+// 本周排程与目标只看一处：周目存档用自己的 week/target，canonical 章节回落到 DAYS/TARGET。
+// 之后任何"今天是第几天、有哪些人"的判断都先走这两个函数，不再直接读 DAYS。
+export const weekOf = (s: Campaign): DayStory[] => s.week ?? DAYS;
+export const targetOf = (s: Campaign): number => s.target ?? TARGET;
 
 export const RIVAL_INTERRUPTIONS: Record<"shen" | "zhou" | "returning", { headline: string; quote: string }> = {
   shen: { headline: "陆遥靠到镜边", quote: "她之前用我们家的持妆款很满意。" },
@@ -665,10 +678,15 @@ export function checkCounter(s: Campaign): Campaign {
 }
 export const servedZhou = (s: Campaign) => hasFlag(s, "served:zhou:good") || hasFlag(s, "served:zhou:risky");
 // 她回来要的是"当天的妆"，前提是第 4 天你按她的皮肤给了修护而不是硬推：被退掉的人不会再来找你要判断。
-export const anjieComesBack = (s: Campaign) => s.day === 5 && hasFlag(s, "served:anjie:good");
+// 周目里 anjie2 是池内普通顾客，链式"回来"只在 canonical 章节成立（或生成周本来就排了她）。
+export const anjieComesBack = (s: Campaign) => s.day === 5 && hasFlag(s, "served:anjie:good")
+  && (s.week === undefined || weekOf(s)[4]?.customers.includes("anjie2"));
 
 export function floorCustomers(s: Campaign): CustomerId[] {
-  const base = DAYS[s.day - 1]?.customers ?? [];
+  const base = weekOf(s)[s.day - 1]?.customers ?? [];
+  // zhou2 / anjie2 两条跨日链只在 canonical 章节里由状态补位：生成周把链内顾客当普通顾客
+  // 显式排进当日阵容，再动态追加就会把同一个人一天排两次。
+  if (s.week !== undefined) return base;
   if (s.day === 4 && servedZhou(s) && !hasFlag(s, "lost:zhou")) return [...base, "zhou2"];
   // 她约的是早上，排在沈薇前面：先接她不会把最后一天那一单的人耗到走。
   if (anjieComesBack(s)) return ["anjie2", ...base];
@@ -798,9 +816,12 @@ function applySampleReturn(s: Campaign, item: (typeof SAMPLE_RETURNS)[number]): 
 
 // 晨会念的是昨天那条线：到昨天为止这个柜位应该做到多少，账上实际有多少。
 export const progressTarget = (throughDay: number) => DAY_TARGETS.slice(0, Math.max(0, Math.min(5, Math.trunc(throughDay)))).reduce((sum, value) => sum + value, 0);
+// 周目的每天那条线按目标等比折算（爬坡形状沿用 canonical 的 DAY_TARGETS）：周目标变了，每天的线跟着变。
+export const progressTargetOf = (s: Campaign, throughDay: number) =>
+  targetOf(s) === TARGET ? progressTarget(throughDay) : Math.round(progressTarget(throughDay) * targetOf(s) / TARGET);
 const money = (value: number) => value.toLocaleString("zh-CN");
 // 晨会看"到昨天为止"，闭店事件看"到今天为止"：同一份进度，两个时点。
-export const thisWeekPercent = (s: Campaign) => { const need = progressTarget(s.day); return need ? Math.round(s.sales / need * 100) : 100; };
+export const thisWeekPercent = (s: Campaign) => { const need = progressTargetOf(s, s.day); return need ? Math.round(s.sales / need * 100) : 100; };
 
 export type CounterReading = { key: string; speaker: string; body: string; text: string; standing: number; roman: number };
 
@@ -810,7 +831,7 @@ export type CounterReading = { key: string; speaker: string; body: string; text:
 // 同一屏下面「自己垫一支走单」又是按今天的线给的（差 ¥2,000）—— 落后与否在一屏里得到两个答案，界面没说为什么。
 export function morningReview(s: Campaign): CounterReading | null {
   if (s.day < 2) return null;
-  const need = progressTarget(s.day - 1);
+  const need = progressTargetOf(s, s.day - 1);
   const done = Math.round((need ? s.sales / need : 1) * 100);
   const base = { key: `morning:${s.day}`, speaker: "晨会 · 罗曼", standing: 0, roman: 0 };
   if (done >= 100) return { ...base, standing: 5, roman: 2, text: `晨会 · 昨天那条线达成 ${done}%，进度在你这边`, body: `罗曼念的是昨天那条线 ¥${money(need)}：你已经 ${done}%。区域周会上，她把这个柜位排在前面。` };
@@ -943,7 +964,7 @@ export function applyDawn(s: Campaign): Campaign {
     next = { ...next, sales: Math.max(0, next.sales - charged), daySales: next.daySales - charged, flags: flag(next, "zhao-returned"), history: history(next, receiptLine("赵女士按承诺退了那单", -Math.min(charged, next.sales))) };
   }
   // 她回来这件事要留在因果账本里，不能只算晨会念的一句话。
-  if (s.day === 5 && hasFlag(s, "served:anjie:good") && !hasFlag(s, "anjie-came-back")) {
+  if (anjieComesBack(s) && !hasFlag(s, "anjie-came-back")) {
     next = { ...next, flags: flag(next, "anjie-came-back"), history: history(next, "安姐赶在化妆师之前回来，只要当天的妆") };
   }
   // 垫的那一支第二天必须有个去处。认的是唐可肯不肯替你张罗：和她借货、替她出货是同一条关系（`TANGKE_STOCK_GATE`）。
@@ -1120,6 +1141,17 @@ const priceAsk = (s: Campaign) => (hasPurchase(s, "xiaoyu")
   ? ` 同一时间小雨发来旗舰店预售截图：同款到手比你的票面少 ¥${money(PRICE_GAP)}，她问柜台能不能退差。` : "");
 
 export function dayEvent(s: Campaign): DayEvent {
+  // 周目没有文案那五晚：生成周每晚只发一张通用卡，选项走同一个 EventChoice 结构，
+  // 不碰 canonical 的剧情线与隐藏条件（小雨的单、安姐的赠品、方敏的缺口都不存在）。
+  if (s.week !== undefined) return {
+    speaker: "罗曼", speakerStaff: "roman", speakerCustomer: null, title: "照常开档",
+    body: `活动周第 ${s.day} 天收摊。罗曼收起今天的小票：${s.sales >= progressTargetOf(s, s.day) ? "这条线你过了，明天照旧。" : "这条线还差一截，明天自己想清楚先接谁。"}`,
+    choices: [
+      { id: "tidy-counter", label: "把柜台收拾干净再走", detail: "记录本多一行", result: "你把今天的试用装和单据码回原位。第二天早上什么都找得到。", apply: st => ({ ...st, evidence: st.evidence + 1, history: history(st, "收摊后你把柜台整理了一遍") }) },
+      { id: "count-samples", label: "盘点小样抽屉", detail: "台账更干净一点", result: "你数清了抽屉里剩下的小样，台账上这条对得上。", apply: st => ({ ...st, compliance: clamp(st.compliance + 2), history: history(st, "收摊后你盘点了一遍小样抽屉") }) },
+      { id: "chat-tangke", label: "和唐可对一下明天的客流", detail: "互换一句实话", result: "她说了明天大概什么时候人多。人情不深，但有用。", apply: st => ({ ...st, relations: { ...st.relations, tangke: st.relations.tangke + 2 }, history: history(st, "你和唐可对了一遍明天的客流") }) },
+    ],
+  };
   if (s.day === 1) return {
     speaker: "苏蔓", speakerStaff: "suman", speakerCustomer: null, title: "少了两份热门赠品",
     body: "苏蔓说上午太忙忘记登记，让你把缺口记到刚才的订单里。她是唯一主动教过你的前辈。",
@@ -1180,7 +1212,7 @@ export function dayEvent(s: Campaign): DayEvent {
   const advanceCard: EventChoice = {
     id: "advance-order",
     label: "自己垫一支走单",
-    detail: `业绩 +¥${money(ADVANCE_SALE)} · 你先掏 ¥${money(advancePocket())} · 今天这条线还差 ¥${money(progressTarget(s.day) - s.sales)} · 台账上多一笔虚增`,
+    detail: `业绩 +¥${money(ADVANCE_SALE)} · 你先掏 ¥${money(advancePocket())} · 今天这条线还差 ¥${money(progressTargetOf(s, s.day) - s.sales)} · 台账上多一笔虚增`,
     result: "唐可替你在系统里开了那张单。收银条写着你的名字，货搬进你自己的包。",
     // 两道闸：当晚没结过（`settleDayEvent` 认 eventDoneDays）+ 这一整周没垫过。
     // 注意 `visible` 是按当下状态算的，按下去之后它会翻假 —— 手机版的确认屏因此不能只读 visibleChoices。
@@ -1305,6 +1337,20 @@ export function parseCampaign(raw: string | null): Campaign | null {
       || (session.faceTrialled !== undefined && typeof session.faceTrialled !== "boolean")
       // 这一单的分钟账：老存档没这个字段按 0 起算，但写了就必须是个非负整数（和 faceTrialled 那一串同一套判法）。
       || (session.visitMinutes !== undefined && (!Number.isInteger(session.visitMinutes) || session.visitMinutes < 0))))) return null;
+    // 周目覆盖（v7）：week 写了就必须是逐项合法的 DayStory，target 写了就必须是范围内的整数，
+    // runSeed 写了就必须是 "week-<周目>:<索引>" —— 三个字段只要脏一个，整份存档拒收。
+    if (parsed.week !== undefined) {
+      if (!Array.isArray(parsed.week) || !parsed.week.length || parsed.week.length > 5) return null;
+      for (const story of parsed.week) {
+        if (!story || !Number.isInteger(story.day) || story.day < 1 || story.day > 5
+          || typeof story.title !== "string" || typeof story.subtitle !== "string"
+          || typeof story.brief !== "string" || typeof story.threat !== "string"
+          || !Array.isArray(story.customers) || !story.customers.length
+          || story.customers.some((id: unknown) => typeof id !== "string" || !Object.hasOwn(CUSTOMERS, id))) return null;
+      }
+    }
+    if (parsed.target !== undefined && (!Number.isInteger(parsed.target) || parsed.target < 1 || parsed.target > 200_000)) return null;
+    if (parsed.runSeed !== undefined && (typeof parsed.runSeed !== "string" || !/^week-\d+:\d+$/.test(parsed.runSeed))) return null;
     const merged: Campaign = {
       ...INITIAL,
       ...parsed,
@@ -1374,7 +1420,7 @@ export function todayHistory(s: Campaign): HistoryEntry[] {
 }
 
 export function historyByDay(s: Campaign): Array<{ day: number; title: string; items: HistoryEntry[] }> {
-  return DAYS.map(story => ({
+  return weekOf(s).map(story => ({
     day: story.day,
     title: story.title,
     items: s.history.filter(item => item.day === story.day),
@@ -1391,7 +1437,7 @@ export function counterVerdict(s: Campaign): { label: string; body: string } {
 }
 
 export function endingTitle(s: Campaign) {
-  const salesWin = s.sales >= TARGET;
+  const salesWin = s.sales >= targetOf(s);
   const safe = s.compliance >= COMPLIANCE_RISK;
   const trusted = s.trust >= 55;
   if (salesWin && !safe) return "销冠的账单";
@@ -1518,7 +1564,8 @@ export function leaveSample(s: Campaign, customerId: CustomerId): Campaign {
   if (s.samples <= 0 || hasFlag(s, `sample:${customerId}`)) return s;
   const customer = CUSTOMERS[customerId];
   const marked = markExpiredSample(s, customerId);
-  return { ...marked, samples: s.samples - 1, trust: clamp(s.trust + 4), flags: flag(marked, `sample:${customerId}`), history: history(s, `你给${customer.name}留下试用小样`) };
+  // 周目增幅 perk:sample-x2：小样递出去的时候多留一份印象，信任多 +1。
+  return { ...marked, samples: s.samples - 1, trust: clamp(s.trust + 4 + (hasFlag(s, "perk:sample-x2") ? 1 : 0)), flags: flag(marked, `sample:${customerId}`), history: history(s, `你给${customer.name}留下试用小样`) };
 }
 
 export function resolveSale(s: Campaign, input: {
@@ -1619,6 +1666,49 @@ export function resolveSale(s: Campaign, input: {
           + (shared && sold ? ` 陆遥分走一半，你实际记入 ¥${amount.toLocaleString("zh-CN")}。` : ""))
         + (blocked ? (restocks ? " 下一单之前有三条路：走调拨单、开口找人，或者等大仓下一批补上——如果她还等得起。" : " 下一单之前只剩两条路：走调拨单，或者开口找人。这一支到周末不会再补了。") : ""),
     },
+  };
+}
+
+// 陆遥在视野之外成交（对抗局 ?mode=match 用）：钱、货、旗子、账本走 resolveSale 同一条入账路径，
+// 但玩家侧的账不能动 —— 体力、信任、台账、留痕、排队耐心、班内分钟都还回去，手上那单 activeSession 也原样奉还。
+// 入法：先把她手上没有的排队顾客全部视作已离场（spendAttention 不碰已离场的人），收完账只留成交这一笔的副作用。
+export function resolveRivalSale(s: Campaign, id: CustomerId): { campaign: Campaign; outcome: SaleOutcome } | null {
+  const customer = CUSTOMERS[id];
+  if (!customer || s.dayServed.includes(id) || s.lost.includes(id) || s.finished) return null;
+  // 她只挑顾客真心会买的方向（positive/mixed），硬推那一手不在她的打法里；
+  // 件数按 unitsWanted 被预算、上限与抽屉削过的数取 —— 收入最高的那组就是答案。
+  let best: { product: ProductId; bundle: BundleId; amount: number } | null = null;
+  for (const product of Object.keys(PRODUCTS) as ProductId[]) {
+    if (s.stock[product] <= 0) continue;
+    const { tier } = fitOf(customer, product);
+    if (tier === "negative") continue;
+    for (const bundle of Object.keys(BUNDLES) as BundleId[]) {
+      const amount = PRODUCTS[product].price * unitsWanted(customer, product, bundle, tier, s.stock[product]);
+      if (amount > (best?.amount ?? 0)) best = { product, bundle, amount };
+    }
+  }
+  const discovered: CueId[] = ["eyes", "cheek", "nose"];
+  const revealed: Trait[] = customer.demands.map(demand => demand.trait);
+  const shielded: Campaign = { ...s, activeSession: null,
+    // 柜台另一边的人对她不算数：把别的排队顾客标成已离场，resolveSale 里的 spendAttention 就不会替他们倒计时。
+    lost: [...s.lost, ...floorCustomers(s).filter(other => other !== id && !s.lost.includes(other))] };
+  const resolved = resolveSale(shielded, {
+    customerId: id,
+    selectedProduct: best?.product ?? (Object.keys(PRODUCTS) as ProductId[]).find(product => s.stock[product] > 0) ?? "soft",
+    bundle: best?.bundle ?? "single",
+    revealed, tested: true, askedQuestion: null, claimed: false,
+    interruption: true, interruptionHandled: true, force: false,
+  });
+  if (!resolved) return null;
+  const booked = resolved.campaign;
+  return {
+    ...resolved,
+    campaign: { ...booked,
+      // 玩家侧的账全部还回入账前的数：她成交不归你记账、不耗你的体力、不替你留下服务痕迹。
+      trust: s.trust, compliance: s.compliance, energy: s.energy, evidence: s.evidence,
+      relations: s.relations, activeSession: s.activeSession,
+      // 现场时钟与排队耐心也不动：她不在你这边的队列里开单。
+      waitMeters: s.waitMeters, shiftMinutes: s.shiftMinutes, floorSeconds: s.floorSeconds, lost: s.lost },
   };
 }
 

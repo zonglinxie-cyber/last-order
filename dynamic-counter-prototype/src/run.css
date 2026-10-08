@@ -1,0 +1,95 @@
+/* ?mode=run 薄壳的样式：种子开局屏与局间增幅三选一。接待/楼层/账目沿用 prototype.css。 */
+
+.run-seed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 20px;
+  min-height: 100%;
+}
+
+.run-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: .18em;
+  color: var(--ink-dim, #8a8073);
+  text-transform: uppercase;
+}
+
+.run-seed h1,
+.run-perk-screen h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.run-seed-copy,
+.run-perk-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-soft, #5c544a);
+}
+
+.run-seed-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.run-seed-form input {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 15px;
+  border: 1px solid var(--line, #d8d0c4);
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+}
+
+.run-perk-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(24, 20, 16, .48);
+}
+
+.run-perk-screen {
+  width: 100%;
+  max-height: 78%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 18px 18px 0 0;
+  background: #fbf8f3;
+  overflow-y: auto;
+}
+
+.run-perk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.run-perk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  padding: 14px 16px;
+  border: 1px solid var(--line, #d8d0c4);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  font-size: 13px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.run-perk-card b { font-size: 15px; }
+.run-perk-card small { color: var(--ink-soft, #5c544a); line-height: 1.5; }
+.run-perk-card:active { transform: translateY(1px); }

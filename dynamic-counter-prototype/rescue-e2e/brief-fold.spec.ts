@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CHECK_COUNTER_NOTE, EXPIRED_SAMPLING, INITIAL, SAVE_KEY, type CustomerId } from "../src/campaign";
+import { CHECK_COUNTER_NOTE, EXPIRED_SAMPLING, INITIAL, SAVE_KEY, SAVE_VERSION, type CustomerId } from "../src/campaign";
 
 /**
  * 晨会那一屏的字逐日变多：第 3 天起有到货 + 巡店两张通知，再加「开店前查一遍批号」那张卡（加高 119px），
@@ -16,7 +16,7 @@ const DAYS: Array<{ day: number; served: CustomerId[]; done: number[]; label: st
 async function briefAt(page: Page, width: number, height: number, spec: (typeof DAYS)[number]) {
   // 沙盘不把晨会当入口存档：只有"那一天已经闭上"的档，重开后才给「进入下一天」，按下去才落在晨会。
   await page.addInitScript(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)),
-    { key: SAVE_KEY, value: { ...INITIAL, version: 6, day: spec.day - 1, dayServed: spec.served, eventDoneDays: spec.done, sales: 10_710, daySales: 4620 } });
+    { key: SAVE_KEY, value: { ...INITIAL, version: SAVE_VERSION, day: spec.day - 1, dayServed: spec.served, eventDoneDays: spec.done, sales: 10_710, daySales: 4620 } });
   await page.setViewportSize({ width, height });
   await page.goto("/");
   await page.getByRole("button", { name: "进入下一天", exact: true }).click();

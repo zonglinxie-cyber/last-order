@@ -287,8 +287,13 @@ export function duelTriggerRival(d: DuelState): DuelState | null {
     log: [...d.log, { who: "note", text: `陆遥插话：${quote}` }, { who: "note", text: "", delta: DUEL_RIVAL_HIT }] };
 }
 
-export const duelUnlockedBundles = (d: DuelState): BundleId[] =>
-  (Object.keys(DUEL_BUNDLE_AT) as BundleId[]).filter(bundle => d.interest >= DUEL_BUNDLE_AT[bundle]);
+// 周目增幅 perk:edge（?mode=run 的三选一）：带过这个旗的存档，连带档位早 15 点兴趣解锁。
+// 阈值只在 duelBundleGate 这一处改，解锁列表与成交闸（duelClose）读同一个数。
+export const duelBundleGate = (bundle: BundleId, s?: Campaign): number =>
+  Math.max(45, DUEL_BUNDLE_AT[bundle] - (s && hasFlag(s, "perk:edge") ? 15 : 0));
+
+export const duelUnlockedBundles = (d: DuelState, s?: Campaign): BundleId[] =>
+  (Object.keys(DUEL_BUNDLE_AT) as BundleId[]).filter(bundle => d.interest >= duelBundleGate(bundle, s));
 
 // 「最后一句」里的第三个选择：玩家不开口，她自己走。结果屏照旧念 lostLine。
 export function duelSendAway(s: Campaign, d: DuelState): { campaign: Campaign; duel: DuelState } | null {
@@ -303,7 +308,7 @@ export function duelSendAway(s: Campaign, d: DuelState): { campaign: Campaign; d
 export function duelClose(s: Campaign, d: DuelState, bundle: BundleId): { campaign: Campaign; outcome: SaleOutcome } | null {
   const session = s.activeSession;
   if (!session || session.customerId !== d.customerId || d.walked || !session.tested) return null;
-  if (d.interest < Math.max(DUEL_CLOSE_MIN, DUEL_BUNDLE_AT[bundle])) return null;
+  if (d.interest < Math.max(DUEL_CLOSE_MIN, duelBundleGate(bundle, s))) return null;
   if (RIVAL_IDS.includes(d.customerId) && !session.rivalChoice) return null;
   const chosen: Campaign = { ...s, activeSession: { ...session, bundle } };
   return closeService(chosen, false);

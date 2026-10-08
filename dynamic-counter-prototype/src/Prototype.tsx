@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
-  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canLeaveSample, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, DAYS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
+  addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canLeaveSample, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
   fitOf, FACE_TRIAL_MINUTES, FACE_TRIAL_RETURN, faceTrialReveal, floorCustomers, historyByDay, INITIAL, LEAVE_SAMPLE_RETURN, leaveSample, openFloorState, parseCampaign, PRODUCTS, pullOver, pullOverLabel, PULL_OVER_RETURN, QUESTIONS, canClaim, CLAIM_LABEL, CLAIM_NOTE,
-  orderQuote, offerTransfer, REACTIONS, relationText, resolveAsk, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService,
-  TARGET, tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, trialGate, trialGateWord, unitsWanted, visibleChoices, visitWord, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+  orderQuote, offerTransfer, REACTIONS, relationText, resolveAsk, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, settleDayEvent, spendAttention, startNextDay, startService, weekOf, targetOf,
+  tonightTouches, touchReply, touchesLeft, touchThreads, transferLabel, transferStock, structureLine, TRAIT_LABELS, todayHistory, trialGate, trialGateWord, unitsWanted, visibleChoices, visitWord, type BundleId, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
 import DuelGame from "./DuelGame";
+import RunGame from "./RunGame";
+import MatchGame from "./MatchGame";
+import BlitzGame from "./BlitzGame";
 import {
   customerAction, customerHome, customerMood, customerSpeech, defaultFocus, formatClock,
   isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffSpeech,
@@ -28,14 +31,33 @@ const STAFF: Record<StaffKey, CharacterVisual> = {
   fangmin: { name: "方敏", role: "合规负责人", sheet: "manager", portrait: "/assets/game/staff-portraits/fangmin.png" },
 };
 
-function loadCampaign(): Campaign | null {
+// 存档槽与周目（目标/排程/出入口）做成可注入的 meta：周目模式复用同一套接待与楼层，
+// 只把"开新一局、换一天、结束这一周"三个钩子接出去。meta 缺省 = canonical 五日章节。
+export type ClassicMeta = {
+  saveKey: string;
+  fresh?: () => Campaign;
+  // 下一手开局（天推进 / 周目交接）由宿主接管；返回 null 表示这一天到此为止，不再推进。
+  nextDay?: (s: Campaign) => Campaign | null;
+  // 结局屏的出口按钮换主人（周目是"下一周"）。
+  onFinale?: (s: Campaign) => void;
+  // 第五天账单上那颗推进钮的文案（canonical 是"查看活动周结局"）。
+  lastDayLabel?: string;
+  finaleLabel?: string;
+  targetLabel?: string;
+  weekLabel?: string;
+  // 宿主接管存档时告诉 intro 这一份是不是续上的周目（决定按钮是"开始"还是"继续"）。
+  resume?: boolean;
+};
+
+type ClassicProps = { campaign?: Campaign; onCampaign?: (next: Campaign) => void; meta?: ClassicMeta };
+
+function loadCampaign(key: string): Campaign | null {
   try {
-    return parseCampaign(window.localStorage.getItem(SAVE_KEY));
+    return parseCampaign(window.localStorage.getItem(key));
   } catch {
     return null;
   }
 }
-
 function CharacterFace({ visual, className = "" }: { visual: CharacterVisual; className?: string }) {
   return <span className={`character-face face-${visual.sheet} ${className}`} role="img" aria-label={`${visual.name} · ${visual.role}`}>{visual.portrait ? <img src={visual.portrait} alt="" aria-hidden="true" /> : <i />}</span>;
 }
@@ -48,9 +70,22 @@ function StaffMapFigure({ visual }: { visual: CharacterVisual }) {
   return <span className={`map-character map-staff map-staff-${visual.sheet}`}><i /></span>;
 }
 
-function ClassicPrototype() {
-  const saved = useMemo(loadCampaign, []);
-  const [campaign, setCampaign] = useState<Campaign>(saved ?? INITIAL);
+export function ClassicPrototype(props: ClassicProps = {}) {
+  const meta = props.meta;
+  const saveKey = meta?.saveKey ?? SAVE_KEY;
+  const fresh = meta?.fresh ?? (() => INITIAL);
+  // 局内状态：props.campaign 给了就跟着宿主走（周目模式父组件持有 Campaign），没给就自己开一档。
+  const [inner, setInner] = useState<Campaign | null>(null);
+  const controlled = props.campaign !== undefined;
+  const saved = useMemo(() => controlled ? (meta?.resume ? props.campaign! : null) : loadCampaign(saveKey), []);
+  const campaignRef = useRef<Campaign>(controlled ? props.campaign! : inner ?? (saved ?? INITIAL));
+  const campaign = controlled ? props.campaign! : inner ?? (saved ?? INITIAL);
+  campaignRef.current = campaign;
+  const setCampaign = (update: Campaign | ((prev: Campaign) => Campaign)) => {
+    const next = typeof update === "function" ? update(campaignRef.current) : update;
+    campaignRef.current = next;
+    if (controlled) props.onCampaign?.(next); else setInner(next);
+  };
   const [screen, setScreen] = useState<Screen>("intro");
   const [customerId, setCustomerId] = useState<CustomerId | null>(null);
   const [selectedCue, setSelectedCue] = useState<CueId | null>(null);
@@ -86,11 +121,13 @@ function ClassicPrototype() {
   const { device } = useMobileDevice();
   const floorSim = useRef({ available: [] as CustomerId[], waitMeters: INITIAL.waitMeters, contested: false, elapsed: 0 });
 
-  const story = DAYS[campaign.day - 1];
+  const week = weekOf(campaign);
+  const story = week[campaign.day - 1] ?? { day: campaign.day, title: `第 ${campaign.day} 天`, subtitle: "", brief: "", threat: "", customers: [] };
+  const weekTarget = targetOf(campaign);
   const customer = customerId ? CUSTOMERS[customerId] : null;
   const dayCustomerIds = floorCustomers(campaign);
   const available = dayCustomerIds.filter(id => !campaign.dayServed.includes(id) && !campaign.lost.includes(id));
-  const remaining = Math.max(0, TARGET - campaign.sales);
+  const remaining = Math.max(0, weekTarget - campaign.sales);
   const event = dayEvent(campaign);
   const shownChoices = visibleChoices(campaign, event);
   // 已经按下的那一格要按 id 回全量列表找：visible 是按当下状态算的，垫货那一格按下去自己就会翻假
@@ -102,7 +139,7 @@ function ClassicPrototype() {
   const ledger = historyByDay(campaign);
   const rival = customerId && (customerId === "shen" || customerId === "zhou" || customerId === "returning") ? RIVAL_INTERRUPTIONS[customerId] : null;
 
-  useEffect(() => { if (screen !== "intro") window.localStorage.setItem(SAVE_KEY, JSON.stringify(campaign)); }, [campaign, screen]);
+  useEffect(() => { if (screen !== "intro" && !controlled) window.localStorage.setItem(saveKey, JSON.stringify(campaign)); }, [campaign, screen]);
   useEffect(() => { requestAnimationFrame(() => { const frame = document.querySelector<HTMLElement>(".device-screen"); if (frame) frame.scrollTop = 0; }); }, [screen]);
   useEffect(() => {
     setFloorBeat(0);
@@ -166,7 +203,7 @@ function ClassicPrototype() {
     return () => window.clearInterval(timer);
   }, [screen, floorSpeed]);
 
-  const beginNew = () => { window.localStorage.removeItem(SAVE_KEY); setCampaign(INITIAL); setEventChoiceId(null); setFloorNotice(null); setScreen("brief"); };
+  const beginNew = () => { window.localStorage.removeItem(saveKey); setCampaign(fresh()); setEventChoiceId(null); setFloorNotice(null); setScreen("brief"); };
   const continueGame = () => {
     const current = openFloorState(campaign);
     if (current !== campaign) setCampaign(current);
@@ -344,29 +381,32 @@ function ClassicPrototype() {
   };
   const finishDay = () => setScreen("summary");
   const nextDay = () => {
-    if (campaign.day >= 5) {
-      setCampaign(s => startNextDay(s));
-      setScreen("finale");
+    const lastDay = campaign.day >= week.length;
+    if (meta?.nextDay) {
+      setCampaign(s => meta.nextDay!(s) ?? s);
+      if (!lastDay) { setEventChoiceId(null); setCustomerId(null); setFloorNotice(null); setScreen("brief"); }
+      else setScreen("finale");
       return;
     }
     setCampaign(s => startNextDay(s));
+    if (lastDay) { setScreen("finale"); return; }
     setEventChoiceId(null); setCustomerId(null); setFloorNotice(null); setScreen("brief");
   };
-  const resetGame = () => { window.localStorage.removeItem(SAVE_KEY); setCampaign(INITIAL); setEventChoiceId(null); setScreen("intro"); };
+  const resetGame = () => { window.localStorage.removeItem(saveKey); setCampaign(fresh()); setEventChoiceId(null); setScreen("intro"); };
   const openFloor = () => setCampaign(s => openFloorState(s));
 
   if (screen === "intro") return <MobileScroll className="app-screen intro-scroll"><main className="intro-screen">
-    <img src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="intro-shade" /><div className="intro-brand"><span>AURORA · 绮光</span><b>新品活动周</b></div>
+    <img src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="intro-shade" /><div className="intro-brand"><span>AURORA · 绮光</span><b>{meta?.weekLabel ?? "新品活动周"}</b></div>
     <section className="intro-copy"><p>美妆销售 · 人情博弈 · 五日章节</p><h1>最后一单</h1><h2>你是试用期柜姐许愿。<br />每一笔销售，都决定谁欠你、谁恨你、谁会回来。</h2>
-      <div className="shift-brief"><span><small>五日销售目标</small><b>¥{TARGET.toLocaleString("zh-CN")}</b></span><span><small>真正的考核</small><b>业绩与后果</b></span></div>
+      <div className="shift-brief"><span><small>{meta?.targetLabel ?? "五日销售目标"}</small><b>¥{weekTarget.toLocaleString("zh-CN")}</b></span><span><small>真正的考核</small><b>业绩与后果</b></span></div>
       <p className="intro-rule">观察面容、判断需求、守住订单。顾客会复购或退货，同事会记住你留下的每条记录。</p>
       <button className="primary-action" type="button" onClick={saved ? continueGame : beginNew}>{saved ? `继续第 ${campaign.day} 天` : "开始新品活动周"}</button>
       {saved && <button className="text-action" type="button" onClick={beginNew}>重新开始</button>}
     </section></main></MobileScroll>;
 
   if (screen === "brief") return <div className="app-screen brief-page"><MobileScroll className="brief-scroll"><main className="brief-screen">
-    <header><span>DAY {campaign.day} / 5</span><b>¥{campaign.sales.toLocaleString("zh-CN")} <small>/ ¥{TARGET.toLocaleString("zh-CN")}</small></b></header>
-    <section className="brief-hero"><p>{story.subtitle}</p><h1>{story.title}</h1><div className="day-track">{DAYS.map(d => <i key={d.day} className={d.day < campaign.day ? "done" : d.day === campaign.day ? "now" : ""} />)}</div></section>
+    <header><span>DAY {campaign.day} / {week.length}</span><b>¥{campaign.sales.toLocaleString("zh-CN")} <small>/ ¥{weekTarget.toLocaleString("zh-CN")}</small></b></header>
+    <section className="brief-hero"><p>{story.subtitle}</p><h1>{story.title}</h1><div className="day-track">{week.map(d => <i key={d.day} className={d.day < campaign.day ? "done" : d.day === campaign.day ? "now" : ""} />)}</div></section>
     <section className="brief-card"><b>今日现场</b><p>{story.brief}</p><em>{story.threat}</em></section>
     <section className="brief-orders"><span><small>今天必须守住</small><b>{dayCustomerIds.map(id => CUSTOMERS[id].name).join(" / ")}</b></span><span><small>小样 / 私域名单</small><b>{campaign.samples} 份 · {campaign.members.length} 人</b></span></section>
     {notices.map(note => <section className="message-preview" key={`${note.speaker}-${note.body}`}><b>{note.speaker}</b><p>{note.body}</p></section>)}
@@ -446,20 +486,20 @@ function ClassicPrototype() {
     return <MobileScroll className="app-screen event-scroll"><main className="event-screen"><header><span>闭店后 · {event.speaker}</span><b>DAY {campaign.day}</b></header><section className="event-speaker-portrait">{eventCustomer ? <img src={eventCustomer.portrait} alt={`${eventCustomer.name}人物形象`} /> : eventVisual ? <CharacterFace visual={eventVisual} /> : null}<div><span>{event.speaker}</span><b>{eventCustomer ? eventCustomer.descriptor : eventVisual?.role}</b></div></section><p>{event.title}</p><h1>{event.body}</h1>{chosenEvent === null && threads.length > 0 && <section className="evening-touch"><h2>今晚跟一句 · 还能发 {touchesLeft(campaign)} 条</h2>{touchedTonight.length === 0 && <p>小样发出去、微信加上，都不算完。今晚问一句使用感，她才会再推开这个门；一个人整周只跟一次。</p>}<div className="touch-list">{threads.map(thread => <button type="button" key={thread.id} disabled={touchesLeft(campaign) <= 0} onClick={() => setCampaign(state => applyTouch(state, thread.id))}><b>{CUSTOMERS[thread.id].name}</b><span>{thread.detail}</span></button>)}</div>{touchedTonight.map(id => <p className="touch-reply" key={id}>{touchReply(campaign, id)}</p>)}</section>}{chosenEvent === null ? <div className="event-choices">{shownChoices.map(choice => <button type="button" key={choice.id} onClick={() => chooseEvent(choice.id)}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div> : <section className="event-result"><b>{chosenEvent.label}</b><p>{chosenEvent.result}</p><button className="primary-action" type="button" onClick={finishDay}>查看今日账单</button></section>}</main></MobileScroll>;
   }
 
-  if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{TARGET.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>记录本 <b>{evidenceWord(campaign.evidence)}</b></span></div><p className={"summary-compliance" + (campaign.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(campaign.compliance)}</p><button className="primary-action" type="button" onClick={nextDay}>{campaign.day === 5 ? "查看活动周结局" : "进入下一天"}</button></main></MobileScroll>;
+  if (screen === "summary") return <MobileScroll className="app-screen summary-scroll"><main className="summary-screen"><p>DAY {campaign.day} · 今日结束</p><h1>{campaign.daySales >= 3000 ? "数字涨了，账也留下了" : "不是每一天都能赢数字"}</h1><div className="summary-sale"><small>今日销售</small><b>¥{campaign.daySales.toLocaleString("zh-CN")}</b><span>累计 ¥{campaign.sales.toLocaleString("zh-CN")} / ¥{weekTarget.toLocaleString("zh-CN")}</span></div><section className="ledger"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</section><div className="summary-metrics"><span>信任 <b>{relationText(campaign.trust)}</b></span><span>记录本 <b>{evidenceWord(campaign.evidence)}</b></span></div><p className={"summary-compliance" + (campaign.compliance < COMPLIANCE_RISK ? " at-risk" : "")}>{complianceWord(campaign.compliance)}</p><button className="primary-action" type="button" onClick={nextDay}>{campaign.day >= week.length ? (meta?.lastDayLabel ?? "查看活动周结局") : "进入下一天"}</button></main></MobileScroll>;
 
   if (screen === "finale") {
-    const salesWin = campaign.sales >= TARGET;
+    const salesWin = campaign.sales >= weekTarget;
     const safe = campaign.compliance >= COMPLIANCE_RISK;
     const trusted = campaign.trust >= 55;
     const title = endingTitle(campaign);
     const counter = counterVerdict(campaign);
-    return <div className="app-screen finale-page"><MobileScroll className="finale-scroll"><main className="finale-screen"><p>新品活动周 · 最终档案</p><h1>{title}</h1><div className="final-score"><span>销售</span><b>¥{campaign.sales.toLocaleString("zh-CN")}</b><small>{salesWin ? "完成五日目标" : "未完成五日目标"}</small></div><p className="week-structure">{structureLine(campaign)}</p><section className="ending-copy"><p>{salesWin ? "你证明了自己能成交。" : "罗曼没有给你漂亮的数字评价。"}{safe ? "合规记录没有把你单独钉在缺口上。" : "但赠品与订单记录已经构成一条危险的线。"}</p><p>{trusted ? "沈薇和几位顾客仍愿意直接找你。" : "顾客记得你卖出去的东西，却未必相信你会负责到底。"}</p><p>苏蔓：{relationText(campaign.relations.suman)}；唐可：{relationText(campaign.relations.tangke)}。</p><p className="counter-verdict"><b>柜位 · {counter.label}</b>{counter.body}</p></section>
+    return <div className="app-screen finale-page"><MobileScroll className="finale-scroll"><main className="finale-screen"><p>{meta?.weekLabel ?? "新品活动周"} · 最终档案</p><h1>{title}</h1><div className="final-score"><span>销售</span><b>¥{campaign.sales.toLocaleString("zh-CN")}</b><small>{salesWin ? `完成${meta?.targetLabel ?? "五日目标"}` : `未完成${meta?.targetLabel ?? "五日目标"}`}</small></div><p className="week-structure">{structureLine(campaign)}</p><section className="ending-copy"><p>{salesWin ? "你证明了自己能成交。" : "罗曼没有给你漂亮的数字评价。"}{safe ? "合规记录没有把你单独钉在缺口上。" : "但赠品与订单记录已经构成一条危险的线。"}</p><p>{trusted ? "沈薇和几位顾客仍愿意直接找你。" : "顾客记得你卖出去的东西，却未必相信你会负责到底。"}</p><p>苏蔓：{relationText(campaign.relations.suman)}；唐可：{relationText(campaign.relations.tangke)}。</p><p className="counter-verdict"><b>柜位 · {counter.label}</b>{counter.body}</p></section>
       <section className="ledger-book" aria-label="五日因果账本"><b>五日因果账本</b>{ledger.map(group => <div className="ledger-day" key={group.day}><span>DAY {group.day} · {group.title}</span>{group.items.map(item => <p key={`${item.day}-${item.text}`}>{item.text}</p>)}</div>)}</section>
       <blockquote>真正的最后一单，不是付款成功的那一刻，而是它回来找你的那一天。</blockquote></main></MobileScroll>
     {/* 唯一的出口钉成脚：59 行的账本把它埋在滚动区底下 1000+ 设计像素（实测 390×844 那颗按钮 top 1696、滚动带底 707），
         能滚到但没有任何"下面还有"的线索。与 P37 晨会「滚动区 + 脚」同一副语法；引文留在账本尾巴上 —— 它是收束，不是动作。 */}
-    <div className="finale-foot"><button className="primary-action" type="button" onClick={resetGame}>重新开始 · 换一种活法</button></div></div>;
+    <div className="finale-foot"><button className="primary-action" type="button" onClick={() => meta?.onFinale ? meta.onFinale(campaign) : resetGame()}>{meta?.finaleLabel ?? "重新开始 · 换一种活法"}</button></div></div>;
   }
 
   const latestLost = campaign.lost.at(-1);
@@ -534,7 +574,7 @@ function ClassicPrototype() {
     <img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" />
     <header className="game-hud">
       <div><span>DAY {campaign.day} · {story.title}</span><b>{formatClock(floorClock)}</b></div>
-      <div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
+      <div className="target-mini"><span>距{meta?.targetLabel ?? "五日目标"}</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
     </header>
     <div className="floor-feed-row">
       <p className="floor-feed">{feedLine}</p>
@@ -593,5 +633,8 @@ function ClassicPrototype() {
 
 export default function Prototype() {
   const mode = new URLSearchParams(window.location.search).get("mode");
+  if (mode === "run") return <RunGame />;
+  if (mode === "match") return <MatchGame />;
+  if (mode === "blitz") return <BlitzGame />;
   return mode === "duel" ? <DuelGame /> : <ClassicPrototype />;
 }

@@ -1,0 +1,42 @@
+/* 速诊（?mode=blitz）样式。牌面、脸部、按钮沿用 duel.css 的视觉语言，这里只加
+   这一模式自己的件：倒计时条、队伍预览、结算屏。不改 duel.css。 */
+@import "./duel.css";
+
+.blitz-intro, .blitz-settle {
+  position:absolute; inset:0; overflow:auto;
+  display:flex; flex-direction:column; gap:12px;
+  padding:calc(18px + 54px + env(safe-area-inset-top)) 16px calc(24px + var(--mobile-safe-area-height, 0px));
+  background:#161012; color:#efe3d0; font-family:'Noto Serif SC', serif;
+}
+.blitz-intro h1, .blitz-settle h1 { margin:0; font-size:22px; font-weight:700; color:#f6e7c8; }
+.blitz-intro .duel-primary, .blitz-settle .duel-primary { margin-top:auto; }
+.blitz-newbest { align-self:flex-start; padding:4px 12px; border:2px solid #f1cf86; border-radius:8px; color:#f1cf86; font-size:14px; font-weight:700; transform:rotate(-4deg); }
+.blitz-stats { display:flex; gap:14px; flex-wrap:wrap; }
+.blitz-stats span { display:flex; flex-direction:column; gap:2px; font-size:12px; color:#b3a08c; }
+.blitz-stats b { font-size:20px; color:#f6e7c8; }
+
+/* 对局屏在 duel-screen 之上加两行：表和队。 */
+.blitz-screen { position:absolute; inset:0; }
+.blitz-clock {
+  display:flex; align-items:center; gap:8px;
+  padding:4px 14px 0; font-family:'Noto Serif SC', serif;
+}
+.blitz-clock-track { flex:1; height:6px; border-radius:4px; background:#2a2023; box-shadow:inset 0 1px 3px #0009; overflow:hidden; }
+.blitz-clock-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#8a5b2e,#f1cf86); transition:width .3s linear; }
+.blitz-clock b { font-size:13px; color:#f6e7c8; font-variant-numeric:tabular-nums; }
+.blitz-score-chip { font-size:12px; color:#f1cf86; font-variant-numeric:tabular-nums; }
+.blitz-ticker { flex:0 1 auto; min-width:0; font-size:12px; color:#9b8d80; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.blitz-queue { display:flex; align-items:center; gap:8px; padding:6px 14px 0; }
+.blitz-next { display:flex; align-items:center; gap:4px; padding:3px 8px 3px 3px; border:1px solid #ffffff1a; border-radius:20px; background:#ffffff08; }
+.blitz-next img { width:24px; height:24px; border-radius:50%; object-fit:cover; object-position:50% 20%; }
+.blitz-next i { font-style:normal; font-size:12px; color:#cbb99f; }
+.blitz-queue em { font-style:normal; font-size:12px; color:#9b8d80; margin-left:auto; }
+
+/* 两行新件吃掉的高度从脸框让出来，矮屏再收一格。 */
+.blitz-screen .duel-face { flex:1 1 auto; min-height:150px; }
+@media (max-height: 640px) {
+  .blitz-clock { padding-top:2px; }
+  .blitz-queue { padding-top:4px; }
+  .blitz-screen .duel-face { min-height:120px; }
+}
