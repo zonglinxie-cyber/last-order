@@ -1,0 +1,36 @@
+/* 人情场跨季档案：叠在 archive.css 的配色与卡片骨架上，只补三页签、人物三行、个人线与剪影头像。
+   正文一律 ≥12px，长句 overflow-wrap:anywhere 防横向溢出（390×844 与 320×568 都不许撑破）。 */
+.world-archive-page .archive-tabs { grid-template-columns: 1fr 1fr 1fr; }
+.world-archive-page .archive-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
+
+/* 没立绘的人用首字圆牌；没见过的人整张压暗成剪影。 */
+.archive-portrait .wa-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #ffe8b6; font: 700 30px/1 'Noto Serif SC', serif; }
+.archive-card.unmet .archive-portrait { background: #2b201d; }
+.archive-card.unmet .archive-portrait img { filter: grayscale(1) brightness(.5) contrast(1.35); opacity: .85; }
+.archive-card.unmet .archive-portrait .wa-letter { color: #6d5b50; }
+.archive-card.unmet .archive-name { color: #8d7a6d; }
+
+/* 见过的人下面那三行：秘密 / 最好 / 最差，各一句。 */
+.wa-lines { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.wa-line { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.wa-line small { color: #a99689; font-size: 12px; letter-spacing: .04em; flex: 0 0 auto; }
+.wa-line span { color: #eee0d5; }
+.wa-secret span { color: #edc779; }
+.wa-locked { color: #7c6a5e !important; }
+
+/* 个人线：四条，每条把全部落点摆出来，走到的点亮、没走到的压暗。 */
+.wa-arcs { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.wa-arc { padding: 13px 14px; border: 1px solid #f0cf9122; border-radius: 16px; background: linear-gradient(145deg, rgba(32, 17, 18, .9), rgba(16, 9, 9, .96)); }
+.wa-arc h3 { margin: 0 0 8px; color: #ffedca; font: 700 15px 'Noto Serif SC', serif; letter-spacing: .04em; }
+.wa-arc-rows { display: flex; flex-direction: column; gap: 7px; }
+.wa-arc-row { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; color: #6d5b50; }
+.wa-arc-row b { font-weight: 600; }
+.wa-arc-row small { color: #5f5148; font-size: 12px; }
+.wa-arc-row.lit { color: #eee0d5; }
+.wa-arc-row.lit b { color: #edc779; }
+.wa-arc-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; border: 1px solid #f0cf9133; background: #ffffff08; }
+.wa-arc-row.lit .wa-arc-dot { border-color: transparent; background: linear-gradient(135deg, #f1cf86, #b47b43); }
+
+/* 入口那颗「档案」：次级动作，够手指（≥44px），压过 world 的 ghost 那档。 */
+.world-archive-entry { display: block; width: 100%; min-height: 44px; margin-top: 8px; padding: 9px 12px; border: 1px solid #f0cf9133; border-radius: 12px; background: #ffffff08; color: #d9bd97; font: 600 13px 'Noto Serif SC', serif; }
+.report-foot .world-archive-entry { margin-top: 0; margin-bottom: 8px; }
