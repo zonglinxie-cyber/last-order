@@ -1,0 +1,13 @@
+
+> ai-company-brawl@0.1.0 build
+> tsc -b && vite build
+
+vite v8.2.1 building client environment for production...
+[2Ktransforming...✓ 24 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.77 kB │ gzip:  0.50 kB
+dist/assets/index-MfMVH5L_.css   56.30 kB │ gzip: 13.36 kB
+dist/assets/index-B11Zc09m.js   290.62 kB │ gzip: 94.50 kB
+
+✓ built in 74ms

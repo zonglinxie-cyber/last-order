@@ -1,0 +1,427 @@
+--- before/src/rescue.css
++++ after/src/rescue.css
+@@ -113,7 +113,7 @@
+ .product-choices { display: flex; gap: 8px; }.product-choices > button { flex: 1; display: flex; gap: 9px; align-items: center; text-align: left; padding: 7px 10px; }
+ .product-choices b, .product-choices small, .product-choices em { display: block; }.product-choices em { font-size: 12px; font-style: normal; color: #bcaa98; }.product-choices small { color: #e9cc9e; }
+ .rescue-game .product-choices button[aria-pressed=true] { border-color: #e5c490; background: #3a2927; }
+-.rescue-product-art { display: block; flex: none; width: 38px; height: 40px; background: url('/assets/aurora/product-trio.png') no-repeat; background-size: 124px 99px; }
++.rescue-product-art { display: block; flex: none; width: 38px; height: 40px; background: url('/assets/optimized/product-trio.webp') no-repeat; background-size: 124px 99px; }
+ .rescue-product-art.product-soft { background-position: 1px 0; }.rescue-product-art.product-glow { background-position: -42px 0; }.rescue-product-art.product-repair { background-position: -84px 0; }
+ .trial-button { margin-top: 10px; min-width: 180px; }
+ .rival-decision > div:first-child { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+--- before/src/CounterGame.tsx
++++ after/src/CounterGame.tsx
+@@ -2,13 +2,16 @@
+ import {
+   advanceFloorTime, askService, availableCustomers, closeService, CUSTOMERS, DAYS, dayEvent,
+   dawnNotices, endingTitle, ENERGY_LOCK, hasFlag, historyByDay, INITIAL, leaveSample,
+-  observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, QUESTIONS, REACTIONS,
++  observeService, openFloorState, orderQuote, parseCampaign, PRODUCTS, REACTIONS,
+   relationText, releaseService, requestStaffHelp, respondToRival, RIVAL_IDS, RIVAL_INTERRUPTIONS,
+   SAVE_KEY, selectServiceProduct, settleDayEvent, spendAttention, startNextDay, startService,
+   TARGET, trialService, type Campaign, type CueId, type CustomerId, type ProductId, type SaleOutcome,
+ } from "../dynamic-counter-prototype/src/campaign";
+ import { asset } from "./sim/asset";
++import { customerPortrait as portrait } from "./experience-art";
+ import "./rescue.css";
++import { CHAPTER_HOOKS, ChapterTrack, ConsultationNotes, GameDialog, questionChoices, ShiftHandbook } from "./Experience";
++import "./experience.css";
+ 
+ type Screen = "intro" | "brief" | "floor" | "consultation" | "result" | "event" | "summary" | "finale";
+ type StaffId = "player" | "luyao" | "roman" | "suman" | "tangke";
+@@ -25,7 +28,6 @@
+ ];
+ const money = (value: number) => "¥" + value.toLocaleString("zh-CN");
+ const isCustomer = (id: Focus): id is CustomerId => Object.hasOwn(CUSTOMERS, id);
+-const portrait = (id: CustomerId) => asset("assets/aurora/" + CUSTOMERS[id].portrait.split("/").at(-1));
+ const customerArt = (id: CustomerId) => asset("assets/chibi/" + (id === "returning" ? "shen" : id === "zhou2" ? "zhou" : id) + ".png");
+ function load() {
+   try { const saved = parseCampaign(localStorage.getItem(SAVE_KEY)); return saved ? openFloorState(saved) : null; }
+@@ -55,9 +57,14 @@
+   const [speed, setSpeed] = useState<0 | 1 | 2 | 4>(0);
+   const [draft, setDraft] = useState("");
+   const [revising, setRevising] = useState(false);
++  const [askingAgain, setAskingAgain] = useState(false);
+   const [outcome, setOutcome] = useState<SaleOutcome | null>(null);
+   const [saveError, setSaveError] = useState(false);
+   const [confirmRestart, setConfirmRestart] = useState(false);
++  const [handbook, setHandbook] = useState(false);
++  const dockRef = useRef<HTMLElement>(null);
++  const dialogOrigin = useRef<HTMLElement | null>(null);
++  const modalOpen = confirmRestart || handbook;
+   const [camera, setCamera] = useState({ x: 0, y: 0 });
+   const drag = useRef<{ x: number; y: number; cx: number; cy: number } | null>(null);
+   const sceneRef = useRef<HTMLDivElement>(null);
+@@ -75,8 +82,10 @@
+   const pendingRival = Boolean(session?.tested && RIVAL_IDS.includes(session.customerId) && !session.rivalChoice);
+   const rival = customer && RIVAL_IDS.includes(customer.id) ? RIVAL_INTERRUPTIONS[customer.id as keyof typeof RIVAL_INTERRUPTIONS] : null;
+   const lastCue = session?.discovered.at(-1);
+-  const showProducts = Boolean(session && session.askedQuestion !== null && (!session.tested || revising) && !pendingRival);
+-  const stage = !session || session.discovered.length < 2 ? 0 : session.askedQuestion === null ? 1 : !session.tested ? 2 : 3;
++  const showProducts = Boolean(session && session.askedQuestion !== null && !askingAgain && (!session.tested || revising) && !pendingRival);
++  const stage = !session || session.discovered.length < 2 ? 0 : session.askedQuestion === null || askingAgain ? 1 : !session.tested || revising ? 2 : 3;
++  const chapter = CHAPTER_HOOKS[game.day - 1];
++  const eventResponse = game.history.filter(entry => entry.day === game.day && entry.text.startsWith("回应 · ")).at(-1)?.text.slice(5);
+   const clockMinutes = 19 * 60 + game.shiftMinutes;
+   const clock = String(Math.floor(clockMinutes / 60) % 24).padStart(2, "0") + ":" + String(Math.floor(clockMinutes % 60)).padStart(2, "0");
+ 
+@@ -110,15 +119,26 @@
+     return () => observer.disconnect();
+   }, []);
+ 
+-  const begin = () => { setGame(INITIAL); setFocus("shen"); setScreen("brief"); setSpeed(0); setOutcome(null); setConfirmRestart(false); };
++  useEffect(() => { dockRef.current?.scrollTo({ top: 0 }); }, [screen, stage, pendingRival, revising]);
++  useEffect(() => {
++    const keydown = (event: KeyboardEvent) => {
++      if (event.key === "Escape" && screen === "floor" && !modalOpen) setSpeed(0);
++    };
++    window.addEventListener("keydown", keydown);
++    return () => window.removeEventListener("keydown", keydown);
++  }, [screen, modalOpen]);
++
++  const begin = () => { setGame(INITIAL); setFocus("shen"); setScreen("brief"); setSpeed(0); setOutcome(null); setConfirmRestart(false); setAskingAgain(false); };
++  const showHandbook = () => { dialogOrigin.current = document.activeElement as HTMLElement; setSpeed(0); setHandbook(true); };
++  const showRestart = () => { dialogOrigin.current = document.activeElement as HTMLElement; setSpeed(0); setConfirmRestart(true); };
+   const openFloor = () => { setGame(value => openFloorState(value)); setScreen("floor"); setSpeed(1); };
+   const beginCustomer = (id: CustomerId) => {
+     if (session && session.customerId !== id) return;
+     const next = startService(game, id);
+     if (next.activeSession?.customerId !== id) return;
+-    setGame(next); setFocus(id); setScreen("consultation"); setRevising(false); setDraft("");
+-  };
+-  const ask = (text: string, index?: number) => { setGame(value => askService(value, text, index)); setDraft(""); };
++    setGame(next); setFocus(id); setScreen("consultation"); setRevising(false); setAskingAgain(false); setDraft("");
++  };
++  const ask = (text: string, index?: number) => { setGame(value => askService(value, text, index)); setDraft(""); setAskingAgain(false); };
+   const close = (force = false) => {
+     const result = closeService(game, force);
+     if (!result) return;
+@@ -134,7 +154,14 @@
+     setFocus(availableCustomers(next)[0] ?? "player"); setScreen(next.finished ? "finale" : "brief");
+   };
+   const moveCamera = (e: PointerEvent<HTMLDivElement>) => {
+-    if (drag.current) setCamera({ x: drag.current.cx + e.clientX - drag.current.x, y: drag.current.cy + e.clientY - drag.current.y });
++    if (drag.current) {
++      const limitX = sceneSize.width * .28, limitY = sceneSize.height * .28;
++      setCamera({ x: Math.max(-limitX, Math.min(limitX, drag.current.cx + e.clientX - drag.current.x)), y: Math.max(-limitY, Math.min(limitY, drag.current.cy + e.clientY - drag.current.y)) });
++    }
++  };
++  const waitLabel = (id: CustomerId) => {
++    const remaining = Math.max(0, (game.waitMeters[id] ?? CUSTOMERS[id].patience) - game.floorSeconds / 20);
++    return Math.ceil(remaining) + " 分钟耐心";
+   };
+   const customerStatus = (id: CustomerId) => game.dayServed.includes(id) ? "已接待" : game.lost.includes(id) ? "已离开" :
+     session?.customerId === id ? "接待中" : (game.waitMeters[id] ?? CUSTOMERS[id].patience) <= 2 ? "开始看表" : "正在等你";
+@@ -149,20 +176,20 @@
+   const canHelp = !hasFlag(game, "help:suman:" + game.day) && game.energy >= 6 && (hasFlag(game, "covered-suman") || game.relations.suman >= 60);
+ 
+   return <div className={"rescue-game screen-" + screen}>
+-    <header className="rescue-topbar">
++    <header className="rescue-topbar" inert={modalOpen}>
+       <div className="rescue-brand"><span className="brand-monogram">AU</span><div><b>最后一单 <span>绮光专柜</span></b><small>第 {game.day} / 5 天 · {story.title}</small></div></div>
+-      <a className="rush-mode-link" href="?mode=rush">闭店大作战 <small>90 秒挑战</small></a>
++      <nav className="experience-nav" aria-label="游戏菜单"><button onClick={showHandbook}>值班手册</button><a className="rush-mode-link" href="?mode=rush">闭店大作战 <small>90 秒挑战 · 独立计分</small></a></nav>
+       <div className="shift-clock"><strong>{clock}</strong><span>{screen === "floor" ? speed === 0 ? "现场已暂停" : "营业中" : screen === "consultation" ? "接待按动作计时" : "待命"}</span></div>
+       <div className="top-score"><span>还差 <b>{money(Math.max(0, TARGET - game.sales))}</b></span><small className={saveError ? "save-failed" : ""}>{saveError ? "保存失败，请勿关闭页面" : screen === "intro" ? "五日销售与人情账" : "已保存到本机"}</small></div>
+     </header>
+-    <div className="rescue-workspace">
++    <div className="rescue-workspace" inert={modalOpen}>
+       <main ref={sceneRef} className="rescue-scene" aria-label={screen === "consultation" && customer ? "接待" + customer.name : "专柜现场"}>
+         {(screen === "floor" || screen === "intro" || screen === "brief") && <>
+           <div className="map-viewport" onPointerDown={e => {
+             if ((e.target as HTMLElement).closest("button")) return;
+             drag.current = { x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y }; e.currentTarget.setPointerCapture(e.pointerId);
+           }} onPointerMove={moveCamera} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
+-            <div className="rescue-world" style={{ width: Math.min(sceneSize.width, sceneSize.height * mapRatio), aspectRatio: mapRatio, transform: "translate(" + camera.x + "px," + camera.y + "px)" }}>
++            <div className="rescue-world" style={{ width: screen === "floor" && sceneSize.width <= 650 ? Math.max(sceneSize.width, sceneSize.height * mapRatio * .78) : Math.min(sceneSize.width, sceneSize.height * mapRatio), aspectRatio: mapRatio, transform: "translate(" + camera.x + "px," + camera.y + "px)" }}>
+               <img className="floor-art" src={asset("assets/scenes/aurora-floor.jpg")} alt="绮光与维珞专柜" onLoad={e => setMapRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)} draggable={false} />
+               {(Object.keys(STAFF) as StaffId[]).map(id => {
+                 const staff = STAFF[id];
+@@ -181,14 +208,20 @@
+               })}
+             </div>
+           </div>
++          {screen === "floor" && <><div className="floor-mission"><span className="eyebrow">DAY {game.day} / 你的选择</span><b>{story.subtitle}</b></div><nav className="floor-queue" aria-label="现场选客">{available.map(id => <button key={id} aria-label={"选择顾客" + CUSTOMERS[id].name} aria-pressed={focus === id} onClick={() => setFocus(id)}><b>{CUSTOMERS[id].name}</b><small>{session?.customerId === id ? "接待中" : waitLabel(id)}</small></button>)}</nav></>}
+           {screen === "floor" && <div className="scene-controls"><div className="time-controls" aria-label="现场时间">{([0, 1, 2, 4] as const).map(value => <button key={value} aria-pressed={speed === value} onClick={() => setSpeed(value)}>{value === 0 ? "暂停" : value + "×"}</button>)}</div><button onClick={() => setCamera({ x: 0, y: 0 })}>复位视角</button><span>选人了解情况，再开始接待</span></div>}
+-          {(screen === "intro" || screen === "brief") && <section className="shift-intro">
+-            <span className="eyebrow">{screen === "intro" ? "美妆销售 · 人情博弈" : "DAY " + game.day + " / 5"}</span><h1>{screen === "intro" ? "最后一单" : story.title}</h1>
+-            <p>{screen === "intro" ? "你是试用期柜姐许愿。五天内补齐业绩，也要记住每笔订单背后的人。" : story.brief}</p>
+-            {notices.map((note, index) => <blockquote key={index}><b>{note.speaker}</b>{note.body}</blockquote>)}
+-            <div className="brief-target"><span>五日目标 <b>{money(TARGET)}</b></span><span>已完成 <b>{money(game.sales)}</b></span></div>
+-            <p className="small-copy">现场等待会消耗耐心。接待时可以仔细想，观察、提问和试用各花一分钟。</p>
+-            <button className="gold-button" onClick={screen === "intro" ? begin : openFloor}>{screen === "intro" ? "开始新品活动周" : "开始营业"}</button>
++          {(screen === "intro" || screen === "brief") && <section className={"shift-intro editorial-intro " + (screen === "intro" ? "opening-cover" : "chapter-cover")}>
++            <div className="intro-copy"><span className="eyebrow">{screen === "intro" ? "A COUNTER FULL OF SECRETS / 职场叙事游戏" : "CHAPTER 0" + game.day + " / 新品活动周"}</span>
++              <h1>{screen === "intro" ? <>最后<span>一单</span><em>LAST ORDER</em></> : story.title}</h1>
++              <h2>{screen === "intro" ? "卖的是美妆，算的是人情。" : story.subtitle}</h2>
++              <p>{screen === "intro" ? "你叫许愿，试用期还剩五天。柜长要业绩，前辈要人情，对面的销冠要你的客人。两万一的目标之外，你还想保住一点自己。" : story.brief}</p>
++              <blockquote className="chapter-quote"><b>{chapter.speaker}</b>“{chapter.line}”</blockquote>
++              {screen === "brief" && notices.map((note, index) => <blockquote key={index}><b>{note.speaker}</b>{note.body}</blockquote>)}
++              <div className="intro-actions"><button className="gold-button" onClick={screen === "intro" ? begin : openFloor}>{screen === "intro" ? "开始新品活动周" : "开始营业"}<span aria-hidden="true"> ↗</span></button><span>{screen === "intro" ? "五天 · 多种结局 · 本机存档" : "阅读不计时，开始营业后计时"}</span></div>
++              <ChapterTrack day={game.day} />
++            </div>
++            <div className="intro-art" aria-hidden="true"><div className="intro-art-frame"><img src={asset("assets/aurora/xuyuan.png")} alt="" /><span className="intro-art-label">许愿 <small>BEAUTY ADVISOR / 试用期</small></span></div><span className="intro-art-stamp">05 DAYS<br />¥21,000</span></div>
++            <div className="intro-bottom"><span>{screen === "intro" ? "一笔成交，是故事的开始，不是结束。" : chapter.question}</span><b>{screen === "intro" ? "绮光百货 · 晚班 19:00" : "累计 " + money(game.sales) + " / " + money(TARGET)}</b></div>
+           </section>}
+         </>}
+         {screen === "consultation" && customer && session && <div className="consult-scene">
+@@ -198,27 +231,30 @@
+           </div><button className="back-floor" onClick={() => setScreen("floor")}>返回现场</button></div>
+           <section className="customer-reading"><span className="eyebrow">{customer.descriptor}</span><h1>{customer.name}</h1><blockquote>{session.chat.at(-1)?.text ?? customer.opening}</blockquote>
+             {lastCue && <p className="reading-finding"><b>{customer.cues[lastCue].label}</b>{customer.cues[lastCue].finding}</p>}
+-            <div className="outside-pressure"><b>柜台另一边</b>{available.filter(id => id !== customer.id).map(id => <p key={id}>{CUSTOMERS[id].name} · {customerStatus(id)}</p>)}{available.length === 1 && <p>其他机会已经结束。这一位仍在等你的判断。</p>}</div>
++            <ConsultationNotes game={game} />
++            <div className="outside-pressure"><b>柜台另一边 · 每次新动作都会消耗等待</b>{available.filter(id => id !== customer.id).map(id => <p key={id}>{CUSTOMERS[id].name} · {waitLabel(id)}</p>)}{available.length === 1 && <p>其他机会已经结束。这一位仍在等你的判断。</p>}</div>
+           </section>
+         </div>}
+         {screen === "result" && outcome && <section className={"story-panel sale-panel " + (outcome.good ? "sale-good" : "sale-risky")}><span className="eyebrow">本次接待 · 收银记录</span><h1>{outcome.title}</h1><strong className="large-number">+ {money(outcome.amount)}</strong><p>{outcome.body}</p><div className="result-metrics"><span>信任 <b>{relationText(game.trust)}</b></span><span>体力 <b>{game.energy} / 100</b></span><span>小样 <b>{game.samples} 份</b></span></div></section>}
+-        {screen === "event" && <section className="story-panel event-panel"><span className="eyebrow">闭店 · {event.speaker}</span><h1>{event.title}</h1><p>{event.body}</p><span className="story-footnote">这次选择会进入账本，并改变之后几天的现场。</span></section>}
++        {screen === "event" && <section className="story-panel event-panel"><div className="event-speaker"><img src={event.speakerCustomer ? portrait(event.speakerCustomer, true) : asset("assets/aurora/" + (event.speakerStaff === "player" ? "xuyuan" : event.speakerStaff ?? "roman") + ".png")} alt="" /><span>柜台关灯以后<br /><b>{event.speaker}</b></span></div><span className="eyebrow">闭店 · {event.speaker}</span><h1>{event.title}</h1><p>{event.body}</p><span className="story-footnote">这次选择会进入账本，并改变之后几天的现场。</span></section>}
+         {(screen === "summary" || screen === "finale") && <section className="story-panel ledger-panel">
+           <span className="eyebrow">{screen === "finale" ? "新品活动周 · 最终结算" : "DAY " + game.day + " · 今日账本"}</span><h1>{screen === "finale" ? endingTitle(game) : "今天的单，明天的账"}</h1><strong className="large-number">{money(game.sales)} <small>/ {money(TARGET)}</small></strong>
+-          <div className="ledger-book" aria-label="因果账本">{historyByDay(game).filter(group => screen === "finale" || group.day === game.day).map(group => <section key={group.day}><h2>DAY {group.day} · {group.title}</h2>{group.items.map((item, index) => <p key={index}>{item.text}</p>)}</section>)}
++          {screen === "summary" && eventResponse && <blockquote className="decision-response"><span className="eyebrow">你的选择，得到了回应</span><p>{eventResponse}</p></blockquote>}
++          {screen === "finale" && <div className="ending-checks"><span>业绩 <b>{game.sales >= TARGET ? "达标" : "未达标"}</b></span><span>信任 <b>{game.trust >= 55 ? "留下了口碑" : "仍需重建"}</b></span><span>合规 <b>{game.compliance >= 50 ? "守住底线" : "风险未清"}</b></span></div>}
++          <div className="ledger-book" aria-label="因果账本">{historyByDay(game).filter(group => screen === "finale" || group.day === game.day).map(group => <section key={group.day}><h2>DAY {group.day} · {group.title}</h2>{group.items.filter(item => screen === "finale" || !item.text.startsWith("回应 · ")).map((item, index) => <p key={index}>{item.text}</p>)}</section>)}
+             {game.orders.filter(order => screen === "finale" || order.day === game.day).map((order, index) => <p className="order-line" key={index}>D{order.day} · {CUSTOMERS[order.customerId].name} · {PRODUCTS[order.product].short} · {money(order.amount)}{order.shared ? "（拼单后入账）" : ""}{order.risky ? " · 售后风险已记录" : ""}</p>)}
+           </div>
+         </section>}
+       </main>
+       <aside className="rescue-rail">
+         <section className="shift-overview"><span className="eyebrow">今天的柜台</span><p className="rail-sales">{money(game.daySales)} <small>今日净业绩</small></p><div className="target-track"><i style={{ width: Math.min(100, game.sales / TARGET * 100) + "%" }} /></div><p className="rail-detail">体力 {game.energy} · 小样 {game.samples} · 合规 {game.compliance}</p></section>
+-        <section className="customer-list"><span className="eyebrow">顾客</span>{todayIds.map(id => <button key={id} onClick={() => setFocus(id)} className={focus === id ? "is-selected" : ""}><img src={portrait(id)} alt="" /><span><b>{CUSTOMERS[id].name}</b><small>{customerStatus(id)}</small></span><span className={"status-dot " + (game.lost.includes(id) ? "lost" : game.dayServed.includes(id) ? "done" : "")} /></button>)}</section>
++        <section className="customer-list"><span className="eyebrow">顾客</span>{todayIds.map(id => <button key={id} onClick={() => setFocus(id)} className={focus === id ? "is-selected" : ""}><img src={portrait(id, true)} alt="" /><span><b>{CUSTOMERS[id].name}</b><small>{customerStatus(id)}</small></span><span className={"status-dot " + (game.lost.includes(id) ? "lost" : game.dayServed.includes(id) ? "done" : "")} /></button>)}</section>
+         <section className="floor-journal"><span className="eyebrow">刚刚发生</span>{game.history.slice(-5).reverse().map((entry, index) => <p key={index}><small>D{entry.day}</small>{entry.text}</p>)}{game.history.length === 0 && <p>陆遥正在留意入口。先接谁，由你决定。</p>}</section>
+-        <button className="restart-link" onClick={() => { setSpeed(0); setConfirmRestart(true); }}>重新开始</button>
++        <button className="restart-link" onClick={showRestart}>重新开始</button>
+       </aside>
+     </div>
+-    <footer className="rescue-dock">
+-      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id) : selectedCustomer ? portrait(selectedCustomer.id) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? session.discovered.length + " / 3 处线索 · 体力 " + game.energy : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
++    <footer ref={dockRef} className="rescue-dock" inert={modalOpen}>
++      <section className="dock-person"><img src={screen === "consultation" && customer ? portrait(customer.id, true) : selectedCustomer ? portrait(selectedCustomer.id, true) : asset("assets/aurora/" + (selectedStaff?.art ?? "xuyuan") + ".png")} alt="" /><div><small>{screen === "consultation" && customer ? customer.descriptor : selectedCustomer?.descriptor ?? selectedStaff?.role}</small><h2>{screen === "consultation" && customer ? customer.name : selectedCustomer?.name ?? selectedStaff?.name}</h2><p>{screen === "consultation" && session ? session.discovered.length + " / 3 处线索 · 体力 " + game.energy : selectedCustomer ? customerStatus(selectedCustomer.id) : "选择与人情都会留下记录"}</p></div></section>
+       <div className="dock-content">
+         {screen === "floor" && selectedCustomer && <div className="floor-inspect"><div><span className="eyebrow">她正在说</span><p>{selectedCustomer.opening}</p></div>
+           {available.includes(selectedCustomer.id) ? <div className="floor-actions">
+@@ -231,10 +267,11 @@
+         </div>}
+         {screen === "floor" && selectedStaff && <div className="staff-inspect"><h3>{focus === "luyao" ? "她在争取你还没接住的人" : focus === "suman" ? "愿不愿意帮忙，要看之前的账" : focus === "tangke" ? "她也在为转正凑最后的数字" : focus === "roman" ? "业绩与赠品记录，她都在盯" : "看清现场，再决定把时间给谁"}</h3><p>{focus === "suman" ? "关系：" + relationText(game.relations.suman) + (canHelp ? "。她愿意替你多留客一会儿。" : "。帮忙需要之前的人情，这班最多一次。") : story.threat}</p><div className="floor-actions">{available.map(id => <button key={id} onClick={() => setFocus(id)}>看看{CUSTOMERS[id].name}</button>)}</div></div>}
+         {screen === "consultation" && customer && session && <section className="service-actions">
++          <div className="action-cost"><span>阅读暂停 · 新观察 / 提问 / 试用各花 1 分钟</span><span>{available.filter(id => id !== customer.id).map(id => CUSTOMERS[id].name + "还等 " + Math.ceil(game.waitMeters[id] ?? CUSTOMERS[id].patience) + " 分钟").join(" · ") || "专心接住眼前这一位"}</span></div>
+           <ol className="service-steps">{["观察", "提问", "试用", "成交"].map((step, index) => <li key={step} className={index === stage ? "current" : index < stage ? "done" : ""}>{index + 1} · {step}</li>)}</ol>
+-          {stage === 0 && <><h3>先看清两处线索</h3><div className="cue-actions">{CUES.map(cue => <button key={cue.id} aria-label={"观察" + cue.label} aria-pressed={session.discovered.includes(cue.id)} onClick={() => setGame(value => observeService(value, cue.id))}>观察{cue.label}{session.discovered.includes(cue.id) ? " ✓" : ""}</button>)}</div><p className="service-feedback">{lastCue ? customer.cues[lastCue].finding : "点脸部线索，或用上面的按钮观察。另一位客人仍在等你。"}</p></>}
+-          {stage === 1 && <><h3>问清她真正介意的事</h3><div className="question-choices">{QUESTIONS[customer.id].map((q, index) => <button key={q.label} onClick={() => ask(q.label, index)}>{q.label}</button>)}</div><form className="question-composer" onSubmit={e => { e.preventDefault(); ask(draft); }}><input aria-label="对顾客说" value={draft} onChange={e => setDraft(e.target.value)} maxLength={280} placeholder="也可以用自己的话问她" /><button type="submit" disabled={!draft.trim()}>开口问</button></form></>}
+-          {showProducts && <><div className="product-choices">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button key={id} aria-label={PRODUCTS[id].short + " " + money(PRODUCTS[id].price)} aria-pressed={session.selectedProduct === id} onClick={() => { setGame(value => selectServiceProduct(value, id)); setRevising(false); }}><i className={"rescue-product-art product-" + id} /><span><b>{PRODUCTS[id].short}</b><small>{money(PRODUCTS[id].price)} / 件</small><em>{PRODUCTS[id].note}</em></span></button>)}</div><button className="gold-button trial-button" disabled={!session.selectedProduct || session.tested} onClick={() => setGame(trialService)}>为{customer.name}试用</button></>}
++          {stage === 0 && <><h3>先看清两处线索</h3><div className="cue-actions">{CUES.map(cue => <button key={cue.id} aria-label={"观察" + cue.label} aria-pressed={session.discovered.includes(cue.id)} onClick={() => setGame(value => observeService(value, cue.id))}>观察{customer.cues[cue.id].label}{session.discovered.includes(cue.id) ? " ✓" : ""}</button>)}</div><p className="service-feedback">{lastCue ? customer.cues[lastCue].finding : "点脸部线索，或用上面的按钮观察。另一位客人仍在等你。"}</p></>}
++          {stage === 1 && <><h3>问清她真正介意的事</h3><div className="question-choices">{questionChoices(customer.id).map(q => <button key={q.label} onClick={() => ask(q.label, q.index)}>{q.label}</button>)}</div><form className="question-composer" onSubmit={e => { e.preventDefault(); ask(draft); }}><input aria-label="对顾客说" value={draft} onChange={e => setDraft(e.target.value)} maxLength={280} placeholder="用自己的话问 · 本地剧本回复" /><button type="submit" disabled={!draft.trim()}>开口问</button></form>{askingAgain && <button className="text-button" onClick={() => setAskingAgain(false)}>不追问了，继续选品</button>}</>}
++          {showProducts && <><p className="product-guidance">根据线索选，不按价格猜。试用花 1 分钟{revising ? "；换款另花 5 体力" : ""}。</p><div className="product-choices">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button key={id} aria-label={PRODUCTS[id].short + " " + money(PRODUCTS[id].price)} aria-pressed={session.selectedProduct === id} onClick={() => { setGame(value => selectServiceProduct(value, id)); setRevising(false); }}><i className={"rescue-product-art product-" + id} /><span><b>{PRODUCTS[id].short}</b><small>{money(PRODUCTS[id].price)} / 件</small><em>{PRODUCTS[id].note}</em></span></button>)}</div><div className="trial-actions"><button className="gold-button trial-button" disabled={!session.selectedProduct || session.tested} onClick={() => setGame(trialService)}>为{customer.name}试用</button>{!session.tested && <button className="text-button" onClick={() => setAskingAgain(true)}>再问一句 · 1 分钟</button>}</div></>}
+           {pendingRival && rival && <div className="rival-decision" aria-label="竞品打断"><div><img src={asset("assets/aurora/luyao.png")} alt="陆遥" /><p><b>{rival.headline}</b><span>“{rival.quote}”</span></p></div><div className="rival-choices">
+             <button aria-label="先登记接待" onClick={() => setGame(value => respondToRival(value, "record"))}><b>先登记接待</b><small>留证据 · 体力 −3</small></button><button aria-label="让顾客确认需求" onClick={() => setGame(value => respondToRival(value, "clarify"))}><b>让顾客确认需求</b><small>守住信任 · 体力 −7</small></button><button aria-label="让她演示" onClick={() => setGame(value => respondToRival(value, "yield"))}><b>让她演示</b><small>共同成交 · 业绩各半</small></button>
+           </div></div>}
+@@ -245,10 +282,11 @@
+         {screen === "result" && outcome && <div className="result-next"><p>{available.length ? "还有 " + available.length + " 位顾客。刚才的接待也花掉了她们的等待时间。" : "今天的接待结束了，柜台还有一件事要处理。"}</p><button className="gold-button" onClick={() => { setScreen(available.length ? "floor" : "event"); setFocus(available[0] ?? "suman"); }}>{available.length ? "回到现场" : "处理闭店事件"}</button></div>}
+         {screen === "event" && <div className="event-options">{event.choices.filter(choice => !choice.visible || choice.visible(game)).map(choice => <button key={choice.id} onClick={() => { setGame(value => settleDayEvent(value, choice.id)); setScreen("summary"); }}><b>{choice.label}</b><span>{choice.detail}</span></button>)}</div>}
+         {screen === "summary" && <div className="result-next"><p>今天的选择已经保存。下一天会带着这些结果开始。</p><button className="gold-button" onClick={nextDay}>{game.day === 5 ? "查看活动周结局" : "进入下一天"}</button></div>}
+-        {screen === "finale" && <div className="result-next"><p>信任 {relationText(game.trust)} · 合规 {game.compliance} · 苏蔓 {relationText(game.relations.suman)}</p><button className="gold-button" onClick={() => setConfirmRestart(true)}>重新开始 · 换一种活法</button></div>}
++        {screen === "finale" && <div className="result-next"><p>信任 {relationText(game.trust)} · 合规 {game.compliance} · 苏蔓 {relationText(game.relations.suman)}</p><button className="gold-button" onClick={showRestart}>重新开始 · 换一种活法</button></div>}
+         {(screen === "intro" || screen === "brief") && <div className="welcome-note"><h3>看现场 → 选顾客 → 判断与试用 → 守住订单</h3><p>每一笔销售，都决定谁欠你、谁恨你、谁会回来。</p></div>}
+       </div>
+     </footer>
+-    {confirmRestart && <div className="dialog-backdrop"><section role="dialog" aria-modal="true" aria-label="重新开始" className="restart-dialog"><h2>重新开始这五天？</h2><p>本机当前进度会被新的一局替换。</p><div><button onClick={() => setConfirmRestart(false)}>继续当前进度</button><button className="gold-button" onClick={begin}>开始新一局</button></div></section></div>}
++    {handbook && <GameDialog title="值班手册" returnFocus={dialogOrigin.current} onClose={() => setHandbook(false)}><ShiftHandbook game={game} onRestart={() => { setHandbook(false); setConfirmRestart(true); }} /></GameDialog>}
++    {confirmRestart && <GameDialog title="重新开始" returnFocus={dialogOrigin.current} onClose={() => setConfirmRestart(false)}><div className="handbook-body"><h3>重新开始这五天？</h3><p>本机当前进度会被新的一局替换，挑战最佳纪录不受影响。</p><div className="floor-actions"><button onClick={() => setConfirmRestart(false)}>继续当前进度</button><button className="gold-button" onClick={begin}>开始新一局</button></div></div></GameDialog>}
+   </div>;
+ }
+--- before/src/RushGame.tsx
++++ after/src/RushGame.tsx
+@@ -2,6 +2,7 @@
+ import { CUSTOMERS, PRODUCTS, type ProductId } from "../dynamic-counter-prototype/src/campaign";
+ import { createRush, parseRush, rushReducer, RUSH_BEST_KEY, RUSH_SAVE_KEY, RUSH_SECONDS, STATIONS, WORLD, type Guest, type Point } from "./rush-rules";
+ import { asset } from "./sim/asset";
++import { customerPortrait, productArtwork } from "./experience-art";
+ import "./rush.css";
+ 
+ const REQUESTS: Record<ProductId, string> = { soft: "来补一瓶柔焦，镜头前要轻薄。", repair: "修护用完了，帮我拿一瓶。", glow: "今晚要上台，拿我常用的持妆。" };
+@@ -9,7 +10,7 @@
+ const place = (p: Point): CSSProperties => ({ left: `${p.x / WORLD.width * 100}%`, top: `${p.y / WORLD.height * 100}%` });
+ const art = (name: string) => asset(`assets/chibi/${name}.png`);
+ function ProductArt({ product }: { product: ProductId }) {
+-  return <span className={`rush-product-image product-${product}`} aria-hidden="true"><img src={asset("assets/aurora/product-trio.png")} alt="" draggable={false} /></span>;
++  return <span className={`rush-product-image product-${product}`} aria-hidden="true"><img src={productArtwork} alt="" draggable={false} /></span>;
+ }
+ function initialState() {
+   try { return parseRush(localStorage.getItem(RUSH_SAVE_KEY)) ?? createRush(); } catch { return createRush(); }
+@@ -203,7 +204,7 @@
+       </main>
+ 
+       <aside className="rush-tickets" aria-label="等待中的顾客"><div className="rush-tickets-title"><span>待接住的单</span><b>{game.guests.length.toString().padStart(2, "0")}</b></div><p className="rush-ticket-hint">看好需求，点她就出发。</p><div className="rush-ticket-list">{game.guests.map(guest => <button key={guest.id} className={`rush-ticket tone-${guest.product} ${guest.patience < 7 ? "impatient" : ""}`} disabled={!active} onClick={() => send(guest)} aria-label={`前往${CUSTOMERS[guest.who].name}，需要${PRODUCTS[guest.product].short}`}>
+-        <div className="rush-ticket-person"><img src={asset(`assets/aurora/${CUSTOMERS[guest.who].portrait.split("/").at(-1)}`)} alt="" /><div><b>{CUSTOMERS[guest.who].name}</b><small>{game.rivalTarget === guest.id && game.rivalHold > 0 ? "陆遥正在抢单" : `${Math.ceil(guest.patience)} 秒后离开`}</small></div><span className="rush-ticket-product">{PRODUCTS[guest.product].short}</span></div><p>{REQUESTS[guest.product]}</p><span className="rush-ticket-progress"><i style={{ width: `${guest.patience / guest.maximum * 100}%` }} /></span>
++        <div className="rush-ticket-person"><img src={customerPortrait(guest.who, true)} alt="" /><div><b>{CUSTOMERS[guest.who].name}</b><small>{game.rivalTarget === guest.id && game.rivalHold > 0 ? "陆遥正在抢单" : `${Math.ceil(guest.patience)} 秒后离开`}</small></div><span className="rush-ticket-product">{PRODUCTS[guest.product].short}</span></div><p>{REQUESTS[guest.product]}</p><span className="rush-ticket-progress"><i style={{ width: `${guest.patience / guest.maximum * 100}%` }} /></span>
+       </button>)}</div><div className="rush-side-note"><span>YOUR NEXT HIGH</span><strong>{bestTarget.toLocaleString()} <small>分</small></strong><p>连对 3 单 = 8 秒高光<br />加速跑动，得分翻倍。</p></div></aside>
+     </div>
+ 
+--- before/README.md
++++ after/README.md
+@@ -3,6 +3,17 @@
+ 你是试用期柜姐许愿。五天内完成 ¥21,000 的业绩，接住顾客、应对同事与竞品，并承担订单之后的复购、退货和人情账。
+ 
+ 主入口保留商场沙盘。点人物先了解情况，再从底栏接待；进入近景后按 **观察 → 提问 → 试用 → 处理竞争 → 报价与成交** 推进。选错产品可以换一款或接受拒绝，强推会留下售后风险。
++
++## 本轮体验改造
++
++根目录网页新增叙事开场、五章提示、值班手册、接待手记、试用前追问、手机选客和商品用途说明。闭店选择现在有可保存的角色回应；拒绝成交不再触发虚假付费事件，让单后的退货只冲回本人剩余份额，超额赠品受真实库存约束。
++
++- [六维度全面审计与后续方向](audit/experience-v2/全面审计与改造说明.md)
++- [实际验收记录](audit/experience-v2/验收记录.md)
++- 新表现层：`src/Experience.tsx`、`src/experience.css`；图片入口：`src/experience-art.ts`。
++- 原始 PNG 保留，主网页使用 `public/assets/optimized/` 的 WebP 和缩略图。可选重建命令：`node scripts/optimize-art.mjs`（需要本机已有 `cwebp`）。
++- 手机 PWA 复用规则修复，但没有套用根网页的新 UI；28 个受保护运行时文件未修改。
++- 下一轮重点是多解选品与角色演出，而不是继续堆面板；这些尚未实现。下文更早的验收记录不代表本轮重测了全部发布能力。
+ 
+ ## 闭店大作战 · 90 秒挑战
+ 
+--- before/dynamic-counter-prototype/src/campaign.ts
++++ after/dynamic-counter-prototype/src/campaign.ts
+@@ -110,7 +110,7 @@
+ 
+ export const PRODUCTS: Record<ProductId, { name: string; short: string; price: number; note: string }> = {
+   soft: { name: "云纱柔焦粉底", short: "柔焦", price: 980, note: "轻薄分区叠加，镜头近看更自然" },
+-  glow: { name: "鎏光持妆套组", short: "持妆", price: 1280, note: "高遮瑕、高提成；干燥和敏感肌风险更高" },
++  glow: { name: "鎏光持妆套组", short: "持妆", price: 1280, note: "高遮瑕、重妆感；干燥和敏感肌风险更高" },
+   repair: { name: "夜兰修护精华", short: "修护", price: 1680, note: "舒缓干燥与泛红，见效不靠厚重遮盖" },
+ };
+ 
+@@ -193,7 +193,7 @@
+   { day: 1, title: "入口位", subtitle: "两个顾客，只能先抓住一个", brief: "新品活动晚高峰。陆遥盯上沈薇，梅女士又只剩十分钟。你第一次决定把黄金时间给谁。", threat: "选择会让另一边的机会继续流失", customers: ["shen", "mei"] },
+   { day: 2, title: "新人价码", subtitle: "好服务不一定是高客单", brief: "小雨第一次买高端美妆，周姐同时在对比维珞。罗曼刚在晨会上说：今天谁的客单低于两千，谁留下复盘。", threat: "推对产品会低于柜长要求，推贵产品会超过顾客预算", customers: ["xiaoyu", "zhou"] },
+   { day: 3, title: "不是买给自己", subtitle: "观察也会误导人", brief: "赵女士替女儿买礼物，段小姐说只看小样。同一时间总部群在催修护精华的新品数据。", threat: "销售技巧不能代替真正了解使用者", customers: ["zhao", "duan"] },
+-  { day: 4, title: "婚礼前一周", subtitle: "最大的一单，最脆弱的人", brief: "安姐是苏蔓维护三年的老客。她点名让你试妆。若你昨天接住了周姐，她会带着同事的需求回来。", threat: "高客单、老客归属、敏感风险同时出现", customers: ["anjie"] },
++  { day: 4, title: "婚礼前一周", subtitle: "最大的一单，最脆弱的人", brief: "安姐是苏蔓维护三年的老客。她点名让你试妆。若你前两天接住了周姐，她会带着同事的需求回来。", threat: "高客单、老客归属、敏感风险同时出现", customers: ["anjie"] },
+   { day: 5, title: "最后一单", subtitle: "复购、售后与盘点同时到来", brief: "区域经理提前巡店。沈薇带着直播团队回来下单，后仓却在查五天前的赠品缺口。今天每条记录都会连起来。", threat: "成交只是开端；旧选择正在返回现场", customers: ["returning"] },
+ ];
+ 
+@@ -289,7 +289,9 @@
+   const relations = item.relation
+     ? { ...s.relations, [item.relation.key]: s.relations[item.relation.key] + item.relation.delta }
+     : s.relations;
+-  const charged = s.orders.find(order => order.customerId === item.id && order.risky)?.amount ?? -item.sales;
++  // Legacy v2 saves may lack orders; their transfer flags still constrain liability.
++  const legacyShare = item.id === "xiaoyu" ? hasFlag(s, "tang-owes-order") ? 0 : hasFlag(s, "split-with-tang") ? .5 : 1 : 1;
++  const charged = s.orders.find(order => order.customerId === item.id && order.risky)?.amount ?? -item.sales * legacyShare;
+   return {
+     ...s,
+     sales: Math.max(0, s.sales - charged),
+@@ -365,6 +367,21 @@
+   return notes;
+ }
+ 
++// Ownership changes alter the credited order too, so future chargebacks never
++// refund a colleague's share. Keep the original receipt total for the ledger.
++function transferXiaoyuOrder(s: Campaign, fraction: number): Campaign {
++  const order = s.orders.find(order => order.customerId === "xiaoyu");
++  const amount = order?.amount ?? (hasFlag(s, "served:xiaoyu:good") ? CUSTOMERS.xiaoyu.sale : hasFlag(s, "served:xiaoyu:risky") ? CUSTOMERS.xiaoyu.wrongSale : 0);
++  const transferred = amount * fraction;
++  return { ...s, sales: Math.max(0, s.sales - transferred), daySales: s.daySales - transferred,
++    orders: s.orders.map(item => item === order ? { ...item, amount: item.amount - transferred, shared: true } : item) };
++}
++
++function hasPurchase(s: Campaign, id: CustomerId) {
++  // Completed consultation is not proof of payment; successful legacy flags are.
++  return s.orders.some(order => order.customerId === id) || hasFlag(s, `served:${id}:good`) || hasFlag(s, `served:${id}:risky`);
++}
++
+ export function dayEvent(s: Campaign): DayEvent {
+   if (s.day === 1) return {
+     speaker: "苏蔓", speakerStaff: "suman", speakerCustomer: null, title: "少了两份热门赠品",
+@@ -376,7 +393,7 @@
+     ],
+   };
+   if (s.day === 2) {
+-    if (!s.dayServed.includes("xiaoyu")) return {
++    if (!hasPurchase(s, "xiaoyu")) return {
+       speaker: "唐可", speakerStaff: "tangke", speakerCustomer: null, title: "小雨已经走了",
+       body: "唐可把中庭的小样袋摔在抽屉里：这单本来可以留下。她问你要不要一起去追。",
+       choices: [
+@@ -389,14 +406,14 @@
+       speaker: "唐可", speakerStaff: "tangke", speakerCustomer: null, title: "她说这单应该算她的",
+       body: "唐可拿出一条上午的咨询记录：小雨先问过她色号，只是当时没有成交。你刚完成了全部试妆。",
+       choices: [
+-        { id: "split-tang", label: "提出平分", detail: "各退一步，销售扣一半归属", result: "唐可接受了。你少了一点数字，却多了一个愿意交接顾客的人。", apply: st => ({ ...st, sales: Math.max(0, st.sales - 490), daySales: Math.max(0, st.daySales - 490), relations: { ...st.relations, tangke: st.relations.tangke + 14 }, flags: flag(st, "split-with-tang"), history: history(st, "你与唐可平分了小雨的订单") }) },
++        { id: "split-tang", label: "提出平分", detail: "各退一步，转出这单实际入账的一半", result: "唐可接受了。你少了一点数字，却多了一个愿意交接顾客的人。", apply: st => ({ ...transferXiaoyuOrder(st, .5), relations: { ...st.relations, tangke: st.relations.tangke + 14 }, flags: flag(st, "split-with-tang"), history: history(st, "你与唐可平分了小雨的订单") }) },
+         { id: "beat-tang", label: "拿出服务记录", detail: "按有效接待规则据理力争", result: "订单归你。唐可无法反驳，但开始把你视作真正的竞争者。", apply: st => ({ ...st, evidence: st.evidence + 1, relations: { ...st.relations, tangke: st.relations.tangke - 5 }, flags: flag(st, "beat-tang-with-record"), history: history(st, "你用服务记录赢下订单归属") }) },
+-        { id: "yield-tang", label: "把单让给她", detail: "换她下次交接一个高客", result: "唐可答应欠你一单。口头承诺没有证据，但她的敌意明显下降。", apply: st => ({ ...st, sales: Math.max(0, st.sales - 980), daySales: Math.max(0, st.daySales - 980), relations: { ...st.relations, tangke: st.relations.tangke + 22 }, flags: flag(st, "tang-owes-order"), history: history(st, "你把小雨的订单让给了唐可") }) },
++        { id: "yield-tang", label: "把单让给她", detail: "换她下次交接一个高客", result: "唐可答应欠你一单。口头承诺没有证据，但她的敌意明显下降。", apply: st => ({ ...transferXiaoyuOrder(st, 1), relations: { ...st.relations, tangke: st.relations.tangke + 22 }, flags: flag(st, "tang-owes-order"), history: history(st, "你把小雨的订单让给了唐可") }) },
+       ],
+     };
+   }
+   if (s.day === 3) {
+-    if (!s.dayServed.includes("zhao")) return {
++    if (!hasPurchase(s, "zhao")) return {
+       speaker: "罗曼", speakerStaff: "roman", speakerCustomer: null, title: "总部还在催修护数据",
+       body: "赵女士没买就走了。罗曼没有骂你，只把区域群的截图转给你：今天这款必须有数。",
+       choices: [
+@@ -407,7 +424,7 @@
+     };
+     return {
+       speaker: "赵女士", speakerStaff: null, speakerCustomer: "zhao", title: "女儿发来一张过敏记录",
+-      body: "她准备付款时才发现，女儿曾对新品中的一种香精过敏。你可以换成低价基础款，也可以保证“多数人没事”。",
++      body: "闭店前，她发来女儿的过敏记录：刚买的新品含有一种曾让女儿过敏的香精。订单已经入账，你现在可以主动联系她换货，也可以保留这笔销售。",
+       choices: [
+         { id: "protect-zhao", label: "换低价基础款", detail: "少卖 ¥700，避免已知风险", result: "赵女士松了口气。当天数字下降，但她把你的微信推给了女儿。", apply: st => ({ ...st, sales: Math.max(0, st.sales - 700), daySales: Math.max(0, st.daySales - 700), trust: clamp(st.trust + 12), flags: flag(st, "protected-zhao"), history: history(st, "你主动降低赵女士的客单避免过敏") }) },
+         { id: "risk-zhao", label: "解释概率后成交", detail: "让她自己承担选择", result: "订单留下了。你说清了风险，却知道她并没有真正听懂。", apply: st => ({ ...st, trust: clamp(st.trust - 3), compliance: clamp(st.compliance - 3), flags: flag(st, "zhao-risk-sale"), history: history(st, "赵女士知情后仍买下新品") }) },
+@@ -415,13 +432,21 @@
+       ],
+     };
+   }
++  if (s.day === 4 && !hasPurchase(s, "anjie")) return {
++    speaker: "苏蔓", speakerStaff: "suman", speakerCustomer: null, title: "没留下的婚礼单",
++    body: "安姐没有在你这里下单。苏蔓收起准备好的旅行装：她跟了我三年。今天没卖成，也不能把原因藏起来。",
++    choices: [
++      { id: "record-anjie-miss", label: "如实交接试用记录", detail: "不补销售，不隐瞒风险", result: "苏蔓没有责怪你。她把记录留给下次接待的人，这至少不是一场没人负责的失败。", apply: st => ({ ...st, evidence: st.evidence + 1, flags: flag(st, "recorded-anjie-miss"), history: history(st, "你向苏蔓交接了未成交的婚礼咨询") }) },
++      { id: "own-anjie-miss", label: "承认没能接住她", detail: "承担复盘，不伪造订单", result: "苏蔓让你明天一起复盘。她听见你没有拿顾客的敏感当借口。", apply: st => ({ ...st, relations: { ...st.relations, suman: st.relations.suman + 3 }, flags: flag(st, "owned-anjie-miss"), history: history(st, "你承担了婚礼单未成交的复盘") }) },
++    ],
++  };
+   if (s.day === 4) return {
+     speaker: "安姐", speakerStaff: "suman", speakerCustomer: "anjie", title: "“把赠品都装进去”",
+     body: "她要六套旅行装送伴娘。系统额度只够两套。苏蔓在远处没有说话。",
+     choices: [
+       { id: "refuse-gifts", label: "只按额度给两套", detail: "守住规则，可能得罪大客", result: "安姐脸色不好看，但接受了。罗曼第一次在群里公开说你“能守底线”。", apply: st => ({ ...st, compliance: clamp(st.compliance + 12), relations: { ...st.relations, roman: st.relations.roman + 12 }, flags: flag(st, "refused-anjie-gifts"), history: history(st, "你拒绝给安姐超额赠品") }) },
+-      { id: "give-gifts", label: "私下补足六套", detail: "消耗4份库存，不登记", result: "安姐满意离开。盘点表上出现四个无法解释的空位。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 18), relations: { ...st.relations, suman: st.relations.suman + 8 }, flags: flag(st, "gave-anjie-gifts"), history: history(st, "你给安姐四套未登记赠品") }) },
+-      { id: "sign-gifts", label: "请苏蔓共同签字", detail: "赠品照给，责任共同留下", result: "苏蔓签了字。她帮了你，也知道你把她绑进了记录。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 6), evidence: st.evidence + 2, relations: { ...st.relations, suman: st.relations.suman + 3 }, flags: flag(st, "signed-anjie-gifts"), history: history(st, "你和苏蔓共同签了安姐赠品记录") }) },
++      { id: "give-gifts", label: "私下补足六套", detail: "消耗4份库存，不登记", visible: st => st.samples >= 4, result: "安姐满意离开。盘点表上出现四个无法解释的空位。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 18), relations: { ...st.relations, suman: st.relations.suman + 8 }, flags: flag(st, "gave-anjie-gifts"), history: history(st, "你给安姐四套未登记赠品") }) },
++      { id: "sign-gifts", label: "请苏蔓共同签字", detail: "消耗4份库存，责任共同留下", visible: st => st.samples >= 4, result: "苏蔓签了字。她帮了你，也知道你把她绑进了记录。", apply: st => ({ ...st, samples: Math.max(0, st.samples - 4), compliance: clamp(st.compliance - 6), evidence: st.evidence + 2, relations: { ...st.relations, suman: st.relations.suman + 3 }, flags: flag(st, "signed-anjie-gifts"), history: history(st, "你和苏蔓共同签了安姐赠品记录") }) },
+     ],
+   };
+   const gap = hasFlag(s, "covered-suman") || hasFlag(s, "gave-anjie-gifts") || hasFlag(s, "signed-anjie-gifts");
+@@ -704,7 +729,7 @@
+   const next = choice.apply(s);
+   const change = next.sales - s.sales;
+   if (change) next.history = history(next, `闭店调整 · ${choice.label}：${change > 0 ? "+" : "−"}¥${Math.abs(change).toLocaleString("zh-CN")}`);
+-  return { ...next, eventDoneDays: [...next.eventDoneDays, s.day], activeSession: null };
++  return { ...next, history: history(next, "回应 · " + choice.result), eventDoneDays: [...next.eventDoneDays, s.day], activeSession: null };
+ }
+ 
+ export function requestStaffHelp(s: Campaign, id: CustomerId): Campaign {
+--- before/dynamic-counter-prototype/rescue-e2e/counter.spec.ts
++++ after/dynamic-counter-prototype/rescue-e2e/counter.spec.ts
+@@ -11,7 +11,10 @@
+   await page.getByRole("button", { name: "接待" + name, exact: true }).click();
+   await page.getByRole("button", { name: "观察眼下", exact: true }).click();
+   await page.getByRole("button", { name: "观察脸颊", exact: true }).click();
+-  await page.locator(".question-choices button").first().click();
++  const questions: Record<string, string> = { 沈薇: "你最怕镜头看到什么？", 梅女士: "明早最想改善哪里？", 小雨: "预算里最不能牺牲什么？", 周姐: "对面说的持妆你信吗？", 赵女士: "女儿用过什么会不舒服？", 段小姐: "真的只是看看吗？", 安姐: "婚礼前皮肤最近稳定吗？" };
++  const followUp = name === "沈薇" ? "昨天最满意哪一点？" : "昨天那款同事怎么说？";
++  const question = page.getByRole("button", { name: questions[name], exact: true });
++  await (await question.count() ? question : page.getByRole("button", { name: followUp, exact: true })).click();
+   await page.getByRole("button", { name: product, exact: true }).click();
+   await page.getByRole("button", { name: "为" + name + "试用", exact: true }).click();
+ }
+@@ -121,7 +124,7 @@
+   }
+   const face = await page.locator(".portrait-window").boundingBox();
+   expect(face!.height).toBeGreaterThan(220);
+-  await page.screenshot({ path: "../audit/rescue-2026-09-08/after-phone-service.png" });
++  await page.screenshot({ path: "../audit/experience-v2/regression-phone-service.png" });
+   await page.getByRole("button", { name: "提出成交", exact: true }).click();
+   await expect(page.getByRole("heading", { name: "沈薇成交", exact: true })).toBeVisible();
+ });

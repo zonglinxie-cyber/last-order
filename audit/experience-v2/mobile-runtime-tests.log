@@ -1,0 +1,39 @@
+
+> dynamic-counter-prototype@0.1.0 test:runtime
+> playwright test
+
+
+Running 30 tests using 7 workers
+
+  ✓   1 tests/mobile-release.spec.ts:9:1 › mobile release opens as a full-screen game and exposes install assets (533ms)
+  ✓   3 tests/consequences.spec.ts:10:1 › covering for Su Man makes blaming her available on day 5 (611ms)
+  ✓   7 tests/endings.spec.ts:10:1 › high sales with poor compliance reaches the risky ending after reload (644ms)
+  ✓   5 tests/consultation-gameplay.spec.ts:15:1 › typed questions can unlock a trial (762ms)
+  ✓   6 tests/mobile-runtime.spec.ts:25:1 › horizontal intent stays in Carousel and cannot create parent momentum (867ms)
+  ✓   8 tests/consequences.spec.ts:21:1 › a clean record removes the option to blame Su Man (262ms)
+  ✓  11 tests/consequences.spec.ts:33:1 › yielding to Tang Ke pays off as a transferred order on day 4 (262ms)
+  ✓  12 tests/consequences.spec.ts:44:1 › protecting Zhao's daughter creates a WeChat order on day 5 (233ms)
+  ✓   9 tests/consultation-gameplay.spec.ts:31:1 › a wrong recommendation can be refused instead of auto-selling (633ms)
+  ✓  10 tests/mobile-runtime.spec.ts:42:1 › vertical intent over a carousel is handed to MobileScroll in both directions (535ms)
+  ✓   2 tests/consultation-layout.spec.ts:5:1 › mobile consultation scrolls its controls while the face stays fixed (1.5s)
+  ✓  13 tests/consequences.spec.ts:55:1 › low energy blocks a new consultation (272ms)
+  ✓  15 tests/mobile-runtime.spec.ts:58:1 › tap activates a card but a completed drag does not (386ms)
+  ✓  16 tests/consequences.spec.ts:67:1 › forcing Anjie comes back as a wedding-week chargeback (222ms)
+  ✓  18 tests/consequences.spec.ts:78:1 › a sample left after a refusal returns as a repurchase (218ms)
+  ✓  19 tests/consequences.spec.ts:89:1 › a versionless save starts a new week instead of merging old numbers (180ms)
+  ✓  14 tests/consultation-gameplay.spec.ts:42:1 › a deliberate hard sell records revenue and risk (911ms)
+  ✓  20 tests/consultation-gameplay.spec.ts:52:1 › a bad trial can be recovered by changing the recommendation (605ms)
+  ✓  17 tests/mobile-runtime.spec.ts:67:1 › Carousel preserves momentum and edge rubber-banding (1.3s)
+  ✓  22 tests/mobile-runtime.spec.ts:90:1 › BottomSheet remains mounted while its default exit animation plays (778ms)
+  ✓  23 tests/mobile-runtime.spec.ts:100:1 › keyboard and its attached footer dismiss on the same transition (713ms)
+  ✓  24 tests/mobile-runtime.spec.ts:129:1 › switching to Pixel keeps the composer above Android navigation (1.1s)
+  ✓   4 tests/campaign.spec.ts:26:1 › five-day campaign completes and persists across a reload (6.1s)
+  ✓  25 tests/mobile-runtime.spec.ts:216:1 › FlowStack pushes and pops screens while dismissing the keyboard (2.0s)
+  ✓  21 tests/consultation-gameplay.spec.ts:65:1 › leaving a consultation preserves diagnosis and rival pressure (8.4s)
+  ✓  26 tests/consultation-gameplay.spec.ts:84:1 › rival responses have distinct costs (446ms)
+  ✓  27 tests/consultation-gameplay.spec.ts:93:1 › the floor shows living speech and inspects staff (308ms)
+  ✓  28 tests/consultation-gameplay.spec.ts:106:1 › the floor keeps customer identities and named staff visible (251ms)
+  ✓  29 tests/consultation-gameplay.spec.ts:120:1 › every campaign day uses the correct customer identity art (583ms)
+  ✓  30 tests/consultation-gameplay.spec.ts:140:1 › named event speakers have visible character art (480ms)
+
+  30 passed (17.0s)

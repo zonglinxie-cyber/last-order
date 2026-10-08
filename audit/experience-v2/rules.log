@@ -1,0 +1,224 @@
+
+> ai-company-brawl@0.1.0 test:rules
+> npm --prefix dynamic-counter-prototype run test:rules && npm run test:rush
+
+
+> dynamic-counter-prototype@0.1.0 test:rules
+> node --experimental-strip-types --test tests/campaign-rules.test.ts tests/consult-chat.test.ts tests/rescue-rules.test.ts
+
+TAP version 13
+# Subtest: a clean route still needs day 5 to clear the target
+ok 1 - a clean route still needs day 5 to clear the target
+  ---
+  duration_ms: 0.643833
+  type: 'test'
+  ...
+# Subtest: history keeps more than 25 entries
+ok 2 - history keeps more than 25 entries
+  ---
+  duration_ms: 0.072667
+  type: 'test'
+  ...
+# Subtest: forcing Anjie comes back as a wedding-week blow-up
+ok 3 - forcing Anjie comes back as a wedding-week blow-up
+  ---
+  duration_ms: 0.19775
+  type: 'test'
+  ...
+# Subtest: a sample left after a refusal returns as a small repurchase
+ok 4 - a sample left after a refusal returns as a small repurchase
+  ---
+  duration_ms: 0.089458
+  type: 'test'
+  ...
+# Subtest: old saves without the current version are discarded
+ok 5 - old saves without the current version are discarded
+  ---
+  duration_ms: 0.281833
+  type: 'test'
+  ...
+# Subtest: a same-day risky last order is clawed back in the finale
+ok 6 - a same-day risky last order is clawed back in the finale
+  ---
+  duration_ms: 0.137875
+  type: 'test'
+  ...
+# Subtest: Lu Yao's interruption copy changes by customer
+ok 7 - Lu Yao's interruption copy changes by customer
+  ---
+  duration_ms: 0.087667
+  type: 'test'
+  ...
+# Subtest: need-focused questions count as useful
+ok 8 - need-focused questions count as useful
+  ---
+  duration_ms: 0.728792
+  type: 'test'
+  ...
+# Subtest: fallback replies stay in character
+ok 9 - fallback replies stay in character
+  ---
+  duration_ms: 0.123125
+  type: 'test'
+  ...
+# Subtest: clock, patience and fractional time survive a saved floor
+ok 10 - clock, patience and fractional time survive a saved floor
+  ---
+  duration_ms: 0.907
+  type: 'test'
+  ...
+# Subtest: repeated observations do not spend time; a returned consultation remains resumable
+ok 11 - repeated observations do not spend time; a returned consultation remains resumable
+  ---
+  duration_ms: 0.592292
+  type: 'test'
+  ...
+# Subtest: a sample never turns an unsuitable trial into a suitable sale
+ok 12 - a sample never turns an unsuitable trial into a suitable sale
+  ---
+  duration_ms: 0.322292
+  type: 'test'
+  ...
+# Subtest: rival decisions are required and idempotent; split risk refunds only the recorded share
+ok 13 - rival decisions are required and idempotent; split risk refunds only the recorded share
+  ---
+  duration_ms: 0.213459
+  type: 'test'
+  ...
+# Subtest: old version-2 saves migrate additively and malformed sessions cannot enter gameplay
+ok 14 - old version-2 saves migrate additively and malformed sessions cannot enter gameplay
+  ---
+  duration_ms: 0.209958
+  type: 'test'
+  ...
+# Subtest: staff favors require a relationship and can only be used once per shift
+ok 15 - staff favors require a relationship and can only be used once per shift
+  ---
+  duration_ms: 0.074167
+  type: 'test'
+  ...
+# Subtest: every displayed quote adds up to its complete order and actual share
+ok 16 - every displayed quote adds up to its complete order and actual share
+  ---
+  duration_ms: 0.156833
+  type: 'test'
+  ...
+# Subtest: refused customers do not create phantom ownership or paid-order events
+ok 17 - refused customers do not create phantom ownership or paid-order events
+  ---
+  duration_ms: 0.183625
+  type: 'test'
+  ...
+# Subtest: transferring a risky order only refunds the share still credited to you
+ok 18 - transferring a risky order only refunds the share still credited to you
+  ---
+  duration_ms: 8.433042
+  type: 'test'
+  ...
+# Subtest: gift choices cannot spend inventory that does not exist
+ok 19 - gift choices cannot spend inventory that does not exist
+  ---
+  duration_ms: 0.3115
+  type: 'test'
+  ...
+# Subtest: the closing response is recorded once and survives reload
+ok 20 - the closing response is recorded once and survives reload
+  ---
+  duration_ms: 0.185375
+  type: 'test'
+  ...
+# Subtest: an actual five-day route survives saves and still needs the final order
+ok 21 - an actual five-day route survives saves and still needs the final order
+  ---
+  duration_ms: 1.201958
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 130.764333
+
+> ai-company-brawl@0.1.0 test:rush
+> node --experimental-strip-types --test tests/rush-rules.test.ts
+
+TAP version 13
+# Subtest: 取货必须走到柜台，送达才计分，完成后手中商品清空
+ok 1 - 取货必须走到柜台，送达才计分，完成后手中商品清空
+  ---
+  duration_ms: 1.58275
+  type: 'test'
+  ...
+# Subtest: 错误商品当场拒绝；不消耗手中商品，不计成功，不可空手刷分
+ok 2 - 错误商品当场拒绝；不消耗手中商品，不计成功，不可空手刷分
+  ---
+  duration_ms: 0.100666
+  type: 'test'
+  ...
+# Subtest: 所有货台和顾客间都能绕柜台到达，每段路线不穿过柜台
+ok 3 - 所有货台和顾客间都能绕柜台到达，每段路线不穿过柜台
+  ---
+  duration_ms: 2.779541
+  type: 'test'
+  ...
+# Subtest: 暂停冻结整局；刷新后先暂停，保留商品、分数、耐心和位置
+ok 4 - 暂停冻结整局；刷新后先暂停，保留商品、分数、耐心和位置
+  ---
+  duration_ms: 0.350084
+  type: 'test'
+  ...
+# Subtest: 连续三次正确送达触发高光，下一单得分翻倍
+ok 5 - 连续三次正确送达触发高光，下一单得分翻倍
+  ---
+  duration_ms: 0.13475
+  type: 'test'
+  ...
+# Subtest: 冲刺有冷却；近距离打断陆遥，连续按不能无限眩晕
+ok 6 - 冲刺有冷却；近距离打断陆遥，连续按不能无限眩晕
+  ---
+  duration_ms: 0.072
+  type: 'test'
+  ...
+# Subtest: 陆遥走近后需要交谈，成功抢客会打断连单
+ok 7 - 陆遥走近后需要交谈，成功抢客会打断连单
+  ---
+  duration_ms: 0.130041
+  type: 'test'
+  ...
+# Subtest: 90 秒准确结束；结算后输入、时间和分数冻结
+ok 8 - 90 秒准确结束；结算后输入、时间和分数冻结
+  ---
+  duration_ms: 4.48675
+  type: 'test'
+  ...
+# Subtest: 拒绝损坏、无限值、越界人物和重复顾客；随机种子可复现
+ok 9 - 拒绝损坏、无限值、越界人物和重复顾客；随机种子可复现
+  ---
+  duration_ms: 4.740917
+  type: 'test'
+  ...
+# Subtest: 任意一帧均可存档恢复，竞争对手连续转向时不会切进柜角
+ok 10 - 任意一帧均可存档恢复，竞争对手连续转向时不会切进柜角
+  ---
+  duration_ms: 6.420333
+  type: 'test'
+  ...
+# Subtest: 重玩在暂停或结算后生效，重置本局数据与时间
+ok 11 - 重玩在暂停或结算后生效，重置本局数据与时间
+  ---
+  duration_ms: 1.65925
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 127.5035

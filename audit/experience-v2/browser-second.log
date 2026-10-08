@@ -1,0 +1,65 @@
+
+> ai-company-brawl@0.1.0 test:browser
+> npm --prefix dynamic-counter-prototype run test:floor
+
+
+> dynamic-counter-prototype@0.1.0 test:floor
+> playwright test --config playwright.floor.config.ts
+
+
+Running 10 tests using 2 workers
+
+  ✓   2 rescue-e2e/experience.spec.ts:11:1 › editorial opening is readable at desktop and phone widths (1.0s)
+  ✓   1 rescue-e2e/counter.spec.ts:19:1 › the full floor-to-consultation campaign reaches the honest ending after reloads (4.5s)
+  ✓   4 rescue-e2e/counter.spec.ts:61:1 › a saved observation and pending rival resume; a sample does not erase rejection (799ms)
+  ✓   5 rescue-e2e/counter.spec.ts:85:1 › a split sale shows and persists the actual credited amount (711ms)
+  ✓   6 rescue-e2e/counter.spec.ts:96:1 › floor acceleration consumes patience and pause freezes it (530ms)
+  ✘   3 rescue-e2e/experience.spec.ts:27:1 › handbook pauses time, traps focus, and preserves a consultation (5.6s)
+  ✓   7 rescue-e2e/counter.spec.ts:110:1 › phone viewport keeps face visible and key service actions usable (618ms)
+  ✓   8 rescue-e2e/experience.spec.ts:52:1 › phone queue, product descriptions and discovered notes stay usable (771ms)
+  ✓   9 rescue-e2e/experience.spec.ts:72:1 › closing choice produces a persistent character response without a phantom gift scene (792ms)
+  ✓  10 rescue-e2e/experience.spec.ts:86:1 › arcade still starts, delivers, pauses and survives reload independently (2.2s)
+
+
+  1) rescue-e2e/experience.spec.ts:27:1 › handbook pauses time, traps focus, and preserves a consultation 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByRole('button', { name: '值班手册', exact: true })
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" with timeout 5000ms
+      - waiting for getByRole('button', { name: '值班手册', exact: true })
+        14 × locator resolved to <button>值班手册</button>
+           - unexpected value "inactive"
+
+
+      40 |   await page.keyboard.press("Escape");
+      41 |   await expect(dialog).toHaveCount(0);
+    > 42 |   await expect(page.getByRole("button", { name: "值班手册", exact: true })).toBeFocused();
+         |                                                                         ^
+      43 |   await expect(page.getByRole("button", { name: "暂停", exact: true })).toHaveAttribute("aria-pressed", "true");
+      44 |   await page.getByRole("button", { name: "接待沈薇", exact: true }).click();
+      45 |   await page.getByRole("button", { name: "观察眼下", exact: true }).click();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/rescue-e2e/experience.spec.ts:42:73
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/floor/experience-handbook-pauses-8ab77-nd-preserves-a-consultation/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/floor/experience-handbook-pauses-8ab77-nd-preserves-a-consultation/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/floor/experience-handbook-pauses-8ab77-nd-preserves-a-consultation/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/floor/experience-handbook-pauses-8ab77-nd-preserves-a-consultation/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    rescue-e2e/experience.spec.ts:27:1 › handbook pauses time, traps focus, and preserves a consultation 
+  9 passed (13.5s)

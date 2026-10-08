@@ -1,0 +1,34 @@
+{
+  "base_commit": "d818b1e8ed417bb12ca2107064347195512a86e3",
+  "scope": "Current tracked modifications and untracked files in dynamic-counter-prototype and .github; secrets excluded; complete committed base remains in Git.",
+  "files": [
+    ".github/workflows/pages.yml",
+    "dynamic-counter-prototype/AGENTS.md",
+    "dynamic-counter-prototype/art/blender-export.md",
+    "dynamic-counter-prototype/art/templates/consultation-853x1844.png",
+    "dynamic-counter-prototype/art/templates/stage-waypoints-853x1844.png",
+    "dynamic-counter-prototype/art/templates/walk-cell-384x512.png",
+    "dynamic-counter-prototype/package.json",
+    "dynamic-counter-prototype/scripts/consult-proxy.mjs",
+    "dynamic-counter-prototype/scripts/dev-with-llm.mjs",
+    "dynamic-counter-prototype/src/Prototype.tsx",
+    "dynamic-counter-prototype/src/campaign.ts",
+    "dynamic-counter-prototype/src/consultChat.ts",
+    "dynamic-counter-prototype/src/floorLife.ts",
+    "dynamic-counter-prototype/src/prototype.css",
+    "dynamic-counter-prototype/tests/campaign.spec.ts",
+    "dynamic-counter-prototype/tests/consult-chat.test.ts",
+    "dynamic-counter-prototype/tests/consultation-gameplay.spec.ts"
+  ],
+  "source_changes_by_this_audit": false,
+  "checks": {
+    "root_build": "passed",
+    "mobile_build": "passed",
+    "mobile_runtime_integrity": "28 protected files passed",
+    "mobile_rule_tests": "9 passed"
+  },
+  "browser": {
+    "root": "http://127.0.0.1:5192/",
+    "mobile": "http://127.0.0.1:5193/"
+  }
+}

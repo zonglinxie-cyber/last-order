@@ -1,0 +1,615 @@
+diff --git a/dynamic-counter-prototype/AGENTS.md b/dynamic-counter-prototype/AGENTS.md
+index 42c8d98..57b02fb 100644
+--- a/dynamic-counter-prototype/AGENTS.md
++++ b/dynamic-counter-prototype/AGENTS.md
+@@ -19,9 +19,10 @@
+ - Body copy in the app viewport should stay at or above 12px, and primary controls at or above 44px, including the desktop phone preview. Self-host `Noto Serif SC` via `@fontsource/noto-serif-sc` woff2 files so the offline PWA does not depend on Google Fonts.
+ - The first release chapter is a complete five-day campaign with concurrent customers, face diagnosis, product choice, order ownership, rival interruption, daily incidents, persistent consequences, and multiple endings. Keep the full campaign playable end to end whenever content changes.
+ - The mobile release is an installable portrait PWA. Real touch devices use the full viewport with safe-area padding and finger-sized controls; the desktop device frame remains a preview surface only.
+-- The consultation is no longer a fixed-answer form. Its required interaction rhythm is observe → ask one meaningful question → trial → read the customer's reaction → close or revise. Wrong recommendations may be refused; returning to the floor preserves the active session and outside competitive pressure.
+-- Floor characters communicate opportunity state through entry, waiting, rival approach, selection, and exit. They are not player-controlled walkers. The player remains embodied through first-person service gestures, the work badge, and direct control over attention, trial, order ownership, and resources.
++- The consultation is no longer a fixed-answer form. After observing two facial cues, the player can type what to say or tap a prompt; the customer answers in character via DeepSeek when the local proxy is running, otherwise a fallback line. The required rhythm remains observe → ask → trial → close. Wrong recommendations may be refused; returning to the floor preserves the active session and outside competitive pressure.
++- Floor characters communicate opportunity state through entry, waiting, rival approach, selection, and exit. They stand on the painted counter stage with walk cycles, name tags, and speech bubbles. Clicking anyone inspects current action, mood, and relationship in the dock; consultation starts only from the dock button. The floor clock can be paused or sped up. They are not player-controlled walkers. The player remains embodied through first-person service gestures, the work badge, and direct control over attention, trial, order ownership, and resources. Do not collapse the floor back into floating name pills or skip the inspect step.
+ - Beauty products must use real raster product art. Do not regress product selection to CSS bottle drawings or text-only placeholders.
++- Replacement floor, portrait, consultation, and product art must follow `art/blender-export.md`. Export right-facing 384×512 walk cells and 853×1844 consultation plates with locked face-cue landmarks. Do not put Xu Yuan on the floor as a walker, and do not replace the PWA with a Godot or realtime 3D scene.
+ - Core named staff have distinct portrait assets in `public/assets/game/staff-portraits/`: Xu Yuan, Lu Yao, Roman, Su Man, Tang Ke, and Fang Min. Do not collapse them back into shared staff sprites or text-only markers. Each customer's map marker must carry that customer's own consultation portrait as an identity badge; do not infer identity only from an age-based generic sprite.
+ 
+ In ChatGPT Work Mode, run `sites-preview start "$PWD"`, open `http://terminal.local:4173/` in the cloud browser, and verify the rendered app and its primary interactions. Keep that preview open and tell the user to inspect it in the cloud browser; do not present the local URL as a user-facing chat link. In Codex Desktop, run the local server yourself, open the preview in the in-app browser, and provide the clickable local URL. Do not deploy to Sites unless the user explicitly asks to share, publish, or deploy. Do not give the user server-start instructions when you can run it.
+diff --git a/dynamic-counter-prototype/package.json b/dynamic-counter-prototype/package.json
+index 7188a6e..2907490 100644
+--- a/dynamic-counter-prototype/package.json
++++ b/dynamic-counter-prototype/package.json
+@@ -9,10 +9,10 @@
+     "test:runtime": "playwright test",
+     "test:release": "playwright test --config playwright.release.config.ts",
+     "test:sites": "node --test tests/sites-worker.test.mjs tests/pwa-build.test.mjs",
+-    "test:rules": "node --experimental-strip-types --test tests/campaign-rules.test.ts",
++    "test:rules": "node --experimental-strip-types --test tests/campaign-rules.test.ts tests/consult-chat.test.ts",
+     "test": "npm run test:rules && npm run build && npm run test:runtime && npm run test:release && npm run test:sites",
+     "predev": "npm run check:runtime",
+-    "dev": "vite",
++    "dev": "node scripts/dev-with-llm.mjs",
+     "preview": "vite preview",
+     "prebuild": "npm run check:runtime",
+     "build": "tsc && vite build && node scripts/prepare-pwa-build.mjs && node scripts/prepare-sites-build.mjs"
+diff --git a/dynamic-counter-prototype/src/Prototype.tsx b/dynamic-counter-prototype/src/Prototype.tsx
+index 5bad141..fd05367 100644
+--- a/dynamic-counter-prototype/src/Prototype.tsx
++++ b/dynamic-counter-prototype/src/Prototype.tsx
+@@ -1,12 +1,19 @@
+-import { useEffect, useMemo, useState } from "react";
+-import { MobileScroll } from "./mobile";
++import { useEffect, useMemo, useRef, useState } from "react";
++import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets } from "./mobile";
+ import {
+   applyFinale, applyQuestion, applyRival, CUSTOMERS, DAYS, dayEvent, dawnNotices, ENERGY_LOCK, endingTitle,
+-  floorCustomers, hasFlag, historyByDay, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
++  floorCustomers, hasFlag, historyByDay, inferUseful, INITIAL, leaveSample, openFloorState, parseCampaign, PRODUCTS, QUESTIONS,
+   REACTIONS, relationText, resolveSale, RIVAL_IDS, RIVAL_INTERRUPTIONS, SAVE_KEY, spendAttention, startNextDay,
+-  TARGET, todayHistory, type Campaign, type CueId, type Customer, type CustomerId, type CustomerSession,
++  TARGET, todayHistory, type Campaign, type ChatLine, type CueId, type Customer, type CustomerId, type CustomerSession,
+   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey,
+ } from "./campaign";
++import { requestConsultReply } from "./consultChat";
++import {
++  customerAction, customerBubble, customerHome, customerMood, defaultFocus, formatClock,
++  isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffBubble,
++  staffMood, staffRelation, stepPose, waitCopy, WAYPOINTS, type ActorPose, type FloorFocus,
++  type FloorSpeed, type FloorStaffId,
++} from "./floorLife";
+ 
+ type Screen = "intro" | "brief" | "floor" | "consultation" | "result" | "event" | "summary" | "finale";
+ type CharacterVisual = { name: string; role: string; sheet: "player" | "rival" | "manager"; portrait?: string };
+@@ -36,6 +43,10 @@ function CustomerMapFigure({ customer }: { customer: Customer }) {
+   return <span className={`map-character map-character-${customer.mapVariant}`}><i /><img src={customer.portrait} alt="" aria-hidden="true" /></span>;
+ }
+ 
++function StaffMapFigure({ visual }: { visual: CharacterVisual }) {
++  return <span className={`map-character map-staff map-staff-${visual.sheet}`}><i /></span>;
++}
++
+ export default function Prototype() {
+   const saved = useMemo(loadCampaign, []);
+   const [campaign, setCampaign] = useState<Campaign>(saved ?? INITIAL);
+@@ -56,6 +67,18 @@ export default function Prototype() {
+   const [outcome, setOutcome] = useState<SaleOutcome | null>(null);
+   const [eventChoiceId, setEventChoiceId] = useState<string | null>(null);
+   const [floorNotice, setFloorNotice] = useState<string | null>(null);
++  const [chat, setChat] = useState<ChatLine[]>([]);
++  const [draft, setDraft] = useState("");
++  const [talking, setTalking] = useState(false);
++  const [floorFocus, setFloorFocus] = useState<FloorFocus | null>(null);
++  const [floorBeat, setFloorBeat] = useState(0);
++  const [floorSpeed, setFloorSpeed] = useState<FloorSpeed>(1);
++  const [floorClock, setFloorClock] = useState(SHIFT_START);
++  const [floorElapsed, setFloorElapsed] = useState(0);
++  const [poses, setPoses] = useState<Record<string, ActorPose>>({});
++  const keyboard = useKeyboard();
++  const { bottomInset } = useKeyboardInsets();
++  const floorSim = useRef({ available: [] as CustomerId[], waitMeters: INITIAL.waitMeters, contested: false, elapsed: 0 });
+ 
+   const story = DAYS[campaign.day - 1];
+   const customer = customerId ? CUSTOMERS[customerId] : null;
+@@ -73,6 +96,61 @@ export default function Prototype() {
+ 
+   useEffect(() => { if (screen !== "intro") window.localStorage.setItem(SAVE_KEY, JSON.stringify(campaign)); }, [campaign, screen]);
+   useEffect(() => { requestAnimationFrame(() => { const frame = document.querySelector<HTMLElement>(".device-screen"); if (frame) frame.scrollTop = 0; }); }, [screen]);
++  useEffect(() => {
++    setFloorClock(SHIFT_START);
++    setFloorElapsed(0);
++    setFloorBeat(0);
++    setPoses({});
++    setFloorSpeed(1);
++    setFloorFocus(null);
++  }, [campaign.day]);
++  useEffect(() => {
++    if (screen !== "floor") return;
++    setFloorFocus(current => current ?? defaultFocus(available, campaign.waitMeters));
++  }, [screen, campaign.day, campaign.dayServed.join("|"), campaign.lost.join("|")]);
++  floorSim.current = { available, waitMeters: campaign.waitMeters, contested: available.some(id => CUSTOMERS[id].rival), elapsed: floorElapsed };
++  useEffect(() => {
++    if (screen !== "floor") return;
++    setPoses(current => {
++      const next = { ...current };
++      available.forEach((id, index) => {
++        if (next[id]) return;
++        const home = customerHome(index, campaign.waitMeters[id] ?? CUSTOMERS[id].patience, CUSTOMERS[id].patience);
++        next[id] = poseAt(home);
++      });
++      if (!next.luyao) next.luyao = poseAt(rivalHome(0), WAYPOINTS.rivalHold);
++      if (!next.roman) next.roman = poseAt(WAYPOINTS.checkout, { left: 70, top: 66 });
++      return next;
++    });
++  }, [screen, available.join("|")]);
++  useEffect(() => {
++    if (screen !== "floor" || floorSpeed === 0) return;
++    const timer = window.setInterval(() => {
++      const { available: ids, waitMeters, contested: hot, elapsed } = floorSim.current;
++      setFloorClock(value => value + floorSpeed);
++      setFloorElapsed(value => value + floorSpeed);
++      setFloorBeat(value => {
++        const beat = value + 1;
++        setPoses(current => {
++          const next = { ...current };
++          ids.forEach((id, index) => {
++            const meter = waitMeters[id] ?? CUSTOMERS[id].patience;
++            const home = customerHome(index, meter, CUSTOMERS[id].patience);
++            const pose = next[id] ?? poseAt(home);
++            const dest = beat % 8 === 0 && meter > 2 ? (index === 0 ? WAYPOINTS.testerSide : WAYPOINTS.openLow) : home;
++            next[id] = stepPose({ ...pose, destLeft: dest.left, destTop: dest.top }, floorSpeed);
++          });
++          const luyaoDest = hot ? rivalHome(rivalApproach(ids, waitMeters, elapsed)) : WAYPOINTS.rivalHold;
++          const romanDest = beat % 12 < 7 ? WAYPOINTS.checkout : { left: 66, top: 63 };
++          next.luyao = stepPose({ ...(next.luyao ?? poseAt(luyaoDest)), destLeft: luyaoDest.left, destTop: luyaoDest.top }, floorSpeed);
++          next.roman = stepPose({ ...(next.roman ?? poseAt(romanDest)), destLeft: romanDest.left, destTop: romanDest.top }, floorSpeed);
++          return next;
++        });
++        return beat;
++      });
++    }, 380);
++    return () => window.clearInterval(timer);
++  }, [screen, floorSpeed]);
+ 
+   const beginNew = () => { window.localStorage.removeItem(SAVE_KEY); setCampaign(INITIAL); setEventChoiceId(null); setFloorNotice(null); setScreen("brief"); };
+   const continueGame = () => {
+@@ -95,6 +173,9 @@ export default function Prototype() {
+     setRevisions(session.revisions);
+     setClaimed(session.claimed);
+     setRivalChoice(session.rivalChoice);
++    setChat(session.chat ?? []);
++    setDraft("");
++    setTalking(false);
+     setInterruption(session.tested && RIVAL_IDS.includes(session.customerId) && !session.rivalChoice);
+     setInterruptionHandled(Boolean(session.rivalChoice));
+   };
+@@ -108,13 +189,14 @@ export default function Prototype() {
+     if (existing) restoreSession(existing);
+     else {
+       setCustomerId(id); setSelectedCue(null); setDiscovered([]); setAskedQuestion(null); setSelectedProduct(null);
+-      setTested(false); setReaction(null); setRevisions(0); setClaimed(false); setRivalChoice(null);
++      setTested(false); setReaction(null); setRevisions(0); setClaimed(false); setRivalChoice(null); setChat([]);
++      setDraft(""); setTalking(false);
+       setInterruption(false); setInterruptionHandled(false);
+     }
+     setScreen("consultation");
+   };
+   const saveSession = (patch: Partial<CustomerSession>) => setCampaign(s => {
+-    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, tested: false, reaction: null, revisions: 0, claimed: false, rivalChoice: null };
++    const base = s.activeSession?.customerId === customerId ? s.activeSession : { customerId: customerId!, discovered: [], askedQuestion: null, selectedProduct: null, tested: false, reaction: null, revisions: 0, claimed: false, rivalChoice: null, chat: [] };
+     return { ...s, activeSession: { ...base, ...patch } };
+   });
+   const advanceFloor = (cost: number) => {
+@@ -127,9 +209,44 @@ export default function Prototype() {
+     const next = [...discovered, cue]; setDiscovered(next); advanceFloor(1); saveSession({ discovered: next });
+   };
+   const ask = (index: number) => {
+-    if (askedQuestion !== null || !customer) return;
+-    setAskedQuestion(index); advanceFloor(1); saveSession({ askedQuestion: index });
+-    setCampaign(s => applyQuestion(s, customer.id, index));
++    if (!customer || talking) return;
++    void speak(QUESTIONS[customer.id][index].label, index);
++  };
++  const speak = async (text: string, chipIndex: number | null = null) => {
++    if (!customer || talking) return;
++    const message = text.trim();
++    if (!message) return;
++    const firstAsk = askedQuestion === null;
++    const useful = chipIndex != null ? Boolean(QUESTIONS[customer.id][chipIndex].useful) : inferUseful(customer.id, message);
++    const index = chipIndex ?? (useful ? 0 : 1);
++    const canned = chipIndex != null ? QUESTIONS[customer.id][chipIndex].response : (useful ? QUESTIONS[customer.id].find(question => question.useful)?.response : "你要是只想完成任务，我现在就可以走。") ?? customer.opening;
++    const playerLine: ChatLine = { role: "player", text: message };
++    const customerLine: ChatLine = { role: "customer", text: canned };
++    const nextChat = [...chat, playerLine, customerLine].slice(-8);
++    setChat(nextChat);
++    setDraft("");
++    keyboard.hide();
++    if (firstAsk) {
++      setAskedQuestion(index);
++      advanceFloor(1);
++      saveSession({ askedQuestion: index, chat: nextChat });
++      setCampaign(s => applyQuestion(s, customer.id, index));
++    } else {
++      advanceFloor(1);
++      saveSession({ chat: nextChat });
++      setCampaign(s => ({ ...s, energy: Math.max(0, s.energy - 3) }));
++    }
++    setTalking(true);
++    try {
++      const result = await requestConsultReply({ customerId: customer.id, playerMessage: message, discovered, chat: nextChat, day: campaign.day });
++      if (result.reply && result.source === "model") {
++        const updated = [...nextChat.slice(0, -1), { role: "customer" as const, text: result.reply }];
++        setChat(updated);
++        saveSession({ chat: updated, askedQuestion: firstAsk ? index : askedQuestion });
++      }
++    } finally {
++      setTalking(false);
++    }
+   };
+   const selectProduct = (id: ProductId) => {
+     setSelectedProduct(id);
+@@ -214,16 +331,21 @@ export default function Prototype() {
+     const otherMeter = waitingOther ? campaign.waitMeters[waitingOther] ?? CUSTOMERS[waitingOther].patience : null;
+     return <MobileScroll className="app-screen consultation-scroll"><main className={`consultation-game ${selectedCue ? "is-focusing" : ""} reaction-${reaction ?? "none"}`} aria-label={`接待${customer.name}`}>
+       <img className="customer-portrait" src={customer.portrait} alt={`${customer.name}面部近景`} /><div className="portrait-grade" />
+-      <header className="consultation-hud"><button className="icon-button" type="button" onClick={() => { saveSession({ discovered, askedQuestion, selectedProduct, tested, reaction, revisions, claimed, rivalChoice }); setScreen("floor"); }} aria-label="返回现场">‹</button><div><strong>{customer.name}</strong><span>{customer.descriptor}</span></div><time>{waitingOther && otherMeter != null ? `${CUSTOMERS[waitingOther].name} ${otherMeter}/${CUSTOMERS[waitingOther].patience}` : `DAY ${campaign.day}`}</time></header>
+-      <div className="customer-speech"><span>{customer.opening}</span></div>
++      <header className="consultation-hud"><button className="icon-button" type="button" onClick={() => { saveSession({ discovered, askedQuestion, selectedProduct, tested, reaction, revisions, claimed, rivalChoice, chat }); setScreen("floor"); }} aria-label="返回现场">‹</button><div><strong>{customer.name}</strong><span>{customer.descriptor}</span></div><time>{waitingOther && otherMeter != null ? `${CUSTOMERS[waitingOther].name} ${otherMeter}/${CUSTOMERS[waitingOther].patience}` : `DAY ${campaign.day}`}</time></header>
++      <div className="customer-speech"><span>{chat.at(-1)?.role === "customer" ? chat.at(-1)?.text : customer.opening}</span></div>
+       <button type="button" className={`face-cue cue-eyes ${discovered.includes("eyes") ? "found" : ""}`} onClick={() => inspect("eyes")} aria-label="观察眼下"><i /></button>
+       <button type="button" className={`face-cue cue-cheek ${discovered.includes("cheek") ? "found" : ""}`} onClick={() => inspect("cheek")} aria-label="观察脸颊"><i /></button>
+       <button type="button" className={`face-cue cue-nose ${discovered.includes("nose") ? "found" : ""}`} onClick={() => inspect("nose")} aria-label="观察鼻翼"><i /></button>
+       {selectedCue && <aside className="finding-card"><b>{customer.cues[selectedCue].label}</b><span>{customer.cues[selectedCue].finding}</span></aside>}
+       {serviceMotion && <div className={`service-hand ${serviceMotion}`} aria-hidden="true"><i /><span>{serviceMotion === "inspect" ? "观察" : serviceMotion === "trial" ? "试妆" : "登记"}</span></div>}
+       {interruption && !interruptionHandled && rival && <div className="rival-interruption multi"><div className="event-character-inline"><CharacterFace visual={STAFF.luyao} /><div><b>{rival.headline}</b><span>“{rival.quote}”</span></div></div><div className="rival-actions"><button type="button" onClick={() => handleRival("record")}>先登记接待</button><button type="button" onClick={() => handleRival("clarify")}>让顾客确认需求</button><button type="button" onClick={() => handleRival("yield")}>让她演示</button></div></div>}
+-      <section className="consultation-dock"><div className="consult-steps"><i className="done">观察</i><i className={askedQuestion !== null ? "done" : ""}>询问</i><i className={tested ? "done" : ""}>试用</i><i>成交</i></div><div className="insight-strip"><span>{discovered.length}/3 线索</span><b>{currentReaction ?? (discovered.length >= 2 ? customer.need : "点按面部线索，先看再问")}</b></div>
+-        {discovered.length >= 2 && askedQuestion === null ? <div className="question-options">{QUESTIONS[customer.id].map((q, index) => <button type="button" key={q.label} onClick={() => ask(index)}>{q.label}</button>)}</div> : askedQuestion !== null && !tested ? <div className="question-answer"><b>{QUESTIONS[customer.id][askedQuestion].response}</b></div> : null}
++      <section className="consultation-dock" style={{ bottom: 10 + bottomInset }}><div className="consult-steps"><i className="done">观察</i><i className={askedQuestion !== null ? "done" : ""}>询问</i><i className={tested ? "done" : ""}>试用</i><i>成交</i></div><div className="insight-strip"><span>{discovered.length}/3 线索</span><b>{currentReaction ?? (discovered.length >= 2 ? (askedQuestion !== null ? "听她的反应，再选产品试用" : "开口问她真正在意什么") : "点按面部线索，先看再问")}</b></div>
++        {chat.length > 0 && <div className="consult-chat" aria-label="接待对话">{chat.slice(-4).map((line, index) => <p key={`${line.role}-${index}`} className={line.role}>{line.role === "player" ? "你" : customer.name}：{line.text}</p>)}</div>}
++        {discovered.length >= 2 && askedQuestion === null ? <div className="question-options">{QUESTIONS[customer.id].map((q, index) => <button type="button" key={q.label} onClick={() => ask(index)} disabled={talking}>{q.label}</button>)}</div> : null}
++        {discovered.length >= 2 && !tested && <form className="consult-composer" onSubmit={(event) => { event.preventDefault(); void speak(draft); }}>
++          <KeyboardInput aria-label="对顾客说" placeholder={askedQuestion === null ? "用你的话问她" : "继续跟她说"} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={talking} />
++          <button type="submit" disabled={talking || !draft.trim()}>{talking ? "在听" : "开口"}</button>
++        </form>}
+         <div className="product-options">{(Object.keys(PRODUCTS) as ProductId[]).map(id => <button type="button" key={id} className={selectedProduct === id ? "active" : ""} onClick={() => selectProduct(id)}><i className={`product-art product-art-${id}`} /><span>{PRODUCTS[id].short}</span><small>¥{PRODUCTS[id].price}</small></button>)}</div>
+         {selectedProduct && <p className="product-note">{PRODUCTS[selectedProduct].note}</p>}
+         {!tested ? <button className="primary-action" type="button" disabled={!canTest} onClick={tryProduct}>{canTest ? `为${customer.name}试用` : discovered.length < 2 ? "先观察两处面部线索" : askedQuestion === null ? "再问一个关键问题" : "选择产品开始试用"}</button> : reaction === "negative" ? <div className="recovery-actions"><button type="button" onClick={sendSample} disabled={campaign.samples <= 0 || hasFlag(campaign, `sample:${customer.id}`)}>留小样 · {campaign.samples}</button><b>反应不对：换一款，或承担拒绝风险</b></div> : null}
+@@ -252,16 +374,83 @@ export default function Prototype() {
+   }
+ 
+   const latestLost = campaign.lost.at(-1);
+-  return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}><img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" /><header className="game-hud"><div><span>DAY {campaign.day} · {story.title}</span><b>许愿在柜台后</b></div><div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div></header><div className="sales-progress"><i style={{ width: `${Math.min(100, campaign.sales / TARGET * 100)}%` }} /></div>
+-    <div className={`ambient-staff staff-rival pressure-${campaign.waitMeters.shen ?? campaign.waitMeters.zhou ?? 4}`}><CharacterFace visual={STAFF.luyao} /><p><b>陆遥</b>{available.some(id => CUSTOMERS[id].rival) ? "正在判断你先接谁" : "在对面观察"}</p></div><div className="ambient-staff staff-manager"><CharacterFace visual={STAFF.roman} /><p><b>罗曼</b>今日排名已更新</p></div>
+-    {available.map((id, index) => {
+-      const c = CUSTOMERS[id];
+-      const resumed = campaign.activeSession?.customerId === id;
+-      const meter = campaign.waitMeters[id] ?? c.patience;
+-      const locked = tired && !resumed;
+-      return <button type="button" key={id} className={`customer-presence character-presence ${index % 2 ? "customer-mei" : "customer-shen"} ${resumed ? "is-resumable" : ""} ${locked ? "is-locked" : ""}`} onClick={() => beginCustomer(id)} aria-label={`观察${c.name}`} disabled={locked}><CustomerMapFigure customer={c} /><span className="presence-copy"><b>{c.name}</b><small>{resumed ? "继续接待" : locked ? "你需要先缓一缓" : c.descriptor.split(" · ")[1] || c.descriptor}</small></span><i className={`patience-meter ${meter <= 2 ? "is-urgent" : ""}`}><span style={{ width: `${Math.max(0, meter / c.patience) * 100}%` }} /></i></button>;
+-    })}
++  const contested = available.some(id => CUSTOMERS[id].rival);
++  const focus = floorFocus ?? defaultFocus(available, campaign.waitMeters);
++  const focusCustomer = focus?.kind === "customer" ? CUSTOMERS[focus.id] : null;
++  const focusStaff = focus?.kind === "staff" ? STAFF[focus.id] : null;
++  const fallbackFocus = defaultFocus(available, campaign.waitMeters);
++  const serveId = focusCustomer?.id ?? (fallbackFocus?.kind === "customer" ? fallbackFocus.id : null);
++  const serveCustomer = serveId ? CUSTOMERS[serveId] : null;
++  const focusMeter = focusCustomer ? campaign.waitMeters[focusCustomer.id] ?? focusCustomer.patience : 0;
++  const focusResumed = focusCustomer ? campaign.activeSession?.customerId === focusCustomer.id : false;
++  const serveLocked = Boolean(serveCustomer && tired && campaign.activeSession?.customerId !== serveCustomer.id);
++  const inspectVisual = focusCustomer ? { name: focusCustomer.name, role: focusCustomer.descriptor, sheet: "player" as const, portrait: focusCustomer.portrait } : focusStaff;
++  const inspectNow = focusCustomer
++    ? customerAction(focusCustomer, focusMeter, focusResumed, contested && focusCustomer.rival)
++    : focus?.kind === "staff" ? staffAction(focus.id, contested) : story.threat;
++  const inspectMood = focusCustomer
++    ? customerMood(focusCustomer, focusMeter)
++    : focus?.kind === "staff" ? staffMood(focus.id, focus.id === "luyao" ? campaign.relations.luyao : campaign.relations.roman) : "当班";
++  const inspectQuote = focusCustomer
++    ? customerBubble(focusCustomer, focusMeter, floorBeat, focusResumed)
++    : focus?.kind === "staff" ? staffBubble(focus.id, contested, floorBeat) : "点现场里的人，先看她在做什么。";
++  const liveFeed = partyLines(available, campaign, contested);
++  const poseOf = (id: string, fallback: { left: number; top: number; face: 1 | -1 }) => poses[id] ?? { ...fallback, destLeft: fallback.left, destTop: fallback.top };
++
++  return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}>
++    <img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" />
++    <header className="game-hud">
++      <div><span>DAY {campaign.day} · {story.title}</span><b>{formatClock(floorClock)}</b></div>
++      <div className="target-mini"><span>距五日目标</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
++    </header>
++    <div className="sales-progress"><i style={{ width: `${Math.min(100, campaign.sales / TARGET * 100)}%` }} /></div>
++    <div className="floor-feed-row">
++      <p className="floor-feed">{contested ? `陆遥 · ${staffAction("luyao", true)}` : liveFeed[0]}</p>
++      <div className="speed-rail" role="group" aria-label="现场时间">{([0, 1, 2, 4] as FloorSpeed[]).map(value => <button type="button" key={value} className={floorSpeed === value ? "is-on" : ""} onClick={() => setFloorSpeed(value)}>{value === 0 ? "停" : `${value}x`}</button>)}</div>
++    </div>
++    <div className="floor-stage">
++      {available.map((id, index) => {
++        const c = CUSTOMERS[id];
++        const home = customerHome(index, campaign.waitMeters[id] ?? c.patience, c.patience);
++        const pose = poseOf(id, { ...home, face: home.left < 40 ? 1 : -1 });
++        const resumed = campaign.activeSession?.customerId === id;
++        const meter = campaign.waitMeters[id] ?? c.patience;
++        const selected = focus?.kind === "customer" && focus.id === id;
++        const walking = isWalking(pose) || meter <= 2;
++        return <button type="button" key={id} className={`floor-actor is-customer ${walking ? "is-walking" : "is-idle"} ${meter <= 2 ? "is-urgent" : ""} ${resumed ? "is-resumable" : ""} ${selected ? "is-selected" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 32 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "customer", id })} aria-label={`查看${c.name}`}>
++          <span className="actor-bubble">{customerBubble(c, meter, floorBeat + index, resumed)}</span>
++          <span className="actor-body"><span className="actor-sprite" style={{ transform: `scaleX(${pose.face})` }}><CustomerMapFigure customer={c} /></span></span>
++          <span className="actor-tag">{c.name}</span>
++        </button>;
++      })}
++      {([["luyao", rivalHome(rivalApproach(available, campaign.waitMeters, floorElapsed)), "查看陆遥"] as const, ["roman", WAYPOINTS.checkout, "查看罗曼"] as const]).map(([id, home, label]) => {
++        const staffId = id as FloorStaffId;
++        const pose = poseOf(id, { ...home, face: id === "luyao" ? 1 : -1 });
++        const selected = focus?.kind === "staff" && focus.id === staffId;
++        return <button type="button" key={id} className={`floor-actor is-staff staff-${id} ${isWalking(pose) ? "is-walking" : "is-idle"} ${selected ? "is-selected" : ""}`} style={{ left: `${pose.left}%`, top: `${pose.top}%`, zIndex: 16 + Math.round(pose.top) }} onClick={() => setFloorFocus({ kind: "staff", id: staffId })} aria-label={label}>
++          <span className="actor-bubble">{staffBubble(staffId, contested, floorBeat)}</span>
++          <span className="actor-body"><span className="actor-sprite" style={{ transform: `scaleX(${pose.face})` }}><StaffMapFigure visual={STAFF[staffId]} /></span></span>
++          <CharacterFace visual={STAFF[staffId]} className="floor-face" />
++          <span className="actor-tag">{STAFF[staffId].name}</span>
++        </button>;
++      })}
++    </div>
+     {latestLost && <div className="lost-opportunity"><b>机会已消失</b><span>{CUSTOMERS[latestLost].lostLine}</span></div>}
+-    <section className="player-console compact"><div className="player-identity"><CharacterFace visual={STAFF.player} /><div><strong>许愿 · 试用期柜姐</strong><b>{campaign.activeSession ? `${CUSTOMERS[campaign.activeSession.customerId].name}的接待还没结束` : tired ? "体力见底，接不了新人" : story.threat}</b><small>{floorNotice ?? (campaign.activeSession ? "返回不会清空判断；另一边仍在流失" : "点一位顾客，把注意力交给她")}</small></div></div><p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : "顾客会记住你的判断，也会记住你的承诺。"}</p></section>
++    <section className="player-console compact inspect-dock">
++      <div className="player-identity">
++        <CharacterFace visual={STAFF.player} className="player-chip" />
++        {inspectVisual && inspectVisual.name !== STAFF.player.name ? <CharacterFace visual={inspectVisual} /> : null}
++        <div>
++          <strong>{focusCustomer ? focusCustomer.descriptor : focusStaff ? `${focusStaff.name} · ${focusStaff.role}` : "许愿 · 试用期柜姐"}</strong>
++          <b>{tired && !campaign.activeSession ? "体力见底，接不了新人" : inspectNow}</b>
++          <small>{floorNotice ?? (tired && !campaign.activeSession ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : focusCustomer ? `${inspectMood} · ${waitCopy(focusMeter, focusCustomer.patience)}` : focus?.kind === "staff" ? `${inspectMood} · ${staffRelation(campaign, focus.id)}` : "点人看她在做什么，再决定接谁")}</small>
++        </div>
++      </div>
++      <blockquote className="inspect-quote">{inspectQuote}</blockquote>
++      {focusCustomer && <div className="inspect-meter" aria-hidden="true"><i style={{ width: `${Math.max(8, focusMeter / focusCustomer.patience * 100)}%` }} /></div>}
++      <ul className="party-list">{liveFeed.map(line => <li key={line}>{line}</li>)}</ul>
++      {serveCustomer && <button className="primary-action" type="button" disabled={serveLocked} aria-label={`观察${serveCustomer.name}`} onClick={() => beginCustomer(serveCustomer.id)}>{campaign.activeSession?.customerId === serveCustomer.id ? `继续接待${serveCustomer.name}` : `观察${serveCustomer.name}`}</button>}
++      <p>{available.length > 1 ? "每次观察、提问、试用，都会让另一位客人继续流失" : tired ? `剩余体力 ${campaign.energy} · 低于 ${ENERGY_LOCK} 时不能新开接待` : "顾客会记住你的判断，也会记住你的承诺。"}</p>
++    </section>
+   </main></MobileScroll>;
+ }
+diff --git a/dynamic-counter-prototype/src/campaign.ts b/dynamic-counter-prototype/src/campaign.ts
+index 9ad336f..8c5dc3d 100644
+--- a/dynamic-counter-prototype/src/campaign.ts
++++ b/dynamic-counter-prototype/src/campaign.ts
+@@ -5,6 +5,8 @@ export type RivalChoice = "record" | "clarify" | "yield";
+ export type StaffKey = "player" | "luyao" | "roman" | "suman" | "tangke" | "fangmin";
+ export type HistoryEntry = { day: number; text: string };
+ 
++export type ChatLine = { role: "player" | "customer"; text: string };
++
+ export type CustomerSession = {
+   customerId: CustomerId;
+   discovered: CueId[];
+@@ -15,6 +17,7 @@ export type CustomerSession = {
+   revisions: number;
+   claimed: boolean;
+   rivalChoice: RivalChoice | null;
++  chat: ChatLine[];
+ };
+ 
+ export type Customer = {
+@@ -193,6 +196,34 @@ export const RIVAL_INTERRUPTIONS: Record<"shen" | "zhou" | "returning", { headli
+   returning: { headline: "陆遥拦在团队助理旁边", quote: "批量单我们也可以做售后。她昨天已经试过了。" },
+ };
+ 
++const NEED_HINTS: Record<CustomerId, RegExp> = {
++  shen: /镜头|粉感|近看|卡粉|自然|妆感|浮粉|补妆/,
++  mei: /明早|眼下|干|疲|精神|修护|干燥|紧绷/,
++  xiaoyu: /闷痘|痘|面试|刺激|一千|不能牺牲/,
++  zhao: /女儿|过敏|成分|礼物|她用|不是我/,
++  anjie: /婚礼|泛红|稳定|敏感|不出错|一周/,
++  returning: /昨天|复现|直播|售后|稳定|团队/,
++  zhou: /暗沉|拍照|会议|发干|对比|一层皮/,
++  duan: /室友|礼物|闷痘|看看|过敏|好骗/,
++  zhou2: /同事|香精|修护|昨天|退/,
++};
++const PUSH_HINTS = /套装|套组|贵的|最贵|成交|开单|直接买|业绩/;
++
++export function inferUseful(customerId: CustomerId, text: string) {
++  const message = text.trim();
++  if (!message) return false;
++  if (PUSH_HINTS.test(message) && !NEED_HINTS[customerId].test(message)) return false;
++  if (NEED_HINTS[customerId].test(message)) return true;
++  return QUESTIONS[customerId].some(question => question.useful && message.includes(question.label.slice(0, 6)));
++}
++
++export function fallbackReply(customerId: CustomerId, text: string, chipIndex: number | null, useful: boolean) {
++  if (chipIndex != null) return QUESTIONS[customerId][chipIndex]?.response ?? CUSTOMERS[customerId].opening;
++  if (useful) return QUESTIONS[customerId].find(question => question.useful)?.response ?? CUSTOMERS[customerId].need;
++  if (/预算|多少钱|套装|套组/.test(text)) return QUESTIONS[customerId].find(question => !question.useful)?.response ?? "别拿价格替代判断。";
++  return "你要是只想完成任务，我现在就可以走。";
++}
++
+ type Payback = {
+   id: CustomerId;
+   resolve: string;
+@@ -435,7 +466,9 @@ export function parseCampaign(raw: string | null): Campaign | null {
+       lost: parsed.lost ?? [],
+       eventDoneDays: parsed.eventDoneDays ?? [],
+       waitMeters: parsed.waitMeters ?? {},
+-      activeSession: parsed.activeSession ?? null,
++      activeSession: parsed.activeSession
++        ? { ...parsed.activeSession, chat: parsed.activeSession.chat ?? [] }
++        : null,
+     };
+     return { ...merged, waitMeters: metersFor(floorCustomers(merged), merged.waitMeters) };
+   } catch {
+diff --git a/dynamic-counter-prototype/src/prototype.css b/dynamic-counter-prototype/src/prototype.css
+index 6992701..da1628d 100644
+--- a/dynamic-counter-prototype/src/prototype.css
++++ b/dynamic-counter-prototype/src/prototype.css
+@@ -58,15 +58,83 @@ button { -webkit-tap-highlight-color:transparent; }
+ .counter-background,.customer-portrait { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; user-select:none; }
+ .stage-wash { position:absolute; inset:0; background:linear-gradient(180deg,rgba(15,8,9,.74),transparent 18%,transparent 57%,rgba(13,7,7,.74) 78%,#120b0a 100%); pointer-events:none; }
+ 
+-.game-hud { position:absolute; z-index:30; top:0; left:0; right:0; display:flex; justify-content:space-between; padding:16px 17px 11px; background:linear-gradient(#120b0ae8,transparent); color:#f4dfbd; text-shadow:0 2px 10px #000; }
++.game-hud { position:absolute; z-index:36; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:start; gap:6px; padding:16px 17px 11px; background:linear-gradient(#120b0ae8,transparent); color:#f4dfbd; text-shadow:0 2px 10px #000; }
+ .game-hud>div { display:flex; flex-direction:column; gap:1px; }
+ .game-hud>div:last-child { text-align:right; }
++.speed-rail { flex-direction:row!important; align-items:center; gap:4px; padding-top:2px; }
++.speed-rail button { min-width:36px; min-height:28px; padding:0 7px; border:1px solid #f0cf9155; border-radius:8px; background:#160e0c8f; color:#efd6b0; font:700 11px 'Noto Serif SC'; }
++.speed-rail button.is-on { background:linear-gradient(135deg,#f1cf86,#b47b43); color:#2a170f; border-color:transparent; }
++.party-list { display:grid; gap:3px; margin:7px 0 8px; padding:0; list-style:none; }
++.party-list li { color:#d7c6ba; font-size:11px; line-height:1.35; }
+ .game-hud span { font-size:9px; letter-spacing:.07em; color:#dbc7ae; }
+ .game-hud b { font:700 18px 'Noto Serif SC'; color:#ffdc96; }
+ .game-hud .target-mini b { font-size:15px; }
+ .sales-progress { position:absolute; z-index:31; top:62px; left:17px; right:17px; height:3px; overflow:hidden; border-radius:4px; background:#ffffff24; }
+ .sales-progress i { display:block; height:100%; background:linear-gradient(90deg,#a57b4c,#ffd789); box-shadow:0 0 10px #ffc45c; transition:width .45s; }
+ 
++.floor-stage { position:absolute; inset:0; z-index:32; pointer-events:none; }
++.floor-actor { position:absolute; display:flex; width:72px; min-height:92px; padding:0; flex-direction:column; align-items:center; justify-content:flex-end; border:0; background:transparent; color:inherit; transform:translate(-50%,-88%); pointer-events:auto; transition:left .38s linear, top .38s linear; }
++.floor-actor .map-character,
++.floor-actor .map-character i,
++.floor-actor .character-face,
++.floor-actor .actor-bubble,
++.floor-actor .actor-sprite { pointer-events:none; }
++.floor-actor.is-entering { transition:none; }
++.floor-actor.is-locked { opacity:.5; }
++.actor-body { display:block; filter:drop-shadow(0 10px 8px #0007); }
++.actor-sprite { display:block; }
++.floor-actor.is-walking .actor-body { animation:walkBob .32s ease-in-out infinite; }
++.floor-actor.is-idle .actor-body { animation:idleShift 2.4s ease-in-out infinite; }
++.floor-actor.is-urgent .actor-body { animation:walkBob .22s ease-in-out infinite; }
++.floor-actor.is-selected { z-index:34!important; }
++.floor-actor.is-selected .actor-tag { background:#f3d08e; color:#2a170f; }
++.floor-actor.is-resumable .actor-tag { box-shadow:0 0 0 2px #f1c97888; }
++.actor-bubble { position:absolute; bottom:calc(100% - 8px); left:50%; width:max-content; max-width:132px; padding:6px 8px; border:1px solid #5d41337a; border-radius:12px 12px 12px 4px; background:rgba(255,248,237,.94); color:#36251e; font:500 11px/1.35 'Noto Serif SC'; transform:translateX(-50%); box-shadow:0 8px 18px #21120d38; pointer-events:none; }
++.actor-tag { position:relative; z-index:3; margin-top:-2px; padding:2px 7px; border-radius:6px; background:#16100fd4; color:#fff4df; font:600 11px/1.2 'Noto Serif SC'; letter-spacing:.02em; box-shadow:0 4px 10px #0006; }
++.character-face.floor-face { position:absolute; left:50%; bottom:58px; width:22px; height:22px; border-radius:50%; transform:translateX(-50%); overflow:hidden; box-shadow:0 3px 8px #0008; }
++.character-face.floor-face>img { object-position:50% 18%; }
++.floor-feed-row { position:absolute; z-index:36; top:72px; left:12px; right:12px; display:flex; align-items:center; gap:8px; }
++.floor-feed { flex:1; min-width:0; margin:0; color:#efd6b0; font:500 11px/1.35 'Noto Serif SC'; text-shadow:0 2px 8px #000; pointer-events:none; }
++.speed-rail { flex:none; }
++.inspect-quote { margin:8px 0 7px; padding:7px 9px; border-left:2px solid #dbb56c; border-radius:0 10px 10px 0; background:#ffffff08; color:#f3e6db; font:500 12px/1.45 'Noto Serif SC'; }
++.inspect-meter { height:3px; overflow:hidden; border-radius:3px; background:#ffffff18; }
++.inspect-meter i { display:block; height:100%; background:linear-gradient(90deg,#d5b064,#ef7764); }
++.player-chip { width:36px; height:46px; }
++.map-staff i { background-image:url('/assets/game/toy-staff-walk.png'); background-size:336px 224px; background-position:0 0; }
++.map-staff-rival i { background-position:0 -112px; }
++.map-staff-manager i { background-image:url('/assets/game/staff-walk.png'); background-position:0 0; }
++.floor-actor.is-walking .map-character-young i,
++.floor-actor.is-urgent .map-character-young i { animation:customerWalk .64s infinite; }
++.floor-actor.is-walking .map-character-mature i,
++.floor-actor.is-urgent .map-character-mature i { animation:customerWalkMature .64s infinite; }
++.floor-actor.is-walking .map-staff-player i,
++.floor-actor.is-walking .map-staff-manager i { animation:staffWalk .7s infinite; }
++.floor-actor.is-walking .map-staff-rival i { animation:staffWalkRival .7s infinite; }
++@keyframes customerWalk {
++  0%,24% { background-position:0 0; }
++  25%,49% { background-position:-96px 0; }
++  50%,74% { background-position:-192px 0; }
++  75%,100% { background-position:-288px 0; }
++}
++@keyframes customerWalkMature {
++  0%,24% { background-position:0 -128px; }
++  25%,49% { background-position:-96px -128px; }
++  50%,74% { background-position:-192px -128px; }
++  75%,100% { background-position:-288px -128px; }
++}
++@keyframes staffWalk {
++  0%,32% { background-position:0 0; }
++  33%,65% { background-position:-84px 0; }
++  66%,100% { background-position:-168px 0; }
++}
++@keyframes staffWalkRival {
++  0%,32% { background-position:0 -112px; }
++  33%,65% { background-position:-84px -112px; }
++  66%,100% { background-position:-168px -112px; }
++}
++@keyframes walkBob { 50% { transform:translateY(-2px); } }
++@keyframes idleShift { 50% { transform:translateY(-1px) rotate(-.6deg); } }
++
+ .customer-presence { position:absolute; z-index:20; display:flex; align-items:center; gap:7px; min-width:124px; padding:5px 10px 5px 5px; border:1px solid #f4d49b78; border-radius:26px; background:rgba(28,17,16,.78); color:white; box-shadow:0 7px 18px #0005; backdrop-filter:blur(8px); animation:presenceBreath 2.6s ease-in-out infinite; }
+ .customer-shen { left:11%; top:35%; }
+ .customer-mei { right:7%; top:48%; animation-delay:-1.1s; }
+@@ -111,7 +179,7 @@ button { -webkit-tap-highlight-color:transparent; }
+ .lost-opportunity b { color:#ffb3a5; font:600 11px 'Noto Serif SC'; }
+ .lost-opportunity span { margin-top:2px; color:#e1c5c1; font-size:7px; }
+ 
+-.player-console { position:absolute; z-index:40; left:10px; right:10px; bottom:13px; padding:13px 14px 11px; border:1px solid #f4d49b2e; border-radius:18px; background:linear-gradient(150deg,rgba(34,19,17,.93),rgba(18,11,10,.96)); box-shadow:0 16px 34px #0008; backdrop-filter:blur(12px); }
++.player-console { position:absolute; z-index:28; left:10px; right:10px; bottom:13px; padding:13px 14px 11px; border:1px solid #f4d49b2e; border-radius:18px; background:linear-gradient(150deg,rgba(34,19,17,.93),rgba(18,11,10,.96)); box-shadow:0 16px 34px #0008; backdrop-filter:blur(12px); }
+ .player-console.compact { padding-bottom:9px; }.player-console.compact>p { margin-top:8px; padding-top:7px; border-top:1px solid #ffffff0d; color:#bca99c; }
+ .player-identity { display:flex; align-items:center; gap:9px; }
+ .player-identity .character-face { width:45px; height:58px; border-color:#f5d5949e; }
+@@ -166,6 +234,8 @@ button { -webkit-tap-highlight-color:transparent; }
+ .consultation-dock { position:absolute; z-index:45; left:8px; right:8px; bottom:10px; padding:10px; border:1px solid #f4d29b2c; border-radius:18px; background:linear-gradient(160deg,rgba(31,18,16,.94),rgba(17,10,9,.98)); box-shadow:0 -10px 32px #0008; backdrop-filter:blur(12px); }
+ .consult-steps { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin-bottom:6px; }.consult-steps i { padding:3px 1px; border-radius:5px; background:#ffffff08; color:#7f6f66; font-size:6px; font-style:normal; text-align:center; }.consult-steps i.done { background:#d8ac5f22; color:#efca82; }
+ .question-options { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin:6px 0; }.question-options button { min-height:40px; padding:5px; border:1px solid #ffffff15; border-radius:9px; background:#ffffff08; color:#ddcec2; font-size:7px; line-height:1.35; }
++.consult-chat { max-height:78px; margin:4px 0 6px; overflow:auto; }.consult-chat p { margin:0 0 4px; color:#d7c6ba; font-size:11px; line-height:1.45; }.consult-chat p.player { color:#efd09a; }.consult-chat p.customer { color:#f3e6db; }
++.consult-composer { display:grid; grid-template-columns:1fr 64px; gap:6px; margin:6px 0 8px; }.consult-composer input { min-height:44px; padding:0 10px; border:1px solid #efd6a239; border-radius:11px; background:#160e0c8f; color:#f8ead6; font-size:12px; }.consult-composer button { min-height:44px; border:0; border-radius:11px; background:linear-gradient(135deg,#f1cf86,#b47b43); color:#2a170f; font:700 12px 'Noto Serif SC'; }.consult-composer button:disabled { color:#96857c; background:#584740; }
+ .question-answer { margin:5px 0; padding:7px 9px; border-left:2px solid #dbb56c; border-radius:5px 10px 10px 5px; background:#ffffff08; }.question-answer b { color:#e8d9ce; font-size:8px; line-height:1.45; }
+ .recovery-actions { display:flex; align-items:center; gap:6px; margin:5px 0; }.recovery-actions button { min-height:34px; flex:none; border:1px solid #dcbd7a55; border-radius:9px; background:#ffffff08; color:#efd39b; font-size:7px; }.recovery-actions b { color:#e5a595; font-size:7px; font-weight:500; }
+ .service-hand { position:absolute; z-index:44; left:50%; bottom:27%; display:flex; width:100px; height:145px; flex-direction:column; align-items:center; justify-content:flex-end; transform:translateX(-50%); pointer-events:none; animation:serviceReach .55s ease-out both; }
+@@ -268,8 +338,16 @@ button { -webkit-tap-highlight-color:transparent; }
+   .brief-orders small,
+   .consult-steps i,
+   .question-options button,
++  .consult-chat p,
++  .consult-composer input,
+   .recovery-actions button,
+-  .recovery-actions b { font-size:11px; }
++  .recovery-actions b,
++  .actor-bubble,
++  .actor-tag,
++  .floor-feed,
++  .inspect-quote,
++  .party-list li,
++  .speed-rail button { font-size:12px; }
+ 
+   .shift-brief small,
+   .status-grid small,
+diff --git a/dynamic-counter-prototype/tests/campaign.spec.ts b/dynamic-counter-prototype/tests/campaign.spec.ts
+index af4435f..48bcaa5 100644
+--- a/dynamic-counter-prototype/tests/campaign.spec.ts
++++ b/dynamic-counter-prototype/tests/campaign.spec.ts
+@@ -1,6 +1,7 @@
+ import { expect, test } from "@playwright/test";
+ 
+ async function observeAndSell(page: any, name: string, product: string) {
++  await page.getByRole("button", { name: `查看${name}` }).click();
+   await page.getByRole("button", { name: `观察${name}` }).click();
+   await page.getByRole("button", { name: "观察眼下" }).click();
+   await page.getByRole("button", { name: "观察脸颊" }).click();
+diff --git a/dynamic-counter-prototype/tests/consultation-gameplay.spec.ts b/dynamic-counter-prototype/tests/consultation-gameplay.spec.ts
+index 95b7763..b133a45 100644
+--- a/dynamic-counter-prototype/tests/consultation-gameplay.spec.ts
++++ b/dynamic-counter-prototype/tests/consultation-gameplay.spec.ts
+@@ -12,6 +12,22 @@ async function enterShen(page: any) {
+   await page.getByRole("button", { name: "你最怕镜头看到什么？" }).click();
+ }
+ 
++test("typed questions can unlock a trial", async ({ page }) => {
++  await page.goto("/");
++  await page.evaluate(() => localStorage.clear());
++  await page.reload();
++  await page.getByRole("button", { name: "开始新品活动周" }).click();
++  await page.getByRole("button", { name: "开始营业" }).click();
++  await page.getByRole("button", { name: "观察沈薇" }).click();
++  await page.getByRole("button", { name: "观察眼下" }).click();
++  await page.getByRole("button", { name: "观察脸颊" }).click();
++  await page.getByLabel("对顾客说").fill("你最怕镜头看到粉感吗");
++  await page.getByLabel("对顾客说").press("Enter");
++  await expect(page.getByLabel("接待对话")).toBeVisible();
++  await page.getByRole("button", { name: /柔焦 ¥980/ }).click();
++  await expect(page.getByRole("button", { name: "为沈薇试用" })).toBeEnabled();
++});
++
+ test("a wrong recommendation can be refused instead of auto-selling", async ({ page }) => {
+   await enterShen(page);
+   await page.getByRole("button", { name: /修护 ¥1680/ }).click();
+@@ -52,12 +68,14 @@ test("leaving a consultation preserves diagnosis and rival pressure", async ({ p
+   await page.reload();
+   await page.getByRole("button", { name: "开始新品活动周" }).click();
+   await page.getByRole("button", { name: "开始营业" }).click();
++  await page.getByRole("button", { name: "查看梅女士" }).click();
+   await page.getByRole("button", { name: "观察梅女士" }).click();
+   await page.getByRole("button", { name: "观察眼下" }).click();
+   await page.getByRole("button", { name: "观察脸颊" }).click();
+   await expect(page.getByText("沈薇 2/4")).toBeVisible();
+   await page.getByRole("button", { name: "返回现场" }).click();
+   await expect(page.getByText("每次观察、提问、试用", { exact: false })).toBeVisible();
++  await page.getByRole("button", { name: "查看梅女士" }).click();
+   await page.getByRole("button", { name: "观察梅女士" }).click();
+   await expect(page.getByText("2/3 线索")).toBeVisible();
+   await expect(page.getByRole("button", { name: "明早最想改善哪里？" })).toBeVisible();
+@@ -72,6 +90,19 @@ test("rival responses have distinct costs", async ({ page }) => {
+   await expect(page.getByRole("button", { name: "已登记归属" })).toBeVisible();
+ });
+ 
++test("the floor shows living speech and inspects staff", async ({ page }) => {
++  await page.goto("/");
++  await page.evaluate(() => localStorage.clear());
++  await page.reload();
++  await page.getByRole("button", { name: "开始新品活动周" }).click();
++  await page.getByRole("button", { name: "开始营业" }).click();
++  await expect(page.locator(".actor-bubble").first()).toBeVisible();
++  await expect(page.locator(".floor-feed")).toHaveText(/陆遥 · 正在靠近/);
++  await page.getByRole("button", { name: "查看陆遥" }).click();
++  await expect(page.getByText("正在靠近你的客人", { exact: true })).toBeVisible();
++  await expect(page.getByRole("button", { name: "观察沈薇" })).toBeVisible();
++});
++
+ test("the floor keeps customer identities and named staff visible", async ({ page }) => {
+   await page.goto("/");
+   await page.evaluate(() => localStorage.clear());

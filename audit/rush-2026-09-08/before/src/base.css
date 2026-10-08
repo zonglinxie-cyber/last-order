@@ -1,0 +1,9 @@
+:root { color-scheme: dark; --gold: #d7b36a; --text: #ebe4d8; }
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; height: 100dvh; margin: 0; overflow: hidden; background: #121016; color: #ebe4d8; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; }
+* { scrollbar-width: thin; scrollbar-color: #6b514a #1b161e; }
+.rescue-game.screen-floor { grid-template-rows: 76px minmax(0, 1fr) 190px; }
+@media (max-width: 650px) { .rescue-game.screen-floor { grid-template-rows: 86px minmax(0, 1fr) 260px; } }
+@media (max-height: 600px) and (min-width: 651px) { .rescue-game.screen-floor { grid-template-rows: 60px minmax(0, 1fr) 170px; } }

@@ -1,0 +1,239 @@
+
+> ai-company-brawl@0.1.0 test
+> npm run test:rules && npm run build && npm run test:browser
+
+
+> ai-company-brawl@0.1.0 test:rules
+> npm --prefix dynamic-counter-prototype run test:rules && npm run test:rush
+
+
+> dynamic-counter-prototype@0.1.0 test:rules
+> node --experimental-strip-types --test tests/campaign-rules.test.ts tests/consult-chat.test.ts tests/rescue-rules.test.ts
+
+TAP version 13
+# Subtest: a clean route still needs day 5 to clear the target
+ok 1 - a clean route still needs day 5 to clear the target
+  ---
+  duration_ms: 0.753542
+  type: 'test'
+  ...
+# Subtest: history keeps more than 25 entries
+ok 2 - history keeps more than 25 entries
+  ---
+  duration_ms: 0.092875
+  type: 'test'
+  ...
+# Subtest: forcing Anjie comes back as a wedding-week blow-up
+ok 3 - forcing Anjie comes back as a wedding-week blow-up
+  ---
+  duration_ms: 0.21175
+  type: 'test'
+  ...
+# Subtest: a sample left after a refusal returns as a small repurchase
+ok 4 - a sample left after a refusal returns as a small repurchase
+  ---
+  duration_ms: 0.084042
+  type: 'test'
+  ...
+# Subtest: old saves without the current version are discarded
+ok 5 - old saves without the current version are discarded
+  ---
+  duration_ms: 0.249583
+  type: 'test'
+  ...
+# Subtest: a same-day risky last order is clawed back in the finale
+ok 6 - a same-day risky last order is clawed back in the finale
+  ---
+  duration_ms: 0.145083
+  type: 'test'
+  ...
+# Subtest: Lu Yao's interruption copy changes by customer
+ok 7 - Lu Yao's interruption copy changes by customer
+  ---
+  duration_ms: 0.165458
+  type: 'test'
+  ...
+# Subtest: need-focused questions count as useful
+ok 8 - need-focused questions count as useful
+  ---
+  duration_ms: 0.424375
+  type: 'test'
+  ...
+# Subtest: fallback replies stay in character
+ok 9 - fallback replies stay in character
+  ---
+  duration_ms: 0.106333
+  type: 'test'
+  ...
+# Subtest: clock, patience and fractional time survive a saved floor
+ok 10 - clock, patience and fractional time survive a saved floor
+  ---
+  duration_ms: 0.933459
+  type: 'test'
+  ...
+# Subtest: repeated observations do not spend time; a returned consultation remains resumable
+ok 11 - repeated observations do not spend time; a returned consultation remains resumable
+  ---
+  duration_ms: 0.392625
+  type: 'test'
+  ...
+# Subtest: a sample never turns an unsuitable trial into a suitable sale
+ok 12 - a sample never turns an unsuitable trial into a suitable sale
+  ---
+  duration_ms: 0.316875
+  type: 'test'
+  ...
+# Subtest: rival decisions are required and idempotent; split risk refunds only the recorded share
+ok 13 - rival decisions are required and idempotent; split risk refunds only the recorded share
+  ---
+  duration_ms: 0.21525
+  type: 'test'
+  ...
+# Subtest: old version-2 saves migrate additively and malformed sessions cannot enter gameplay
+ok 14 - old version-2 saves migrate additively and malformed sessions cannot enter gameplay
+  ---
+  duration_ms: 0.217833
+  type: 'test'
+  ...
+# Subtest: staff favors require a relationship and can only be used once per shift
+ok 15 - staff favors require a relationship and can only be used once per shift
+  ---
+  duration_ms: 0.066417
+  type: 'test'
+  ...
+# Subtest: every displayed quote adds up to its complete order and actual share
+ok 16 - every displayed quote adds up to its complete order and actual share
+  ---
+  duration_ms: 0.159708
+  type: 'test'
+  ...
+# Subtest: an actual five-day route survives saves and still needs the final order
+ok 17 - an actual five-day route survives saves and still needs the final order
+  ---
+  duration_ms: 9.035
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 75.463333
+
+> ai-company-brawl@0.1.0 test:rush
+> node --experimental-strip-types --test tests/rush-rules.test.ts
+
+TAP version 13
+# Subtest: 取货必须走到柜台，送达才计分，完成后手中商品清空
+ok 1 - 取货必须走到柜台，送达才计分，完成后手中商品清空
+  ---
+  duration_ms: 1.515333
+  type: 'test'
+  ...
+# Subtest: 错误商品当场拒绝；不消耗手中商品，不计成功，不可空手刷分
+ok 2 - 错误商品当场拒绝；不消耗手中商品，不计成功，不可空手刷分
+  ---
+  duration_ms: 0.078667
+  type: 'test'
+  ...
+# Subtest: 所有货台和顾客间都能绕柜台到达，每段路线不穿过柜台
+ok 3 - 所有货台和顾客间都能绕柜台到达，每段路线不穿过柜台
+  ---
+  duration_ms: 2.477958
+  type: 'test'
+  ...
+# Subtest: 暂停冻结整局；刷新后先暂停，保留商品、分数、耐心和位置
+ok 4 - 暂停冻结整局；刷新后先暂停，保留商品、分数、耐心和位置
+  ---
+  duration_ms: 0.402709
+  type: 'test'
+  ...
+# Subtest: 连续三次正确送达触发高光，下一单得分翻倍
+ok 5 - 连续三次正确送达触发高光，下一单得分翻倍
+  ---
+  duration_ms: 0.2735
+  type: 'test'
+  ...
+# Subtest: 冲刺有冷却；近距离打断陆遥，连续按不能无限眩晕
+ok 6 - 冲刺有冷却；近距离打断陆遥，连续按不能无限眩晕
+  ---
+  duration_ms: 0.088083
+  type: 'test'
+  ...
+# Subtest: 陆遥走近后需要交谈，成功抢客会打断连单
+ok 7 - 陆遥走近后需要交谈，成功抢客会打断连单
+  ---
+  duration_ms: 0.134042
+  type: 'test'
+  ...
+# Subtest: 90 秒准确结束；结算后输入、时间和分数冻结
+ok 8 - 90 秒准确结束；结算后输入、时间和分数冻结
+  ---
+  duration_ms: 4.389292
+  type: 'test'
+  ...
+# Subtest: 拒绝损坏、无限值、越界人物和重复顾客；随机种子可复现
+ok 9 - 拒绝损坏、无限值、越界人物和重复顾客；随机种子可复现
+  ---
+  duration_ms: 4.1685
+  type: 'test'
+  ...
+# Subtest: 任意一帧均可存档恢复，竞争对手连续转向时不会切进柜角
+ok 10 - 任意一帧均可存档恢复，竞争对手连续转向时不会切进柜角
+  ---
+  duration_ms: 6.418167
+  type: 'test'
+  ...
+# Subtest: 重玩在暂停或结算后生效，重置本局数据与时间
+ok 11 - 重玩在暂停或结算后生效，重置本局数据与时间
+  ---
+  duration_ms: 2.136584
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 82.478042
+
+> ai-company-brawl@0.1.0 build
+> tsc -b && vite build
+
+vite v8.2.1 building client environment for production...
+[2Ktransforming...✓ 22 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.77 kB │ gzip:  0.50 kB
+dist/assets/index-CqDdLKh8.css   44.15 kB │ gzip: 10.70 kB
+dist/assets/index-C4jNxHD4.js   280.58 kB │ gzip: 91.11 kB
+
+✓ built in 84ms
+
+> ai-company-brawl@0.1.0 test:browser
+> npm --prefix dynamic-counter-prototype run test:floor
+
+
+> dynamic-counter-prototype@0.1.0 test:floor
+> playwright test --config playwright.floor.config.ts
+
+[WebServer] (node:88093) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:88097) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 rescue-e2e/counter.spec.ts:19:1 › the full floor-to-consultation campaign reaches the honest ending after reloads (4.8s)
+  ✓  2 rescue-e2e/counter.spec.ts:61:1 › a saved observation and pending rival resume; a sample does not erase rejection (847ms)
+  ✓  3 rescue-e2e/counter.spec.ts:85:1 › a split sale shows and persists the actual credited amount (778ms)
+  ✓  4 rescue-e2e/counter.spec.ts:96:1 › floor acceleration consumes patience and pause freezes it (594ms)
+  ✓  5 rescue-e2e/counter.spec.ts:110:1 › phone viewport keeps face visible and key service actions usable (708ms)
+
+  5 passed (11.2s)

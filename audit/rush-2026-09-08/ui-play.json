@@ -1,0 +1,102 @@
+{
+  "deliveries": [
+    {
+      "action": "送给周姐：修护",
+      "score": "274",
+      "combo": "1",
+      "time": "70"
+    },
+    {
+      "action": "送给小雨：持妆",
+      "score": "410",
+      "combo": "2",
+      "time": "68"
+    },
+    {
+      "action": "送给赵女士：柔焦",
+      "score": "550",
+      "combo": "3",
+      "time": "65"
+    },
+    {
+      "action": "送给安姐：修护",
+      "score": "1118",
+      "combo": "4",
+      "time": "63"
+    },
+    {
+      "action": "送给段小姐：柔焦",
+      "score": "1686",
+      "combo": "5",
+      "time": "60"
+    },
+    {
+      "action": "送给沈薇：持妆",
+      "score": "2246",
+      "combo": "6",
+      "time": "57"
+    },
+    {
+      "action": "送给沈薇：柔焦",
+      "score": "158",
+      "combo": "1",
+      "time": "87"
+    },
+    {
+      "action": "送给梅女士：修护",
+      "score": "312",
+      "combo": "2",
+      "time": "84"
+    },
+    {
+      "action": "送给小雨：柔焦",
+      "score": "466",
+      "combo": "3",
+      "time": "80"
+    },
+    {
+      "action": "送给周姐：持妆",
+      "score": "1082",
+      "combo": "4",
+      "time": "78"
+    },
+    {
+      "action": "送给赵女士：修护",
+      "score": "1722",
+      "combo": "5",
+      "time": "76"
+    },
+    {
+      "action": "送给安姐：持妆",
+      "score": "2298",
+      "combo": "6",
+      "time": "74"
+    },
+    {
+      "action": "送给段小姐：修护",
+      "score": "3162",
+      "combo": "7",
+      "time": "73"
+    },
+    {
+      "action": "送给沈薇：修护",
+      "score": "4026",
+      "combo": "8",
+      "time": "71"
+    }
+  ],
+  "cameraDeliveries": [
+    {
+      "order": "前往梅女士，需要持妆",
+      "score": "4890"
+    },
+    {
+      "order": "前往小雨，需要柔焦",
+      "score": "5730"
+    },
+    {
+      "order": "前往周姐，需要持妆",
+      "score": "6570"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+ M README.md
+ M dynamic-counter-prototype/AGENTS.md
+ M dynamic-counter-prototype/package.json
+ M dynamic-counter-prototype/playwright.config.ts
+ M dynamic-counter-prototype/src/Prototype.tsx
+ M dynamic-counter-prototype/src/campaign.ts
+ M dynamic-counter-prototype/src/prototype.css
+ M dynamic-counter-prototype/tests/campaign.spec.ts
+ M dynamic-counter-prototype/tests/consultation-gameplay.spec.ts
+ M dynamic-counter-prototype/tests/release/offline.spec.ts
+ M index.html
+ M package.json
+ M src/main.tsx
+?? .github/
+?? AGENTS.md
+?? audit/
+?? dynamic-counter-prototype/art/
+?? dynamic-counter-prototype/playwright.floor.config.ts
+?? dynamic-counter-prototype/rescue-e2e/
+?? dynamic-counter-prototype/scripts/consult-proxy.mjs
+?? dynamic-counter-prototype/scripts/dev-with-llm.mjs
+?? dynamic-counter-prototype/src/consultChat.ts
+?? dynamic-counter-prototype/src/floorLife.ts
+?? dynamic-counter-prototype/tests/consult-chat.test.ts
+?? dynamic-counter-prototype/tests/consultation-layout.spec.ts
+?? dynamic-counter-prototype/tests/rescue-rules.test.ts
+?? public/assets/aurora/product-trio.png
+?? src/CounterGame.tsx
+?? src/base.css
+?? src/rescue.css

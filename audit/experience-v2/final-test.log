@@ -1,0 +1,272 @@
+
+> ai-company-brawl@0.1.0 test
+> npm run test:rules && npm run build && npm run test:browser
+
+
+> ai-company-brawl@0.1.0 test:rules
+> npm --prefix dynamic-counter-prototype run test:rules && npm run test:rush
+
+
+> dynamic-counter-prototype@0.1.0 test:rules
+> node --experimental-strip-types --test tests/campaign-rules.test.ts tests/consult-chat.test.ts tests/rescue-rules.test.ts
+
+TAP version 13
+# Subtest: a clean route still needs day 5 to clear the target
+ok 1 - a clean route still needs day 5 to clear the target
+  ---
+  duration_ms: 0.668625
+  type: 'test'
+  ...
+# Subtest: history keeps more than 25 entries
+ok 2 - history keeps more than 25 entries
+  ---
+  duration_ms: 0.082041
+  type: 'test'
+  ...
+# Subtest: forcing Anjie comes back as a wedding-week blow-up
+ok 3 - forcing Anjie comes back as a wedding-week blow-up
+  ---
+  duration_ms: 0.219458
+  type: 'test'
+  ...
+# Subtest: a sample left after a refusal returns as a small repurchase
+ok 4 - a sample left after a refusal returns as a small repurchase
+  ---
+  duration_ms: 0.082542
+  type: 'test'
+  ...
+# Subtest: old saves without the current version are discarded
+ok 5 - old saves without the current version are discarded
+  ---
+  duration_ms: 0.250333
+  type: 'test'
+  ...
+# Subtest: a same-day risky last order is clawed back in the finale
+ok 6 - a same-day risky last order is clawed back in the finale
+  ---
+  duration_ms: 0.145291
+  type: 'test'
+  ...
+# Subtest: Lu Yao's interruption copy changes by customer
+ok 7 - Lu Yao's interruption copy changes by customer
+  ---
+  duration_ms: 0.089875
+  type: 'test'
+  ...
+# Subtest: need-focused questions count as useful
+ok 8 - need-focused questions count as useful
+  ---
+  duration_ms: 0.748708
+  type: 'test'
+  ...
+# Subtest: fallback replies stay in character
+ok 9 - fallback replies stay in character
+  ---
+  duration_ms: 0.131167
+  type: 'test'
+  ...
+# Subtest: clock, patience and fractional time survive a saved floor
+ok 10 - clock, patience and fractional time survive a saved floor
+  ---
+  duration_ms: 1.155833
+  type: 'test'
+  ...
+# Subtest: repeated observations do not spend time; a returned consultation remains resumable
+ok 11 - repeated observations do not spend time; a returned consultation remains resumable
+  ---
+  duration_ms: 0.698416
+  type: 'test'
+  ...
+# Subtest: a sample never turns an unsuitable trial into a suitable sale
+ok 12 - a sample never turns an unsuitable trial into a suitable sale
+  ---
+  duration_ms: 0.381125
+  type: 'test'
+  ...
+# Subtest: rival decisions are required and idempotent; split risk refunds only the recorded share
+ok 13 - rival decisions are required and idempotent; split risk refunds only the recorded share
+  ---
+  duration_ms: 0.255125
+  type: 'test'
+  ...
+# Subtest: old version-2 saves migrate additively and malformed sessions cannot enter gameplay
+ok 14 - old version-2 saves migrate additively and malformed sessions cannot enter gameplay
+  ---
+  duration_ms: 0.243042
+  type: 'test'
+  ...
+# Subtest: staff favors require a relationship and can only be used once per shift
+ok 15 - staff favors require a relationship and can only be used once per shift
+  ---
+  duration_ms: 0.074625
+  type: 'test'
+  ...
+# Subtest: every displayed quote adds up to its complete order and actual share
+ok 16 - every displayed quote adds up to its complete order and actual share
+  ---
+  duration_ms: 0.190583
+  type: 'test'
+  ...
+# Subtest: refused customers do not create phantom ownership or paid-order events
+ok 17 - refused customers do not create phantom ownership or paid-order events
+  ---
+  duration_ms: 0.230667
+  type: 'test'
+  ...
+# Subtest: transferring a risky order only refunds the share still credited to you
+ok 18 - transferring a risky order only refunds the share still credited to you
+  ---
+  duration_ms: 8.38375
+  type: 'test'
+  ...
+# Subtest: legacy purchases keep their event and transferred refund liability without an orders field
+ok 19 - legacy purchases keep their event and transferred refund liability without an orders field
+  ---
+  duration_ms: 0.294334
+  type: 'test'
+  ...
+# Subtest: gift choices cannot spend inventory that does not exist
+ok 20 - gift choices cannot spend inventory that does not exist
+  ---
+  duration_ms: 0.093458
+  type: 'test'
+  ...
+# Subtest: the closing response is recorded once and survives reload
+ok 21 - the closing response is recorded once and survives reload
+  ---
+  duration_ms: 0.09475
+  type: 'test'
+  ...
+# Subtest: an actual five-day route survives saves and still needs the final order
+ok 22 - an actual five-day route survives saves and still needs the final order
+  ---
+  duration_ms: 1.207041
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 133.6825
+
+> ai-company-brawl@0.1.0 test:rush
+> node --experimental-strip-types --test tests/rush-rules.test.ts
+
+TAP version 13
+# Subtest: 取货必须走到柜台，送达才计分，完成后手中商品清空
+ok 1 - 取货必须走到柜台，送达才计分，完成后手中商品清空
+  ---
+  duration_ms: 1.385958
+  type: 'test'
+  ...
+# Subtest: 错误商品当场拒绝；不消耗手中商品，不计成功，不可空手刷分
+ok 2 - 错误商品当场拒绝；不消耗手中商品，不计成功，不可空手刷分
+  ---
+  duration_ms: 0.099292
+  type: 'test'
+  ...
+# Subtest: 所有货台和顾客间都能绕柜台到达，每段路线不穿过柜台
+ok 3 - 所有货台和顾客间都能绕柜台到达，每段路线不穿过柜台
+  ---
+  duration_ms: 2.476
+  type: 'test'
+  ...
+# Subtest: 暂停冻结整局；刷新后先暂停，保留商品、分数、耐心和位置
+ok 4 - 暂停冻结整局；刷新后先暂停，保留商品、分数、耐心和位置
+  ---
+  duration_ms: 0.301792
+  type: 'test'
+  ...
+# Subtest: 连续三次正确送达触发高光，下一单得分翻倍
+ok 5 - 连续三次正确送达触发高光，下一单得分翻倍
+  ---
+  duration_ms: 0.11875
+  type: 'test'
+  ...
+# Subtest: 冲刺有冷却；近距离打断陆遥，连续按不能无限眩晕
+ok 6 - 冲刺有冷却；近距离打断陆遥，连续按不能无限眩晕
+  ---
+  duration_ms: 0.066417
+  type: 'test'
+  ...
+# Subtest: 陆遥走近后需要交谈，成功抢客会打断连单
+ok 7 - 陆遥走近后需要交谈，成功抢客会打断连单
+  ---
+  duration_ms: 0.125667
+  type: 'test'
+  ...
+# Subtest: 90 秒准确结束；结算后输入、时间和分数冻结
+ok 8 - 90 秒准确结束；结算后输入、时间和分数冻结
+  ---
+  duration_ms: 4.389875
+  type: 'test'
+  ...
+# Subtest: 拒绝损坏、无限值、越界人物和重复顾客；随机种子可复现
+ok 9 - 拒绝损坏、无限值、越界人物和重复顾客；随机种子可复现
+  ---
+  duration_ms: 4.083292
+  type: 'test'
+  ...
+# Subtest: 任意一帧均可存档恢复，竞争对手连续转向时不会切进柜角
+ok 10 - 任意一帧均可存档恢复，竞争对手连续转向时不会切进柜角
+  ---
+  duration_ms: 6.09275
+  type: 'test'
+  ...
+# Subtest: 重玩在暂停或结算后生效，重置本局数据与时间
+ok 11 - 重玩在暂停或结算后生效，重置本局数据与时间
+  ---
+  duration_ms: 1.749708
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.362291
+
+> ai-company-brawl@0.1.0 build
+> tsc -b && vite build
+
+vite v8.2.1 building client environment for production...
+[2Ktransforming...✓ 25 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.77 kB │ gzip:  0.50 kB
+dist/assets/index-CMX5yFHp.css   57.24 kB │ gzip: 13.51 kB
+dist/assets/index-D4sxNH3w.js   292.74 kB │ gzip: 95.21 kB
+
+✓ built in 83ms
+
+> ai-company-brawl@0.1.0 test:browser
+> npm --prefix dynamic-counter-prototype run test:floor
+
+
+> dynamic-counter-prototype@0.1.0 test:floor
+> playwright test --config playwright.floor.config.ts
+
+
+Running 12 tests using 2 workers
+
+  ✓   2 rescue-e2e/experience.spec.ts:11:1 › editorial opening is readable at desktop and phone widths (973ms)
+  ✓   3 rescue-e2e/experience.spec.ts:27:1 › handbook pauses time, traps focus, and preserves a consultation (633ms)
+  ✓   4 rescue-e2e/experience.spec.ts:52:1 › phone queue, product descriptions and discovered notes stay usable (693ms)
+  ✓   5 rescue-e2e/experience.spec.ts:72:1 › a follow-up spends attention and can recover a poor question before trial (736ms)
+  ✓   6 rescue-e2e/experience.spec.ts:93:1 › closing choice produces a persistent character response without a phantom gift scene (780ms)
+  ✓   1 rescue-e2e/counter.spec.ts:22:1 › the full floor-to-consultation campaign reaches the honest ending after reloads (4.6s)
+  ✓   8 rescue-e2e/counter.spec.ts:64:1 › a saved observation and pending rival resume; a sample does not erase rejection (817ms)
+  ✓   7 rescue-e2e/experience.spec.ts:107:1 › a lost-opportunity route completes all five days without inventing purchases (1.8s)
+  ✓   9 rescue-e2e/counter.spec.ts:88:1 › a split sale shows and persists the actual credited amount (747ms)
+  ✓  11 rescue-e2e/counter.spec.ts:99:1 › floor acceleration consumes patience and pause freezes it (523ms)
+  ✓  12 rescue-e2e/counter.spec.ts:113:1 › phone viewport keeps face visible and key service actions usable (657ms)
+  ✓  10 rescue-e2e/experience.spec.ts:123:1 › arcade still starts, delivers, pauses and survives reload independently (2.1s)
+
+  12 passed (10.8s)

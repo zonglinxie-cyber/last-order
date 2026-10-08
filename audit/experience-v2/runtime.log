@@ -1,0 +1,5 @@
+
+> dynamic-counter-prototype@0.1.0 check:runtime
+> node scripts/check-mobile-runtime.mjs
+
+Mobile runtime integrity check passed (28 protected files).

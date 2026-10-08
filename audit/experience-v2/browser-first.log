@@ -1,0 +1,18 @@
+
+> ai-company-brawl@0.1.0 test:browser
+> npm --prefix dynamic-counter-prototype run test:floor
+
+
+> dynamic-counter-prototype@0.1.0 test:floor
+> playwright test --config playwright.floor.config.ts
+
+
+Running 5 tests using 1 worker
+
+  ✓  1 rescue-e2e/counter.spec.ts:19:1 › the full floor-to-consultation campaign reaches the honest ending after reloads (4.4s)
+  ✓  2 rescue-e2e/counter.spec.ts:61:1 › a saved observation and pending rival resume; a sample does not erase rejection (819ms)
+  ✓  3 rescue-e2e/counter.spec.ts:85:1 › a split sale shows and persists the actual credited amount (713ms)
+  ✓  4 rescue-e2e/counter.spec.ts:96:1 › floor acceleration consumes patience and pause freezes it (537ms)
+  ✓  5 rescue-e2e/counter.spec.ts:110:1 › phone viewport keeps face visible and key service actions usable (641ms)
+
+  5 passed (10.8s)
