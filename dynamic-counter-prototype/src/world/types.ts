@@ -108,13 +108,21 @@ export type World = {
   opinion: Record<PersonId, number>;
   /** NPC 之间冷暖的当前值，键为 "a>b"；缺省取 Person.bonds 的初始值 */
   bonds: Record<string, number>;
+  /** 运行时才建立的关系类型（介绍认识、反目成仇），键同 bonds；缺省取 Person.bonds 声明的 kind */
+  bondKinds?: Record<string, BondKind>;
   memories: Memory[];
-  /** 故事碎片用的进度值（QBN 的 quality），如 "arc:anjie" */
+  /** 故事碎片用的进度值（QBN 的 quality），如 "arc:anjie"；引擎自己也记 "storyteller:heat" */
   qualities: Record<string, number>;
   /** 本时段在场的人和所在区域 */
   present: Record<PersonId, Zone>;
-  /** 被效果排定的来访："第几天 第几时段 谁来，带谁" */
-  appointments: Array<{ day: number; slot: Slot; person: PersonId; bring?: PersonId[] }>;
+  /** 本时段玩家已经招呼过的人：陆遥只挑没被招呼过的顾客下手 */
+  touched: PersonId[];
+  /** 当前节日 id（节日表由内容侧维护）；Visits.festivals 和 Cond {festival} 都读它 */
+  festival?: string;
+  /** 已消耗的抽数：每个随机决定都从 seed+rngCalls 推导，存档往返后确定性不断 */
+  rngCalls: number;
+  /** 被效果排定的来访："第几天 第几时段 谁来，带谁"；reason 记她为什么来（退货要退款） */
+  appointments: Array<{ day: number; slot: Slot; person: PersonId; bring?: PersonId[]; reason?: "visit" | "refund" | "wechat"; amount?: number }>;
   /** 故事碎片的使用记录：id -> 最近一次触发的天 */
   fired: Record<string, number>;
   log: LogEntry[];
@@ -155,6 +163,8 @@ export type Effect =
 
 /** 角色槽：引擎从在场或全体人物里找满足条件的人填进去 */
 export type CastSlot = {
+  /** 钉死成某个具体的人（个人线主角）；不填则按 where 从在场或全体里找 */
+  id?: PersonId;
   /** 填槽的人必须满足这些条件；条件里可以用 "$self" 指这个槽的人，也可以引用前面的槽 */
   where: Cond[];
   /** 默认 true：必须在场 */
