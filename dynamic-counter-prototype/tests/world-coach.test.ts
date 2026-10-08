@@ -49,7 +49,7 @@ test("第一次打开人物卡：指着那排动作，说每件都花精力", ()
 test("第一次花过精力：指着「下一时段」", () => {
   const tip = coachTip(view({ acted: true }), floor({ energy: 97 }), PEOPLE, []);
   assert.equal(tip?.step, "action");
-  assert.equal(tip.text, "精力用得差不多了，就点右上角的「下一时段」。");
+  assert.equal(tip.text, "每做一件事都花精力。想让时间往前走，就点右上角的「下一时段」。");
   assert.deepEqual(tip.anchor, { kind: "nextSlot" });
   assert.equal(tip.side, "below");
 });

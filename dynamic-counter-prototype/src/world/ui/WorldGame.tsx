@@ -523,7 +523,7 @@ export default function WorldGame() {
         <span>{yuan(world.money)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
       </div>
       <button className="world-mute" type="button" aria-label={muted ? "开声音" : "静音"} aria-pressed={muted}
-        onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "静" : "声"}</button>
+        onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "🔇" : "🔊"}</button>
       <button className="world-web-btn" type="button" aria-label="人情网" onClick={() => setWebOpen(true)}>人情网</button>
       <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
     </header>
