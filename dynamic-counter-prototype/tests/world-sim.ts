@@ -8,6 +8,7 @@ import {
   ambient, applyChoice, beginSlot, bestFit, choiceVisible, doVerb, drawStorylet, endDay,
   newWorld, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
+import { rank, seasonEnding } from "../src/world/ending.ts";
 import type { Festival, Person, PersonId, Slot, Storylet, World } from "../src/world/types.ts";
 import { PRODUCTS, type ProductId } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
@@ -151,17 +152,21 @@ const N = Math.max(1, Number(process.argv[2]) || 16);
 console.log(`== 人情场模拟 · 内容来源 ${source} · ${people.length} 人 · ${storylets.length} 张卡 ==`);
 console.log(`== ${N} 个种子 × ${DAYS} 天 × ${STYLES.length} 种风格 ==\n`);
 
-type Result = { style: Style; seed: string; money: number; standing: number; compliance: number; signature: string; arcs: Record<PersonId, Record<string, number>> };
+type Result = {
+  style: Style; seed: string; money: number; standing: number; compliance: number;
+  signature: string; ending: string; arcs: Record<PersonId, Record<string, number>>;
+};
 const results: Result[] = [];
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
     const w = playSeason(style, seed, people, storylets, festivals);
     const s = seasonSummary(w, people);
+    const ending = seasonEnding(w, people);
     results.push({
       style, seed, money: w.money, standing: w.standing, compliance: w.compliance,
       signature: `盟友[${[...s.allies].sort().join(",")}] 仇人[${[...s.enemies].sort().join(",")}]`,
-      arcs: s.arcs,
+      ending: ending.id, arcs: s.arcs,
     });
   }
 }
@@ -173,16 +178,39 @@ for (const style of STYLES) {
   console.log(`${style.padEnd(9)} ${String(signatures.size).padStart(4)}/${N}    ${dist(rs.map(r => r.money)).padEnd(30)} ${dist(rs.map(r => r.standing)).padEnd(22)} ${dist(rs.map(r => r.compliance))}`);
 }
 
-// 每个种子里钱最多的风格是谁；有没有一种风格横扫全部种子。
+const ended = (r: Result, id: PersonId) => (r.arcs[id]?.end ?? 0) >= 1;
+console.log("\n结局分布（rank 越小越好）:");
+for (const style of STYLES) {
+  const rs = results.filter(r => r.style === style);
+  const counts = new Map<string, number>();
+  for (const r of rs) counts.set(r.ending, (counts.get(r.ending) ?? 0) + 1);
+  const line = [...counts.entries()]
+    .sort((a, b) => rank(a[0]) - rank(b[0]) || b[1] - a[1])
+    .map(([id, n]) => `${id}(r${rank(id)})×${n}`)
+    .join(" · ");
+  console.log(`  ${style.padEnd(8)} ${line}`);
+}
+
+console.log("\n个人线走到终点（end≥1）:");
+for (const id of ["shen", "anjie", "luyao", "suman"] as const) {
+  const bits = STYLES.map(style => {
+    const rs = results.filter(r => r.style === style);
+    const n = rs.filter(r => ended(r, id)).length;
+    return `${style} ${n}/${N}`;
+  });
+  console.log(`  ${id.padEnd(8)} ${bits.join(" · ")}`);
+}
+
+// 每个种子里结局更好的风格是谁（rank 越小越好）；并列都算赢。
 const wins: Record<Style, number> = { honest: 0, pushy: 0, social: 0, random: 0 };
 for (let i = 0; i < N; i++) {
   const seed = `sim-${i}`;
   const mine = results.filter(r => r.seed === seed);
-  const best = Math.max(...mine.map(r => r.money));
-  for (const r of mine.filter(r => r.money === best)) wins[r.style]++;
+  const best = Math.min(...mine.map(r => rank(r.ending)));
+  for (const r of mine.filter(r => rank(r.ending) === best)) wins[r.style]++;
 }
 const dominant = STYLES.filter(s => wins[s] === N);
-console.log(`\n按种子算账（并列都算赢）: ${STYLES.map(s => `${s} ${wins[s]}/${N}`).join(" · ")}`);
+console.log(`\n按种子算账（结局更好者赢，并列都算）: ${STYLES.map(s => `${s} ${wins[s]}/${N}`).join(" · ")}`);
 console.log(dominant.length
   ? `⚠ ${dominant.join(",")} 在所有种子上都最优 —— 规则可能写坏了`
   : `没有哪种风格在所有种子上都最优`);

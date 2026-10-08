@@ -1747,8 +1747,52 @@ export const STORYLETS: Storylet[] = [
     ],
   },
 
-  // —— 个人线：沈薇。落点看你怎么待她，也看米朵和唐糖怎么看你 ——
+  // —— 个人线：沈薇。她不在场时，苏蔓可以在微信里把下一节需要的人约来 ——
 
+  {
+    id: "arc-shen-call",
+    kind: "arc",
+    cast: { a: suman },
+    when: [
+      { absent: "shen" },
+      { not: { quality: "arc:shen:end", gte: 1 } },
+      { day: { lte: 26 } },
+    ],
+    weight: 9, tension: 0, cooldown: 2,
+    text: "{$a}把手机递过来。沈薇问今晚来不来，人她可以带来。",
+    choices: [
+      {
+        label: "叫她带米朵",
+        when: [{ not: { quality: "arc:shen", gte: 2 } }],
+        effects: [
+          { appoint: { person: "shen", inDays: 1, slot: 1, bring: ["miduo"] } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}在微信里叫了沈薇。她回：米朵我带来。",
+      },
+      {
+        label: "叫她带唐糖",
+        when: [{ quality: "arc:shen", gte: 2 }, { not: { quality: "arc:shen", gte: 3 } }],
+        effects: [
+          { appoint: { person: "shen", inDays: 1, slot: 1, bring: ["tangtang"] } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}叫了沈薇，让唐糖跟着来。复刻的事，到了镜子前再说。",
+      },
+      {
+        label: "叫她一个人来",
+        when: [{ quality: "arc:shen", gte: 3 }],
+        effects: [
+          { appoint: { person: "shen", inDays: 1, slot: 1 } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}只叫了沈薇。团队的下一句，她自己来拿。",
+      },
+    ],
+  },
   {
     id: "arc-shen-team",
     kind: "arc",
@@ -1757,13 +1801,13 @@ export const STORYLETS: Storylet[] = [
       b: { where: [{ bond: ["$self", "shen"], kind: "fan" }] },
     },
     when: [{ not: { quality: "arc:shen", gte: 1 } }],
-    weight: 8, tension: 0, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$a}把{$b}带进镜子。她说团队要同一句，{$b}的脸还没被你看过。",
     choices: [
       {
         label: "分开说，两张脸不是一套",
         effects: [
-          { quality: "arc:shen", set: 1 },
+          { quality: "arc:shen", set: 1 }, { appoint: { person: "shen", inDays: 2, slot: 1, bring: ["miduo"] } },
           { opinion: "$a", delta: 8 }, { opinion: "$b", delta: 4 },
           { bond: ["$a", "$b"], delta: 5 },
           { remember: { holder: "$a", act: "honest-advice", valence: 2, subject: "player" } },
@@ -1775,7 +1819,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "按团队一套开",
         effects: [
-          { quality: "arc:shen", set: 1 },
+          { quality: "arc:shen", set: 1 }, { appoint: { person: "shen", inDays: 2, slot: 1, bring: ["miduo"] } },
           { opinion: "$a", delta: -6 }, { opinion: "$b", delta: -2 },
           { bond: ["$a", "$b"], delta: -8 },
           { remember: { holder: "$a", act: "hard-sell", valence: -2, subject: "player" } },
@@ -1787,7 +1831,7 @@ export const STORYLETS: Storylet[] = [
         label: "先问{$b}，让{$a}等",
         when: [{ temper: "$b", is: "hasty" }],
         effects: [
-          { quality: "arc:shen", set: 1 },
+          { quality: "arc:shen", set: 1 }, { appoint: { person: "shen", inDays: 2, slot: 1, bring: ["miduo"] } },
           { opinion: "$b", delta: 6 }, { opinion: "$a", delta: -3 },
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "sidelined", valence: -1, subject: "player" } },
@@ -1804,13 +1848,13 @@ export const STORYLETS: Storylet[] = [
       b: { where: [{ bond: ["$self", "shen"], kind: "fan" }, { temper: "$self", is: "gossip" }] },
     },
     when: [{ quality: "arc:shen", gte: 1 }, { not: { quality: "arc:shen", gte: 2 } }],
-    weight: 8, tension: 1, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$b}把灯架在镜边，要你说两周能看出来。{$a}在旁边，不准备出镜。",
     choices: [
       {
         label: "镜头里只说备案里有的",
         effects: [
-          { quality: "arc:shen", set: 2 }, { appoint: { person: "shen", inDays: 3, slot: 1, bring: ["tangtang"] } },
+          { quality: "arc:shen", set: 2 }, { appoint: { person: "shen", inDays: 2, slot: 1, bring: ["tangtang"] } },
           { opinion: "$b", delta: -4 }, { opinion: "$a", delta: 6 },
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "kept-word", valence: 2, subject: "player" } },
@@ -1821,7 +1865,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "顺着说两周能看出来",
         effects: [
-          { quality: "arc:shen", set: 2 }, { appoint: { person: "shen", inDays: 3, slot: 1, bring: ["tangtang"] } },
+          { quality: "arc:shen", set: 2 }, { appoint: { person: "shen", inDays: 2, slot: 1, bring: ["tangtang"] } },
           { opinion: "$b", delta: 8 }, { opinion: "$a", delta: -8 },
           { bond: ["$a", "$b"], delta: -8 },
           { remember: { holder: "$a", act: "hard-sell", valence: -2, subject: "player" } },
@@ -1832,7 +1876,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "灯偏开，修护只留给{$b}本人",
         effects: [
-          { quality: "arc:shen", set: 2 }, { appoint: { person: "shen", inDays: 3, slot: 1, bring: ["tangtang"] } },
+          { quality: "arc:shen", set: 2 }, { appoint: { person: "shen", inDays: 2, slot: 1, bring: ["tangtang"] } },
           { opinion: "$b", delta: -3 }, { opinion: "$a", delta: 4 },
           { remember: { holder: "$b", act: "off-camera", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "honest-advice", valence: 1, subject: "player" } },
@@ -1850,13 +1894,13 @@ export const STORYLETS: Storylet[] = [
       b: { where: [{ bond: ["$self", "shen"], kind: "fan" }, { temper: "$self", is: "face" }] },
     },
     when: [{ quality: "arc:shen", gte: 2 }, { not: { quality: "arc:shen", gte: 3 } }],
-    weight: 8, tension: 1, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$b}要复刻{$a}上次的妆。她两颊是红的，{$a}说你记得。",
     choices: [
       {
         label: "说明不能复刻",
         effects: [
-          { quality: "arc:shen", set: 3 },
+          { quality: "arc:shen", set: 3 }, { appoint: { person: "shen", inDays: 2, slot: 1 } },
           { opinion: "$b", delta: -3 }, { opinion: "$a", delta: 8 },
           { bond: ["$a", "$b"], delta: 6 },
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
@@ -1867,7 +1911,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "按上次的妆给她",
         effects: [
-          { quality: "arc:shen", set: 3 },
+          { quality: "arc:shen", set: 3 }, { appoint: { person: "shen", inDays: 2, slot: 1 } },
           { opinion: "$b", delta: 6 }, { opinion: "$a", delta: -6 },
           { bond: ["$a", "$b"], delta: -12 },
           { remember: { holder: "$a", act: "hard-sell", valence: -2, subject: "player" } },
@@ -1878,7 +1922,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "让{$a}自己看{$b}的脸",
         effects: [
-          { quality: "arc:shen", set: 3 },
+          { quality: "arc:shen", set: 3 }, { appoint: { person: "shen", inDays: 2, slot: 1 } },
           { opinion: "$a", delta: 4 }, { opinion: "$b", delta: 3 },
           { bond: ["$a", "$b"], delta: 4 },
           { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
@@ -1893,7 +1937,7 @@ export const STORYLETS: Storylet[] = [
     kind: "arc",
     cast: { a: shen },
     when: [{ quality: "arc:shen", gte: 3 }, { not: { quality: "arc:shen:end", gte: 1 } }],
-    weight: 8, tension: -1, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$a}一个人来。团队的下一句给不给你，她说看米朵和唐糖回来怎么讲你。",
     choices: [
       {
@@ -1944,8 +1988,62 @@ export const STORYLETS: Storylet[] = [
     ],
   },
 
-  // —— 个人线：安姐 ——
+  // —— 个人线：安姐。她不在场时，苏蔓可以在微信里把下一节需要的人约来 ——
 
+  {
+    id: "arc-anjie-call",
+    kind: "arc",
+    cast: { a: suman },
+    when: [
+      { absent: "anjie" },
+      { not: { quality: "arc:anjie:end", gte: 1 } },
+      { day: { lte: 26 } },
+    ],
+    weight: 9, tension: 0, cooldown: 2,
+    text: "{$a}说安姐在微信里问过一句。你要是让她回，婚礼这边按你定的人来。",
+    choices: [
+      {
+        label: "叫她自己来",
+        when: [{ not: { quality: "arc:anjie", gte: 1 } }],
+        effects: [
+          { appoint: { person: "anjie", inDays: 1, slot: 1 } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}在微信里叫了安姐。她说明天午后到，先不带人。",
+      },
+      {
+        label: "叫她带梁夏",
+        when: [{ quality: "arc:anjie", gte: 1 }, { not: { quality: "arc:anjie", gte: 2 } }],
+        effects: [
+          { appoint: { person: "anjie", inDays: 1, slot: 1, bring: ["liangxia"] } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}让安姐把梁夏带来。手机的事，到了再说。",
+      },
+      {
+        label: "叫她带白姐",
+        when: [{ quality: "arc:anjie", gte: 2 }, { not: { quality: "arc:anjie", gte: 3 } }],
+        effects: [
+          { appoint: { person: "anjie", inDays: 1, slot: 1, bring: ["baijie"] } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}叫了安姐。白姐的工具包会一起到，问的是色号。",
+      },
+      {
+        label: "叫她来收一句",
+        when: [{ quality: "arc:anjie", gte: 3 }],
+        effects: [
+          { appoint: { person: "anjie", inDays: 1, slot: 1 } },
+          { opinion: "$a", delta: 6 },
+          { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}叫安姐一个人来。她只问后面的人还交不交。",
+      },
+    ],
+  },
   {
     id: "arc-anjie-risk",
     kind: "arc",
@@ -1954,13 +2052,13 @@ export const STORYLETS: Storylet[] = [
       b: suman,
     },
     when: [{ not: { quality: "arc:anjie", gte: 1 } }],
-    weight: 8, tension: 0, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$b}把{$a}让到你这边。婚礼前的脸是红的，{$a}说这套不能出错。",
     choices: [
       {
         label: "先说泛红，不换全套",
         effects: [
-          { quality: "arc:anjie", set: 1 }, { appoint: { person: "anjie", inDays: 3, slot: 1, bring: ["liangxia"] } },
+          { quality: "arc:anjie", set: 1 }, { appoint: { person: "anjie", inDays: 2, slot: 1, bring: ["liangxia"] } },
           { opinion: "$a", delta: 8 }, { opinion: "$b", delta: 4 },
           { bond: ["$a", "$b"], delta: 4 },
           { remember: { holder: "$a", act: "honest-advice", valence: 2, subject: "player" } },
@@ -1971,7 +2069,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "推全套",
         effects: [
-          { quality: "arc:anjie", set: 1 }, { appoint: { person: "anjie", inDays: 3, slot: 1, bring: ["liangxia"] } },
+          { quality: "arc:anjie", set: 1 }, { appoint: { person: "anjie", inDays: 2, slot: 1, bring: ["liangxia"] } },
           { opinion: "$a", delta: -8 }, { opinion: "$b", delta: -4 },
           { bond: ["$a", "$b"], delta: -10 },
           { remember: { holder: "$a", act: "hard-sell", valence: -2, subject: "player" } },
@@ -1982,7 +2080,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "请{$b}先说一句",
         effects: [
-          { quality: "arc:anjie", set: 1 }, { appoint: { person: "anjie", inDays: 3, slot: 1, bring: ["liangxia"] } },
+          { quality: "arc:anjie", set: 1 }, { appoint: { person: "anjie", inDays: 2, slot: 1, bring: ["liangxia"] } },
           { opinion: "$b", delta: 6 }, { opinion: "$a", delta: 4 },
           { bond: ["$a", "$b"], delta: 5 },
           { remember: { holder: "$b", act: "kept-word", valence: 2, subject: "player" } },
@@ -2000,13 +2098,13 @@ export const STORYLETS: Storylet[] = [
       b: { where: [{ bond: ["anjie", "$self"], kind: "friend", gte: 70 }] },
     },
     when: [{ quality: "arc:anjie", gte: 1 }, { not: { quality: "arc:anjie", gte: 2 } }],
-    weight: 8, tension: 1, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$b}进门就把手机按住。{$a}不在句子里，交代只有一句：别再上镜。",
     choices: [
       {
         label: "放下手机，按上班八小时看",
         effects: [
-          { quality: "arc:anjie", set: 2 }, { appoint: { person: "anjie", inDays: 3, slot: 1, bring: ["baijie"] } },
+          { quality: "arc:anjie", set: 2 }, { appoint: { person: "anjie", inDays: 2, slot: 1, bring: ["baijie"] } },
           { opinion: "$b", delta: 8 }, { opinion: "$a", delta: 6 },
           { bond: ["$a", "$b"], delta: 5 },
           { remember: { holder: "$b", act: "off-camera", valence: 2, subject: "player" } },
@@ -2017,7 +2115,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "让{$b}出镜",
         effects: [
-          { quality: "arc:anjie", set: 2 }, { appoint: { person: "anjie", inDays: 3, slot: 1, bring: ["baijie"] } },
+          { quality: "arc:anjie", set: 2 }, { appoint: { person: "anjie", inDays: 2, slot: 1, bring: ["baijie"] } },
           { opinion: "$b", delta: -10 }, { opinion: "$a", delta: -12 },
           { bond: ["$a", "suman"], delta: -8 },
           { remember: { holder: "$b", act: "on-camera", valence: -2, subject: "player" } },
@@ -2029,7 +2127,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "只拍产品，不拍脸",
         effects: [
-          { quality: "arc:anjie", set: 2 }, { appoint: { person: "anjie", inDays: 3, slot: 1, bring: ["baijie"] } },
+          { quality: "arc:anjie", set: 2 }, { appoint: { person: "anjie", inDays: 2, slot: 1, bring: ["baijie"] } },
           { opinion: "$b", delta: 4 }, { opinion: "$a", delta: 3 },
           { remember: { holder: "$b", act: "off-camera", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "honest-advice", valence: 1, subject: "player" } },
@@ -2046,13 +2144,13 @@ export const STORYLETS: Storylet[] = [
       b: { where: [{ bond: ["$self", "anjie"], kind: "client" }, { temper: "$self", is: "hasty" }] },
     },
     when: [{ quality: "arc:anjie", gte: 2 }, { not: { quality: "arc:anjie", gte: 3 } }],
-    weight: 8, tension: 1, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$b}把工具包放在凳边，问的是色号，不是四支一样的货。抽屉今天只够先开一边。",
     choices: [
       {
         label: "色号分开答，不把她当囤货",
         effects: [
-          { quality: "arc:anjie", set: 3 },
+          { quality: "arc:anjie", set: 3 }, { appoint: { person: "anjie", inDays: 2, slot: 1 } },
           { opinion: "$b", delta: 8 }, { opinion: "$a", delta: 3 },
           { bond: ["$a", "$b"], delta: 4 },
           { remember: { holder: "$b", act: "honest-advice", valence: 2, subject: "player" } },
@@ -2062,7 +2160,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "按四支一样的开",
         effects: [
-          { quality: "arc:anjie", set: 3 },
+          { quality: "arc:anjie", set: 3 }, { appoint: { person: "anjie", inDays: 2, slot: 1 } },
           { opinion: "$b", delta: -10 }, { opinion: "$a", delta: -4 },
           { bond: ["$b", "songjie"], delta: -6 },
           { remember: { holder: "$b", act: "hard-sell", valence: -2, subject: "player" } },
@@ -2073,7 +2171,7 @@ export const STORYLETS: Storylet[] = [
       {
         label: "今天先开{$a}这边",
         effects: [
-          { quality: "arc:anjie", set: 3 },
+          { quality: "arc:anjie", set: 3 }, { appoint: { person: "anjie", inDays: 2, slot: 1 } },
           { opinion: "$a", delta: 4 }, { opinion: "$b", delta: -3 },
           { bond: ["$a", "$b"], delta: -4 },
           { remember: { holder: "$b", act: "sidelined", valence: -1, subject: "player" } },
@@ -2088,7 +2186,7 @@ export const STORYLETS: Storylet[] = [
     kind: "arc",
     cast: { a: anjie },
     when: [{ quality: "arc:anjie", gte: 3 }, { not: { quality: "arc:anjie:end", gte: 1 } }],
-    weight: 8, tension: -1, once: true,
+    weight: 24, tension: 0, once: true,
     text: "{$a}不复盘婚礼。她只问一句：后面的人，还交不交给你。",
     choices: [
       {

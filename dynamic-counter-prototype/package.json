@@ -9,7 +9,7 @@
     "test:runtime": "playwright test",
     "test:release": "playwright test --config playwright.release.config.ts",
     "test:sites": "node --test tests/sites-worker.test.mjs tests/pwa-build.test.mjs",
-    "test:rules": "node --experimental-strip-types --test tests/campaign-rules.test.ts tests/consult-chat.test.ts tests/rescue-rules.test.ts tests/counter-standing.test.ts tests/duel-rules.test.ts tests/progress.test.ts tests/world-engine.test.ts tests/world-words.test.ts tests/world-content.test.ts",
+    "test:rules": "node --experimental-strip-types --test tests/campaign-rules.test.ts tests/consult-chat.test.ts tests/rescue-rules.test.ts tests/counter-standing.test.ts tests/duel-rules.test.ts tests/progress.test.ts tests/world-engine.test.ts tests/world-words.test.ts tests/world-content.test.ts tests/world-ending.test.ts",
     "test:floor": "playwright test --config playwright.floor.config.ts",
     "test": "npm run test:rules && npm run build && npm run test:runtime && npm run test:release && npm run test:sites",
     "predev": "npm run check:runtime",
