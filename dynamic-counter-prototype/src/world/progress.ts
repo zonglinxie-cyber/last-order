@@ -9,8 +9,9 @@ import type { PersonId, World } from "./types.ts";
 export const WORLD_PROGRESS_KEY = "last-order-world-progress-v1";
 export const WORLD_PROGRESS_VERSION = 1;
 
-/** 四条个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~4 个）。 */
-export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman"];
+/** 个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~4 个）。
+ *  前四条是第 1 季，后四条从第 2 季才开。 */
+export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman", "tangke", "roman", "fangmin", "qiaowan"];
 
 const PERSON_IDS = new Set<PersonId>(PEOPLE.map(p => p.id));
 const ENDING_IDS = new Set<string>(ENDINGS.map(e => e.id));

@@ -5,7 +5,10 @@ import type { SeasonEnding } from "./ending.ts";
 /** 还没拿到的结局，档案里只说这一句：给方向，不点破要凑成什么数。 */
 export const ENDING_HINTS: Record<string, string> = {
   "both-kept": "有两条线几乎同时朝你点头，还得守住台账和柜位——很少人一次拿到两句。",
+  "names-stay": "有人离开这张表，认老柜的人还留在你这三米。",
+  "own-sentence": "实习生能自己把一句说完，晚班的表也交到你手里。上季还有一条线留在柜上。",
   "folder-follows": "把数做上去、把账守稳，让最认原话的那个人愿意跟你走。",
+  "file-and-sheet": "缺口的名字没有进档案，柜上的表还是两列数字。上季有一条线停在散场。",
   "speaks-first": "对面那个人肯调过来，还先对你开口——这需要先别把她逼成仇家。",
   "team-stays": "让带团队来的人，散场时还把人交在你手里。",
   "still-named": "让错不起的那个人，下一次还只认你这张脸。",

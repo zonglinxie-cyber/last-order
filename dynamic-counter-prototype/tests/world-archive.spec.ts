@@ -68,7 +68,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("个人线：走到过的落点亮起，没走到的压成？？？", async ({ page }) => {
       await page.getByRole("button", { name: "个人线" }).click();
-      await expect(page.locator(".wa-arc")).toHaveCount(4);
+      await expect(page.locator(".wa-arc")).toHaveCount(8);
       const shenArc = page.locator(".wa-arc", { hasText: "沈薇" }).first();
       await expect(shenArc.locator(".wa-arc-row.lit")).not.toHaveCount(0);
       await expect(shenArc.locator(".wa-arc-row:not(.lit)")).not.toHaveCount(0);
@@ -77,12 +77,12 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("结局：按 rank 排好，拿到的认标题、没拿到的只给不剧透提示", async ({ page }) => {
       await page.getByRole("button", { name: "结局" }).click();
-      await expect(page.locator(".ending-row")).toHaveCount(10);
+      await expect(page.locator(".ending-row")).toHaveCount(13);
       await expect(page.locator(".ending-row.achieved")).toHaveCount(1);
       await expect(page.locator(".ending-row.achieved b")).toHaveText("镜子前空了");
-      await expect(page.locator(".ending-row.locked")).toHaveCount(9);
+      await expect(page.locator(".ending-row.locked")).toHaveCount(12);
       await expect(page.locator(".ending-row.locked b").first()).toHaveText("？？？");
-      await expect(page.getByText("散过场 1 / 10 种")).toBeVisible();
+      await expect(page.getByText("散过场 1 / 13 种")).toBeVisible();
     });
 
     test("正文 ≥12px、页签与返回 ≥44px、不横向溢出", async ({ page }) => {
