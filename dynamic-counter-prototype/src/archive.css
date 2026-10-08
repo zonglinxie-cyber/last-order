@@ -1,0 +1,38 @@
+/* 档案（跨局图鉴）：配色沿用 --gold/--cream/--wine 那一套，正文书写下限 12px、按钮下限 44px。
+   页面结构是晨会/结局同一副语法：固定头部 + MobileScroll 滚动区（AGENTS 那条 app-owned chrome 留在 MobileScroll 外面）。 */
+.archive-page { position:absolute; inset:0; display:flex; flex-direction:column; background:radial-gradient(circle at 78% 10%,#3d2a26,#1a1010 46%,#120b0b 100%); }
+.archive-page .archive-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.archive-head { flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:10px 12px 8px calc(12px + env(safe-area-inset-left)); color:#f4dfbd; }
+.archive-back { width:44px; height:44px; flex:0 0 auto; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff0a; color:#efd6b0; font:700 20px/1 'Noto Serif SC'; }
+.archive-head div { display:flex; flex-direction:column; }
+.archive-head b { color:#ffedca; font:700 18px 'Noto Serif SC'; letter-spacing:.06em; }
+.archive-head small { color:#b99b7f; font-size:12px; margin-top:2px; }
+.archive-tabs { flex:0 0 auto; display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 12px 10px; }
+.archive-tabs button { min-height:44px; border:1px solid #f0cf9133; border-radius:11px; background:#ffffff08; color:#c7a993; font:600 13px 'Noto Serif SC'; }
+.archive-tabs button.active { background:linear-gradient(135deg,#f1cf86,#b47b43); border-color:transparent; color:#2a170f; }
+.archive-list { display:flex; flex-direction:column; gap:10px; padding:12px; }
+.archive-card { display:flex; gap:10px; padding:12px; border:1px solid #f0cf9122; border-radius:16px; background:linear-gradient(145deg,rgba(32,17,18,.9),rgba(16,9,9,.96)); }
+.archive-portrait { flex:0 0 auto; width:72px; height:96px; overflow:hidden; border-radius:10px; background:#0e0909; }
+.archive-portrait img { display:block; width:100%; height:100%; object-fit:cover; object-position:50% 22%; }
+/* 没见过的人只留剪影：同一张接待近景压暗去色，人形在、脸认不出。 */
+.archive-card.unmet .archive-portrait { background:#2b201d; }
+.archive-card.unmet .archive-portrait img { filter:grayscale(1) brightness(.5) contrast(1.35); opacity:.85; }
+.archive-card.unmet .archive-name { color:#8d7a6d; }
+.archive-body { flex:1 1 auto; min-width:0; }
+.archive-name { display:block; color:#ffe8b6; font:700 15px 'Noto Serif SC'; }
+.archive-unmet { margin:6px 0 0; color:#8d7a6d; font-size:12px; }
+.archive-visit { margin-top:9px; padding-top:9px; border-top:1px solid #ffffff0f; }
+.archive-visit small { display:block; color:#a99689; font-size:12px; letter-spacing:.05em; }
+.archive-descriptor { margin:3px 0 0; color:#d5b994; font-size:12px; line-height:1.55; overflow-wrap:anywhere; }
+.archive-opening { margin:4px 0 0; color:#eee0d5; font:500 12px/1.6 'Noto Serif SC'; overflow-wrap:anywhere; }
+.archive-outcome { margin:4px 0 0; color:#c08a6a; font-size:12px; line-height:1.55; overflow-wrap:anywhere; }
+.archive-need { margin:5px 0 0; color:#edc779; font:600 12px/1.55 'Noto Serif SC'; overflow-wrap:anywhere; }
+.archive-need.locked { color:#7c6a5e; font-weight:500; }
+.archive-endings { display:flex; flex-direction:column; gap:10px; padding:12px; }
+.ending-row { padding:13px 14px; border:1px solid #f0cf9122; border-radius:16px; background:linear-gradient(145deg,rgba(32,17,18,.9),rgba(16,9,9,.96)); }
+.ending-row b { display:block; color:#ffedca; font:700 15px 'Noto Serif SC'; letter-spacing:.04em; }
+.ending-row.locked b { color:#6d5b50; letter-spacing:.2em; }
+.ending-row p { margin:6px 0 0; color:#bba89b; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+/* 封面与结局屏上那颗「档案」：次级动作，压过 .text-action 的 32px，够手指。 */
+.archive-entry { display:block; width:100%; min-height:44px; margin-top:7px; padding:9px 12px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#d9bd97; font:600 13px 'Noto Serif SC'; }
+.finale-foot .archive-entry { margin-top:0; margin-bottom:7px; }
