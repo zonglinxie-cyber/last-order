@@ -110,6 +110,16 @@ export const ACT_WORD: Record<string, string> = {
   "unlearned": "把背错的那句卸掉了",
   "own-line": "用自己的句子把客人送走了",
   "folder-kept": "把原话留在文件夹里，下一季还认",
+  // 顾客个人线（content/storylets-arcs3.ts）
+  "budget-kept": "按她报的预算开了，没有往上加",
+  "over-budget": "开过了她报出来的预算",
+  "colleague-need": "按同事的需求开，没有按她自己的脸",
+  "own-face": "按她自己的脸开，同事的需求另说",
+  "daughter-row": "对的是女儿写下的那一行",
+  "mother-say": "听了她口述的那一格，没有对屏幕",
+  "claim-full": "在镜头里把功效说满了",
+  "claim-held": "镜头开着，功效没有说满",
+  "rival-line": "把对面那句复述给她听了",
   // 每日委托（requests.ts）
   "kept-promise": "答应她的事做到了",
   "broke-promise": "答应她的事没做到",

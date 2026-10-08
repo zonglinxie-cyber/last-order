@@ -105,7 +105,7 @@ test("parse：合法档往返，类型不对或 id 未知整份丢弃", () => {
 
 test("parse：个人线的 owner 都在，落点表按这些人收", () => {
   const empty = emptyWorldProgress();
-  assert.deepEqual(ARC_PEOPLE, ["shen", "anjie", "luyao", "suman", "tangke", "roman", "fangmin", "qiaowan"]);
+  assert.deepEqual(ARC_PEOPLE, ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo", "tangke", "roman", "fangmin", "qiaowan"]);
   // 空档里 arcEnds 应已铺好四条线，但都还没落点
   for (const id of ARC_PEOPLE) assert.deepEqual(empty.arcEnds[id] ?? [], []);
 });
