@@ -1,0 +1,134 @@
+/* 人情场楼层：配色沿用 --gold/--cream/深褐那套（见 web.css / prototype.css）。
+   尺寸契约与人情网相同：正文 ≥12px、可点的都 ≥44px、除地图容器外不横向溢出。
+   大地图是 1280×720 横图，竖屏按可视区高度铺满、左右拖；人站在 zones.ts 量的落点上。 */
+.world-app { position:absolute; inset:0; display:flex; flex-direction:column; background:#17100f; overflow:hidden; }
+
+/* —— 顶栏：一条细栏，第 N 天 · 时段 · 钱 · 精力 · 小样 —— */
+.world-bar { flex:0 0 auto; z-index:30; display:flex; align-items:center; gap:8px; padding:var(--top-inset) 10px 8px; background:linear-gradient(#120a0af5,#140c0cd8); border-bottom:1px solid #f0cf9122; }
+.world-bar-info { flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:10px; white-space:nowrap; overflow-x:auto; scrollbar-width:none; }
+.world-bar-info::-webkit-scrollbar { display:none; }
+.world-bar-info b { flex:0 0 auto; color:#ffedca; font:700 13px 'Noto Serif SC',serif; }
+.world-bar-info span { flex:0 0 auto; color:#d5b994; font-size:12px; }
+.world-web-btn,.world-next { flex:0 0 auto; min-height:44px; padding:0 14px; border-radius:12px; font:600 13px 'Noto Serif SC',serif; }
+.world-web-btn { border:1px solid #f0cf9133; background:#ffffff0a; color:#efd6b0; }
+.world-next { display:flex; align-items:center; gap:6px; border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
+.world-next small { font-size:12px; font-weight:700; }
+
+/* —— 大地图 —— */
+.world-map-view { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; touch-action:none; user-select:none; }
+.world-map { position:absolute; top:0; left:0; height:100%; aspect-ratio:16/9; container-type:size; will-change:transform; }
+.wf-floor { position:absolute; inset:0; width:100%; height:100%; display:block; -webkit-user-drag:none; }
+.wf-zone { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border-radius:999px; background:#120a0a59; color:#ffe8b6cc; font:600 12px 'Noto Serif SC',serif; letter-spacing:.1em; pointer-events:none; }
+
+/* —— 人：脚落在点上，换区用 left/top 过渡走过去 —— */
+.wf-actor { position:absolute; transform:translate(-50%,-97%); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:44px; min-height:44px; margin:0; padding:0; border:0; background:transparent; cursor:pointer; transition:left .9s ease-in-out, top .9s ease-in-out; }
+.wf-tag { margin-bottom:2px; padding:1px 7px; border-radius:999px; background:#120a0a99; color:#ffe8b6; font:600 max(12px,2.2cqh) 'Noto Serif SC',serif; white-space:nowrap; text-shadow:0 1px 3px #000; }
+.wf-figure { display:flex; flex-direction:column; align-items:center; animation:wf-bob 2.7s ease-in-out infinite; }
+@keyframes wf-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2.5%); } }
+.wf-chibi { height:11cqh; min-height:52px; filter:drop-shadow(0 4px 6px #0008); -webkit-user-drag:none; }
+.wf-generic { display:flex; flex-direction:column; align-items:center; }
+.wf-head { width:5.6cqh; height:5.6cqh; min-width:30px; min-height:30px; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:50%; border:2px solid #f0cf9199; background:#3d2a26; box-shadow:0 2px 6px #0009; }
+.wf-head img { width:100%; height:100%; object-fit:cover; object-position:50% 22%; }
+.wf-head b { color:#ffe8b6; font:700 max(12px,2.6cqh)/1 'Noto Serif SC',serif; }
+.wf-torso { width:7.2cqh; height:6.4cqh; min-width:38px; min-height:36px; margin-top:-0.9cqh; border-radius:48% 48% 14% 14%/62% 62% 12% 12%; background:linear-gradient(165deg,#7a5650,#3d2a26 70%); border:1px solid #0e080888; box-shadow:0 4px 8px #0007; }
+.wf-glow { position:absolute; z-index:-1; bottom:-4px; left:50%; width:9cqh; min-width:50px; height:2.6cqh; min-height:14px; transform:translateX(-50%); border-radius:50%; background:radial-gradient(closest-side,#f0c97877,transparent); opacity:0; transition:opacity .25s; }
+.wf-actor.is-sel .wf-glow,.wf-actor.is-target .wf-glow { opacity:1; }
+.wf-actor.is-target .wf-tag { background:#f0c978; color:#2a1713; }
+.wf-actor.is-sel .wf-tag { background:#ffe8b6; color:#2a1713; }
+
+/* —— 气泡：新产生的 log 在当事人头顶冒一句，依次出现、几秒后淡出 —— */
+.wf-bubble { position:absolute; z-index:60; max-width:190px; padding:6px 9px; border-radius:10px; background:#fff4dfe8; color:#2a1a16; font-size:12px; line-height:1.45; box-shadow:0 4px 14px #0008; transform:translate(-50%,-116%); opacity:0; pointer-events:none; animation:wf-bubble 4.6s ease forwards; }
+.wf-bubble::after { content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#fff4dfe8; }
+@keyframes wf-bubble {
+  0% { opacity:0; transform:translate(-50%,-96%) scale(.7); }
+  7% { opacity:1; transform:translate(-50%,-116%) scale(1); }
+  82% { opacity:1; }
+  100% { opacity:0; transform:translate(-50%,-132%); }
+}
+
+/* —— 刚刚发生 —— */
+.world-feed-toggle { position:absolute; z-index:40; left:10px; bottom:calc(10px + env(safe-area-inset-bottom)); min-height:44px; padding:0 14px; border:1px solid #f0cf9133; border-radius:999px; background:#1c1210d9; color:#efd6b0; font:600 12px 'Noto Serif SC',serif; }
+.world-feed { position:absolute; z-index:40; left:10px; right:10px; bottom:calc(58px + env(safe-area-inset-bottom)); max-height:44%; overflow-y:auto; padding:10px 12px; border:1px solid #f0cf9133; border-radius:14px; background:#1c1210f0; box-shadow:0 -8px 28px #0009; }
+.world-feed p { margin:0 0 7px; color:#eee0d5; font-size:12px; line-height:1.5; }
+.world-feed p small { display:block; color:#a99689; font-size:12px; }
+.world-feed .feed-empty { color:#8d7a6d; }
+
+/* —— 一句话结果 —— */
+.world-toast { position:absolute; z-index:70; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); width:max-content; max-width:88%; margin:0; transform:translateX(-50%); padding:10px 14px; border:1px solid #f0cf9144; border-radius:12px; background:#2a1713f2; color:#ffe8b6; font-size:12px; line-height:1.5; text-align:center; box-shadow:0 8px 24px #000a; }
+
+/* —— 底部抽屉：上面人物卡，下面一行动作 —— */
+.world-drawer { position:absolute; z-index:50; left:0; right:0; bottom:0; height:64%; display:flex; flex-direction:column; }
+.world-drawer .person-card { position:relative; inset:auto; flex:1 1 auto; min-height:0; height:auto; max-height:none; border-radius:16px 16px 0 0; border-bottom:0; box-shadow:0 -14px 40px #000c; }
+.world-verbs,.world-pick,.world-serve { flex:0 0 auto; background:#241413; border-top:1px solid #f0cf9122; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+.world-verbs { display:flex; gap:8px; overflow-x:auto; }
+.world-verbs button { flex:0 0 auto; min-width:88px; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 12px; border:1px solid #f0cf9144; border-radius:12px; background:#ffffff08; color:#ffe8b6; }
+.world-verbs button b { font:600 14px 'Noto Serif SC',serif; }
+.world-verbs button small { color:#b99b7f; font-size:12px; }
+.world-verbs button.pair { border-style:dashed; }
+.world-verbs .verbs-empty { flex:1 1 auto; margin:0; padding:10px 6px; color:#a99689; font-size:12px; line-height:1.5; }
+
+/* 两个人的动作：名单和地图高光是一件事的两头 */
+.world-pick p { margin:0 0 8px; color:#d5b994; font-size:12px; }
+.pick-targets { display:flex; gap:8px; overflow-x:auto; }
+.pick-targets button { flex:0 0 auto; min-height:44px; padding:0 14px; border:1px solid #f0cf9155; border-radius:999px; background:#f0c97814; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
+.pick-targets .pick-cancel { border-color:#ffffff22; background:transparent; color:#a99689; }
+
+/* 接待：三支产品、件数、她自己说出口的需要 */
+.world-serve .serve-said { margin:0 0 4px; color:#ffe8b6; font-size:12px; line-height:1.5; }
+.world-serve .serve-meta { margin:0 0 8px; color:#a99689; font-size:12px; line-height:1.5; }
+.serve-products { display:flex; gap:8px; }
+.serve-products button { flex:1 1 0; min-width:0; min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:6px 4px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; }
+.serve-products button.on { border-color:#f0c978; background:#f0c9781c; }
+.serve-products button b { font:600 13px 'Noto Serif SC',serif; }
+.serve-products button small { color:#b99b7f; font-size:12px; }
+.serve-units { display:flex; gap:8px; margin-top:8px; }
+.serve-units button { flex:1 1 0; min-height:44px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
+.serve-units button.on { border-color:#f0c978; background:#f0c9781c; }
+.serve-actions { display:flex; gap:8px; margin-top:8px; }
+.serve-actions button { flex:1 1 0; min-height:48px; border-radius:12px; font:700 14px 'Noto Serif SC',serif; }
+.serve-commit { border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
+.serve-commit:disabled { opacity:.45; }
+.serve-force { border:1px solid #8a4a5a88; background:#8a4a5a26; color:#e8b6c0; }
+.serve-force:disabled { opacity:.45; }
+
+/* —— 说书人的卡 —— */
+.world-story { position:absolute; inset:0; z-index:80; display:flex; align-items:flex-end; justify-content:center; padding:0 14px calc(18px + env(safe-area-inset-bottom)); background:#100a09b8; }
+.story-card { width:100%; max-width:430px; padding:16px 14px 14px; border:1px solid #f0cf9144; border-radius:16px; background:linear-gradient(150deg,#2a1713fa,#160d0dfc); box-shadow:0 18px 50px #000c; }
+.story-text { margin:0 0 12px; color:#f2e6d8; font-size:14px; line-height:1.75; }
+.story-choices { display:flex; flex-direction:column; gap:8px; }
+.story-choices button { min-height:48px; padding:10px 12px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; font-size:13px; line-height:1.5; text-align:left; }
+
+/* —— 当日小结 / 一周盘点 / 一季总结 —— */
+.world-report-page { display:flex; flex-direction:column; }
+.world-report-page .world-report-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.world-report { padding:var(--top-inset) 18px 20px; }
+.world-report .report-eyebrow { margin:0 0 6px; color:#c7a993; font-size:12px; letter-spacing:.08em; }
+.world-report h1 { margin:0 0 16px; color:#ffe8b6; font:700 26px 'Noto Serif SC',serif; }
+.report-numbers { display:flex; gap:10px; margin-bottom:16px; }
+.report-numbers span { flex:1 1 0; display:flex; flex-direction:column; gap:3px; padding:10px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
+.report-numbers small { color:#a99689; font-size:12px; }
+.report-numbers b { color:#ffedca; font:700 15px 'Noto Serif SC',serif; }
+.report-block { margin:0 0 14px; padding:12px 14px; border:1px solid #f0cf9122; border-radius:14px; background:#ffffff05; }
+.report-block h2 { margin:0 0 6px; color:#f4dfbd; font:600 14px 'Noto Serif SC',serif; }
+.report-block p { margin:0 0 4px; color:#eee0d5; font-size:13px; line-height:1.6; }
+.report-block p b { color:#ffe8b6; margin-right:6px; }
+.report-foot { flex:0 0 auto; padding:10px 14px calc(12px + env(safe-area-inset-bottom)); }
+
+.world-primary { width:100%; min-height:52px; border:0; border-radius:14px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 16px 'Noto Serif SC',serif; }
+.world-ghost { width:100%; min-height:48px; margin-top:8px; border:1px solid #f0cf9133; border-radius:14px; background:transparent; color:#efd6b0; font:600 14px 'Noto Serif SC',serif; }
+
+/* —— 开局 —— */
+.world-intro-screen { display:block; }
+.world-intro-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:saturate(.8) contrast(1.02); }
+.world-intro-shade { position:absolute; inset:0; background:linear-gradient(180deg,#12090b80 0,transparent 34%,#120a0ab8 62%,#100909f0 100%); }
+.world-intro-card { position:absolute; left:15px; right:15px; bottom:calc(20px + env(safe-area-inset-bottom)); padding:18px 16px 16px; border:1px solid #f0cf912e; border-radius:20px; background:linear-gradient(145deg,rgba(32,17,18,.93),rgba(16,9,9,.97)); box-shadow:0 20px 42px #0009; }
+.world-intro-eyebrow { margin:0 0 4px; color:#c7a993; font-size:12px; letter-spacing:.14em; }
+.world-intro-card h1 { margin:0 0 8px; color:#ffe8b6; font:700 30px 'Noto Serif SC',serif; letter-spacing:.1em; }
+.world-intro-copy { margin:0 0 14px; color:#eee0d5; font-size:13px; line-height:1.7; }
+
+/* —— 人情网整屏 —— */
+.world-web { position:absolute; inset:0; z-index:90; display:flex; flex-direction:column; background:#120b0b; }
+.world-web-bar { flex:0 0 auto; display:flex; align-items:center; padding:calc(6px + env(safe-area-inset-top)) 10px 6px; border-bottom:1px solid #f0cf9118; }
+.world-web-bar button { min-height:44px; min-width:88px; padding:0 14px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff0a; color:#efd6b0; font:600 13px 'Noto Serif SC',serif; }
+.world-web-body { position:relative; flex:1 1 auto; min-height:0; }
+.world-web-body .web-view { position:absolute; inset:0; }

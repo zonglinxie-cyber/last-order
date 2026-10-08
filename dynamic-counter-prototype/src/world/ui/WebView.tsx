@@ -120,7 +120,8 @@ export function WebView({ world, people }: { world: World; people: Person[] }) {
           />)}
         </g>
         <g className="web-nodes">
-          {layout.nodes.map(node => {
+          {/* 压暗的陌生人先画、认识的人后画：外圈密时命中圆不能盖住能叫得出名字的人。 */}
+          {[...layout.nodes].sort((a, b) => Number(b.dark) - Number(a.dark)).map(node => {
             const isPlayer = node.id === PLAYER;
             const isCenter = focus !== null && node.id === focus;
             const portrait = portraitOf(node.id);
