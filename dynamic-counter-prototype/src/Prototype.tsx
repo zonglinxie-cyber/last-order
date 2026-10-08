@@ -16,6 +16,8 @@ const DuelGame = lazy(() => import("./DuelGame"));
 const RunGame = lazy(() => import("./RunGame"));
 const MatchGame = lazy(() => import("./MatchGame"));
 const BlitzGame = lazy(() => import("./BlitzGame"));
+// 人情网视图的预览壳（?mode=web）：只带 fixture，不接引擎。
+const WorldWebMode = lazy(() => import("./world/ui/WorldWebMode"));
 import { asset } from "./base";
 import {
   customerAction, customerHome, customerMood, customerSpeech, defaultFocus, formatClock,
@@ -647,5 +649,6 @@ export default function Prototype() {
   if (mode === "run") return <Suspense fallback={null}><RunGame /></Suspense>;
   if (mode === "match") return <Suspense fallback={null}><MatchGame /></Suspense>;
   if (mode === "blitz") return <Suspense fallback={null}><BlitzGame /></Suspense>;
+  if (mode === "web") return <Suspense fallback={null}><WorldWebMode /></Suspense>;
   return mode === "duel" ? <Suspense fallback={null}><DuelGame /></Suspense> : <ClassicPrototype />;
 }
