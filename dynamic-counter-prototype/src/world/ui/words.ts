@@ -57,6 +57,12 @@ export const ACT_WORD: Record<string, string> = {
   "betrayed": "把她的秘密说了出去",
   // 对面
   "heard-rival-pitch": "让对面柜把她请走了",
+  // 在场的人自己长出来的（exchanges.ts）
+  "quarreled": "跟人当场吵了一架",
+  "vouched-for": "替你说了好话",
+  "badmouthed": "在背后数落了你一通",
+  "walked-out": "被你气得待不下去，走了",
+  "stormed-off": "熟人被你气走，她跟着走了",
   // 故事碎片里写下的（content/storylets.ts）
   "sidelined": "把她晾在一边，先顾了别人",
   "public-shame": "当着别人的面让她下不来台",

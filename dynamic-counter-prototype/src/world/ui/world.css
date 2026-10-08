@@ -36,6 +36,9 @@
 .wf-actor.is-sel .wf-glow,.wf-actor.is-target .wf-glow { opacity:1; }
 .wf-actor.is-target .wf-tag { background:#f0c978; color:#2a1713; }
 .wf-actor.is-sel .wf-tag { background:#ffe8b6; color:#2a1713; }
+/* 拌嘴中的两人头顶冒火：一粒跳动的火星 */
+.wf-heat { position:absolute; top:-7px; left:50%; width:9px; height:9px; margin-left:-5px; border-radius:50% 50% 50% 0; background:radial-gradient(circle at 35% 30%,#ffc26b,#e04a25 70%); box-shadow:0 0 9px #ff6a2a; transform:rotate(-45deg); animation:wf-heat .6s ease-in-out infinite alternate; }
+@keyframes wf-heat { from { transform:rotate(-45deg) scale(.8); } to { transform:rotate(-45deg) scale(1.3); } }
 
 /* —— 气泡：新产生的 log 在当事人头顶冒一句，依次出现、几秒后淡出 —— */
 .wf-bubble { position:absolute; z-index:60; max-width:190px; padding:6px 9px; border-radius:10px; background:#fff4dfe8; color:#2a1a16; font-size:12px; line-height:1.45; box-shadow:0 4px 14px #0008; transform:translate(-50%,-116%); opacity:0; pointer-events:none; animation:wf-bubble 4.6s ease forwards; }
