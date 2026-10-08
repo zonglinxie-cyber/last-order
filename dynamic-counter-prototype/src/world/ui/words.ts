@@ -110,6 +110,11 @@ export const ACT_WORD: Record<string, string> = {
   "unlearned": "把背错的那句卸掉了",
   "own-line": "用自己的句子把客人送走了",
   "folder-kept": "把原话留在文件夹里，下一季还认",
+  // 每日委托（requests.ts）
+  "kept-promise": "答应她的事做到了",
+  "broke-promise": "答应她的事没做到",
+  "lent-samples": "借了两支小样给她",
+  "turned-down": "没应下她张的口",
 };
 
 /** 未知代号原样念出来，不编一句假话盖过去。 */

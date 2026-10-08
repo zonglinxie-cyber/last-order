@@ -107,6 +107,25 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".serve-said")).not.toContainText("温和点就行");
     });
 
+    test("新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度", async ({ page }) => {
+      await enter(page, envelope({ day: 2, slot: 0, requests: [{
+        id: "req:2:clean:fangmin", kind: "clean", by: "fangmin", day: 2, due: 2,
+        state: "open", text: "今天一天，一单都别硬推", reward: "方敏在台账上记你一笔",
+      }] }));
+      const card = page.locator(".world-requests");
+      await expect(card).toBeVisible();
+      await expect(card).toContainText("今天的请求");
+      await expect(card).toContainText("方敏");
+      await expect(card).toContainText("别硬推");
+      await card.getByRole("button", { name: "知道了" }).click();
+      await expect(card).toHaveCount(0);
+      // 「现场」栏的小标记还在，点开能看到这条的进度。
+      await expect(page.locator(".req-chip")).toContainText("委托 0/1");
+      await page.getByRole("button", { name: "查看委托进度" }).click();
+      await expect(page.locator(".world-requests")).toContainText("委托 0/1");
+      await expect(page.locator(".world-requests")).toContainText("今天打烊前");
+    });
+
     test("说书人抽到卡能选，结果念一句", async ({ page }) => {
       await saveWorld(page, cardEnvelope());
       await page.goto("/?mode=world");

@@ -101,6 +101,47 @@ export type Memory = {
 
 export type LogEntry = { day: number; slot: Slot; text: string; who?: PersonId[] };
 
+// —— 每日委托 ——
+
+/** 委托模板：谁提的、要做什么，由 requests.ts 的规则解释。 */
+export type RequestKind =
+  | "quota"    // 罗曼：今天卖出 N 件
+  | "keep"     // 苏蔓：她的老客今天会来，帮她留住、别让对面请走
+  | "samples"  // 唐可：借她几支小样 —— 当场答应或回绝的那一种
+  | "pair"     // 熟客：介绍个合得来的人，或替她跟人打圆场
+  | "clean"    // 方敏：今天一整天不硬推
+  | "rebook";  // 加过微信的客人：明天过来，明天要在场接住
+
+export type RequestState =
+  | "open"      // 还没到期
+  | "done"      // 做到了
+  | "failed"    // 到期没做到：说好的事没做
+  | "declined"  // 当场回绝的（比晾着到期体面一点）
+  | "void";     // 条件作废（约的人根本没来）：不算做也不算失约
+
+/** 一条委托随档走：文案是生成那一刻写死的，界面只念不拼。 */
+export type WorldRequest = {
+  id: string;
+  kind: RequestKind;
+  /** 谁提的 */
+  by: PersonId;
+  /** 哪天提的 */
+  day: number;
+  /** 期限：这一天打烊时结算；当天是 day，第二天是 day+1 */
+  due: number;
+  /** 目标人：keep / rebook 要接住的那位，pair-mediator 要劝和的对象 */
+  target?: PersonId;
+  /** 件数：quota 要卖的件数、samples 要借的支数 */
+  n?: number;
+  /** pair 的事由 */
+  goal?: "introduce" | "mediate";
+  state: RequestState;
+  /** 要什么 */
+  text: string;
+  /** 做到了有什么 */
+  reward: string;
+};
+
 export type World = {
   seed: string;
   /** 第几季：从 1 起，nextSeason +1。旧存档缺这个字段按 1 读。 */
@@ -132,6 +173,8 @@ export type World = {
   rngCalls: number;
   /** 被效果排定的来访："第几天 第几时段 谁来，带谁"；reason 记她为什么来（退货要退款） */
   appointments: Array<{ day: number; slot: Slot; person: PersonId; bring?: PersonId[]; reason?: "visit" | "refund" | "wechat"; amount?: number }>;
+  /** 每日委托：开门那阵在场或熟悉的人提的请求；旧存档缺字段按空读 */
+  requests: WorldRequest[];
   /** 故事碎片的使用记录：id -> 最近一次触发的天 */
   fired: Record<string, number>;
   log: LogEntry[];

@@ -10,9 +10,10 @@ import {
 } from "../campaign.ts";
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
+import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
-  Storylet, Verb, Visits, World, Zone,
+  Storylet, Verb, Visits, World, WorldRequest, Zone,
 } from "./types.ts";
 import { PLAYER } from "./types.ts";
 import { ta } from "./pronoun.ts";
@@ -212,7 +213,7 @@ export function newWorld(seed: string, _people: Person[]): World {
     standing: START_STANDING, compliance: START_COMPLIANCE,
     energy: ENERGY_PER_DAY, samples: START_SAMPLES,
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
-    present: {}, touched: [], rngCalls: 0, appointments: [], fired: {}, log: [],
+    present: {}, touched: [], rngCalls: 0, appointments: [], requests: [], fired: {}, log: [],
   };
 }
 
@@ -414,6 +415,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
         const amount = PRODUCTS[product].price;
         w = { ...w, money: w.money + amount };
         w = setQuality(w, `bought:${ap.person}`, w.day);
+        w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
         w = remember(w, ap.person, "came-back-bought", 1);
         w = say(w, `${person.name}回来又带了一支${PRODUCTS[product].name}，进账 ¥${amount}。`, [ap.person]);
       }
@@ -476,6 +478,10 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   w = { ...w, present };
 
+  // 在场的人盖"今天来过"的章：委托判定（她来没来）与别的按天算的事都读它。
+  for (const person of people)
+    if (person.role === "customer" && person.id in present) w = setQuality(w, seenKey(person.id), w.day);
+
   // 秘密揭开：reveal 条件满足（多数是她对你够熟了）且她本人在场时，记成 quality。
   for (const person of people) {
     if (!person.secret || !(person.id in present) || qualityOf(w, `secret-known:${person.id}`)) continue;
@@ -484,6 +490,9 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       w = say(w, `你听说了${person.name}的事：${person.secret.text}`, [person.id]);
     }
   }
+
+  // 开门第一件事：今天谁托你做什么（每天一次，slot 0 落定之后）。
+  if (w.slot === 0) w = openDay(w, people);
   return w;
 }
 
@@ -830,6 +839,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
           w = { ...w, money: w.money + amount };
           w = setQuality(w, gate, 1);
           w = setQuality(w, `bought:${b.id}`, w.day);
+          w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
           w = say(w, `你请${a.name}照看${b.name}，${ta(a)}替你开出了一支${PRODUCTS[product].name}，进账 ¥${amount}。`, targets);
           return w;
         }
@@ -935,6 +945,7 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
       w = say(w, `你硬是把${PRODUCTS[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，${ta(person)}认了。`, [personId]);
     }
     w = setQuality(w, `bought:${personId}`, w.day);
+    w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + sold);
     return witnessed(w, people, [personId], "hard-sell", -2);
   }
 
@@ -947,6 +958,7 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
   const amount = price * wanted;
   w = { ...w, money: w.money + amount, standing: clamp(w.standing + 1, 0, 100) };
   w = setQuality(w, `bought:${personId}`, w.day);
+  w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + wanted);
   if (tier === "positive") {
     w = addOpinion(w, personId, SERVE_GOOD_OPINION);
     w = remember(w, personId, "honest-advice", 2);
@@ -968,6 +980,9 @@ export const STANDING_DRIFT_RATE = 0.1;
 export function endDay(world: World, people: Person[]): World {
   let w = world;
   w = { ...w, standing: Math.round(w.standing + (START_STANDING - w.standing) * STANDING_DRIFT_RATE) };
+  // 到期的委托在今夜结账：做到了的记人情，失约的记"说好的事没做" ——
+  // 放在传话快照之前，这条坏话今晚就能被带出去。
+  w = settleRequests(w, people);
   const mems = w.memories; // 今晚读的记忆快照：夜里讲出去的话不当晚再传。
   const nightPairs: Array<[Person, Person]> = [];
   for (const a of people) for (const b of people) {
@@ -1060,7 +1075,7 @@ export function nextSeason(world: World, people: Person[]): World {
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
     qualities, present: {}, touched: [], rngCalls: world.rngCalls,
-    appointments: [], fired: {},
+    appointments: [], requests: [], fired: {},
     log: [{ day: 1, slot: 0, text: `第 ${season} 季开始。` }],
   };
 }
@@ -1136,11 +1151,21 @@ export function parseWorld(data: unknown): World | null {
     && ((a as { bring?: string[] }).bring === undefined || isStrArray((a as { bring?: string[] }).bring))
     && ((a as { reason?: string }).reason === undefined || ["visit", "refund", "wechat"].includes((a as { reason?: string }).reason!))
     && ((a as { amount?: number }).amount === undefined || isNum((a as { amount?: number }).amount)))) return null;
+  if (w.requests !== undefined && !(Array.isArray(w.requests) && w.requests.every((r: unknown) => isRecord(r)
+    && isStr((r as WorldRequest).id) && ["quota", "keep", "samples", "pair", "clean", "rebook"].includes((r as WorldRequest).kind)
+    && isStr((r as WorldRequest).by) && isInt((r as WorldRequest).day) && (r as WorldRequest).day >= 1
+    && isInt((r as WorldRequest).due) && (r as WorldRequest).due >= (r as WorldRequest).day
+    && ((r as WorldRequest).target === undefined || isStr((r as WorldRequest).target))
+    && ((r as WorldRequest).n === undefined || isInt((r as WorldRequest).n))
+    && ((r as WorldRequest).goal === undefined || ["introduce", "mediate"].includes((r as WorldRequest).goal!))
+    && ["open", "done", "failed", "declined", "void"].includes((r as WorldRequest).state)
+    && isStr((r as WorldRequest).text) && isStr((r as WorldRequest).reward)))) return null;
   if (!Array.isArray(w.log) || !w.log.every((l: unknown) => isRecord(l)
     && isInt((l as LogEntry).day) && isInt((l as LogEntry).slot) && isStr((l as LogEntry).text)
     && ((l as LogEntry).who === undefined || isStrArray((l as LogEntry).who)))) return null;
   const world = w as unknown as World;
   world.bondKinds ??= {};
+  world.requests ??= []; // 旧存档没有委托：按今天没人提读
   world.season ??= 1; // 旧存档没有这个字段：那是第一季写的
   return world;
 }
