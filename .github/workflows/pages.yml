@@ -27,10 +27,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # 桌面沙盘在 /last-order/，手机 PWA（含 ?mode=run/blitz/match/duel）在 /last-order/m/。
       - run: npm run build
         env:
           VITE_BASE: /last-order/
+      - run: npm ci && npm run build
+        working-directory: dynamic-counter-prototype
+        env:
+          VITE_BASE: /last-order/m/
       - run: cp dist/index.html dist/404.html
+      # 把手机版产物挪进根 dist 的 m/ 子目录一起上传；m/404.html 兜底深链刷新。
+      - run: mkdir -p dist/m && cp -r dynamic-counter-prototype/dist/client/. dist/m/ && cp dynamic-counter-prototype/dist/client/index.html dist/m/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

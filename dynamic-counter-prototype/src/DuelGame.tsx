@@ -14,6 +14,7 @@ import {
   duelClose, duelForce, duelLook, duelMulligan, duelPlay, duelSendAway, duelTrial, duelTriggerRival,
   duelUnlockedBundles, startDuel, type DuelCard, type DuelSide, type DuelState,
 } from "./duel";
+import { asset } from "./base";
 import { sfx, sfxMute, sfxMuted } from "./sfx";
 import "./duel.css";
 
@@ -276,7 +277,7 @@ export default function DuelGame() {
       <p className="duel-copy">{story.brief}</p>
       {need > 0 && <p className="duel-ledger-line">昨天收工的线是 {yuan(need)}，你账上 {yuan(campaign.sales)}。</p>}
       <ul className="duel-notices">{notices.map((note, i) => <li key={i}><b>{note.speaker}</b><span>{note.body}</span></li>)}</ul>
-      <div className="duel-brief-stage"><img src="/assets/game/counter-stage-toy.png" alt="" aria-hidden="true" draggable={false} /><i>绮光专柜 · 早班</i></div>
+      <div className="duel-brief-stage"><img src={asset("/assets/game/counter-stage-toy.png")} alt="" aria-hidden="true" draggable={false} /><i>绮光专柜 · 早班</i></div>
     </main></MobileScroll>
       <footer className="duel-page-foot"><button className="duel-primary" type="button" onClick={() => { setCampaign(state => openFloorState(state)); setScreen("floor"); }}>开始营业</button></footer>
     </div>;
@@ -291,7 +292,7 @@ export default function DuelGame() {
           <p className="duel-ledger-line">{campaign.sales < TARGET ? `五日目标还差 ${yuan(TARGET - campaign.sales)}` : `五日 ${yuan(TARGET)} 已经做到`}</p>
         </header>
         <div className="duel-stage">
-          <img className="duel-stage-bg" src="/assets/game/counter-stage-toy.png" alt="" aria-hidden="true" draggable={false} />
+          <img className="duel-stage-bg" src={asset("/assets/game/counter-stage-toy.png")} alt="" aria-hidden="true" draggable={false} />
           <div className="duel-stage-row">
             {available.map(id => {
               const her = CUSTOMERS[id];
@@ -455,7 +456,7 @@ export default function DuelGame() {
   if (screen === "event") {
     const event = dayEvent(campaign);
     const shownChoices = visibleChoices(campaign, event);
-    const speakerImg = event.speakerStaff ? `/assets/game/staff-portraits/${event.speakerStaff}.png`
+    const speakerImg = event.speakerStaff ? asset(`/assets/game/staff-portraits/${event.speakerStaff}.png`)
       : event.speakerCustomer ? CUSTOMERS[event.speakerCustomer].portrait : null;
     return <div className="duel-page"><MobileScroll className="duel-scroll"><main className="duel-event">
       <p className="duel-eyebrow">闭店后 · {event.speaker}</p>
@@ -476,7 +477,7 @@ export default function DuelGame() {
     const tomorrow = campaign.day < 5 ? progressTarget(campaign.day + 1) : null;
     return <MobileScroll className="app-screen duel-scroll"><main className="duel-summary">
       <p className="duel-eyebrow">DAY {campaign.day} · 今日结束</p>
-      <div className="duel-speaker"><img src="/assets/game/staff-portraits/xuyuan.png" alt="" aria-hidden="true" draggable={false} /><b>许愿 · 收工</b></div>
+      <div className="duel-speaker"><img src={asset("/assets/game/staff-portraits/xuyuan.png")} alt="" aria-hidden="true" draggable={false} /><b>许愿 · 收工</b></div>
       <h1>今日流水 {yuan(campaign.daySales)}</h1>
       {tomorrow !== null && <p className="duel-ledger-line">明天收工前累计要到 {yuan(tomorrow)}，你账上 {yuan(campaign.sales)}。</p>}
       <section className="duel-ledger receipt"><b>今天留下的事</b>{todayHistory(campaign).map(item => <p key={item.text}>{item.text}</p>)}</section>

@@ -20,6 +20,7 @@ import {
   startMatch, type MatchState,
 } from "./match.ts";
 import { sfx, sfxMute, sfxMuted } from "./sfx";
+import { asset } from "./base";
 import "./match.css";
 
 type MatchScreen = "floor" | "duel" | "result" | "walked" | "summary";
@@ -235,9 +236,9 @@ export default function MatchGame() {
           <h1>同一片客流，谁先接住是谁的</h1>
         </header>
         <div className="duel-stage match-stage">
-          <img className="duel-stage-bg" src="/assets/game/counter-stage-toy.png" alt="" aria-hidden="true" draggable={false} />
+          <img className="duel-stage-bg" src={asset("/assets/game/counter-stage-toy.png")} alt="" aria-hidden="true" draggable={false} />
           <div className="match-rival" aria-live="polite">
-            <img src="/assets/game/staff-portraits/luyao.png" alt="" aria-hidden="true" draggable={false} />
+            <img src={asset("/assets/game/staff-portraits/luyao.png")} alt="" aria-hidden="true" draggable={false} />
             <div className="match-rival-info">
               <b>陆遥</b>
               <span>{rivalLine}</span>

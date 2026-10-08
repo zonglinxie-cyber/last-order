@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KeyboardInput, MobileScroll, useKeyboard, useKeyboardInsets, useMobileDevice } from "./mobile";
 import {
   addMember, advanceFloorTime, applyQuestion, applyRival, applyTouch, BUNDLES, BUNDLE_MINUTE_HINT, bundleMinutesWord, canAddMember, canCheckCounter, canLeaveSample, canPullOver, canTransferVia, CHECK_COUNTER_NOTE, checkCounter, checkCounterLabel, complianceWord, COMPLIANCE_RISK, consultationRecord, counterVerdict, CUSTOMERS, dayEvent, dawnNotices, demandBudgetWord, ENERGY_LOCK, endingTitle, energyWord, evidenceWord, EXPIRED_SAMPLING,
@@ -8,10 +8,13 @@ import {
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
-import DuelGame from "./DuelGame";
-import RunGame from "./RunGame";
-import MatchGame from "./MatchGame";
-import BlitzGame from "./BlitzGame";
+// 四个玩法各打各的 chunk：576KB 主包大部分是接待层的共享代码 + 玩法屏，按需拆开后
+// 进五日剧情只带 ClassicPrototype 一份，进 ?mode=* 才下载对应那一块。
+const DuelGame = lazy(() => import("./DuelGame"));
+const RunGame = lazy(() => import("./RunGame"));
+const MatchGame = lazy(() => import("./MatchGame"));
+const BlitzGame = lazy(() => import("./BlitzGame"));
+import { asset } from "./base";
 import {
   customerAction, customerHome, customerMood, customerSpeech, defaultFocus, formatClock,
   isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffSpeech,
@@ -23,12 +26,12 @@ type Screen = "intro" | "brief" | "floor" | "consultation" | "result" | "event" 
 type CharacterVisual = { name: string; role: string; sheet: "player" | "rival" | "manager"; portrait?: string };
 
 const STAFF: Record<StaffKey, CharacterVisual> = {
-  player: { name: "许愿", role: "试用期柜姐", sheet: "player", portrait: "/assets/game/staff-portraits/xuyuan.png" },
-  luyao: { name: "陆遥", role: "竞品销冠", sheet: "rival", portrait: "/assets/game/staff-portraits/luyao.png" },
-  roman: { name: "罗曼", role: "柜长", sheet: "manager", portrait: "/assets/game/staff-portraits/roman.png" },
-  suman: { name: "苏蔓", role: "资深柜姐", sheet: "player", portrait: "/assets/game/staff-portraits/suman.png" },
-  tangke: { name: "唐可", role: "同期新人", sheet: "rival", portrait: "/assets/game/staff-portraits/tangke.png" },
-  fangmin: { name: "方敏", role: "合规负责人", sheet: "manager", portrait: "/assets/game/staff-portraits/fangmin.png" },
+  player: { name: "许愿", role: "试用期柜姐", sheet: "player", portrait: asset("/assets/game/staff-portraits/xuyuan.png") },
+  luyao: { name: "陆遥", role: "竞品销冠", sheet: "rival", portrait: asset("/assets/game/staff-portraits/luyao.png") },
+  roman: { name: "罗曼", role: "柜长", sheet: "manager", portrait: asset("/assets/game/staff-portraits/roman.png") },
+  suman: { name: "苏蔓", role: "资深柜姐", sheet: "player", portrait: asset("/assets/game/staff-portraits/suman.png") },
+  tangke: { name: "唐可", role: "同期新人", sheet: "rival", portrait: asset("/assets/game/staff-portraits/tangke.png") },
+  fangmin: { name: "方敏", role: "合规负责人", sheet: "manager", portrait: asset("/assets/game/staff-portraits/fangmin.png") },
 };
 
 // 存档槽与周目（目标/排程/出入口）做成可注入的 meta：周目模式复用同一套接待与楼层，
@@ -396,7 +399,7 @@ export function ClassicPrototype(props: ClassicProps = {}) {
   const openFloor = () => setCampaign(s => openFloorState(s));
 
   if (screen === "intro") return <MobileScroll className="app-screen intro-scroll"><main className="intro-screen">
-    <img src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="intro-shade" /><div className="intro-brand"><span>AURORA · 绮光</span><b>{meta?.weekLabel ?? "新品活动周"}</b></div>
+    <img src={asset("/assets/game/counter-stage-toy.png")} alt="绮光专柜" /><div className="intro-shade" /><div className="intro-brand"><span>AURORA · 绮光</span><b>{meta?.weekLabel ?? "新品活动周"}</b></div>
     <section className="intro-copy"><p>美妆销售 · 人情博弈 · 五日章节</p><h1>最后一单</h1><h2>你是试用期柜姐许愿。<br />每一笔销售，都决定谁欠你、谁恨你、谁会回来。</h2>
       <div className="shift-brief"><span><small>{meta?.targetLabel ?? "五日销售目标"}</small><b>¥{weekTarget.toLocaleString("zh-CN")}</b></span><span><small>真正的考核</small><b>业绩与后果</b></span></div>
       <p className="intro-rule">观察面容、判断需求、守住订单。顾客会复购或退货，同事会记住你留下的每条记录。</p>
@@ -571,7 +574,7 @@ export function ClassicPrototype(props: ClassicProps = {}) {
       : null;
 
   return <MobileScroll className="app-screen stage-scroll"><main className="counter-game" aria-label={`${story.title}营业现场`}>
-    <img className="counter-background" src="/assets/game/counter-stage-toy.png" alt="绮光专柜" /><div className="stage-wash" />
+    <img className="counter-background" src={asset("/assets/game/counter-stage-toy.png")} alt="绮光专柜" /><div className="stage-wash" />
     <header className="game-hud">
       <div><span>DAY {campaign.day} · {story.title}</span><b>{formatClock(floorClock)}</b></div>
       <div className="target-mini"><span>距{meta?.targetLabel ?? "五日目标"}</span><b>¥{remaining.toLocaleString("zh-CN")}</b></div>
@@ -633,8 +636,8 @@ export function ClassicPrototype(props: ClassicProps = {}) {
 
 export default function Prototype() {
   const mode = new URLSearchParams(window.location.search).get("mode");
-  if (mode === "run") return <RunGame />;
-  if (mode === "match") return <MatchGame />;
-  if (mode === "blitz") return <BlitzGame />;
-  return mode === "duel" ? <DuelGame /> : <ClassicPrototype />;
+  if (mode === "run") return <Suspense fallback={null}><RunGame /></Suspense>;
+  if (mode === "match") return <Suspense fallback={null}><MatchGame /></Suspense>;
+  if (mode === "blitz") return <Suspense fallback={null}><BlitzGame /></Suspense>;
+  return mode === "duel" ? <Suspense fallback={null}><DuelGame /></Suspense> : <ClassicPrototype />;
 }
