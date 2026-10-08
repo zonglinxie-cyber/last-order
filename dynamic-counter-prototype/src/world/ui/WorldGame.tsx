@@ -3,7 +3,7 @@
 // 念 engine 写进 log 的句子；世界状态走 serializeWorld/parseWorld 落盘。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { MobileScroll } from "../../mobile";
-import { demandBudgetWord, PRODUCTS, TRAIT_LABELS, type Customer, type ProductId } from "../../campaign.ts";
+import { demandBudgetWord, PRODUCTS, type Customer, type ProductId } from "../../campaign.ts";
 import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
@@ -16,6 +16,7 @@ import { quarrelPairs } from "../exchanges.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
+import { SECRET_KNOWN_KEY, demandWords, serveTalk, unsaidWord } from "../serve-talk.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { Passersby } from "./Passersby.tsx";
@@ -254,6 +255,15 @@ export default function WorldGame() {
     [world, selected]);
   const verbs = selected ? availableVerbs(world, PEOPLE, [selected]) : [];
   const pairVerbs = TWO_TARGET.filter(v => calls.some(c => c.verb === v));
+  // 接待面板上她肯说出口的那几条，判定全在 serve-talk.ts；没说的那几条照样参与 fitScore。
+  const talk = serving && person?.skin
+    ? serveTalk(person.skin.demands, world.opinion[person.id] ?? 0, !!world.qualities[SECRET_KNOWN_KEY(person.id)], person.skin.veto)
+    : null;
+  const serveSaid = talk && person ? {
+    lines: talk.said.map(d => demandWords(person.id, d)).join("；"),
+    veto: talk.vetoNote,
+    hold: talk.unsaid > 0 ? unsaidWord(person.gender) : null,
+  } : null;
   const pickTargets = useMemo(() => {
     if (!pick || !selected) return [] as PersonId[];
     return [...new Set(pick.calls.map(c => c.targets.find(t => t !== selected)!))];
@@ -592,9 +602,12 @@ export default function WorldGame() {
           <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
         </div>
       </div> : serving && person.skin ? <div className="world-serve">
-        <p className="serve-said">{ta(person)}说过：{person.skin.demands.map(d => TRAIT_LABELS[d.trait]).join(" · ")}</p>
+        <p className="serve-said">{ta(person)}说过：{serveSaid?.lines}</p>
+        {serveSaid?.veto && <p className="serve-veto">{ta(person)}把底线也讲了出来：{serveSaid.veto}</p>}
+        {serveSaid?.hold && <p className="serve-hold">{serveSaid.hold}</p>}
         <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
         <div className="serve-products">{PRODUCT_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><i className={`product-art product-art-${pid}`} /><b>{PRODUCTS[pid].short}</b><small>{yuan(PRODUCTS[pid].price)}</small></button>)}</div>
+        <p className="serve-note">{serveProduct ? PRODUCTS[serveProduct].note : `先挑一支，这里会写它适合什么样的脸，对照${ta(person)}刚才说的`}</p>
         <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
         <div className="serve-actions">
           <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>

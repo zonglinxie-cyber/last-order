@@ -85,11 +85,26 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("button", { name: "查看梅女士" }).click();
       await page.getByRole("button", { name: /接待/ }).click();
       await expect(page.locator(".world-serve")).toBeVisible();
-      // 她说出口的需要 + 预算上限要摆出来。
+      // 她说出口的需要 + 预算上限要摆出来。看法 20 是"肯说两条"那一档（serve-talk.ts）。
       await expect(page.locator(".serve-said")).toContainText("干燥泛红");
+      await expect(page.locator(".serve-said")).toContainText("干燥泛红是我眼下最大的事，别拿厚东西糊我；温和点就行，我懒得闹脸");
+      // 没说出口的那条不报数、也不漏出来。
+      await expect(page.locator(".serve-hold")).toContainText("她像是还有顾虑，没说出来。");
+      await expect(page.locator(".serve-said")).not.toContainText("立竿见影");
+      // 挑一支货，下面那行念它的性子，给玩家对照她自己那句话。
       await page.getByRole("button", { name: /修护/ }).click();
+      await expect(page.locator(".serve-note")).toContainText("舒缓干燥与泛红");
       await page.getByRole("button", { name: "开给她" }).click();
       await expect(page.locator(".world-toast")).toContainText(/进账 ¥1,?680/);
+    });
+
+    test("看法低时她只肯说一句", async ({ page }) => {
+      await enter(page, envelope({ opinion: { mei: 3 } }));
+      await page.getByRole("button", { name: "查看梅女士" }).click();
+      await page.getByRole("button", { name: /接待/ }).click();
+      await expect(page.locator(".serve-said")).toHaveText("她说过：干燥泛红是我眼下最大的事，别拿厚东西糊我");
+      await expect(page.locator(".serve-hold")).toContainText("她像是还有顾虑，没说出来。");
+      await expect(page.locator(".serve-said")).not.toContainText("温和点就行");
     });
 
     test("说书人抽到卡能选，结果念一句", async ({ page }) => {
