@@ -1,0 +1,214 @@
+/* 话术牌局（?mode=duel）样式。正文字号 ≥12px，可点控件 ≥44px。
+   设备状态条叠在内容上面（与 prototype.css 同一约定）：每个屏的第一行都让开 --top-inset。
+   脸上热区由 JS 按 853×1844 图片坐标换算成容器像素，这里的 .duel-cue 只管外观。 */
+
+.duel-page, .duel-screen { --top-inset:calc(54px + env(safe-area-inset-top)); }
+
+.duel-page { position:absolute; inset:0; display:flex; flex-direction:column; background:#161012; }
+/* MobileScroll 默认 absolute inset:0：带固定脚的屏要把它退回普通 flex 子项，否则它盖住脚部。 */
+.duel-page .duel-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.duel-page-foot { padding:10px 14px calc(10px + var(--mobile-safe-area-height, 0px)); background:#161012; border-top:1px solid #ffffff14; }
+.duel-mute-row { display:flex; justify-content:flex-end; }
+
+.duel-intro, .duel-brief, .duel-floor, .duel-event, .duel-summary, .duel-finale, .duel-result {
+  display:flex; flex-direction:column; gap:10px; padding:calc(18px + var(--top-inset)) 16px 24px; color:#efe3d0; font-family:'Noto Serif SC', serif;
+}
+.duel-floor { padding:0; gap:0; }
+.duel-eyebrow { margin:0; color:#c9a25e; font-size:12px; letter-spacing:.12em; }
+.duel-intro h1, .duel-brief h1, .duel-floor h1, .duel-event h1, .duel-summary h1, .duel-finale h1, .duel-result h1 {
+  margin:0; font-size:22px; font-weight:700; color:#f6e7c8;
+}
+.duel-subtitle { margin:0; color:#b3a08c; font-size:13px; }
+.duel-copy { margin:0; color:#d8c6b0; font-size:13px; line-height:1.65; }
+.duel-ledger-line { margin:0; padding:8px 10px; border-left:2px solid #b47b43; background:#f1cf8610; color:#efd9ae; font-size:12px; line-height:1.5; }
+.duel-notices { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+.duel-notices li { padding:10px 12px; border:1px solid #ffffff14; border-radius:12px; background:#ffffff08; }
+.duel-notices b { display:block; color:#e8c98c; font-size:12px; margin-bottom:3px; }
+.duel-notices span { color:#d8c6b0; font-size:12px; line-height:1.55; }
+
+.duel-primary { width:100%; min-height:46px; border:0; border-radius:12px; background:linear-gradient(135deg,#f1cf86,#b47b43); color:#2a170f; font:700 14px 'Noto Serif SC', serif; box-shadow:0 8px 18px #0005,inset 0 1px #fff4ca; }
+.duel-primary:disabled { background:#584740; color:#96857c; box-shadow:none; }
+.duel-ghost-btn { min-height:44px; padding:0 14px; border:1px solid #dcbd7a55; border-radius:12px; background:#ffffff08; color:#dcc8b2; font:600 12px 'Noto Serif SC', serif; }
+.duel-ghost-btn:disabled { opacity:.45; }
+.duel-ghost-btn.danger { border-color:#d8756d61; color:#e5a595; }
+
+/* ---------- 地板：柜台画当舞台，等的人站上来，耐心是小心形 ---------- */
+.duel-floor-page { overflow:hidden; }
+.duel-floor { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.duel-floor-head { display:flex; flex-direction:column; gap:8px; padding:calc(14px + var(--top-inset)) 16px 12px; }
+.duel-floor-head h1 { margin:0; font-size:19px; font-weight:700; color:#f6e7c8; }
+.duel-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; border-top:1px solid #ffffff14; }
+.duel-stage-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 30%; }
+.duel-stage::after { content:''; position:absolute; inset:0; background:linear-gradient(#16101266,#16101200 30%,#161012cc 96%); }
+.duel-stage-row { position:absolute; z-index:2; left:0; right:0; bottom:10px; display:flex; justify-content:center; align-items:flex-end; gap:18px; padding:0 12px; }
+.duel-stander { display:flex; flex-direction:column; align-items:center; gap:0; padding:0; border:0; background:transparent; }
+.duel-stander img { width:118px; height:150px; object-fit:cover; object-position:50% 10%; border-radius:60px 60px 10px 10px; box-shadow:0 10px 24px #000a; }
+.duel-stander:disabled img { filter:grayscale(.6) brightness(.7); }
+.duel-stander-tag { display:flex; flex-direction:column; align-items:center; gap:2px; margin-top:-14px; padding:7px 12px; border:1px solid #f1cf8655; border-radius:12px; background:#171010e8; box-shadow:0 6px 16px #0008; }
+.duel-stander-tag b { font-size:13px; color:#f6e7c8; }
+.duel-stander-tag em { font-style:normal; font-size:12px; color:#b3a08c; max-width:130px; }
+.duel-stander.low .duel-stander-tag em { color:#e5a595; }
+.duel-hearts { display:flex; gap:4px; }
+.duel-hearts i { font-style:normal; font-size:12px; line-height:1; color:#3a2e2c; }
+.duel-hearts i::before { content:'♥'; }
+.duel-hearts i.on { color:#e6a2b0; text-shadow:0 0 6px #e6a2b055; }
+.duel-stander.low .duel-hearts i.on { color:#d8584e; animation:duelHeart .5s ease-in-out infinite alternate; }
+@keyframes duelHeart { from { transform:scale(1) translateX(0); } to { transform:scale(1.12) translateX(.5px); } }
+
+/* ---------- 对局屏：固定布局，不进 MobileScroll ---------- */
+.duel-screen { position:absolute; inset:0; display:flex; flex-direction:column; background:#161012; color:#efe3d0; font-family:'Noto Serif SC', serif; overflow:hidden; }
+.duel-top { display:flex; align-items:center; gap:8px; min-height:44px; padding:calc(4px + var(--top-inset)) 12px 4px; border-bottom:1px solid #ffffff12; }
+.duel-top b { font-size:14px; color:#f6e7c8; }
+.duel-top span { flex:1; min-width:0; font-size:12px; color:#b3a08c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.duel-rounds { display:flex; gap:4px; }
+.duel-rounds em { width:8px; height:8px; border-radius:50%; background:#e6b969; box-shadow:0 0 6px #e6b96955; }
+.duel-rounds em.used { background:#3a2e2c; box-shadow:none; }
+.duel-mute { min-width:44px; min-height:44px; border:0; border-radius:10px; background:transparent; color:#c9a25e; font:600 12px 'Noto Serif SC', serif; }
+
+/* 刻度标签挂在轨道下方：要给它们留出真实高度，否则被脸框盖住。 */
+.duel-interest { padding:6px 14px 20px; }
+.duel-track { position:relative; height:16px; border-radius:9px; background:#2a2023; box-shadow:inset 0 1px 3px #0009; }
+.duel-fill { height:100%; border-radius:9px; background:linear-gradient(90deg,#8a5b2e,#f1cf86); transition:width .35s ease; }
+.duel-tick { position:absolute; top:-3px; bottom:-3px; width:2px; background:#ffffff30; }
+.duel-tick.on { background:#f1cf86; }
+.duel-tick u { position:absolute; top:18px; left:50%; transform:translateX(-50%); text-decoration:none; font-size:12px; color:#b3a08c; white-space:nowrap; }
+.duel-tick.on u { color:#f1cf86; }
+.duel-float { position:absolute; right:0; top:-4px; font-size:13px; font-weight:700; animation:duelFloat 1.1s ease forwards; pointer-events:none; }
+.duel-float.up { color:#ffd98a; }
+.duel-float.down { color:#e58f84; }
+@keyframes duelFloat { 0% { opacity:0; transform:translateY(6px); } 20% { opacity:1; } 100% { opacity:0; transform:translateY(-16px); } }
+
+.duel-face { position:relative; flex:1 1 auto; min-height:170px; margin:2px 10px 0; border-radius:16px; overflow:hidden; background:#241a1d; }
+/* 取景锚在脸中段（眼下/鼻翼/脸颊之间），任何高度下五官都在框内；点位像素由 JS 按同一锚点换算。 */
+.duel-portrait { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 41%; }
+.duel-half { position:absolute; top:0; bottom:0; width:50%; border:0; padding:0; overflow:hidden; background:transparent; }
+.duel-half.left { left:0; }
+.duel-half.right { right:0; }
+.duel-half img { position:absolute; top:0; width:200%; height:100%; object-fit:cover; object-position:50% 41%; max-width:none; }
+.duel-half.left img { left:0; }
+.duel-half.right img { right:0; }
+.duel-face.armed .duel-half, .duel-face.dragging .duel-half { box-shadow:inset 0 0 0 1px #f1cf8640; }
+.duel-half.droppable { box-shadow:inset 0 0 0 2px #f1cf86aa !important; background:#f1cf8612; }
+/* 两半脸的程序化差分：按产品方向加不同滤镜，negative 叠一层淡红颗粒。 */
+.half-soft.half-positive img { filter:blur(.7px) brightness(1.07) saturate(.92); }
+.half-glow.half-positive img { filter:contrast(1.1) brightness(.97) saturate(1.08); }
+.half-repair.half-positive img { filter:saturate(.72) brightness(1.03); }
+.half-soft.half-mixed img { filter:blur(.4px) brightness(1.03); }
+.half-glow.half-mixed img { filter:contrast(1.05) brightness(.99); }
+.half-repair.half-mixed img { filter:saturate(.86); }
+.half-negative img { filter:saturate(.45) contrast(.92) sepia(.18) hue-rotate(-18deg); }
+.half-negative::after { content:''; position:absolute; inset:0; background:rgba(150,42,38,.2) repeating-linear-gradient(45deg,#0000 0 2px,#00000014 2px 4px); }
+.duel-split { position:absolute; top:6%; bottom:6%; width:1px; background:linear-gradient(#f1cf8600,#f1cf8670,#f1cf8600); pointer-events:none; }
+.duel-cue { position:absolute; z-index:26; display:grid; width:44px; height:44px; place-items:center; border:0; border-radius:50%; background:#f5d08f18; box-shadow:0 0 0 1px #ffe2a9b8,0 0 20px #ffd77e66; transform:translate(-50%,-50%); animation:cuePulse 2s ease-in-out infinite; }
+.duel-cue[data-cue="cheek"] { animation-delay:-.6s; }
+.duel-cue[data-cue="nose"] { animation-delay:-1.2s; }
+.duel-cue:disabled { animation:none; opacity:.4; }
+.duel-cue i { width:7px; height:7px; border:1px solid #fff1cf; border-radius:50%; background:#e6b969; box-shadow:0 0 0 4px #e6b96930; }
+.duel-cue.found { opacity:.45; animation:none; }
+.duel-bubble { position:absolute; left:10px; right:10px; top:8px; z-index:28; padding:8px 12px; border-radius:12px; background:#100a0ccc; color:#f3e6cd; font-size:13px; line-height:1.5; animation:duelBubble .3s ease; }
+@keyframes duelBubble { from { opacity:0; transform:translateY(-4px); } }
+.duel-traits { position:absolute; left:10px; right:10px; bottom:8px; z-index:28; display:flex; flex-wrap:wrap; gap:5px; }
+.duel-traits span { padding:3px 8px; border-radius:8px; background:#f1cf8622; border:1px solid #f1cf8655; color:#f3d797; font-size:12px; }
+.duel-traits span.unknown { background:#ffffff10; border-color:#ffffff2a; color:#9b8d80; }
+
+.duel-tray { display:flex; align-items:center; gap:10px; padding:8px 14px 0; }
+.duel-product { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:64px; min-height:64px; padding:6px 8px; border:1px solid #dcbd7a44; border-radius:12px; background:#22191b; touch-action:none; cursor:grab; }
+.duel-product.used { opacity:.35; }
+.duel-product.armed { border-color:#f1cf86; box-shadow:0 0 0 2px #f1cf8644; }
+.duel-product b { font-size:12px; color:#e8d5b4; }
+.duel-tray-hint { margin:0; margin-left:auto; font-size:12px; color:#9b8d80; }
+.duel-ghost { position:fixed; z-index:99; width:56px; height:56px; margin:-28px 0 0 -28px; display:grid; place-items:center; border-radius:50%; background:#22191bcc; box-shadow:0 8px 20px #0008; pointer-events:none; transform:scale(1.15); }
+
+.duel-hand { display:flex; justify-content:center; align-items:flex-end; gap:8px; padding:6px 12px 4px; }
+/* 第 5 张牌（讲透这一支）进来后放不下整排：收成重叠扇形，不横向滚动也不被裁。 */
+.duel-hand.tight { gap:0; }
+.duel-hand.tight .duel-card { width:64px; }
+.duel-hand.tight .duel-card + .duel-card { margin-left:-18px; }
+.duel-hand.tight .duel-card:first-child { margin-left:0; }
+.duel-hand.rival { background:#3a1d1f66; border-radius:12px; margin:0 10px; }
+.duel-card { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:3px; width:72px; min-height:88px; padding:8px 6px; border:1px solid #dcbd7a55; border-radius:10px; background:linear-gradient(180deg,#2c2124,#211719); color:#efe3d0; box-shadow:0 4px 10px #0006; }
+.duel-card:nth-child(odd) { transform:rotate(-2deg); }
+.duel-card:nth-child(even) { transform:rotate(2deg); }
+.duel-card i { font-style:normal; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:#f1cf8622; color:#e8c98c; font-size:12px; }
+.duel-card b { font-size:12px; line-height:1.3; text-align:center; color:#f0e2c9; word-break:break-all; }
+.duel-card small { font-size:12px; color:#c9a25e; }
+.duel-card.kind-overpromise { border-color:#d8756d55; }
+.duel-card.kind-overpromise i { background:#d8756d22; color:#e5a595; }
+.duel-card.kind-rival { border-color:#e5a595aa; background:linear-gradient(180deg,#3a2224,#2a1719); }
+.duel-card:disabled { opacity:.4; }
+.duel-rival-note { margin:2px 14px; padding:6px 10px; border-radius:8px; background:#d8756d1f; color:#e5a595; font-size:12px; text-align:center; }
+.duel-rival-note.lastcall-note { background:#f1cf8618; color:#f3d797; }
+
+.duel-foot { padding:6px 14px calc(10px + var(--mobile-safe-area-height, 0px)); }
+.duel-bundles { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+.duel-bundle { min-height:48px; padding:4px 2px; border:1px solid #ffffff1a; border-radius:10px; background:#ffffff06; color:#9b8d80; }
+.duel-bundle b { display:block; font-size:12px; color:inherit; }
+.duel-bundle small { font-size:12px; color:#8b7d70; }
+.duel-bundle.open { border-color:#f1cf86aa; background:#f1cf8614; color:#f3d797; }
+.duel-bundle.open small { color:#d8bc85; }
+.duel-buttons { display:grid; grid-template-columns:1.3fr 1fr .7fr; gap:8px; }
+.duel-buttons .duel-close { min-height:48px; }
+.duel-buttons .duel-ghost-btn { padding:0 6px; }
+.duel-foot-hint { margin:6px 0 0; font-size:12px; color:#9b8d80; text-align:center; }
+
+.duel-guide { position:absolute; left:50%; bottom:210px; transform:translateX(-50%); z-index:60; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:#100a0cee; border:1px solid #f1cf8677; box-shadow:0 8px 24px #000a; }
+.duel-guide p { margin:0; font-size:13px; color:#f6e7c8; }
+.duel-guide button { min-height:36px; padding:0 10px; border:1px solid #dcbd7a55; border-radius:8px; background:transparent; color:#c9a25e; font-size:12px; }
+
+/* ---------- 结果 / 事件 / 账单 / 结局 ---------- */
+.duel-result { min-height:70%; align-items:center; text-align:center; }
+.duel-result .duel-eyebrow { align-self:flex-start; }
+.duel-result-face { width:100%; height:32vh; min-height:200px; border-radius:16px; overflow:hidden; box-shadow:0 12px 30px #0009; }
+.duel-result-face img { width:100%; height:100%; object-fit:cover; object-position:50% 28%; }
+.duel-result.good .duel-result-face img { filter:brightness(1.08) saturate(1.05); transform:scale(1.04); }
+.duel-result.walked .duel-result-face img { filter:grayscale(.85) brightness(.75); }
+.duel-result.walked h1 { color:#9b8d80; }
+.duel-result.walked .duel-primary { background:#584740; color:#d8c6b0; box-shadow:none; }
+.duel-result-line { display:flex; align-items:center; justify-content:center; gap:10px; }
+.duel-result-line .product-art { width:48px; height:50px; background-size:157px 124px; }
+.duel-result-line .product-art-soft { background-position:1px 0; }
+.duel-result-line .product-art-glow { background-position:-53px 0; }
+.duel-result-line .product-art-repair { background-position:-106px 0; }
+.duel-result-line b { font-size:14px; color:#f0e2c9; }
+.duel-seal { padding:5px 14px; border:2px solid #b44a3e; border-radius:8px; color:#e58f84; font-size:14px; font-weight:700; transform:rotate(-6deg); }
+.duel-seal.stamp { border-color:#b47b43; color:#f1cf86; animation:duelStamp .45s cubic-bezier(.2,2.4,.4,1); }
+@keyframes duelStamp { 0% { transform:rotate(-6deg) scale(2.2); opacity:0; } 100% { transform:rotate(-6deg) scale(1); opacity:1; } }
+.duel-amount { font-size:30px; color:#f1cf86; }
+.duel-result.bad .duel-amount { color:#9b8d80; }
+/* 说话人头像条：闭店事件的员工 / 账单屏收工的许愿。 */
+.duel-speaker { display:flex; align-items:center; gap:10px; align-self:flex-start; padding:5px 14px 5px 5px; border:1px solid #efb87936; border-radius:40px; background:#140b0bc4; }
+.duel-speaker img { width:44px; height:44px; border-radius:50%; object-fit:cover; object-position:50% 20%; }
+.duel-speaker b { font-size:13px; color:#ffe1aa; }
+/* 晨会下半屏的柜台画横幅。 */
+.duel-brief-stage { position:relative; margin-top:auto; min-height:130px; border-radius:14px; overflow:hidden; }
+.duel-brief-stage img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 62%; }
+.duel-brief-stage i { position:absolute; left:12px; bottom:10px; font-style:normal; font-size:12px; color:#ffe1aa; text-shadow:0 1px 6px #000; }
+/* 小票式流水：虚线边 + 等宽感。 */
+.duel-ledger.receipt { border-style:dashed; border-radius:4px; background:#f6ecd80a; font-variant-numeric:tabular-nums; }
+.duel-event-choices { display:flex; flex-direction:column; gap:8px; }
+.duel-choice { display:flex; flex-direction:column; gap:3px; min-height:44px; padding:10px 12px; border:1px solid #ffffff1a; border-radius:12px; background:#ffffff08; color:#efe3d0; text-align:left; }
+.duel-choice b { font-size:13px; color:#f0dfb8; }
+.duel-choice span { font-size:12px; color:#b3a08c; line-height:1.45; }
+.duel-event-result b { color:#e8c98c; font-size:13px; }
+.duel-ledger { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border:1px solid #ffffff14; border-radius:12px; background:#ffffff06; }
+.duel-ledger>b, .duel-ledger div>b { font-size:12px; color:#e8c98c; }
+.duel-ledger p { margin:0; font-size:12px; color:#cbb99f; line-height:1.5; }
+.duel-ledger div { margin-top:6px; display:flex; flex-direction:column; gap:4px; }
+.duel-compliance { margin:0; font-size:12px; color:#cbb99f; }
+.duel-compliance.at-risk { color:#e58f84; }
+.duel-final-score { display:flex; align-items:baseline; gap:10px; }
+.duel-final-score span { font-size:12px; color:#b3a08c; }
+.duel-final-score b { font-size:28px; color:#f1cf86; }
+.duel-final-score small { font-size:12px; color:#9b8d80; }
+
+/* 矮屏（320×568）收一格：脸让给牌和按钮。 */
+@media (max-height: 640px) {
+  .duel-top { min-height:40px; padding:2px 10px; }
+  .duel-bubble { font-size:12px; padding:6px 10px; }
+  .duel-card { width:64px; min-height:76px; }
+  .duel-hand { padding-top:2px; }
+  .duel-tray { padding-top:4px; }
+  .duel-product { min-height:56px; min-width:56px; }
+  .duel-face { min-height:140px; margin-top:2px; }
+  .duel-foot { padding-top:2px; }
+}

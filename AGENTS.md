@@ -28,4 +28,5 @@
 - 当前主入口的自由输入由本地剧本规则回答。手机版保留可选本地模型代理，未真实验证模型前不能称为 AI 已接通。测试用 scripted 模式，不消耗用户的外部 API。
 - 本机预览显式绑定 `127.0.0.1`。常规检查：根目录 `npm test`；手机版 `npm run check:runtime`、`npm run build`、`npm run test:runtime`。改 PWA 时补离线验收。手机版 `npm run build` 的 `tsc` 只 `include: ["src"]`，`tests/` 与 `rescue-e2e/` 不在类型检查范围内（Playwright 只转译不检查），写了 Playwright 用例要另外按项目同款编译开关单跑一次 `tsc --ignoreConfig --noEmit <那两个文件>`，别以为 build 绿了就是类型也绿了。
 - 修改手机版前读 `dynamic-counter-prototype/AGENTS.md`；其 28 个受保护运行时文件不能顺手改动。
+- 话术牌局（2026-10，A+B 混合改版试验）：手机版 `/?mode=duel` 进入，旧版不受影响。规则在 `dynamic-counter-prototype/src/duel.ts`（常量全 export），UI 在 `src/DuelGame.tsx` / `src/duel.css`，音效在 `src/sfx.ts`（WebAudio 现合成）；成交、库存、耐心、事件全部复用 `campaign.ts`，不另起经济。独立存档 `last-order-duel-v1`，只在两位顾客之间落盘。平衡用 `node --experimental-strip-types tests/duel-sim.ts` 跑四条路线（skilled ¥22,930 / grey ¥22,930 合规 15 / novice ¥13,090 / naive ¥1,960），改常量后必须重跑并更新这里的数字；e2e 是 `tests/duel-flow.spec.ts`。调研与走查截图在 `audit/research-2026-10/`。这一版牌局界面有意使用兴趣条和耐心心形，旧版"不做进度条"的约定不适用于 duel 模式。
 - 用户授权的是修复现有游戏，保留原改动和恢复点。大规模删功能、切题材、换引擎或发布前要先明确范围。

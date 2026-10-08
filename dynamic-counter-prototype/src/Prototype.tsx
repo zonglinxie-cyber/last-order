@@ -8,6 +8,7 @@ import {
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
+import DuelGame from "./DuelGame";
 import {
   customerAction, customerHome, customerMood, customerSpeech, defaultFocus, formatClock,
   isWalking, partyLines, poseAt, rivalApproach, rivalHome, SHIFT_START, staffAction, staffSpeech,
@@ -47,7 +48,7 @@ function StaffMapFigure({ visual }: { visual: CharacterVisual }) {
   return <span className={`map-character map-staff map-staff-${visual.sheet}`}><i /></span>;
 }
 
-export default function Prototype() {
+function ClassicPrototype() {
   const saved = useMemo(loadCampaign, []);
   const [campaign, setCampaign] = useState<Campaign>(saved ?? INITIAL);
   const [screen, setScreen] = useState<Screen>("intro");
@@ -588,4 +589,9 @@ export default function Prototype() {
       <p>{floorHint}</p>
     </section>
   </main></MobileScroll>;
+}
+
+export default function Prototype() {
+  const mode = new URLSearchParams(window.location.search).get("mode");
+  return mode === "duel" ? <DuelGame /> : <ClassicPrototype />;
 }
