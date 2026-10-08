@@ -8,17 +8,20 @@ import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, seasonSummary, substitute,
+  drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, substitute,
   verbOptions, ENERGY_PER_DAY, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
+import { seasonRecap } from "../recap.ts";
 import { quarrelPairs } from "../exchanges.ts";
+import { askedToday, dueToday, resolveRequestChoice } from "../requests.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
 import { SECRET_KNOWN_KEY, demandWords, serveTalk, unsaidWord } from "../serve-talk.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
+import { RequestsCard, RequestsPanel } from "./Requests.tsx";
 import { Passersby } from "./Passersby.tsx";
 import { WebView } from "./WebView.tsx";
 import { WorldArchive } from "./WorldArchive.tsx";
@@ -27,15 +30,15 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { SLOT_WORD } from "./words.ts";
+import { opinionWord, SLOT_WORD } from "./words.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
 
 const SEASON_DAYS = 28; // 与 content/festivals.ts 的一季同长
 const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
-// public/assets/game/chibi/ 里按 id 对得上的小人图；对不上的用「头像圆牌 + 通用身体」。
-const CHIBI = new Set(["anjie", "duan", "fangmin", "luyao", "mei", "roman", "shen", "suman", "tangke", "xiaoyu", "zhao", "zhou"]);
+// public/assets/game/chibi/ 里按 id 对得上的小人图（WebP 透明底）；对不上的用头像圆牌。
+const CHIBI = new Set(["anjie", "baijie", "caiaiyi", "cenning", "chendao", "chenke", "dongayi", "duan", "fangmin", "gaoyuan", "guyan", "hanlei", "heqing", "huojie", "jiangning", "laokang", "liangxia", "ligui", "lina", "linyi", "luyao", "mei", "miduo", "peilan", "qianjie", "qiaowan", "roman", "ruanxiaoman", "shen", "songjie", "suman", "suxiao", "tangke", "tangtang", "tanwan", "wulaoshi", "xiaoyu", "yenushi", "yinxiaojie", "zhao", "zhaoning", "zhou"]);
 const TWO_TARGET: Verb[] = ["introduce", "mediate", "handoff", "tell"];
 // 代词按人物性别念（pronoun.ts 的 ta），不写死"她"。
 const verbWord = (verb: Verb, person: Person): string => ({
@@ -64,6 +67,8 @@ type UiState = {
   pending?: { id: string; binding: Record<string, PersonId> };
   report?: DayReport;
   dayBase?: DayBase;
+  /** 哪天看过「今天的请求」卡：同一天刷新不重弹 */
+  reqSeen?: number;
 };
 
 const restore = (): { world: World; ui: UiState } | null => {
@@ -246,6 +251,8 @@ export default function WorldGame() {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [muted, setMuted] = useState(sfxMuted());
+  const [reqSeenDay, setReqSeenDay] = useState(boot?.ui.reqSeen ?? 0);
+  const [reqPanelOpen, setReqPanelOpen] = useState(false);
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
   const spots = useMemo(() => layOut(world), [world]);
@@ -275,6 +282,8 @@ export default function WorldGame() {
     .filter(x => x.entry.day === world.day && x.entry.slot === world.slot && x.entry.who?.length), [world.log, world.day, world.slot]);
   const bubbles = slotLogs.slice(-5);
   const dayLogs = useMemo(() => world.log.filter(l => l.day === world.day), [world.log, world.day]);
+  // 今天要结的委托：「现场」栏的小标记按这份数念「委托 n/m」。
+  const dueReqs = useMemo(() => dueToday(world), [world]);
 
   // —— 落盘 ——
   const envelope = useMemo(() => JSON.stringify({
@@ -284,8 +293,9 @@ export default function WorldGame() {
       pending: pending ? { id: pending.storylet.id, binding: pending.binding } : undefined,
       report: report ?? undefined,
       dayBase: dayBase ?? undefined,
+      reqSeen: reqSeenDay || undefined,
     } satisfies UiState,
-  }), [phase, world, pending, report, dayBase]);
+  }), [phase, world, pending, report, dayBase, reqSeenDay]);
   useEffect(() => {
     if (phase === "intro") return;
     try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
@@ -318,6 +328,7 @@ export default function WorldGame() {
     if (!saved) { startNew(); return; }
     const { world: w, ui } = saved;
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
+    setReqSeenDay(ui.reqSeen ?? 0);
     setWorld(w);
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
     if (ui.screen === "season") { setPhase("season"); return; }
@@ -398,6 +409,13 @@ export default function WorldGame() {
     cueOutcome(world, next);
     setWorld(next); setPending(null);
   };
+  // 委托卡上当场能答的（唐可借小样）：应下/回绝都算一句话的事。
+  const answerRequest = (reqId: string, accept: boolean) => {
+    const next = resolveRequestChoice(world, PEOPLE, reqId, accept);
+    if (next === world) return;
+    cueOutcome(world, next);
+    setWorld(next);
+  };
 
   // —— 大地图横拖 ——
   const viewRef = useRef<HTMLDivElement>(null);
@@ -461,37 +479,92 @@ export default function WorldGame() {
   }
 
   if (phase === "season") {
-    const s = seasonSummary(world, PEOPLE);
     const ending = seasonEnding(world, PEOPLE);
-    const arcRows = Object.entries(s.arcs).filter(([, arc]) => Object.keys(arc).length);
-    return <div className="app-screen world-app world-report-page">
-      <MobileScroll className="world-report-scroll"><main className="world-report">
-        <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
-        {/* 标题就是这一季做成了什么 —— 引擎早算出了结局，别让它只在档案里露脸。 */}
-        <h1>{ending.title}</h1>
-        <p className="report-ending">{ending.body}</p>
-        <div className="report-numbers">
-          <span><small>这一季进账</small><b>{yuan(s.money)}</b></span>
-          <span><small>柜位</small><b>{s.standing}</b></span>
-          <span><small>台账</small><b>{s.compliance}</b></span>
+    const recap = seasonRecap(world, PEOPLE, STORYLETS);
+    const person = (id: PersonId) => PEOPLE.find(p => p.id === id);
+    const avatar = (id: PersonId, key?: string | number) => {
+      const p = person(id);
+      return <span key={key} className={"recap-avatar" + (p?.portrait ? "" : " letter")} aria-hidden="true">
+        {p?.portrait ? <img src={p.portrait} alt="" /> : <b>{(p?.name ?? id).slice(0, 1)}</b>}
+      </span>;
+    };
+    const personRow = (r: { id: PersonId; line: string; day?: number }) => {
+      const p = person(r.id);
+      return <li className="recap-person" key={r.id}>
+        {avatar(r.id)}
+        <div className="recap-person-main">
+          <b>{nameOf(r.id)}{r.day !== undefined ? <small>第 {r.day} 天</small> : null}</b>
+          <p>{p ? `${ta(p)}` : ""}{r.line}</p>
         </div>
-        <section className="report-block">
-          <h2>谁是你的人</h2>
-          {s.allies.length ? <p>{s.allies.map(nameOf).join("、")}</p> : <p>没有一个人把你当自己人。</p>}
+      </li>;
+    };
+    return <div className="app-screen world-app world-report-page world-recap-page">
+      <MobileScroll className="world-report-scroll"><main className="world-report world-recap">
+        <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
+        <h1 className="recap-ending">{ending.title}</h1>
+        <p className="recap-ending-body">{ending.body}</p>
+
+        <section className="recap-block">
+          <h2>这一季的高光</h2>
+          <ol className="recap-timeline">
+            {recap.highlights.map((h, i) => <li key={i}>
+              <span className="recap-day">第 {h.day} 天</span>
+              <div className="recap-timeline-main">
+                <p>{h.text}</p>
+                {h.who.length ? <span className="recap-who">{h.who.map(id => avatar(id, id))}</span> : null}
+              </div>
+            </li>)}
+          </ol>
         </section>
-        <section className="report-block">
-          <h2>谁记了你的仇</h2>
-          {s.enemies.length ? <p>{s.enemies.map(nameOf).join("、")}</p> : <p>没人跟你结仇。</p>}
+
+        <section className="recap-block">
+          <h2>你的人</h2>
+          {recap.allies.length
+            ? <ul className="recap-people">{recap.allies.map(personRow)}</ul>
+            : <p className="recap-empty">没有一个人把你当自己人。</p>}
         </section>
-        <section className="report-block">
-          <h2>几条线走到哪里了</h2>
-          {arcRows.length ? arcRows.map(([id, arc]) => <p key={id}><b>{nameOf(id)}</b>：{Object.entries(arc).map(([k, v]) => `${k} · ${v}`).join("，")}</p>) : <p>谁的线都没走起来。</p>}
+        {recap.remembered.length ? <section className="recap-block">
+          <h2>记着你的人</h2>
+          <ul className="recap-people recap-people-grudge">{recap.remembered.map(personRow)}</ul>
+        </section> : null}
+
+        <section className="recap-block">
+          <h2>这一季谁变了</h2>
+          {recap.movers.length ? <ul className="recap-people recap-movers">{recap.movers.map(m => <li className="recap-person" key={m.id}>
+            {avatar(m.id)}
+            <div className="recap-person-main">
+              <b>{nameOf(m.id)}</b>
+              {/* 看法只用话说（opinionWord），不把数值摊给玩家。 */}
+              <p>{m.from === undefined ? `开季还没认识，如今${opinionWord(m.to)}` : `从「${opinionWord(m.from)}」到「${opinionWord(m.to)}」`}</p>
+            </div>
+            <span className={"recap-delta" + (m.to - (m.from ?? 0) < 0 ? " down" : "")} aria-hidden="true">{m.to - (m.from ?? 0) > 0 ? "近了" : "远了"}</span>
+          </li>)}</ul> : <p className="recap-empty">这一季没人改主意。</p>}
+        </section>
+
+        <section className="recap-block">
+          <h2>走完的线</h2>
+          {recap.arcs.length
+            ? <ul className="recap-arcs">{recap.arcs.map(a => <li key={a.id}>
+              <b>{nameOf(a.id)}</b><span>「{a.title}」</span>{a.day !== undefined ? <small>第 {a.day} 天落定</small> : null}
+            </li>)}</ul>
+            : <p className="recap-empty">谁的线都没走到头。</p>}
+        </section>
+
+        <section className="recap-block recap-numbers-block">
+          <h2>三本账</h2>
+          <div className="report-numbers recap-numbers">
+            <span><small>这一季进账</small><b>{yuan(recap.stats.money.value)}</b><em>{recap.stats.money.line}</em></span>
+            <span><small>柜位</small><b>{recap.stats.standing.value}</b><em>{recap.stats.standing.line}</em></span>
+            <span><small>台账</small><b>{recap.stats.compliance.value}</b><em>{recap.stats.compliance.line}</em></span>
+          </div>
         </section>
       </main></MobileScroll>
-      <div className="report-foot">
-        <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+      <div className="report-foot recap-foot">
         <button className="world-primary" type="button" onClick={startNextSeason}>进入第 {world.season + 1} 季</button>
-        <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
+        <div className="recap-foot-row">
+          <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+          <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
+        </div>
       </div>
       {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
     </div>;
@@ -535,6 +608,10 @@ export default function WorldGame() {
     ? pending.storylet.choices.map((c, i) => ({ c, i })).filter(x => choiceVisible(world, PEOPLE, pending, x.c))
     : [];
 
+  // 开门那张「今天的请求」卡：第一个时段、没别的层压着、今天还没看过才弹。
+  const reqCardOpen = world.slot === 0 && !pending && !selected && !webOpen && !reqPanelOpen
+    && reqSeenDay !== world.day && askedToday(world).length > 0;
+
   return <div className="app-screen world-app">
     <header className="world-bar">
       <div className="world-bar-info">
@@ -570,7 +647,7 @@ export default function WorldGame() {
             <span className="wf-tag">{p.name}</span>
             <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
               {CHIBI.has(id)
-                ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.png`)} alt="" aria-hidden="true" draggable={false} />
+                ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.webp`)} alt="" aria-hidden="true" draggable={false} />
                 : <span className="wf-token">{p.portrait ? <img src={p.portrait} alt="" aria-hidden="true" /> : <b aria-hidden="true">{p.name.slice(0, 1)}</b>}</span>}
             </span>
             <i className="wf-glow" aria-hidden="true" />
@@ -586,7 +663,10 @@ export default function WorldGame() {
     </div>
 
     <section className="world-scene" aria-label="现场">
-      <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人</h2>
+      <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人
+        {dueReqs.length > 0 && <button type="button" className="req-chip" aria-label="查看委托进度"
+          onClick={() => setReqPanelOpen(true)}>委托 {dueReqs.filter(r => r.state === "done").length}/{dueReqs.length}</button>}
+      </h2>
       <MobileScroll className="world-feed">
         {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。点地图上的人，看看是谁、对你什么看法。</p>}
         {[...dayLogs].reverse().slice(0, 14).map((l, i) => <p key={`${l.day}-${l.slot}-${dayLogs.length - i}`}><small>{SLOT_WORD[l.slot]}</small>{l.text}</p>)}
@@ -623,6 +703,11 @@ export default function WorldGame() {
       </div>}
     </div>}
 
+    {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
+      onClose={() => setReqSeenDay(world.day)} />}
+    {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
+      onClose={() => setReqPanelOpen(false)} />}
+
     {pending && <div className="world-story" role="dialog" aria-label="发生的事">
       <article className="story-card">
         <p className="story-text">{substitute(pending.storylet.text, pending.binding, PEOPLE)}</p>
@@ -639,6 +724,7 @@ export default function WorldGame() {
       <div className="world-web-body"><WebView world={world} people={PEOPLE} /></div>
     </div>}
 
-    <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < ENERGY_PER_DAY }} />
+    {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
+    {!reqCardOpen && !reqPanelOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < ENERGY_PER_DAY }} />}
   </div>;
 }
