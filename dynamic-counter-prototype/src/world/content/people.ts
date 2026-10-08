@@ -131,7 +131,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "一厚就卡粉，镜头里全是粉感" },
       budget: 3200, maxUnits: 3,
     },
-    visits: { days: [5, 6, 7], slots: [1, 2], chance: 0.4 },
+    visits: { days: [1, 3, 5, 6, 7], slots: [1, 2], chance: 0.55 },
     secret: { text: "署她名字的那张退货单，不是她退的。", reveal: [{ remembers: "shen", act: "not-my-return" }] },
     voice: {
       greet: "先说好，我不缺粉底。",
@@ -209,7 +209,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "临婚前不能冒刺激风险" },
       budget: 7000, maxUnits: 4,
     },
-    visits: { days: [4, 6], slots: [1], chance: 0.4, fromDay: 3 },
+    visits: { days: [2, 4, 6, 7], slots: [1, 2], chance: 0.55, fromDay: 2 },
     secret: { text: "伴娘进门时她跟苏蔓说过：别让人再上镜。", reveal: [{ remembers: "suman", act: "kept-word" }] },
     voice: {
       greet: "婚礼还有一周。这套不能出错。",
