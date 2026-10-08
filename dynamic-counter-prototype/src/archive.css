@@ -2,7 +2,7 @@
    页面结构是晨会/结局同一副语法：固定头部 + MobileScroll 滚动区（AGENTS 那条 app-owned chrome 留在 MobileScroll 外面）。 */
 .archive-page { position:absolute; inset:0; display:flex; flex-direction:column; background:radial-gradient(circle at 78% 10%,#3d2a26,#1a1010 46%,#120b0b 100%); }
 .archive-page .archive-scroll { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
-.archive-head { flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:10px 12px 8px calc(12px + env(safe-area-inset-left)); color:#f4dfbd; }
+.archive-head { flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:var(--top-inset) 12px 8px calc(12px + env(safe-area-inset-left)); color:#f4dfbd; }
 .archive-back { width:44px; height:44px; flex:0 0 auto; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff0a; color:#efd6b0; font:700 20px/1 'Noto Serif SC'; }
 .archive-head div { display:flex; flex-direction:column; }
 .archive-head b { color:#ffedca; font:700 18px 'Noto Serif SC'; letter-spacing:.06em; }
