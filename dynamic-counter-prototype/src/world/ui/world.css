@@ -97,6 +97,31 @@
 .serve-force { border:1px solid #8a4a5a88; background:#8a4a5a26; color:#e8b6c0; }
 .serve-force:disabled { opacity:.45; }
 
+/* —— 每日委托：开门卡、进度卡、「现场」栏的小标记 —— */
+.world-scene h2 { display:flex; align-items:center; gap:8px; }
+.req-chip { flex:0 0 auto; margin-left:auto; min-height:44px; padding:0 14px; border:1px solid #f0cf9155; border-radius:999px; background:#f0c97814; color:#ffe8b6; font:600 12px 'Noto Serif SC',serif; letter-spacing:0; }
+.world-requests { position:absolute; inset:0; z-index:80; display:flex; align-items:flex-end; justify-content:center; padding:0 14px calc(18px + env(safe-area-inset-bottom)); background:#100a09b8; }
+.req-card { width:100%; max-width:430px; max-height:72%; display:flex; flex-direction:column; padding:16px 14px 14px; border:1px solid #f0cf9144; border-radius:16px; background:linear-gradient(150deg,#2a1713fa,#160d0dfc); box-shadow:0 18px 50px #000c; }
+.req-title { flex:0 0 auto; margin:0 0 10px; color:#ffe8b6; font:700 16px 'Noto Serif SC',serif; }
+.req-list { flex:1 1 auto; min-height:0; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; list-style:none; }
+.req-row { flex:0 0 auto; padding:10px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
+.req-row.done { border-color:#8fb98f55; }
+.req-row.failed,.req-row.declined { border-color:#8a4a5a66; }
+.req-by { display:flex; align-items:baseline; margin:0 0 3px; }
+.req-by b { color:#d5b994; font:600 12px 'Noto Serif SC',serif; }
+.req-state { margin-left:auto; color:#a99689; font-size:12px; }
+.req-row.done .req-state { color:#9fc49f; }
+.req-row.failed .req-state,.req-row.declined .req-state { color:#d98a97; }
+.req-text { margin:0 0 3px; color:#f2e6d8; font-size:13px; line-height:1.55; }
+.req-reward { margin:0; color:#a99689; font-size:12px; line-height:1.5; }
+.req-actions { display:flex; gap:8px; margin-top:8px; }
+.req-actions button { flex:1 1 0; min-height:44px; border-radius:10px; font:600 13px 'Noto Serif SC',serif; }
+.req-yes { border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
+.req-yes:disabled { opacity:.45; }
+.req-no { border:1px solid #ffffff22; background:transparent; color:#a99689; }
+.req-empty { margin:0 0 8px; color:#a99689; font-size:13px; line-height:1.6; }
+.req-close { flex:0 0 auto; width:100%; min-height:48px; margin-top:12px; padding:10px 12px; border:1px solid #f0cf9177; border-radius:12px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 14px 'Noto Serif SC',serif; }
+
 /* —— 说书人的卡 —— */
 .world-story { position:absolute; inset:0; z-index:80; display:flex; align-items:flex-end; justify-content:center; padding:0 14px calc(18px + env(safe-area-inset-bottom)); background:#100a09b8; }
 .story-card { width:100%; max-width:430px; padding:16px 14px 14px; border:1px solid #f0cf9144; border-radius:16px; background:linear-gradient(150deg,#2a1713fa,#160d0dfc); box-shadow:0 18px 50px #000c; }

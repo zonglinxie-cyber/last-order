@@ -13,11 +13,13 @@ import {
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { quarrelPairs } from "../exchanges.ts";
+import { askedToday, dueToday, resolveRequestChoice } from "../requests.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
+import { RequestsCard, RequestsPanel } from "./Requests.tsx";
 import { Passersby } from "./Passersby.tsx";
 import { WebView } from "./WebView.tsx";
 import { WorldArchive } from "./WorldArchive.tsx";
@@ -63,6 +65,8 @@ type UiState = {
   pending?: { id: string; binding: Record<string, PersonId> };
   report?: DayReport;
   dayBase?: DayBase;
+  /** 哪天看过「今天的请求」卡：同一天刷新不重弹 */
+  reqSeen?: number;
 };
 
 const restore = (): { world: World; ui: UiState } | null => {
@@ -245,6 +249,8 @@ export default function WorldGame() {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [muted, setMuted] = useState(sfxMuted());
+  const [reqSeenDay, setReqSeenDay] = useState(boot?.ui.reqSeen ?? 0);
+  const [reqPanelOpen, setReqPanelOpen] = useState(false);
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
   const spots = useMemo(() => layOut(world), [world]);
@@ -265,6 +271,8 @@ export default function WorldGame() {
     .filter(x => x.entry.day === world.day && x.entry.slot === world.slot && x.entry.who?.length), [world.log, world.day, world.slot]);
   const bubbles = slotLogs.slice(-5);
   const dayLogs = useMemo(() => world.log.filter(l => l.day === world.day), [world.log, world.day]);
+  // 今天要结的委托：「现场」栏的小标记按这份数念「委托 n/m」。
+  const dueReqs = useMemo(() => dueToday(world), [world]);
 
   // —— 落盘 ——
   const envelope = useMemo(() => JSON.stringify({
@@ -274,8 +282,9 @@ export default function WorldGame() {
       pending: pending ? { id: pending.storylet.id, binding: pending.binding } : undefined,
       report: report ?? undefined,
       dayBase: dayBase ?? undefined,
+      reqSeen: reqSeenDay || undefined,
     } satisfies UiState,
-  }), [phase, world, pending, report, dayBase]);
+  }), [phase, world, pending, report, dayBase, reqSeenDay]);
   useEffect(() => {
     if (phase === "intro") return;
     try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
@@ -308,6 +317,7 @@ export default function WorldGame() {
     if (!saved) { startNew(); return; }
     const { world: w, ui } = saved;
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
+    setReqSeenDay(ui.reqSeen ?? 0);
     setWorld(w);
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
     if (ui.screen === "season") { setPhase("season"); return; }
@@ -387,6 +397,13 @@ export default function WorldGame() {
     if (next === world) return;
     cueOutcome(world, next);
     setWorld(next); setPending(null);
+  };
+  // 委托卡上当场能答的（唐可借小样）：应下/回绝都算一句话的事。
+  const answerRequest = (reqId: string, accept: boolean) => {
+    const next = resolveRequestChoice(world, PEOPLE, reqId, accept);
+    if (next === world) return;
+    cueOutcome(world, next);
+    setWorld(next);
   };
 
   // —— 大地图横拖 ——
@@ -522,6 +539,10 @@ export default function WorldGame() {
     ? pending.storylet.choices.map((c, i) => ({ c, i })).filter(x => choiceVisible(world, PEOPLE, pending, x.c))
     : [];
 
+  // 开门那张「今天的请求」卡：第一个时段、没别的层压着、今天还没看过才弹。
+  const reqCardOpen = world.slot === 0 && !pending && !selected && !webOpen && !reqPanelOpen
+    && reqSeenDay !== world.day && askedToday(world).length > 0;
+
   return <div className="app-screen world-app">
     <header className="world-bar">
       <div className="world-bar-info">
@@ -573,7 +594,10 @@ export default function WorldGame() {
     </div>
 
     <section className="world-scene" aria-label="现场">
-      <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人</h2>
+      <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人
+        {dueReqs.length > 0 && <button type="button" className="req-chip" aria-label="查看委托进度"
+          onClick={() => setReqPanelOpen(true)}>委托 {dueReqs.filter(r => r.state === "done").length}/{dueReqs.length}</button>}
+      </h2>
       <MobileScroll className="world-feed">
         {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。点地图上的人，看看是谁、对你什么看法。</p>}
         {[...dayLogs].reverse().slice(0, 14).map((l, i) => <p key={`${l.day}-${l.slot}-${dayLogs.length - i}`}><small>{SLOT_WORD[l.slot]}</small>{l.text}</p>)}
@@ -606,6 +630,11 @@ export default function WorldGame() {
         {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{world.present[person.id] === "rival" ? `${ta(person)}被请去了对面，这个时段够不着。` : `这会儿对${ta(person)}做不了什么，或者精力不够了。`}</p>}
       </div>}
     </div>}
+
+    {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
+      onClose={() => setReqSeenDay(world.day)} />}
+    {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
+      onClose={() => setReqPanelOpen(false)} />}
 
     {pending && <div className="world-story" role="dialog" aria-label="发生的事">
       <article className="story-card">

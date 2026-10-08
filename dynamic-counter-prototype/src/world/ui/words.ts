@@ -94,6 +94,11 @@ export const ACT_WORD: Record<string, string> = {
   "refused-gap": "没替她补那个缺口",
   "turned-friend": "没按熟客那套待她，把她处成了朋友",
   "passed-word": "把一句好话原样带到了她面前",
+  // 每日委托（requests.ts）
+  "kept-promise": "答应她的事做到了",
+  "broke-promise": "答应她的事没做到",
+  "lent-samples": "借了两支小样给她",
+  "turned-down": "没应下她张的口",
 };
 
 /** 未知代号原样念出来，不编一句假话盖过去。 */
