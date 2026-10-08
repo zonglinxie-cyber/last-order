@@ -8,6 +8,8 @@ import {
   type ProductId, type RivalChoice, type SaleOutcome, type StaffKey, type TransferChannel, type Trait,
 } from "./campaign";
 import { requestConsultReply } from "./consultChat";
+import { Archive } from "./Archive";
+import { commitCampaignToProgress } from "./progress.ts";
 // 四个玩法各打各的 chunk：576KB 主包大部分是接待层的共享代码 + 玩法屏，按需拆开后
 // 进五日剧情只带 ClassicPrototype 一份，进 ?mode=* 才下载对应那一块。
 const DuelGame = lazy(() => import("./DuelGame"));
@@ -116,6 +118,7 @@ export function ClassicPrototype(props: ClassicProps = {}) {
   const [floorFocus, setFloorFocus] = useState<FloorFocus | null>(null);
   const [floorBeat, setFloorBeat] = useState(0);
   const [floorSpeed, setFloorSpeed] = useState<FloorSpeed>(1);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const floorClock = SHIFT_START + campaign.shiftMinutes;
   const floorElapsed = campaign.shiftMinutes + campaign.floorSeconds / 20;
   const [poses, setPoses] = useState<Record<string, ActorPose>>({});
@@ -142,7 +145,8 @@ export function ClassicPrototype(props: ClassicProps = {}) {
   const ledger = historyByDay(campaign);
   const rival = customerId && (customerId === "shen" || customerId === "zhou" || customerId === "returning") ? RIVAL_INTERRUPTIONS[customerId] : null;
 
-  useEffect(() => { if (screen !== "intro" && !controlled) window.localStorage.setItem(saveKey, JSON.stringify(campaign)); }, [campaign, screen]);
+  // 每一次落盘同时把这一局的痕迹并进跨局档案（只增不减，存档在另一个键上）。
+  useEffect(() => { if (screen !== "intro" && !controlled) { window.localStorage.setItem(saveKey, JSON.stringify(campaign)); commitCampaignToProgress(campaign); } }, [campaign, screen]);
   useEffect(() => { requestAnimationFrame(() => { const frame = document.querySelector<HTMLElement>(".device-screen"); if (frame) frame.scrollTop = 0; }); }, [screen]);
   useEffect(() => {
     setFloorBeat(0);
@@ -398,12 +402,16 @@ export function ClassicPrototype(props: ClassicProps = {}) {
   const resetGame = () => { window.localStorage.removeItem(saveKey); setCampaign(fresh()); setEventChoiceId(null); setScreen("intro"); };
   const openFloor = () => setCampaign(s => openFloorState(s));
 
+  // 档案是跨局的一层，挂在封面与结局屏两处入口；整屏顶替当前画面，返回即回到原来那一屏。
+  if (archiveOpen) return <Archive onBack={() => setArchiveOpen(false)} />;
+
   if (screen === "intro") return <MobileScroll className="app-screen intro-scroll"><main className="intro-screen">
     <img src={asset("/assets/game/counter-stage-toy.png")} alt="绮光专柜" /><div className="intro-shade" /><div className="intro-brand"><span>AURORA · 绮光</span><b>{meta?.weekLabel ?? "新品活动周"}</b></div>
     <section className="intro-copy"><p>美妆销售 · 人情博弈 · 五日章节</p><h1>最后一单</h1><h2>你是试用期柜姐许愿。<br />每一笔销售，都决定谁欠你、谁恨你、谁会回来。</h2>
       <div className="shift-brief"><span><small>{meta?.targetLabel ?? "五日销售目标"}</small><b>¥{weekTarget.toLocaleString("zh-CN")}</b></span><span><small>真正的考核</small><b>业绩与后果</b></span></div>
       <p className="intro-rule">观察面容、判断需求、守住订单。顾客会复购或退货，同事会记住你留下的每条记录。</p>
       <button className="primary-action" type="button" onClick={saved ? continueGame : beginNew}>{saved ? `继续第 ${campaign.day} 天` : "开始新品活动周"}</button>
+      <button className="archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
       {saved && <button className="text-action" type="button" onClick={beginNew}>重新开始</button>}
     </section></main></MobileScroll>;
 
@@ -502,7 +510,7 @@ export function ClassicPrototype(props: ClassicProps = {}) {
       <blockquote>真正的最后一单，不是付款成功的那一刻，而是它回来找你的那一天。</blockquote></main></MobileScroll>
     {/* 唯一的出口钉成脚：59 行的账本把它埋在滚动区底下 1000+ 设计像素（实测 390×844 那颗按钮 top 1696、滚动带底 707），
         能滚到但没有任何"下面还有"的线索。与 P37 晨会「滚动区 + 脚」同一副语法；引文留在账本尾巴上 —— 它是收束，不是动作。 */}
-    <div className="finale-foot"><button className="primary-action" type="button" onClick={() => meta?.onFinale ? meta.onFinale(campaign) : resetGame()}>{meta?.finaleLabel ?? "重新开始 · 换一种活法"}</button></div></div>;
+    <div className="finale-foot"><button className="archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button><button className="primary-action" type="button" onClick={() => meta?.onFinale ? meta.onFinale(campaign) : resetGame()}>{meta?.finaleLabel ?? "重新开始 · 换一种活法"}</button></div></div>;
   }
 
   const latestLost = campaign.lost.at(-1);
