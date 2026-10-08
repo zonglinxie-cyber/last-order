@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { CUSTOMERS } from "../src/campaign.ts";
 import { FESTIVALS } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
-import { STORYLETS } from "../src/world/content/storylets.ts";
+import { STORYLETS } from "../src/world/content/index.ts";
 import { PLAYER, type Cond, type Effect, type Ref, type Temper } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
