@@ -10,7 +10,7 @@ import {
 } from "../campaign.ts";
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
 import type {
-  BondKind, Cond, Effect, LogEntry, Memory, Person, PersonId, Ref, Slot,
+  BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
   Storylet, Verb, World, Zone,
 } from "./types.ts";
 import { PLAYER } from "./types.ts";
@@ -313,8 +313,14 @@ function applyEffect(world: World, people: Person[], effect: Effect, binding: Bi
 
 // —— 来访调度 ——
 
-export function beginSlot(world: World, people: Person[]): World {
+/** 这一天落在哪个节日窗口里；不在任何窗口里返回 undefined。 */
+export const festivalOn = (day: number, festivals: Festival[]): string | undefined =>
+  festivals.find(f => day >= f.fromDay && day <= f.toDay)?.id;
+
+/** 开一个时段。festivals 给了就按当天日期设置 World.festival —— Visits.festivals 与 {festival} 条件都读它。 */
+export function beginSlot(world: World, people: Person[], festivals?: Festival[]): World {
   let w: World = { ...world, present: {}, touched: [] };
+  if (festivals) w = { ...w, festival: festivalOn(w.day, festivals) };
   const dayOfWeek = ((w.day - 1) % 7) + 1;
   const present: Record<PersonId, Zone> = {};
 
@@ -514,8 +520,11 @@ function bindCast(w: World, people: Person[], storylet: Storylet): [Binding | nu
   return [search(0) ? binding : null, next];
 }
 
+/** 个人线优先：主角在场时她是带着事来的，这一段比路过的社交局更该被讲。 */
+export const ARC_WEIGHT_MULT = 3;
+
 const storyWeight = (storylet: Storylet, heat: number): number => {
-  const w = Math.max(0, storylet.weight);
+  const w = Math.max(0, storylet.weight) * (storylet.kind === "arc" ? ARC_WEIGHT_MULT : 1);
   if (storylet.tension === 1) return w * (1 + Math.max(0, -heat)) / (1 + Math.max(0, heat));
   if (storylet.tension === -1) return w * (1 + Math.max(0, heat)) / (1 + Math.max(0, -heat));
   return w;

@@ -8,7 +8,7 @@ import {
   ambient, applyChoice, beginSlot, bestFit, choiceVisible, doVerb, drawStorylet, endDay,
   newWorld, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
-import type { Person, PersonId, Slot, Storylet, World } from "../src/world/types.ts";
+import type { Festival, Person, PersonId, Slot, Storylet, World } from "../src/world/types.ts";
 import { PRODUCTS, type ProductId } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
@@ -95,16 +95,22 @@ function takeTurns(style: Style, w: World, people: Person[]): World {
   return w;
 }
 
-function playSeason(style: Style, seed: string, people: Person[], storylets: Storylet[]): World {
+/** 每种风格下每张卡被抽到的次数（跨种子累计），用来找"写了却永远出不来"的卡。 */
+const fireCount = new Map<Style, Map<string, number>>();
+
+function playSeason(style: Style, seed: string, people: Person[], storylets: Storylet[], festivals: Festival[]): World {
   let w = newWorld(seed, people);
   while (w.day <= DAYS) {
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
-      w = beginSlot(w, people);
+      w = beginSlot(w, people, festivals);
       w = ambient(w, people);
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
+        const counts = fireCount.get(style) ?? new Map<string, number>();
+        counts.set(drawn.storylet.id, (counts.get(drawn.storylet.id) ?? 0) + 1);
+        fireCount.set(style, counts);
         const visibleIdx = drawn.storylet.choices.map((c, i) => i)
           .filter(i => choiceVisible(w, people, drawn, drawn.storylet.choices[i]));
         let k: number; [k, w] = simIndex(w, Math.max(1, visibleIdx.length));
@@ -119,15 +125,16 @@ function playSeason(style: Style, seed: string, people: Person[], storylets: Sto
 
 // —— 内容加载 ——
 
-async function loadContent(): Promise<{ people: Person[]; storylets: Storylet[]; source: string }> {
+async function loadContent(): Promise<{ people: Person[]; storylets: Storylet[]; festivals: Festival[]; source: string }> {
   const url = new URL("../src/world/content/index.ts", import.meta.url);
   if (existsSync(fileURLToPath(url))) {
     const mod = await import(url.href) as Record<string, unknown>;
     const people = (mod.PEOPLE ?? mod.people ?? (mod.default as { people?: Person[] })?.people) as Person[] | undefined;
     const storylets = (mod.STORYLETS ?? mod.storylets ?? (mod.default as { storylets?: Storylet[] })?.storylets) as Storylet[] | undefined;
-    if (people?.length && storylets?.length) return { people, storylets, source: "src/world/content" };
+    const festivals = (mod.FESTIVALS ?? []) as Festival[];
+    if (people?.length && storylets?.length) return { people, storylets, festivals, source: "src/world/content" };
   }
-  return { people: FIXTURE_PEOPLE, storylets: FIXTURE_STORYLETS, source: "tests/fixtures/world-fixture.ts" };
+  return { people: FIXTURE_PEOPLE, storylets: FIXTURE_STORYLETS, festivals: [], source: "tests/fixtures/world-fixture.ts" };
 }
 
 // —— 统计 ——
@@ -139,7 +146,7 @@ const median = (xs: number[]) => {
 const dist = (xs: number[]) =>
   `min ${Math.min(...xs)} / med ${median(xs)} / max ${Math.max(...xs)}`;
 
-const { people, storylets, source } = await loadContent();
+const { people, storylets, festivals, source } = await loadContent();
 const N = Math.max(1, Number(process.argv[2]) || 16);
 console.log(`== 人情场模拟 · 内容来源 ${source} · ${people.length} 人 · ${storylets.length} 张卡 ==`);
 console.log(`== ${N} 个种子 × ${DAYS} 天 × ${STYLES.length} 种风格 ==\n`);
@@ -149,7 +156,7 @@ const results: Result[] = [];
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
-    const w = playSeason(style, seed, people, storylets);
+    const w = playSeason(style, seed, people, storylets, festivals);
     const s = seasonSummary(w, people);
     results.push({
       style, seed, money: w.money, standing: w.standing, compliance: w.compliance,
@@ -197,3 +204,10 @@ for (const p of people) {
   const row = arcTable.get(p.id)!;
   console.log(`  ${p.id.padEnd(8)} ${[...row.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(" · ")}`);
 }
+
+// 卡的覆盖面：每种风格抽到过几张；所有风格合起来都没抽到过的卡单独列出来 —— 写了却出不来，要么条件写死，要么引擎没接上。
+console.log("\n故事碎片覆盖（抽到过的张数 / 总张数）:");
+for (const style of STYLES) console.log(`  ${style.padEnd(8)} ${fireCount.get(style)?.size ?? 0}/${storylets.length}`);
+const everFired = new Set(STYLES.flatMap(style => [...(fireCount.get(style)?.keys() ?? [])]));
+const never = storylets.filter(s => !everFired.has(s.id));
+console.log(never.length ? `  从没出现过 ${never.length} 张：${never.map(s => s.id).join(" ")}` : "  每张卡都至少出现过一次");
