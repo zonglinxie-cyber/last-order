@@ -15,7 +15,9 @@
 .world-next small { font-size:12px; font-weight:700; }
 
 /* —— 大地图 —— */
-.world-map-view { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; touch-action:none; user-select:none; }
+/* 地图只占上半屏、约两屏宽：一眼看得出是整层商场，左右拖看另一半。下面是常驻的「现场」栏。 */
+.world-app { container-type:inline-size; }
+.world-map-view { position:relative; flex:0 0 auto; height:min(58%, calc(100cqw * 1.9 * 9 / 16)); overflow:hidden; touch-action:none; user-select:none; background:#0c0707; }
 .world-map { position:absolute; top:0; left:0; height:100%; aspect-ratio:16/9; container-type:size; will-change:transform; }
 .wf-floor { position:absolute; inset:0; width:100%; height:100%; display:block; -webkit-user-drag:none; }
 .wf-zone { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border-radius:999px; background:#120a0a59; color:#ffe8b6cc; font:600 12px 'Noto Serif SC',serif; letter-spacing:.1em; pointer-events:none; }
@@ -26,11 +28,10 @@
 .wf-figure { display:flex; flex-direction:column; align-items:center; animation:wf-bob 2.7s ease-in-out infinite; }
 @keyframes wf-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2.5%); } }
 .wf-chibi { height:11cqh; min-height:52px; filter:drop-shadow(0 4px 6px #0008); -webkit-user-drag:none; }
-.wf-generic { display:flex; flex-direction:column; align-items:center; }
-.wf-head { width:5.6cqh; height:5.6cqh; min-width:30px; min-height:30px; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:50%; border:2px solid #f0cf9199; background:#3d2a26; box-shadow:0 2px 6px #0009; }
-.wf-head img { width:100%; height:100%; object-fit:cover; object-position:50% 22%; }
-.wf-head b { color:#ffe8b6; font:700 max(12px,2.6cqh)/1 'Noto Serif SC',serif; }
-.wf-torso { width:7.2cqh; height:6.4cqh; min-width:38px; min-height:36px; margin-top:-0.9cqh; border-radius:48% 48% 14% 14%/62% 62% 12% 12%; background:linear-gradient(165deg,#7a5650,#3d2a26 70%); border:1px solid #0e080888; box-shadow:0 4px 8px #0007; }
+/* 还没有小人图的人：一枚带金边的圆形头像牌，脚下一圈影子；有了立绘小人再换。 */
+.wf-token { width:max(44px,9cqh); height:max(44px,9cqh); display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:50%; border:2px solid #f0cf91cc; background:radial-gradient(circle at 35% 30%,#5a3d35,#2a1a16); box-shadow:0 6px 10px #000a, 0 0 0 3px #120a0a66; }
+.wf-token img { width:100%; height:100%; object-fit:cover; object-position:50% 22%; }
+.wf-token b { color:#ffe8b6; font:700 max(16px,3.4cqh) 'Noto Serif SC',serif; }
 .wf-glow { position:absolute; z-index:-1; bottom:-4px; left:50%; width:9cqh; min-width:50px; height:2.6cqh; min-height:14px; transform:translateX(-50%); border-radius:50%; background:radial-gradient(closest-side,#f0c97877,transparent); opacity:0; transition:opacity .25s; }
 .wf-actor.is-sel .wf-glow,.wf-actor.is-target .wf-glow { opacity:1; }
 .wf-actor.is-target .wf-tag { background:#f0c978; color:#2a1713; }
@@ -47,11 +48,13 @@
 }
 
 /* —— 刚刚发生 —— */
-.world-feed-toggle { position:absolute; z-index:40; left:10px; bottom:calc(10px + env(safe-area-inset-bottom)); min-height:44px; padding:0 14px; border:1px solid #f0cf9133; border-radius:999px; background:#1c1210d9; color:#efd6b0; font:600 12px 'Noto Serif SC',serif; }
-.world-feed { position:absolute; z-index:40; left:10px; right:10px; bottom:calc(58px + env(safe-area-inset-bottom)); max-height:44%; overflow-y:auto; padding:10px 12px; border:1px solid #f0cf9133; border-radius:14px; background:#1c1210f0; box-shadow:0 -8px 28px #0009; }
-.world-feed p { margin:0 0 7px; color:#eee0d5; font-size:12px; line-height:1.5; }
+.world-scene { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #f0cf9133; background:linear-gradient(#1c1210,#130c0b); }
+.world-scene h2 { flex:0 0 auto; margin:0 0 6px; color:#d5b994; font:600 12px 'Noto Serif SC',serif; letter-spacing:.08em; }
+.world-scene .world-feed { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
+.world-feed p { margin:0 0 7px; color:#eee0d5; font-size:13px; line-height:1.55; }
 .world-feed p small { display:block; color:#a99689; font-size:12px; }
 .world-feed .feed-empty { color:#8d7a6d; }
+.world-feed p:first-child:not(.feed-empty) { color:#ffe8b6; }
 
 /* —— 一句话结果 —— */
 .world-toast { position:absolute; z-index:70; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); width:max-content; max-width:88%; margin:0; transform:translateX(-50%); padding:10px 14px; border:1px solid #f0cf9144; border-radius:12px; background:#2a1713f2; color:#ffe8b6; font-size:12px; line-height:1.5; text-align:center; box-shadow:0 8px 24px #000a; }

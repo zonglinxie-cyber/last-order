@@ -60,10 +60,15 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
       return [null, w];
     }
     case "social": {
-      // 优先能把关系变成钱的：同事肯开单就先托她；再经营关系网。
+      // 先经营关系网（劝和、帮同事、牵线），再把客人托给肯开单的同事。
+      // 托单放在前面的话，客人一多五次动作全花在托单上，人情动作一次都轮不到。
+      for (const verb of ["mediate", "help", "introduce"] as const) {
+        const c = first(verb, untouched);
+        if (c) return [{ call: c }, w];
+      }
       const sale = options.find(c => c.verb === "handoff" && personOf(people, c.targets[1]).skin);
       if (sale) return [{ call: sale }, w];
-      for (const verb of ["mediate", "keep", "tell", "help", "introduce", "wechat", "sample", "greet"] as const) {
+      for (const verb of ["keep", "tell", "wechat", "sample", "greet"] as const) {
         const c = first(verb, untouched);
         if (c) return [{ call: c }, w];
       }
@@ -105,7 +110,6 @@ function playSeason(style: Style, seed: string, people: Person[], storylets: Sto
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
       w = beginSlot(w, people, festivals);
-      w = ambient(w, people);
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
@@ -118,6 +122,7 @@ function playSeason(style: Style, seed: string, people: Person[], storylets: Sto
         w = applyChoice(w, people, drawn, visibleIdx[k] ?? 0);
       }
       w = takeTurns(style, w, people);
+      w = ambient(w, people); // 时段末：传话、陆遥带走没顾上的人（与界面同一个顺序）
     }
     w = endDay(w, people);
   }

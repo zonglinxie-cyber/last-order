@@ -28,6 +28,10 @@ export const SAMPLES_MAX = 8;
 export const SAMPLES_PER_NIGHT = 4;
 /** 同时在场的顾客上限（手机屏幕放不下更多）。同事、对手、商场方不占这个名额。 */
 export const MAX_PRESENT_CUSTOMERS = 5;
+/** 每个时段至少有这么多位客人在场：空场对新玩家是最差的第一眼。 */
+export const MIN_PRESENT_CUSTOMERS = 2;
+/** 开局那个上午先来的两位：和五日版第一天同一道题——两个人，只能先接住一个。 */
+export const OPENING_GUESTS: PersonId[] = ["shen", "mei"];
 
 /** 白天传话：A 在场、对 B 有正冷暖时开口的概率。爱八卦再加。 */
 export const GOSSIP_BASE = 0.25;
@@ -320,6 +324,9 @@ function applyEffect(world: World, people: Person[], effect: Effect, binding: Bi
 
 // —— 来访调度 ——
 
+/** 当天被对面请走的人：今天不再回到这层楼上。 */
+const awayToday = (w: World, id: PersonId) => qualityOf(w, `away:${id}`) === w.day;
+
 /** 这一天落在哪个节日窗口里；不在任何窗口里返回 undefined。 */
 export const festivalOn = (day: number, festivals: Festival[]): string | undefined =>
   festivals.find(f => day >= f.fromDay && day <= f.toDay)?.id;
@@ -383,10 +390,18 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     }
   }
 
+  // 开局那个上午：先到的两位站在柜台前。
+  if (w.day === 1 && w.slot === 0) {
+    for (const id of OPENING_GUESTS) {
+      if (customerCount >= MAX_PRESENT_CUSTOMERS || id in present) continue;
+      if (personOf(people, id)?.role === "customer") { placeCustomer(id, "counter"); customerCount++; }
+    }
+  }
+
   // 按 Visits 规律来的人：日子 = 一周第几天 ((day-1)%7)+1，时段要在她的 slots 里。
   const candidates: Array<{ id: PersonId; r: number }> = [];
   for (const person of people) {
-    if (person.role !== "customer" || person.id in present) continue;
+    if (person.role !== "customer" || person.id in present || awayToday(w, person.id)) continue;
     const v = person.visits;
     if (v.days !== "any" && !v.days.includes(dayOfWeek)) continue;
     if (!v.slots.includes(w.slot)) continue;
@@ -403,6 +418,23 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     let acc = 0, zone: Zone = "atrium";
     for (const [z, weight] of CUSTOMER_ZONE_WEIGHTS) { acc += weight; if (r < acc) { zone = z; break; } }
     placeCustomer(c.id, zone); customerCount++;
+  }
+
+  // 场子不能空：按规律来的人不够 MIN_PRESENT_CUSTOMERS 时，从"这几天本来就可能来"的人里补
+  // （fromDay 已到、不是只在节日才来的），按各自的来访概率加权抽，同一个种子补出同一批人。
+  while (customerCount < MIN_PRESENT_CUSTOMERS) {
+    const pool = people.filter(p => p.role === "customer" && !(p.id in present) && !awayToday(w, p.id)
+      && (p.visits.fromDay === undefined || w.day >= p.visits.fromDay)
+      && (!p.visits.festivals || (!!w.festival && p.visits.festivals.includes(w.festival)))
+      && p.visits.chance > 0);
+    if (!pool.length) break;
+    const i = drawWeighted(w.seed, w.rngCalls, pool.map(p => p.visits.chance));
+    w = { ...w, rngCalls: w.rngCalls + 1 };
+    if (i < 0) break;
+    let r: number; [r, w] = roll(w);
+    let acc = 0, zone: Zone = "atrium";
+    for (const [z, weight] of CUSTOMER_ZONE_WEIGHTS) { acc += weight; if (r < acc) { zone = z; break; } }
+    placeCustomer(pool[i].id, zone); customerCount++;
   }
 
   w = { ...w, present };
@@ -459,7 +491,7 @@ export function ambient(world: World, people: Person[]): World {
   for (const a of here) for (const b of here) if (a.id !== b.id) pairs.push([a, b]);
   w = gossipRound(w, people, pairs, GOSSIP_BASE, GOSSIP_TEMPER_BONUS, w.memories);
 
-  // 陆遥抢客：挑一位在场、对玩家看法最低、本时段还没被玩家招呼过的顾客带去 rival 区。
+  // 陆遥抢客（时段末结算）：挑一位在场、对玩家看法最低、这个时段玩家没顾上的顾客带去维珞，她当天不再回来。
   const rival = here.find(p => p.role === "rival");
   if (rival) {
     const marks = here.filter(p => p.role === "customer" && w.present[p.id] !== "rival" && !w.touched.includes(p.id));
@@ -471,7 +503,8 @@ export function ambient(world: World, people: Person[]): World {
           w = { ...w, present: { ...w.present, [mark.id]: "rival" } };
           w = addOpinion(w, mark.id, POACH_OPINION);
           w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
-          w = say(w, `${rival.name}把${mark.name}请去对面维珞试妆，这个时段你够不着她了。`, [rival.id, mark.id]);
+          w = setQuality(w, `away:${mark.id}`, w.day);
+          w = say(w, `你没顾上${mark.name}，${rival.name}把她请去了对面维珞，今天不会再回来。`, [rival.id, mark.id]);
         }
       }
     }

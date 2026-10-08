@@ -96,7 +96,10 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".story-text")).not.toBeEmpty();
       await page.locator(".story-choices button").first().click();
       await expect(page.locator(".world-story")).toHaveCount(0);
-      await expect(page.locator(".world-toast")).toBeVisible();
+      // 卡收起后「现场」栏就露出来了：结果念在它的第一行，不再另弹一条同样的提示。
+      await expect(page.locator(".world-feed p").first()).not.toHaveClass(/feed-empty/);
+      await expect(page.locator(".world-feed p").first()).not.toBeEmpty();
+      await expect(page.locator(".world-toast")).toHaveCount(0);
     });
 
     test("连点「下一时段」走进第 2 天，看到当日小结", async ({ page }) => {

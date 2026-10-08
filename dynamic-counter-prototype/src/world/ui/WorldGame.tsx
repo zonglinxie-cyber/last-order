@@ -62,9 +62,10 @@ const restore = (): { world: World; ui: UiState } | null => {
   } catch { return null; }
 };
 
-// —— 每个时段开头的固定动作：落位 → 在场的人自己互动 → 说书人抽一张 ——
+// —— 每个时段开头：落位 → 说书人抽一张。在场的人自己互动（传话、陆遥抢客）放在时段末，
+//     先让玩家动手：你这个时段没顾上的人，陆遥才带得走。
 const runPipeline = (w: World): { world: World; drawn: DrawnStorylet | null } => {
-  const next = ambient(beginSlot(w, PEOPLE, FESTIVALS), PEOPLE);
+  const next = beginSlot(w, PEOPLE, FESTIVALS);
   const r = drawStorylet(next, PEOPLE, STORYLETS);
   return { world: r.world, drawn: r.drawn };
 };
@@ -85,9 +86,11 @@ function layOut(world: World): Map<PersonId, Spot> {
     byZone.set(zone, bag);
   }
   for (const [zone, bag] of byZone) {
+    // 柜台后只站得下四个人：多出来的同事站到收银台后面，不叠在同一个点上。
+    const overflow = zone === "counter" ? ZONE_STAFF_SPOTS.cashier : ZONE_SPOTS[zone];
     bag.staff.sort().forEach((id, i) => {
       const list = ZONE_STAFF_SPOTS[zone];
-      out.set(id, list[i % list.length] ?? ZONE_SPOTS[zone][i % ZONE_SPOTS[zone].length]);
+      out.set(id, i < list.length ? list[i] : overflow[(i - list.length) % overflow.length]);
     });
     bag.guests.sort().forEach((id, i) => {
       const list = ZONE_SPOTS[zone];
@@ -122,7 +125,6 @@ export default function WorldGame() {
   const [serving, setServing] = useState(false);
   const [serveProduct, setServeProduct] = useState<ProductId | null>(null);
   const [serveUnits, setServeUnits] = useState(1);
-  const [feedOpen, setFeedOpen] = useState(false);
   const [webOpen, setWebOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
@@ -175,7 +177,7 @@ export default function WorldGame() {
     setDayBase(base);
     const { world: w, drawn } = runPipeline(fresh);
     setWorld(w); setPending(drawn); setReport(null);
-    setSelected(null); setPick(null); setServing(false); setFeedOpen(false); setWebOpen(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
     setPhase("play");
   };
   const continueGame = () => {
@@ -184,7 +186,7 @@ export default function WorldGame() {
     const { world: w, ui } = saved;
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
     setWorld(w);
-    setSelected(null); setPick(null); setServing(false); setFeedOpen(false); setWebOpen(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
     if (ui.screen === "season") { setPhase("season"); return; }
     if (ui.screen === "report" && ui.report) { setReport(ui.report); setPhase("report"); return; }
     const card = ui.pending ? STORYLETS.find(s => s.id === ui.pending!.id) : undefined;
@@ -195,9 +197,10 @@ export default function WorldGame() {
 
   // —— 时段推进 ——
   const nextTurn = () => {
-    setSelected(null); setPick(null); setServing(false); setFeedOpen(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setResult(null);
+    const settled = ambient(world, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
     if (world.slot === 3) {
-      const w = endDay(world, PEOPLE);
+      const w = endDay(settled, PEOPLE);
       const rep = buildReport(world, w, dayBase ?? { day: world.day, money: 0, opinion: {} });
       setDayBase({ day: w.day, money: w.money, opinion: { ...w.opinion } });
       setWorld(w);
@@ -206,7 +209,7 @@ export default function WorldGame() {
       else { setReport(rep); setPhase("report"); }
       return;
     }
-    const { world: w, drawn } = runPipeline(advanceSlot(world));
+    const { world: w, drawn } = runPipeline(advanceSlot(settled));
     setWorld(w); setPending(drawn);
   };
   const startNextDay = () => {
@@ -242,7 +245,6 @@ export default function WorldGame() {
     const next = applyChoice(world, PEOPLE, pending, index);
     if (next === world) return;
     setWorld(next); setPending(null);
-    setResult(next.log.at(-1)?.text ?? null);
   };
 
   // —— 大地图横拖 ——
@@ -402,10 +404,7 @@ export default function WorldGame() {
             <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
               {CHIBI.has(id)
                 ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.png`)} alt="" aria-hidden="true" draggable={false} />
-                : <span className="wf-generic">
-                    <span className="wf-head">{p.portrait ? <img src={p.portrait} alt="" aria-hidden="true" /> : <b aria-hidden="true">{p.name.slice(0, 1)}</b>}</span>
-                    <i className="wf-torso" aria-hidden="true" />
-                  </span>}
+                : <span className="wf-token">{p.portrait ? <img src={p.portrait} alt="" aria-hidden="true" /> : <b aria-hidden="true">{p.name.slice(0, 1)}</b>}</span>}
             </span>
             <i className="wf-glow" aria-hidden="true" />
           </button>;
@@ -419,15 +418,16 @@ export default function WorldGame() {
       </div>
     </div>
 
-    <button type="button" className="world-feed-toggle" aria-expanded={feedOpen} onClick={() => setFeedOpen(!feedOpen)}>
-      刚刚发生{slotLogs.length ? ` · ${slotLogs.length}` : ""}
-    </button>
-    {feedOpen && <MobileScroll className="world-feed">
-      {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。</p>}
-      {[...dayLogs].reverse().slice(0, 14).map((l, i) => <p key={`${l.day}-${l.slot}-${dayLogs.length - i}`}><small>第{l.day}天 · {SLOT_WORD[l.slot]}</small>{l.text}</p>)}
-    </MobileScroll>}
+    <section className="world-scene" aria-label="现场">
+      <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人</h2>
+      <MobileScroll className="world-feed">
+        {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。点地图上的人，看看她是谁、对你什么看法。</p>}
+        {[...dayLogs].reverse().slice(0, 14).map((l, i) => <p key={`${l.day}-${l.slot}-${dayLogs.length - i}`}><small>{SLOT_WORD[l.slot]}</small>{l.text}</p>)}
+      </MobileScroll>
+    </section>
 
-    {result && <p className="world-toast" role="status">{result}</p>}
+    {/* 抽屉盖住了「现场」栏，动作的结果才在这里说一遍；抽屉收起时就只在现场栏里念。 */}
+    {result && person && <p className="world-toast" role="status">{result}</p>}
 
     {person && <div className="world-drawer">
       <PersonCard person={person} world={world} people={PEOPLE} onClose={() => { setSelected(null); setServing(false); setPick(null); }} />

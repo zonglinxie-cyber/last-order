@@ -372,3 +372,34 @@ test("柜位：每晚把离起点的差距回落一成", () => {
   const low = { ...newWorld("standing-drift", PEOPLE), standing: 20 };
   assert.equal(endDay(low, PEOPLE).standing, 23);
 });
+
+test("场子不空：每个时段至少两位客人；开局上午沈薇和梅女士在柜台前", () => {
+  let w = newWorld("never-empty", PEOPLE);
+  w = beginSlot(w, PEOPLE);
+  assert.equal(w.present.shen, "counter");
+  assert.equal(w.present.mei, "counter");
+  for (let day = 0; day < 3; day++) {
+    for (let slot = 0; slot < 4; slot++) {
+      w = beginSlot({ ...w, slot: slot as 0 | 1 | 2 | 3 }, PEOPLE);
+      const guests = Object.keys(w.present).filter(id => person(id)?.role === "customer");
+      assert.ok(guests.length >= 2, `第 ${w.day} 天时段 ${slot} 只有 ${guests.length} 位客人`);
+    }
+    w = endDay(w, PEOPLE);
+  }
+});
+
+test("陆遥在时段末带走没顾上的人，她当天不再回来", () => {
+  // 找一个种子：开局上午沈薇、梅女士都在，玩家谁也没招呼，时段末有人被带走。
+  for (let i = 0; i < 60; i++) {
+    let w = beginSlot(newWorld(`poach-${i}`, PEOPLE), PEOPLE);
+    w = ambient(w, PEOPLE);
+    const gone = ["shen", "mei"].find(id => w.present[id] === "rival");
+    if (!gone) continue;
+    for (let slot = 1; slot < 4; slot++) {
+      w = beginSlot({ ...w, slot: slot as 0 | 1 | 2 | 3 }, PEOPLE);
+      assert.ok(!(gone in w.present), `${gone} 当天被请走，第 ${slot} 时段不该再出现`);
+    }
+    return;
+  }
+  assert.fail("60 个种子里没有一次抢客，概率常量可能被改坏了");
+});
