@@ -1,0 +1,472 @@
+// 人情场楼层界面（?mode=world）：一天四个时段的循环、可左右拖的横版大地图、
+// 点人开抽屉做事、说书人的卡。规则全部问 engine.ts —— 这里只摆人、摆按钮、
+// 念 engine 写进 log 的句子；世界状态走 serializeWorld/parseWorld 落盘。
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { MobileScroll } from "../../mobile";
+import { demandBudgetWord, PRODUCTS, TRAIT_LABELS, type Customer, type ProductId } from "../../campaign.ts";
+import { asset } from "../../base.ts";
+import {
+  advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
+  drawStorylet, endDay, newWorld, parseWorld, resolveServe, seasonSummary, substitute,
+  verbOptions, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  type DrawnStorylet, type VerbCall,
+} from "../engine.ts";
+import type { Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
+import { PEOPLE, STORYLETS, FESTIVALS } from "../content/index.ts";
+import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
+import { PersonCard } from "./PersonCard.tsx";
+import { WebView } from "./WebView.tsx";
+import { SLOT_WORD } from "./words.ts";
+import "./world.css";
+
+const SEASON_DAYS = 28; // 与 content/festivals.ts 的一季同长
+const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
+// public/assets/game/chibi/ 里按 id 对得上的小人图；对不上的用「头像圆牌 + 通用身体」。
+const CHIBI = new Set(["anjie", "duan", "fangmin", "luyao", "mei", "roman", "shen", "suman", "tangke", "xiaoyu", "zhao", "zhou"]);
+const TWO_TARGET: Verb[] = ["introduce", "mediate", "handoff", "tell"];
+const VERB_WORD: Record<Verb, string> = {
+  greet: "招呼", serve: "接待", sample: "送小样", introduce: "介绍认识", mediate: "打圆场",
+  handoff: "托她照看", help: "帮一把", wechat: "加微信", keep: "替她保密", tell: "说件私事",
+};
+const pickHint = (verb: Verb, a: Person) => {
+  if (verb === "introduce") return `再点一个人，介绍她和${a.name}认识`;
+  if (verb === "mediate") return `再点一个人，替她和${a.name}打圆场`;
+  if (verb === "handoff") return a.role === "staff" ? "点一位客人，交给她照看" : "点一位同事，把她交过去";
+  return `把谁的私事说给${a.name}听`;
+};
+
+// —— 存档：serializeWorld/parseWorld 的信封里多塞一格 ui（parseWorld 只认 version+world，多余字段不拦）——
+
+type DayBase = { day: number; money: number; opinion: Record<PersonId, number> };
+type DayReport = {
+  day: number;
+  moneyDelta: number;
+  movers: Array<{ id: PersonId; delta: number; now: number }>;
+  tomorrow: Array<{ name: string; slot: Slot }>;
+  week: boolean;
+};
+type UiState = {
+  screen?: "play" | "report" | "season";
+  pending?: { id: string; binding: Record<string, PersonId> };
+  report?: DayReport;
+  dayBase?: DayBase;
+};
+
+const restore = (): { world: World; ui: UiState } | null => {
+  try {
+    const raw = window.localStorage.getItem(SAVE_KEY);
+    const world = parseWorld(raw);
+    if (!raw || !world) return null;
+    const env = JSON.parse(raw) as { ui?: UiState };
+    return { world, ui: env.ui ?? {} };
+  } catch { return null; }
+};
+
+// —— 每个时段开头的固定动作：落位 → 在场的人自己互动 → 说书人抽一张 ——
+const runPipeline = (w: World): { world: World; drawn: DrawnStorylet | null } => {
+  const next = ambient(beginSlot(w, PEOPLE, FESTIVALS), PEOPLE);
+  const r = drawStorylet(next, PEOPLE, STORYLETS);
+  return { world: r.world, drawn: r.drawn };
+};
+
+const nameOf = (id: PersonId) => PEOPLE.find(p => p.id === id)?.name ?? id;
+const festivalName = (id?: string) => FESTIVALS.find(f => f.id === id)?.name;
+const shorten = (text: string) => (text.length > 30 ? `${text.slice(0, 29)}…` : text);
+const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
+
+/** 站在哪一区的人各就各位：同事/对手/商场方站前段，顾客站后段，同区按 id 排稳定序。 */
+function layOut(world: World): Map<PersonId, Spot> {
+  const out = new Map<PersonId, Spot>();
+  const byZone = new Map<Zone, { staff: PersonId[]; guests: PersonId[] }>();
+  for (const [id, zone] of Object.entries(world.present)) {
+    const bag = byZone.get(zone) ?? { staff: [], guests: [] };
+    const person = PEOPLE.find(p => p.id === id);
+    (person?.role === "customer" ? bag.guests : bag.staff).push(id);
+    byZone.set(zone, bag);
+  }
+  for (const [zone, bag] of byZone) {
+    bag.staff.sort().forEach((id, i) => {
+      const list = ZONE_STAFF_SPOTS[zone];
+      out.set(id, list[i % list.length] ?? ZONE_SPOTS[zone][i % ZONE_SPOTS[zone].length]);
+    });
+    bag.guests.sort().forEach((id, i) => {
+      const list = ZONE_SPOTS[zone];
+      out.set(id, list[i % list.length]);
+    });
+  }
+  return out;
+}
+
+function buildReport(before: World, after: World, base: DayBase): DayReport {
+  const ids = new Set([...Object.keys(base.opinion), ...Object.keys(after.opinion)]);
+  const movers = [...ids]
+    .map(id => ({ id, delta: (after.opinion[id] ?? 0) - (base.opinion[id] ?? 0), now: after.opinion[id] ?? 0 }))
+    .filter(m => m.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, 3);
+  const tomorrow = after.appointments
+    .filter(a => a.day === after.day)
+    .map(a => ({ name: nameOf(a.person), slot: a.slot }));
+  return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0 };
+}
+
+export default function WorldGame() {
+  const boot = useMemo(restore, []);
+  const [world, setWorld] = useState<World>(() => boot?.world ?? newWorld("empty", PEOPLE));
+  const [phase, setPhase] = useState<"intro" | "play" | "report" | "season">("intro");
+  const [pending, setPending] = useState<DrawnStorylet | null>(null);
+  const [report, setReport] = useState<DayReport | null>(boot?.ui.report ?? null);
+  const [dayBase, setDayBase] = useState<DayBase | null>(boot?.ui.dayBase ?? null);
+  const [selected, setSelected] = useState<PersonId | null>(null);
+  const [pick, setPick] = useState<{ verb: Verb; calls: VerbCall[] } | null>(null);
+  const [serving, setServing] = useState(false);
+  const [serveProduct, setServeProduct] = useState<ProductId | null>(null);
+  const [serveUnits, setServeUnits] = useState(1);
+  const [feedOpen, setFeedOpen] = useState(false);
+  const [webOpen, setWebOpen] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
+  const spots = useMemo(() => layOut(world), [world]);
+  const calls = useMemo(() => (selected ? verbOptions(world, PEOPLE).filter(c => c.targets.includes(selected)) : []),
+    [world, selected]);
+  const verbs = selected ? availableVerbs(world, PEOPLE, [selected]) : [];
+  const pairVerbs = TWO_TARGET.filter(v => calls.some(c => c.verb === v));
+  const pickTargets = useMemo(() => {
+    if (!pick || !selected) return [] as PersonId[];
+    return [...new Set(pick.calls.map(c => c.targets.find(t => t !== selected)!))];
+  }, [pick, selected]);
+
+  // 本时段新产生的 log：气泡冒在当事人头上，整条收进「刚刚发生」。
+  const slotLogs = useMemo(() => world.log
+    .map((entry, i) => ({ entry, i }))
+    .filter(x => x.entry.day === world.day && x.entry.slot === world.slot && x.entry.who?.length), [world.log, world.day, world.slot]);
+  const bubbles = slotLogs.slice(-5);
+  const dayLogs = useMemo(() => world.log.filter(l => l.day === world.day), [world.log, world.day]);
+
+  // —— 落盘 ——
+  const envelope = useMemo(() => JSON.stringify({
+    version: WORLD_SAVE_VERSION, world,
+    ui: {
+      screen: phase === "intro" ? undefined : phase === "play" ? "play" : phase === "report" ? "report" : "season",
+      pending: pending ? { id: pending.storylet.id, binding: pending.binding } : undefined,
+      report: report ?? undefined,
+      dayBase: dayBase ?? undefined,
+    } satisfies UiState,
+  }), [phase, world, pending, report, dayBase]);
+  useEffect(() => {
+    if (phase === "intro") return;
+    try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
+  }, [envelope, phase]);
+  useEffect(() => {
+    if (!result) return;
+    const timer = window.setTimeout(() => setResult(null), 3800);
+    return () => window.clearTimeout(timer);
+  }, [result]);
+  // 人走了（被请去对面、故事卡里离开）就把抽屉收掉；够不着的留着卡给人看。
+  useEffect(() => {
+    if (selected && !(selected in world.present)) { setSelected(null); setServing(false); setPick(null); }
+  }, [world.present, selected]);
+
+  // —— 开局 / 继续 ——
+  const startNew = () => {
+    const fresh = newWorld(`world-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`, PEOPLE);
+    const base: DayBase = { day: fresh.day, money: fresh.money, opinion: { ...fresh.opinion } };
+    setDayBase(base);
+    const { world: w, drawn } = runPipeline(fresh);
+    setWorld(w); setPending(drawn); setReport(null);
+    setSelected(null); setPick(null); setServing(false); setFeedOpen(false); setWebOpen(false); setResult(null);
+    setPhase("play");
+  };
+  const continueGame = () => {
+    const saved = restore();
+    if (!saved) { startNew(); return; }
+    const { world: w, ui } = saved;
+    setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
+    setWorld(w);
+    setSelected(null); setPick(null); setServing(false); setFeedOpen(false); setWebOpen(false); setResult(null);
+    if (ui.screen === "season") { setPhase("season"); return; }
+    if (ui.screen === "report" && ui.report) { setReport(ui.report); setPhase("report"); return; }
+    const card = ui.pending ? STORYLETS.find(s => s.id === ui.pending!.id) : undefined;
+    setPending(card ? { storylet: card, binding: ui.pending!.binding } : null);
+    setReport(null);
+    setPhase("play");
+  };
+
+  // —— 时段推进 ——
+  const nextTurn = () => {
+    setSelected(null); setPick(null); setServing(false); setFeedOpen(false); setResult(null);
+    if (world.slot === 3) {
+      const w = endDay(world, PEOPLE);
+      const rep = buildReport(world, w, dayBase ?? { day: world.day, money: 0, opinion: {} });
+      setDayBase({ day: w.day, money: w.money, opinion: { ...w.opinion } });
+      setWorld(w);
+      setPending(null);
+      if (w.day > SEASON_DAYS) { setReport(null); setPhase("season"); }
+      else { setReport(rep); setPhase("report"); }
+      return;
+    }
+    const { world: w, drawn } = runPipeline(advanceSlot(world));
+    setWorld(w); setPending(drawn);
+  };
+  const startNextDay = () => {
+    const { world: w, drawn } = runPipeline(world);
+    setWorld(w); setPending(drawn); setReport(null);
+    setPhase("play");
+  };
+
+  // —— 楼层上的动作 ——
+  const apply = (call: VerbCall) => {
+    const next = doVerb(world, PEOPLE, call.verb, call.targets);
+    if (next === world) return;
+    setWorld(next); setPick(null);
+    setResult(next.log.at(-1)?.text ?? null);
+  };
+  const tapPerson = (id: PersonId) => {
+    if (pick) {
+      const call = pick.calls.find(c => c.targets.includes(id));
+      if (call) { apply(call); return; }
+      setPick(null); // 点的不是目标：退出选人，照常开她的卡
+    }
+    setSelected(id); setServing(false); setServeProduct(null); setServeUnits(1);
+  };
+  const doServe = (force: boolean) => {
+    if (!selected || !serveProduct) return;
+    const next = resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force);
+    if (next === world) return;
+    setWorld(next); setServing(false);
+    setResult(next.log.at(-1)?.text ?? null);
+  };
+  const chooseStory = (index: number) => {
+    if (!pending) return;
+    const next = applyChoice(world, PEOPLE, pending, index);
+    if (next === world) return;
+    setWorld(next); setPending(null);
+    setResult(next.log.at(-1)?.text ?? null);
+  };
+
+  // —— 大地图横拖 ——
+  const viewRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [bounds, setBounds] = useState({ view: 0, map: 0 });
+  const [panX, setPanX] = useState(0);
+  const centered = useRef(false);
+  const drag = useRef({ id: -1, startX: 0, startPan: 0, moved: false });
+  const clampPan = (x: number, b = bounds) => Math.min(0, Math.max(Math.min(0, b.view - b.map), x));
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const sync = () => {
+      const map = mapRef.current;
+      const b = { view: el.clientWidth, map: map?.offsetWidth ?? 0 };
+      setBounds(b);
+      if (!centered.current && b.view && b.map) {
+        centered.current = true;
+        setPanX(clampPan(b.view * 0.5 - b.map * 0.3, b));
+      }
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const onPanDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    drag.current = { id: event.pointerId, startX: event.clientX, startPan: panX, moved: false };
+  };
+  const onPanMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (d.id !== event.pointerId) return;
+    const dx = event.clientX - d.startX;
+    if (Math.abs(dx) > 6) d.moved = true;
+    if (!d.moved) return;
+    // 超过阈值才算拖动，这时再捕获指针；在 down 就捕获会把小人按钮的 click 劫走。
+    try { event.currentTarget.setPointerCapture(d.id); } catch { /* 指针已抬起 */ }
+    setPanX(clampPan(d.startPan + dx));
+  };
+  const onPanUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (drag.current.id === event.pointerId) drag.current.id = -1;
+  };
+
+  // —— 屏 ——
+  if (phase === "intro") {
+    return <div className="app-screen world-app world-intro-screen">
+      <img className="world-intro-bg" src={asset("/assets/game/mall-floor.jpg")} alt="" aria-hidden="true" />
+      <div className="world-intro-shade" />
+      <section className="world-intro-card">
+        <p className="world-intro-eyebrow">AURORA · 绮光</p>
+        <h1>人情场</h1>
+        <p className="world-intro-copy">商场一层是一整张人情网。你在柜上怎么待一个人，会顺着这张网传出去。没有关卡，一季 28 天，看看最后谁还会回来。</p>
+        <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
+          {boot ? `继续 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
+        </button>
+        {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}
+      </section>
+    </div>;
+  }
+
+  if (phase === "season") {
+    const s = seasonSummary(world, PEOPLE);
+    const arcRows = Object.entries(s.arcs).filter(([, arc]) => Object.keys(arc).length);
+    return <div className="app-screen world-app world-report-page">
+      <MobileScroll className="world-report-scroll"><main className="world-report">
+        <p className="report-eyebrow">一季 · {SEASON_DAYS} 天散场</p>
+        <h1>这一季散场了</h1>
+        <div className="report-numbers">
+          <span><small>这一季进账</small><b>{yuan(s.money)}</b></span>
+          <span><small>柜位</small><b>{s.standing}</b></span>
+          <span><small>台账</small><b>{s.compliance}</b></span>
+        </div>
+        <section className="report-block">
+          <h2>谁是你的人</h2>
+          {s.allies.length ? <p>{s.allies.map(nameOf).join("、")}</p> : <p>没有一个人把你当自己人。</p>}
+        </section>
+        <section className="report-block">
+          <h2>谁记了你的仇</h2>
+          {s.enemies.length ? <p>{s.enemies.map(nameOf).join("、")}</p> : <p>没人跟你结仇。</p>}
+        </section>
+        <section className="report-block">
+          <h2>几条线走到哪里了</h2>
+          {arcRows.length ? arcRows.map(([id, arc]) => <p key={id}><b>{nameOf(id)}</b>：{Object.entries(arc).map(([k, v]) => `${k} · ${v}`).join("，")}</p>) : <p>谁的线都没走起来。</p>}
+        </section>
+      </main></MobileScroll>
+      <div className="report-foot"><button className="world-primary" type="button" onClick={startNew}>再开一季</button></div>
+    </div>;
+  }
+
+  if (phase === "report" && report) {
+    const allies = PEOPLE.filter(p => (world.opinion[p.id] ?? 0) >= 40);
+    const enemies = PEOPLE.filter(p => (world.opinion[p.id] ?? 0) <= -30);
+    return <div className="app-screen world-app world-report-page">
+      <MobileScroll className="world-report-scroll"><main className="world-report">
+        <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "一周盘点" : "今日收工"}</p>
+        <h1>{report.week ? "这一周过去了" : "今天打烊了"}</h1>
+        <div className="report-numbers">
+          <span><small>今天进账</small><b>{report.moneyDelta === 0 ? "没开单" : `${report.moneyDelta > 0 ? "+" : "−"}${yuan(Math.abs(report.moneyDelta))}`}</b></span>
+          <span><small>累计</small><b>{yuan(world.money)}</b></span>
+          <span><small>柜位 / 台账</small><b>{world.standing} / {world.compliance}</b></span>
+        </div>
+        <section className="report-block">
+          <h2>谁对你的看法变了</h2>
+          {report.movers.length
+            ? report.movers.map(m => <p key={m.id}><b>{nameOf(m.id)}</b>{m.delta > 0 ? "对你更近了" : "对你更远了"}</p>)
+            : <p>今天没人改主意。</p>}
+        </section>
+        <section className="report-block">
+          <h2>明天约好了的</h2>
+          {report.tomorrow.length
+            ? <p>{report.tomorrow.map(t => `${t.name}（${SLOT_WORD[t.slot]}）`).join("、")}说来</p>
+            : <p>明天没人约好。谁肯替你约人，得看今晚这张网。</p>}
+        </section>
+        {report.week && <section className="report-block">
+          <h2>这一周的网</h2>
+          <p>{allies.length ? `把你当自己人的：${allies.map(p => p.name).join("、")}` : "还没有人把你当自己人"}{enemies.length ? `；记仇的：${enemies.map(p => p.name).join("、")}` : ""}</p>
+        </section>}
+      </main></MobileScroll>
+      <div className="report-foot"><button className="world-primary" type="button" onClick={startNextDay}>进入第 {world.day} 天</button></div>
+    </div>;
+  }
+
+  const storyChoices = pending
+    ? pending.storylet.choices.map((c, i) => ({ c, i })).filter(x => choiceVisible(world, PEOPLE, pending, x.c))
+    : [];
+
+  return <div className="app-screen world-app">
+    <header className="world-bar">
+      <div className="world-bar-info">
+        <b>第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(world.festival)}` : ""}</b>
+        <span>{yuan(world.money)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
+      </div>
+      <button className="world-web-btn" type="button" aria-label="人情网" onClick={() => setWebOpen(true)}>人情网</button>
+      <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
+    </header>
+
+    <div className="world-map-view" ref={viewRef}
+      onPointerDown={onPanDown} onPointerMove={onPanMove} onPointerUp={onPanUp} onPointerCancel={onPanUp}
+      onClickCapture={e => { if (drag.current.moved) { e.stopPropagation(); e.preventDefault(); drag.current.moved = false; } }}>
+      <div className="world-map" ref={mapRef} style={{ transform: `translateX(${panX}px)` }}>
+        <img className="wf-floor" src={asset("/assets/game/mall-floor.jpg")} alt="商场一层" draggable={false} />
+        {Object.entries(ZONE_LABEL).map(([zone, label]) =>
+          <span key={zone} className="wf-zone" aria-hidden="true" style={{ left: `${label.x}%`, top: `${label.y}%` }}>{label.word}</span>)}
+        {Object.keys(world.present).map((id, index) => {
+          const p = PEOPLE.find(x => x.id === id);
+          if (!p) return null;
+          const spot = spots.get(id);
+          if (!spot) return null;
+          const isTarget = pickTargets.includes(id);
+          return <button type="button" key={id}
+            className={`wf-actor${selected === id ? " is-sel" : ""}${isTarget ? " is-target" : ""}`}
+            style={{ left: `${spot.x}%`, top: `${spot.y}%`, zIndex: 20 + Math.round(spot.y) } as CSSProperties}
+            aria-label={`${pick ? "选" : "查看"}${p.name}`}
+            onClick={() => tapPerson(id)}>
+            <span className="wf-tag">{p.name}</span>
+            <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
+              {CHIBI.has(id)
+                ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.png`)} alt="" aria-hidden="true" draggable={false} />
+                : <span className="wf-generic">
+                    <span className="wf-head">{p.portrait ? <img src={p.portrait} alt="" aria-hidden="true" /> : <b aria-hidden="true">{p.name.slice(0, 1)}</b>}</span>
+                    <i className="wf-torso" aria-hidden="true" />
+                  </span>}
+            </span>
+            <i className="wf-glow" aria-hidden="true" />
+          </button>;
+        })}
+        {bubbles.map((x, bi) => {
+          const anchor = x.entry.who!.map(id => spots.get(id)).find((s): s is Spot => !!s);
+          if (!anchor) return null;
+          return <span key={`${x.entry.day}-${x.entry.slot}-${x.i}`} className="wf-bubble"
+            style={{ left: `${anchor.x}%`, top: `${anchor.y}%`, animationDelay: `${bi * 0.7}s` }}>{shorten(x.entry.text)}</span>;
+        })}
+      </div>
+    </div>
+
+    <button type="button" className="world-feed-toggle" aria-expanded={feedOpen} onClick={() => setFeedOpen(!feedOpen)}>
+      刚刚发生{slotLogs.length ? ` · ${slotLogs.length}` : ""}
+    </button>
+    {feedOpen && <MobileScroll className="world-feed">
+      {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。</p>}
+      {[...dayLogs].reverse().slice(0, 14).map((l, i) => <p key={`${l.day}-${l.slot}-${dayLogs.length - i}`}><small>第{l.day}天 · {SLOT_WORD[l.slot]}</small>{l.text}</p>)}
+    </MobileScroll>}
+
+    {result && <p className="world-toast" role="status">{result}</p>}
+
+    {person && <div className="world-drawer">
+      <PersonCard person={person} world={world} people={PEOPLE} onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
+      {pick ? <div className="world-pick">
+        <p>{pickHint(pick.verb, person)}</p>
+        <div className="pick-targets">
+          {pickTargets.map(id => <button key={id} type="button" onClick={() => tapPerson(id)}>{nameOf(id)}{id in world.present ? "" : " · 不在场"}</button>)}
+          <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
+        </div>
+      </div> : serving && person.skin ? <div className="world-serve">
+        <p className="serve-said">她说过：{person.skin.demands.map(d => TRAIT_LABELS[d.trait]).join(" · ")}</p>
+        <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
+        <div className="serve-products">{PRODUCT_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><i className={`product-art product-art-${pid}`} /><b>{PRODUCTS[pid].short}</b><small>{yuan(PRODUCTS[pid].price)}</small></button>)}</div>
+        <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
+        <div className="serve-actions">
+          <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给她</button>
+          <button className="serve-force" type="button" disabled={!serveProduct} onClick={() => doServe(true)}>硬推</button>
+        </div>
+      </div> : <div className="world-verbs">
+        {verbs.map(v => <button key={v} type="button" onClick={() => v === "serve" ? (setServing(true), setServeProduct(null), setServeUnits(1)) : apply({ verb: v, targets: [person.id] })}><b>{VERB_WORD[v]}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
+        {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{VERB_WORD[v]}</b><small>{VERB_ENERGY[v]} 精力 · 再点一人</small></button>)}
+        {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{world.present[person.id] === "rival" ? "她被请去了对面，这个时段够不着。" : "这会儿对她做不了什么，或者精力不够了。"}</p>}
+      </div>}
+    </div>}
+
+    {pending && <div className="world-story" role="dialog" aria-label="发生的事">
+      <article className="story-card">
+        <p className="story-text">{substitute(pending.storylet.text, pending.binding, PEOPLE)}</p>
+        <div className="story-choices">
+          {storyChoices.length
+            ? storyChoices.map(x => <button key={x.i} type="button" onClick={() => chooseStory(x.i)}>{substitute(x.c.label, pending.binding, PEOPLE)}</button>)
+            : <button type="button" onClick={() => setPending(null)}>先记下这一幕</button>}
+        </div>
+      </article>
+    </div>}
+
+    {webOpen && <div className="world-web">
+      <div className="world-web-bar"><button type="button" onClick={() => setWebOpen(false)}>‹ 返回楼层</button></div>
+      <div className="world-web-body"><WebView world={world} people={PEOPLE} /></div>
+    </div>}
+  </div>;
+}
