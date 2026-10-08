@@ -1,5 +1,6 @@
 // 人物卡：只读 World 与 Person，不接引擎、不做任何判断。
 // 看法与冷暖一律说成话（words.ts 唯一出处），不出现数字和进度条。
+import { ta } from "../pronoun.ts";
 import { useMemo } from "react";
 import { MobileScroll } from "../../mobile";
 import { PLAYER, type Person, type PersonId, type World } from "../types.ts";
@@ -37,11 +38,11 @@ export function PersonCard({ person, world, people, onClose }: PersonCardProps) 
       <button className="pc-close" type="button" aria-label="关闭人物卡" onClick={onClose}>×</button>
     </header>
     <MobileScroll className="pc-scroll">
-      <p className="pc-opinion">她看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
+      <p className="pc-opinion">{ta(person)}看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
       <p className="pc-tempers">{person.tempers.map(t => TEMPER_WORD[t]).join(" · ")}</p>
       <section className="pc-section">
-        <h3>她的熟人</h3>
-        {known.length === 0 ? <p className="pc-empty">她在这个场上还没什么熟人。</p> : <ul className="pc-known">
+        <h3>{ta(person)}的熟人</h3>
+        {known.length === 0 ? <p className="pc-empty">{ta(person)}在这个场上还没什么熟人。</p> : <ul className="pc-known">
           {known.map(row => <li key={row.id} className={row.warmth >= 20 ? "warm" : row.warmth <= -20 ? "cold" : ""}>
             <b>{row.name}</b>
             <small>{row.kind ? `${BOND_KIND_WORD[row.kind]} · ` : ""}{bondWarmWord(row.warmth)}</small>
@@ -49,8 +50,8 @@ export function PersonCard({ person, world, people, onClose }: PersonCardProps) 
         </ul>}
       </section>
       <section className="pc-section">
-        <h3>她知道的关于你的事</h3>
-        {aboutPlayer.length === 0 ? <p className="pc-empty">她手上还没有关于你的事。</p> : <ul className="pc-memories">
+        <h3>{ta(person)}知道的关于你的事</h3>
+        {aboutPlayer.length === 0 ? <p className="pc-empty">{ta(person)}手上还没有关于你的事。</p> : <ul className="pc-memories">
           {aboutPlayer.map((memory, index) => <li key={`${memory.day}:${memory.act}:${index}`} className={memory.valence >= 1 ? "good" : memory.valence <= -1 ? "bad" : ""}>
             <b className="pc-memory-head">第{memory.day}天 · {memory.heardFrom ? `听${nameOf(memory.heardFrom)}说` : "亲眼看见"}</b>
             <p>{actWord(memory.act)}</p>

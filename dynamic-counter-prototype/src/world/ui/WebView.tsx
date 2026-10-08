@@ -2,6 +2,7 @@
 // 布局取舍：40 人全摆在圈上再缩放，节点会掉到 44px 命中线以下、名字也糊；
 // 所以默认画玩家为中心的全网（按 |opinion| 排内外圈），点一个人改成只画她的一度、二度——
 // 每屏节点数由邻域封顶，命中区永远够手指。
+import { ta } from "../pronoun.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { asset } from "../../base.ts";
 import { PLAYER, type Person, type PersonId, type World } from "../types.ts";
@@ -101,7 +102,7 @@ export function WebView({ world, people }: { world: World; people: Person[] }) {
     <header className="web-head">
       <div className="web-head-title">
         <b>{focusPerson ? `${focusPerson.name} 的关系网` : "人情网"}</b>
-        <small>{focusPerson ? "只画她的一度、二度 · 点中心回全网" : `第${world.day}天 ${SLOT_WORD[world.slot]} · 点一个人看她和连线`}</small>
+        <small>{focusPerson ? `只画${ta(focusPerson)}的一度、二度 · 点中心回全网` : `第${world.day}天 ${SLOT_WORD[world.slot]} · 点一个人看关系和连线`}</small>
       </div>
       {focus !== null && <button className="web-all" type="button" onClick={() => setFocus(null)}>全网</button>}
     </header>

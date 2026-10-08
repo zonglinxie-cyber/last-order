@@ -14,6 +14,7 @@ import {
 } from "../engine.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
+import { ta } from "../pronoun.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { Passersby } from "./Passersby.tsx";
@@ -34,14 +35,15 @@ const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
 // public/assets/game/chibi/ 里按 id 对得上的小人图；对不上的用「头像圆牌 + 通用身体」。
 const CHIBI = new Set(["anjie", "duan", "fangmin", "luyao", "mei", "roman", "shen", "suman", "tangke", "xiaoyu", "zhao", "zhou"]);
 const TWO_TARGET: Verb[] = ["introduce", "mediate", "handoff", "tell"];
-const VERB_WORD: Record<Verb, string> = {
+// 代词按人物性别念（pronoun.ts 的 ta），不写死"她"。
+const verbWord = (verb: Verb, person: Person): string => ({
   greet: "招呼", serve: "接待", sample: "送小样", introduce: "介绍认识", mediate: "打圆场",
-  handoff: "托她照看", help: "帮一把", wechat: "加微信", keep: "替她保密", tell: "说件私事",
-};
+  handoff: `托${ta(person)}照看`, help: "帮一把", wechat: "加微信", keep: `替${ta(person)}保密`, tell: "说件私事",
+} satisfies Record<Verb, string>)[verb];
 const pickHint = (verb: Verb, a: Person) => {
-  if (verb === "introduce") return `再点一个人，介绍她和${a.name}认识`;
-  if (verb === "mediate") return `再点一个人，替她和${a.name}打圆场`;
-  if (verb === "handoff") return a.role === "staff" ? "点一位客人，交给她照看" : "点一位同事，把她交过去";
+  if (verb === "introduce") return `再点一个人，介绍给${a.name}认识`;
+  if (verb === "mediate") return `再点一个人，替${a.name}和对方打圆场`;
+  if (verb === "handoff") return a.role === "staff" ? `点一位客人，交给${a.name}照看` : `点一位同事，把${a.name}交过去`;
   return `把谁的私事说给${a.name}听`;
 };
 
@@ -569,7 +571,7 @@ export default function WorldGame() {
     <section className="world-scene" aria-label="现场">
       <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人</h2>
       <MobileScroll className="world-feed">
-        {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。点地图上的人，看看她是谁、对你什么看法。</p>}
+        {dayLogs.length === 0 && <p className="feed-empty">这个时段还没什么动静。点地图上的人，看看是谁、对你什么看法。</p>}
         {[...dayLogs].reverse().slice(0, 14).map((l, i) => <p key={`${l.day}-${l.slot}-${dayLogs.length - i}`}><small>{SLOT_WORD[l.slot]}</small>{l.text}</p>)}
       </MobileScroll>
     </section>
@@ -586,18 +588,18 @@ export default function WorldGame() {
           <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
         </div>
       </div> : serving && person.skin ? <div className="world-serve">
-        <p className="serve-said">她说过：{person.skin.demands.map(d => TRAIT_LABELS[d.trait]).join(" · ")}</p>
+        <p className="serve-said">{ta(person)}说过：{person.skin.demands.map(d => TRAIT_LABELS[d.trait]).join(" · ")}</p>
         <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
         <div className="serve-products">{PRODUCT_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><i className={`product-art product-art-${pid}`} /><b>{PRODUCTS[pid].short}</b><small>{yuan(PRODUCTS[pid].price)}</small></button>)}</div>
         <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
         <div className="serve-actions">
-          <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给她</button>
+          <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>
           <button className="serve-force" type="button" disabled={!serveProduct} onClick={() => doServe(true)}>硬推</button>
         </div>
       </div> : <div className="world-verbs">
-        {verbs.map(v => <button key={v} type="button" onClick={() => v === "serve" ? (setServing(true), setServeProduct(null), setServeUnits(1)) : apply({ verb: v, targets: [person.id] })}><b>{VERB_WORD[v]}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
-        {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{VERB_WORD[v]}</b><small>{VERB_ENERGY[v]} 精力 · 再点一人</small></button>)}
-        {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{world.present[person.id] === "rival" ? "她被请去了对面，这个时段够不着。" : "这会儿对她做不了什么，或者精力不够了。"}</p>}
+        {verbs.map(v => <button key={v} type="button" onClick={() => v === "serve" ? (setServing(true), setServeProduct(null), setServeUnits(1)) : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
+        {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力 · 再点一人</small></button>)}
+        {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{world.present[person.id] === "rival" ? `${ta(person)}被请去了对面，这个时段够不着。` : `这会儿对${ta(person)}做不了什么，或者精力不够了。`}</p>}
       </div>}
     </div>}
 

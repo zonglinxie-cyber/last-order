@@ -1,5 +1,6 @@
 // 人情场跨季「档案」：见过谁、对她知道到哪一步、几条线走到哪里、拿到过哪种散场。
 // 只读 progress 与内容，不做任何判断；配色与 archive.css / web.css 同源。
+import { ta } from "../pronoun.ts";
 import { useMemo, useState } from "react";
 import { MobileScroll } from "../../mobile";
 import { ENDINGS, rank } from "../ending.ts";
@@ -81,11 +82,11 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
                 <p className="wa-line wa-secret">
                   <small>秘密</small>
                   {progress.secretKnown.includes(person.id)
-                    ? <span>{person.secret?.text ?? "她这一层没有藏着的事。"}</span>
-                    : <span className="wa-locked">还没在她跟前揭开过。</span>}
+                    ? <span>{person.secret?.text ?? `${ta(person)}这一层没有藏着的事。`}</span>
+                    : <span className="wa-locked">还没在{ta(person)}跟前揭开过。</span>}
                 </p>
-                <p className="wa-line"><small>她最好的时候</small><span>{opinionWord(progress.bestOpinion[person.id])}</span></p>
-                <p className="wa-line"><small>她最差的时候</small><span>{opinionWord(progress.worstOpinion[person.id])}</span></p>
+                <p className="wa-line"><small>{ta(person)}最好的时候</small><span>{opinionWord(progress.bestOpinion[person.id])}</span></p>
+                <p className="wa-line"><small>{ta(person)}最差的时候</small><span>{opinionWord(progress.worstOpinion[person.id])}</span></p>
               </div>
             </> : <p className="archive-unmet">还没在这层楼上碰到过。</p>}
           </div>
