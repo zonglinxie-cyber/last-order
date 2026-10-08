@@ -462,11 +462,14 @@ export default function WorldGame() {
 
   if (phase === "season") {
     const s = seasonSummary(world, PEOPLE);
+    const ending = seasonEnding(world, PEOPLE);
     const arcRows = Object.entries(s.arcs).filter(([, arc]) => Object.keys(arc).length);
     return <div className="app-screen world-app world-report-page">
       <MobileScroll className="world-report-scroll"><main className="world-report">
         <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
-        <h1>这一季散场了</h1>
+        {/* 标题就是这一季做成了什么 —— 引擎早算出了结局，别让它只在档案里露脸。 */}
+        <h1>{ending.title}</h1>
+        <p className="report-ending">{ending.body}</p>
         <div className="report-numbers">
           <span><small>这一季进账</small><b>{yuan(s.money)}</b></span>
           <span><small>柜位</small><b>{s.standing}</b></span>

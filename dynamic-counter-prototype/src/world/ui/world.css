@@ -113,6 +113,8 @@
 .world-report { padding:var(--top-inset) 18px 20px; }
 .world-report .report-eyebrow { margin:0 0 6px; color:#c7a993; font-size:12px; letter-spacing:.08em; }
 .world-report h1 { margin:0 0 16px; color:#ffe8b6; font:700 26px 'Noto Serif SC',serif; }
+/* 散场页那句结局解释贴在标题下面：标题就是这一季做成了什么，两句要读成一段话 */
+.world-report h1 + .report-ending { margin:-6px 0 16px; color:#f2e6d8; font-size:14px; line-height:1.75; }
 .report-numbers { display:flex; gap:10px; margin-bottom:16px; }
 .report-numbers span { flex:1 1 0; display:flex; flex-direction:column; gap:3px; padding:10px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
 .report-numbers small { color:#a99689; font-size:12px; }
