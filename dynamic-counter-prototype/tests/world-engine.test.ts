@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
-  MAX_PRESENT_CUSTOMERS, newWorld, opinionOf, parseWorld,
-  resolveServe, seasonSummary, serializeWorld, verbOptions,
+  evalCond, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, opinionOf, parseWorld,
+  related, resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
-import type { Person, Storylet, World } from "../src/world/types.ts";
+import type { Cond, Effect, Person, Storylet, World } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
 import { PRODUCTS } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
@@ -20,6 +20,18 @@ const stage = (w: World, ids: string[], zone = "atrium"): World =>
 
 const setOpinion = (w: World, id: string, v: number): World =>
   ({ ...w, opinion: { ...w.opinion, [id]: v } });
+
+/** 把一组 effects 真跑一遍：造一张钉死角色槽的卡，走 drawStorylet + applyChoice。 */
+const fire = (w: World, cast: Record<string, string>, effects: Effect[]): World => {
+  const st: Storylet = {
+    id: "t-fx", kind: "social", tension: 0, weight: 1, text: "x", when: [],
+    cast: Object.fromEntries(Object.entries(cast).map(([k, id]) => [k, { id, where: [] }])),
+    choices: [{ label: "好", effects, result: "好" }],
+  };
+  const { world: w2, drawn } = drawStorylet(w, PEOPLE, [st]);
+  assert.ok(drawn, "钉死角色的测试卡应当抽得出来");
+  return applyChoice(w2, PEOPLE, drawn, 0);
+};
 
 /** 一段固定剧本：两天八时段，每时段开场→闲聊→说书人→做第一个能做的动作。 */
 function runScript(seed: string): World {
@@ -386,6 +398,146 @@ test("场子不空：每个时段至少两位客人；开局上午沈薇和梅�
     }
     w = endDay(w, PEOPLE);
   }
+});
+
+test("bond 效果：set 钉冷暖、kind 改种类、delta 照旧是加减", () => {
+  // 彭姐和赵阿姨原本是 -35 的对头，和好成朋友、冷暖钉到 15。
+  let w = stage(newWorld("fx", PEOPLE), ["peng", "zhao"]);
+  w = fire(w, { a: "peng", b: "zhao" }, [{ bond: ["$a", "$b"], kind: "friend", set: 15 }]);
+  assert.equal(kindOf(w, PEOPLE, "peng", "zhao"), "friend");
+  assert.equal(warmthOf(w, PEOPLE, "peng", "zhao"), 15);
+
+  // 只给 kind：种类改掉、冷暖不动；有向，zhao>peng 还是 rival。
+  w = stage(newWorld("fx", PEOPLE), ["peng", "zhao"]);
+  w = fire(w, { a: "peng", b: "zhao" }, [{ bond: ["$a", "$b"], kind: "friend" }]);
+  assert.equal(kindOf(w, PEOPLE, "peng", "zhao"), "friend");
+  assert.equal(warmthOf(w, PEOPLE, "peng", "zhao"), -35);
+  assert.equal(kindOf(w, PEOPLE, "zhao", "peng"), "rival");
+
+  // 只给 set：冷暖钉住；原本不认识的人有了这条记录，就算认识了。
+  w = stage(newWorld("fx", PEOPLE), ["mei", "duan"]);
+  assert.ok(!related(w, PEOPLE, "mei", "duan"));
+  w = fire(w, { a: "mei", b: "duan" }, [{ bond: ["$a", "$b"], set: 25 }]);
+  assert.equal(warmthOf(w, PEOPLE, "mei", "duan"), 25);
+  assert.ok(related(w, PEOPLE, "mei", "duan"));
+  assert.equal(kindOf(w, PEOPLE, "mei", "duan"), undefined, "没写种类、也没声明过，就没有种类");
+
+  // delta 写法不变：冷暖加减，不碰种类。
+  w = stage(newWorld("fx", PEOPLE), ["peng", "zhao"]);
+  w = fire(w, { a: "peng", b: "zhao" }, [{ bond: ["$a", "$b"], delta: 20 }]);
+  assert.equal(warmthOf(w, PEOPLE, "peng", "zhao"), -15);
+  assert.equal(kindOf(w, PEOPLE, "peng", "zhao"), "rival", "delta 不改种类");
+});
+
+test("remember 的 heardFrom 写下'听谁说的'，remembers 的 from 认得出来", () => {
+  let w = stage(newWorld("fx", PEOPLE), ["mei", "shen"]);
+  w = fire(w, { a: "mei", b: "shen" }, [
+    { remember: { holder: "$a", act: "saw-fight", valence: -1, heardFrom: "$b" } },
+    { remember: { holder: "$a", act: "saw-help", valence: 1 } },
+  ]);
+  assert.equal(w.memories.find(m => m.holder === "mei" && m.act === "saw-fight")?.heardFrom, "shen");
+  assert.equal(w.memories.find(m => m.holder === "mei" && m.act === "saw-help")?.heardFrom, undefined,
+    "不写 heardFrom 就是当场见闻");
+
+  assert.ok(evalCond(w, PEOPLE, { remembers: "mei", act: "saw-fight", from: "shen" }));
+  assert.ok(!evalCond(w, PEOPLE, { remembers: "mei", act: "saw-fight", from: "he" }));
+  assert.ok(!evalCond(w, PEOPLE, { remembers: "mei", act: "saw-fight", from: "$missing" }),
+    "from 引用了绑不出来的槽时条件不成立");
+  assert.ok(evalCond(w, PEOPLE, { remembers: "mei", act: "saw-fight", heard: true }));
+  assert.ok(!evalCond(w, PEOPLE, { remembers: "mei", act: "saw-help", heard: true }));
+});
+
+test("move 效果把在场的人挪到别的区，不在场的不动", () => {
+  let w = stage(newWorld("fx", PEOPLE), ["mei", "shen"]);
+  w = fire(w, { a: "mei" }, [
+    { move: { person: "$a", zone: "lounge" } },
+    { move: { person: "duan", zone: "cashier" } },
+  ]);
+  assert.equal(w.present["mei"], "lounge", "被请去休息区");
+  assert.equal(w.present["shen"], "atrium", "别人不动");
+  assert.ok(!("duan" in w.present), "不在场的人挪不动");
+});
+
+test("reveal 效果当场揭开秘密，knowsSecret 条件是同一个口径", () => {
+  let w = stage(newWorld("fx", PEOPLE), ["qiu", "he", "suman"]);
+  assert.ok(!evalCond(w, PEOPLE, { knowsSecret: "qiu" }));
+  w = fire(w, { a: "qiu" }, [{ reveal: "$a" }]);
+  assert.equal(w.qualities["secret-known:qiu"], 1);
+  assert.ok(evalCond(w, PEOPLE, { knowsSecret: "qiu" }));
+  const secret = person("qiu").secret!;
+  assert.ok(w.log.some(l => l.text === `你听说了邱太的事：${secret.text}`),
+    "和 beginSlot 自动揭开念同一句话");
+
+  // 没写 secret 的人也只写旗子，不念文案。
+  const before = w.log.length;
+  w = fire(w, { a: "suman" }, [{ reveal: "$a" }]);
+  assert.equal(w.qualities["secret-known:suman"], 1);
+  assert.equal(w.log.length, before + 1, "只多一条选项的结果句");
+});
+
+test("Visits.festivalBoost：节日窗口里来访概率乘以倍数，平时照旧", () => {
+  const fests = [{ id: "f520", name: "五二〇", fromDay: 2, toDay: 2 }];
+  // 平时 0.4，节日 0.4×3 压回 1 → 必来；平时必来，节日 ×0 → 不来。
+  const boostIn: Person = { ...person("duan"), id: "boost-in", bonds: [],
+    visits: { days: "any", slots: [0, 1, 2, 3], chance: 0.4, festivalBoost: 3 } };
+  const boostOut: Person = { ...person("mei"), id: "boost-out", bonds: [],
+    visits: { days: "any", slots: [0, 1, 2, 3], chance: 1, festivalBoost: 0 } };
+  const folks = [boostIn, boostOut];
+  for (let i = 0; i < 8; i++) {
+    const seed = `boost-${i}`;
+    for (const day of [1, 2, 3]) {
+      const w = beginSlot({ ...newWorld(seed, folks), day }, folks, fests);
+      if (day === 2) {
+        assert.ok("boost-in" in w.present, `种子 ${seed}：节日里 boost 到饱和必来`);
+        assert.ok(!("boost-out" in w.present), `种子 ${seed}：festivalBoost 0 过节反而躲着`);
+      } else {
+        assert.ok("boost-out" in w.present, `种子 ${seed}：没节日照旧按 chance=1 来`);
+      }
+    }
+  }
+});
+
+test("角色槽 where 是'全部满足'：一条不成立就绑不进去", () => {
+  const picky: Storylet = {
+    id: "t-picky", kind: "social", tension: 0, weight: 1, text: "{$a}",
+    cast: { a: { where: [{ role: "$self", is: "customer" }, { opinion: "$self", gte: 50 }] } },
+    when: [], choices: [{ label: "好", effects: [], result: "好" }],
+  };
+  // 在场、是顾客，但看法只有 30：两条只成立一条，整张卡出不来。
+  let w = stage(newWorld("picky", PEOPLE), ["mei"]);
+  w = setOpinion(w, "mei", 30);
+  assert.equal(drawStorylet(w, PEOPLE, [picky]).drawn, null);
+  // 每条都成立才绑得上。
+  w = setOpinion(w, "mei", 50);
+  assert.ok(drawStorylet(w, PEOPLE, [picky]).drawn);
+});
+
+test("没写过的 quality 一律读作 0", () => {
+  const w = newWorld("q0", PEOPLE);
+  for (const cond of [
+    { quality: "never-written", gte: 0 },
+    { quality: "never-written", lte: 0 },
+    { quality: "never-written", eq: 0 },
+  ] satisfies Cond[]) assert.ok(evalCond(w, PEOPLE, cond), JSON.stringify(cond));
+  assert.ok(!evalCond(w, PEOPLE, { quality: "never-written", gte: 1 }));
+  // delta 效果也是在 0 的基础上加，不用先初始化。
+  const w2 = fire(stage(w, ["mei"]), { a: "mei" }, [{ quality: "arc:test", delta: 5 }]);
+  assert.equal(w2.qualities["arc:test"], 5);
+});
+
+test("存档：新效果写进的状态照样能序列化往返", () => {
+  let w = stage(newWorld("rt", PEOPLE), ["qiu", "he", "mei", "suman"]);
+  w = fire(w, { a: "qiu", b: "he", c: "mei", d: "suman" }, [
+    { bond: ["$a", "$b"], kind: "rival", set: -40 },
+    { remember: { holder: "$c", act: "heard-it", valence: -1, heardFrom: "$a" } },
+    { move: { person: "$d", zone: "backroom" } },
+    { reveal: "$a" },
+  ]);
+  assert.ok(w.bondKinds?.["qiu>he"] === "rival"
+    && w.memories.some(m => m.heardFrom === "qiu")
+    && w.present["suman"] === "backroom"
+    && w.qualities["secret-known:qiu"] === 1);
+  assert.deepEqual(parseWorld(serializeWorld(w)), w);
 });
 
 test("陆遥在时段末带走没顾上的人，她当天不再回来", () => {

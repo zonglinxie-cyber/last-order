@@ -39,6 +39,9 @@ export type Visits = {
   fromDay?: number;
   /** 节日 id 列表：只在这些节日的窗口里出现 */
   festivals?: string[];
+  /** 节日窗口开着时，来访概率换成 chance × 这个数（压回 0..1）。
+      >1 过节更常来，<1 过节反而躲着她；不填 festivals 也对任何节日生效。 */
+  festivalBoost?: number;
 };
 
 export type Skin = {
@@ -111,7 +114,8 @@ export type World = {
   /** 运行时才建立的关系类型（介绍认识、反目成仇），键同 bonds；缺省取 Person.bonds 声明的 kind */
   bondKinds?: Record<string, BondKind>;
   memories: Memory[];
-  /** 故事碎片用的进度值（QBN 的 quality），如 "arc:anjie"；引擎自己也记 "storyteller:heat" */
+  /** 故事碎片用的进度值（QBN 的 quality），如 "arc:anjie"；引擎自己也记 "storyteller:heat"。
+      没写过的 key 一律读作 0 —— 条件和效果都不用先初始化。 */
   qualities: Record<string, number>;
   /** 本时段在场的人和所在区域 */
   present: Record<PersonId, Zone>;
@@ -139,7 +143,10 @@ export type Cond =
   | { opinion: Ref; gte?: number; lte?: number }
   | { bond: [Ref, Ref]; gte?: number; lte?: number; kind?: BondKind }
   | { quality: string; gte?: number; lte?: number; eq?: number }
-  | { remembers: Ref; act?: string; valence?: "good" | "bad"; subject?: Ref; heard?: boolean }
+  /** holder 记着一件事；act/valence/subject 过滤是哪种事，heard 区分亲眼还是听来的，from 钉死"是听谁说的"。 */
+  | { remembers: Ref; act?: string; valence?: "good" | "bad"; subject?: Ref; heard?: boolean; from?: Ref }
+  /** 玩家是否已经知道她的秘密（引擎写 secret-known:<id>，beginSlot 自动揭开和 reveal 效果都算） */
+  | { knowsSecret: Ref }
   | { temper: Ref; is: Temper }
   | { role: Ref; is: Role }
   | { day: { gte?: number; lte?: number } }
@@ -151,12 +158,21 @@ export type Cond =
 
 export type Effect =
   | { opinion: Ref; delta: number }
-  | { bond: [Ref, Ref]; delta: number }
+  /** 冷暖加减。同一个 bond 效果里 delta 和 set 二选一，不能同时给。 */
+  | { bond: [Ref, Ref]; delta: number; kind?: never; set?: never }
+  /** 新建关系或改关系种类（介绍认识、对头和好成朋友）：kind 写种类；set 把冷暖钉到这个值，
+      不给 set 保持现状；两个都不给只算"从此认识"。与 delta 二选一。 */
+  | { bond: [Ref, Ref]; kind?: BondKind; set?: number; delta?: never }
   | { quality: string; delta?: number; set?: number }
   | { stat: "money" | "standing" | "compliance" | "energy" | "samples"; delta: number }
-  | { remember: { holder: Ref; act: string; valence: -2 | -1 | 0 | 1 | 2; subject?: Ref } }
+  /** 让她记住一件事；heardFrom 写"是听谁说的"，不写就是当场见闻。 */
+  | { remember: { holder: Ref; act: string; valence: -2 | -1 | 0 | 1 | 2; subject?: Ref; heardFrom?: Ref } }
   /** 让某人在若干天后再来，可以带上别人 */
   | { appoint: { person: Ref; inDays: number; slot?: Slot; bring?: Ref[] } }
+  /** 把在场的人挪到别的区（被请去休息区、被带去收银）；人不在场就不动 */
+  | { move: { person: Ref; zone: Zone } }
+  /** 玩家当场知道某人的秘密：写 secret-known:<id>，口径和 beginSlot 自动揭开的那条一致 */
+  | { reveal: Ref }
   /** 当场离开 */
   | { leave: Ref }
   | { log: string };
@@ -165,7 +181,8 @@ export type Effect =
 export type CastSlot = {
   /** 钉死成某个具体的人（个人线主角）；不填则按 where 从在场或全体里找 */
   id?: PersonId;
-  /** 填槽的人必须满足这些条件；条件里可以用 "$self" 指这个槽的人，也可以引用前面的槽 */
+  /** 填槽的人必须满足这些条件，where 里的每一条都要成立（全部满足才算数；
+      要"或者"就在其中一条里写 { any: [...] }）。条件里可以用 "$self" 指这个槽的人，也可以引用前面的槽 */
   where: Cond[];
   /** 默认 true：必须在场 */
   mustBePresent?: boolean;

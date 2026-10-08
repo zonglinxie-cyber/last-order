@@ -11,7 +11,7 @@ import {
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
 import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
-  Storylet, Verb, World, Zone,
+  Storylet, Verb, Visits, World, Zone,
 } from "./types.ts";
 import { PLAYER } from "./types.ts";
 
@@ -251,11 +251,18 @@ export function evalCond(world: World, people: Person[], cond: Cond, binding: Bi
     const holder = at(cond.remembers); if (!holder) return false;
     const subject = cond.subject ? at(cond.subject) : undefined;
     if (cond.subject && !subject) return false;
+    const from = cond.from ? at(cond.from) : undefined;
+    if (cond.from && !from) return false;
     return world.memories.some(m => m.holder === holder
       && (cond.act === undefined || m.act === cond.act)
       && (cond.valence === undefined || (cond.valence === "good" ? m.valence > 0 : m.valence < 0))
       && (subject === undefined || m.subject === subject)
-      && (cond.heard === undefined || (cond.heard ? m.heardFrom !== undefined : m.heardFrom === undefined)));
+      && (cond.heard === undefined || (cond.heard ? m.heardFrom !== undefined : m.heardFrom === undefined))
+      && (from === undefined || m.heardFrom === from));
+  }
+  if ("knowsSecret" in cond) {
+    const id = at(cond.knowsSecret);
+    return !!id && !!qualityOf(world, `secret-known:${id}`);
   }
   if ("temper" in cond) { const id = at(cond.temper); return !!id && hasTemper(personOf(people, id), cond.is); }
   if ("role" in cond) { const id = at(cond.role); return !!id && personOf(people, id)?.role === cond.is; }
@@ -290,7 +297,16 @@ function applyEffect(world: World, people: Person[], effect: Effect, binding: Bi
   }
   if ("bond" in effect) {
     const a = at(effect.bond[0]), b = at(effect.bond[1]);
-    return a && b ? addWarmth(world, people, a, b, effect.delta) : world;
+    if (!a || !b) return world;
+    const d = effect.delta;
+    if (d !== undefined) return addWarmth(world, people, a, b, d);
+    // 建档 / 改种类：set 给就把冷暖钉到这个值，不给保持现状；kind 没给且两边都没声明过种类时
+    // 只写冷暖——bonds 里有这条记录就足够让 related() 认"两人认识"。
+    const kind = effect.kind ?? kindOf(world, people, a, b);
+    const warmth = clamp100(effect.set ?? warmthOf(world, people, a, b));
+    return kind === undefined
+      ? { ...world, bonds: { ...world.bonds, [bondKey(a, b)]: warmth } }
+      : setBond(world, a, b, kind, warmth);
   }
   if ("quality" in effect) {
     return setQuality(world, effect.quality, effect.set ?? qualityOf(world, effect.quality) + (effect.delta ?? 0));
@@ -304,7 +320,8 @@ function applyEffect(world: World, people: Person[], effect: Effect, binding: Bi
   if ("remember" in effect) {
     const holder = at(effect.remember.holder); if (!holder) return world;
     const subject = effect.remember.subject ? at(effect.remember.subject) : PLAYER;
-    return subject ? remember(world, holder, effect.remember.act, effect.remember.valence, subject) : world;
+    const heardFrom = effect.remember.heardFrom ? at(effect.remember.heardFrom) : undefined;
+    return subject ? remember(world, holder, effect.remember.act, effect.remember.valence, subject, heardFrom) : world;
   }
   if ("appoint" in effect) {
     const person = at(effect.appoint.person); if (!person) return world;
@@ -312,6 +329,18 @@ function applyEffect(world: World, people: Person[], effect: Effect, binding: Bi
     const bring = effect.appoint.bring?.map(at).filter((x): x is PersonId => !!x);
     return { ...world, appointments: [...world.appointments,
       { day: world.day + effect.appoint.inDays, slot, person, ...(bring?.length ? { bring } : {}), reason: "visit" }] };
+  }
+  if ("move" in effect) {
+    const id = at(effect.move.person);
+    if (!id || !isPresent(world, id)) return world;
+    return { ...world, present: { ...world.present, [id]: effect.move.zone } };
+  }
+  if ("reveal" in effect) {
+    const id = at(effect.reveal); if (!id) return world;
+    const person = personOf(people, id);
+    if (person?.secret && !qualityOf(world, `secret-known:${id}`))
+      world = say(world, `你听说了${person.name}的事：${person.secret.text}`, [id]);
+    return setQuality(world, `secret-known:${id}`, 1);
   }
   if ("leave" in effect) {
     const id = at(effect.leave); if (!id || !isPresent(world, id)) return world;
@@ -330,6 +359,10 @@ const awayToday = (w: World, id: PersonId) => qualityOf(w, `away:${id}`) === w.d
 /** 这一天落在哪个节日窗口里；不在任何窗口里返回 undefined。 */
 export const festivalOn = (day: number, festivals: Festival[]): string | undefined =>
   festivals.find(f => day >= f.fromDay && day <= f.toDay)?.id;
+
+/** 她此刻的来访概率：节日窗口开着、她又写了 festivalBoost 时按 chance×boost 算（压回 0..1），否则就是 chance。 */
+const visitChance = (v: Visits, festival: string | undefined): number =>
+  festival !== undefined && v.festivalBoost !== undefined ? clamp(v.chance * v.festivalBoost, 0, 1) : v.chance;
 
 /** 开一个时段。festivals 给了就按当天日期设置 World.festival —— Visits.festivals 与 {festival} 条件都读它。 */
 export function beginSlot(world: World, people: Person[], festivals?: Festival[]): World {
@@ -408,7 +441,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     if (v.fromDay !== undefined && w.day < v.fromDay) continue;
     if (v.festivals && (!w.festival || !v.festivals.includes(w.festival))) continue;
     let r: number; [r, w] = roll(w);
-    if (r < v.chance) candidates.push({ id: person.id, r });
+    if (r < visitChance(v, w.festival)) candidates.push({ id: person.id, r });
   }
   // 超出上限时谁留下由抽数排序决定 —— 同一个种子挑出同一批人。
   candidates.sort((x, y) => x.r - y.r);
@@ -426,9 +459,9 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     const pool = people.filter(p => p.role === "customer" && !(p.id in present) && !awayToday(w, p.id)
       && (p.visits.fromDay === undefined || w.day >= p.visits.fromDay)
       && (!p.visits.festivals || (!!w.festival && p.visits.festivals.includes(w.festival)))
-      && p.visits.chance > 0);
+      && visitChance(p.visits, w.festival) > 0);
     if (!pool.length) break;
-    const i = drawWeighted(w.seed, w.rngCalls, pool.map(p => p.visits.chance));
+    const i = drawWeighted(w.seed, w.rngCalls, pool.map(p => visitChance(p.visits, w.festival)));
     w = { ...w, rngCalls: w.rngCalls + 1 };
     if (i < 0) break;
     let r: number; [r, w] = roll(w);
