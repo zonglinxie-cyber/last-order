@@ -62,11 +62,14 @@ export type Voice = {
   complain: string;   // 跟熟人说你坏话
 };
 
+export type Gender = "f" | "m";
+
 export type Person = {
   id: PersonId;
   name: string;
   role: Role;
   age: number;
+  gender: Gender;
   /** 一句话身份 */
   descriptor: string;
   tempers: Temper[];
@@ -151,6 +154,7 @@ export type Cond =
   | { knowsSecret: Ref }
   | { temper: Ref; is: Temper }
   | { role: Ref; is: Role }
+  | { gender: Ref; is: Gender }
   | { day: { gte?: number; lte?: number } }
   /** 第几季（从 1 起）。只在某一季之后才开的线写 { season: { gte: 2 } }。 */
   | { season: { gte?: number; lte?: number } }

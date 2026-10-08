@@ -123,7 +123,7 @@ const LINKS: Link[] = [
 
 const DRAFTS: Array<Omit<Person, "bonds">> = [
   {
-    id: "shen", name: "沈薇", role: "customer", age: 29,
+    id: "shen", name: "沈薇", role: "customer", age: 29, gender: "f",
     descriptor: "熟客博主，对面也认识她",
     tempers: ["proud", "wary"],
     skin: {
@@ -143,7 +143,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-shen-consultation.png"),
   },
   {
-    id: "mei", name: "梅女士", role: "customer", age: 41,
+    id: "mei", name: "梅女士", role: "customer", age: 41, gender: "f",
     descriptor: "下班还要见客户，只留十分钟",
     tempers: ["hasty", "loyal"],
     skin: {
@@ -161,7 +161,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-mei-consultation.png"),
   },
   {
-    id: "xiaoyu", name: "小雨", role: "customer", age: 22,
+    id: "xiaoyu", name: "小雨", role: "customer", age: 22, gender: "f",
     descriptor: "第一次买高端，预算就一千",
     tempers: ["shy", "thrifty"],
     skin: {
@@ -180,7 +180,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-xiaoyu-consultation.png"),
   },
   {
-    id: "zhao", name: "赵女士", role: "customer", age: 48,
+    id: "zhao", name: "赵女士", role: "customer", age: 48, gender: "f",
     descriptor: "给女儿买，自己的脸不作数",
     tempers: ["wary", "thrifty"],
     skin: {
@@ -201,7 +201,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-zhao-consultation.png"),
   },
   {
-    id: "anjie", name: "安姐", role: "customer", age: 32,
+    id: "anjie", name: "安姐", role: "customer", age: 32, gender: "f",
     descriptor: "婚前试妆，错不起",
     tempers: ["loyal", "face"],
     skin: {
@@ -221,7 +221,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-anjie-consultation.png"),
   },
   {
-    id: "zhou", name: "周姐", role: "customer", age: 36,
+    id: "zhou", name: "周姐", role: "customer", age: 36, gender: "f",
     descriptor: "来对比的，只有二十分钟",
     tempers: ["wary", "proud"],
     skin: {
@@ -240,7 +240,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-zhou-consultation.png"),
   },
   {
-    id: "duan", name: "段小姐", role: "customer", age: 24,
+    id: "duan", name: "段小姐", role: "customer", age: 24, gender: "f",
     descriptor: "嘴上说看看，包里是别人的过敏记录",
     tempers: ["shy", "face"],
     skin: {
@@ -260,7 +260,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/customer-duan-consultation.png"),
   },
   {
-    id: "roman", name: "罗曼", role: "staff", age: 34,
+    id: "roman", name: "罗曼", role: "staff", age: 34, gender: "f",
     descriptor: "柜长，看数和原话",
     tempers: ["proud", "hasty"],
     visits: { days: "any", slots: [0, 1], chance: 0.85 },
@@ -274,7 +274,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/staff-portraits/roman.png"),
   },
   {
-    id: "suman", name: "苏蔓", role: "staff", age: 31,
+    id: "suman", name: "苏蔓", role: "staff", age: 31, gender: "f",
     descriptor: "资深柜姐，老客认她",
     tempers: ["loyal", "warm"],
     visits: { days: "any", slots: [1, 2], chance: 0.8 },
@@ -289,7 +289,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/staff-portraits/suman.png"),
   },
   {
-    id: "tangke", name: "唐可", role: "staff", age: 26,
+    id: "tangke", name: "唐可", role: "staff", age: 26, gender: "f",
     descriptor: "同期，跟你记在同一张周目标上",
     tempers: ["proud", "loyal"],
     visits: { days: "any", slots: [2, 3], chance: 0.75 },
@@ -303,7 +303,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/staff-portraits/tangke.png"),
   },
   {
-    id: "fangmin", name: "方敏", role: "staff", age: 38,
+    id: "fangmin", name: "方敏", role: "staff", age: 38, gender: "f",
     descriptor: "合规，只收写得进档案的句子",
     tempers: ["wary", "loyal"],
     visits: { days: [1, 3, 5], slots: [0, 3], chance: 0.45 },
@@ -318,7 +318,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/staff-portraits/fangmin.png"),
   },
   {
-    id: "luyao", name: "陆遥", role: "rival", age: 29,
+    id: "luyao", name: "陆遥", role: "rival", age: 29, gender: "f",
     descriptor: "对面维珞，评价栏上写着能截",
     tempers: ["proud", "hasty"],
     visits: { days: "any", slots: [1, 2, 3], chance: 0.7 },
@@ -333,7 +333,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     portrait: asset("/assets/game/staff-portraits/luyao.png"),
   },
   {
-    id: "qiaowan", name: "乔晚", role: "staff", age: 22,
+    id: "qiaowan", name: "乔晚", role: "staff", age: 22, gender: "f",
     portrait: asset("/assets/game/people/qiaowan.webp"),
     descriptor: "实习生，把你的句子学得很死",
     tempers: ["shy", "loyal"],
@@ -349,7 +349,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十二岁，马尾，空白工牌，站在镜子侧面，捏着一张色号纸条。",
   },
   {
-    id: "peilan", name: "裴岚", role: "staff", age: 44,
+    id: "peilan", name: "裴岚", role: "staff", age: 44, gender: "f",
     portrait: asset("/assets/game/people/peilan.webp"),
     descriptor: "区域经理，以前站过柜，不进直播",
     tempers: ["wary", "face"],
@@ -365,7 +365,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。四十出头，短发，深色外套没有工牌绳，站在入口不进柜。",
   },
   {
-    id: "ligui", name: "李桂", role: "mall", age: 52,
+    id: "ligui", name: "李桂", role: "mall", age: 52, gender: "f",
     portrait: asset("/assets/game/people/ligui.webp"),
     descriptor: "商场保洁，李娜的妈",
     tempers: ["warm", "gossip"],
@@ -380,7 +380,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。五十出头，保洁背心，一手清洁车把手，一手一只没封口的小样袋。",
   },
   {
-    id: "laokang", name: "老康", role: "mall", age: 55,
+    id: "laokang", name: "老康", role: "mall", age: 55, gender: "m",
     portrait: asset("/assets/game/people/laokang.webp"),
     descriptor: "门口保安，认得出赶场的人",
     tempers: ["loyal", "wary"],
@@ -395,7 +395,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。五十多岁，保安制服，站在入口内侧，手里是对讲机不是试妆盘。",
   },
   {
-    id: "huojie", name: "霍姐", role: "mall", age: 40,
+    id: "huojie", name: "霍姐", role: "mall", age: 40, gender: "f",
     portrait: asset("/assets/game/people/huojie.webp"),
     descriptor: "楼层经理，中庭活动要人",
     tempers: ["face", "hasty"],
@@ -410,7 +410,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。四十岁，楼层工牌，文件夹夹着今日活动单，站在中庭与柜台之间。",
   },
   {
-    id: "miduo", name: "米朵", role: "customer", age: 24,
+    id: "miduo", name: "米朵", role: "customer", age: 24, gender: "f",
     portrait: asset("/assets/game/people/miduo.webp"),
     descriptor: "新主播，灯是她的",
     tempers: ["proud", "gossip"],
@@ -430,7 +430,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十四岁，手机架在镜边，补光灯对着脸，工牌不是商场的。",
   },
   {
-    id: "tangtang", name: "唐糖", role: "customer", age: 22,
+    id: "tangtang", name: "唐糖", role: "customer", age: 22, gender: "f",
     portrait: asset("/assets/game/people/tangtang.webp"),
     descriptor: "沈薇团队里新来的，被要求化成一样",
     tempers: ["face", "hasty"],
@@ -450,7 +450,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十二岁，妆已经上了一半，手机里存着别人的近景，站得靠镜太近。",
   },
   {
-    id: "liangxia", name: "梁夏", role: "customer", age: 29,
+    id: "liangxia", name: "梁夏", role: "customer", age: 29, gender: "f",
     portrait: asset("/assets/game/people/liangxia.webp"),
     descriptor: "安姐的伴娘，今天不是来被拍的",
     tempers: ["face", "shy"],
@@ -470,7 +470,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十九岁，伴娘群里那种妥帖的上衣，一手按住别人的手机。",
   },
   {
-    id: "baijie", name: "白姐", role: "customer", age: 34,
+    id: "baijie", name: "白姐", role: "customer", age: 34, gender: "f",
     portrait: asset("/assets/game/people/baijie.webp"),
     descriptor: "婚礼跟妆，问色号不是来囤货",
     tempers: ["proud", "hasty"],
@@ -490,7 +490,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。三十四岁，跟妆工具包放在凳边，手上有未卸的试色，不是购物袋。",
   },
   {
-    id: "zhaoning", name: "赵宁", role: "customer", age: 20,
+    id: "zhaoning", name: "赵宁", role: "customer", age: 20, gender: "f",
     portrait: asset("/assets/game/people/zhaoning.webp"),
     descriptor: "赵女士的女儿，敏感，很少自己进柜",
     tempers: ["shy", "wary"],
@@ -511,7 +511,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十岁，学生气，手机打开过敏清单，站在母亲侧后方。",
   },
   {
-    id: "heqing", name: "何清", role: "customer", age: 26,
+    id: "heqing", name: "何清", role: "customer", age: 26, gender: "f",
     portrait: asset("/assets/game/people/heqing.webp"),
     descriptor: "和阮小满一起来，总是她先开口",
     tempers: ["face", "hasty"],
@@ -530,7 +530,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十六岁，周末要拍照的妆，站在镜子正中，朋友在她侧边。",
   },
   {
-    id: "ruanxiaoman", name: "阮小满", role: "customer", age: 26,
+    id: "ruanxiaoman", name: "阮小满", role: "customer", age: 26, gender: "f",
     portrait: asset("/assets/game/people/ruanxiaoman.webp"),
     descriptor: "跟何清来，话少，唇周干",
     tempers: ["shy", "loyal"],
@@ -550,7 +550,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十六岁，杯沿有旧豆沙，站在闺蜜侧后方，不看镜头。",
   },
   {
-    id: "caiaiyi", name: "蔡阿姨", role: "customer", age: 50,
+    id: "caiaiyi", name: "蔡阿姨", role: "customer", age: 50, gender: "f",
     portrait: asset("/assets/game/people/caiaiyi.webp"),
     descriptor: "广场舞队拼单，人多，肤质不一",
     tempers: ["gossip", "warm"],
@@ -570,7 +570,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。五十岁，舞队外套搭在臂上，手机打开一个几十人的群。",
   },
   {
-    id: "linyi", name: "林姨", role: "customer", age: 57,
+    id: "linyi", name: "林姨", role: "customer", age: 57, gender: "f",
     portrait: asset("/assets/game/people/linyi.webp"),
     descriptor: "给外孙女买第一支，怕老师说",
     tempers: ["thrifty", "loyal"],
@@ -590,7 +590,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。五十七岁，布包里露出一张学生证照片，眼睛在礼盒和色号之间。",
   },
   {
-    id: "wulaoshi", name: "吴老师", role: "customer", age: 62,
+    id: "wulaoshi", name: "吴老师", role: "customer", age: 62, gender: "f",
     portrait: asset("/assets/game/people/wulaoshi.webp"),
     descriptor: "退休教师，看过你的回放",
     tempers: ["wary", "loyal"],
@@ -610,7 +610,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。六十二岁，退休教师的外套，手机横着在柜台上，录音界面亮着。",
   },
   {
-    id: "dongayi", name: "董阿姨", role: "customer", age: 48,
+    id: "dongayi", name: "董阿姨", role: "customer", age: 48, gender: "f",
     portrait: asset("/assets/game/people/dongayi.webp"),
     descriptor: "老会员，认人，不给练手的碰",
     tempers: ["face", "loyal"],
@@ -630,7 +630,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。四十八岁，老会员的包，看见实习生就侧过脸。",
   },
   {
-    id: "guyan", name: "顾言", role: "customer", age: 21,
+    id: "guyan", name: "顾言", role: "customer", age: 21, gender: "m",
     portrait: asset("/assets/game/people/guyan.webp"),
     descriptor: "帮宿舍代买，备忘录字迹不一样",
     tempers: ["warm", "thrifty"],
@@ -649,7 +649,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十一岁，手机备忘录摊开四条，字迹不同，没有代购群的报价。",
   },
   {
-    id: "jiangning", name: "江宁", role: "customer", age: 20,
+    id: "jiangning", name: "江宁", role: "customer", age: 20, gender: "f",
     portrait: asset("/assets/game/people/jiangning.webp"),
     descriptor: "大二，晚上试镜，卡里大约四百",
     tempers: ["hasty", "shy"],
@@ -669,7 +669,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十岁，颊上有一颗正在冒的痘，书包还没放下。",
   },
   {
-    id: "suxiao", name: "苏晓", role: "customer", age: 24,
+    id: "suxiao", name: "苏晓", role: "customer", age: 24, gender: "f",
     portrait: asset("/assets/game/people/suxiao.webp"),
     descriptor: "考研，购物车里都是打折的持妆",
     tempers: ["thrifty", "wary"],
@@ -689,7 +689,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十四岁，眼下干，手机购物车停在持妆，人站得很晚。",
   },
   {
-    id: "songjie", name: "宋姐", role: "customer", age: 36,
+    id: "songjie", name: "宋姐", role: "customer", age: 36, gender: "f",
     portrait: asset("/assets/game/people/songjie.webp"),
     descriptor: "代购，群在手机最上面",
     tempers: ["gossip", "thrifty"],
@@ -709,7 +709,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。三十六岁，手机停在代购群最上面，袋子里有别的品牌小票。",
   },
   {
-    id: "hanlei", name: "韩磊", role: "customer", age: 31,
+    id: "hanlei", name: "韩磊", role: "customer", age: 31, gender: "m",
     portrait: asset("/assets/game/people/hanlei.webp"),
     descriptor: "公司行政，要专票，不试色",
     tempers: ["hasty", "face"],
@@ -729,7 +729,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。三十一岁，邮件抬头是公司，四套未拆礼盒，不往镜子前坐。",
   },
   {
-    id: "chendao", name: "陈导", role: "customer", age: 38,
+    id: "chendao", name: "陈导", role: "customer", age: 38, gender: "m",
     portrait: asset("/assets/game/people/chendao.webp"),
     descriptor: "导游，团在中庭，只有十分钟",
     tempers: ["hasty", "warm"],
@@ -748,7 +748,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。三十八岁，导游旗收在肘弯，一直看表，不坐下来。",
   },
   {
-    id: "yenushi", name: "叶女士", role: "customer", age: 33,
+    id: "yenushi", name: "叶女士", role: "customer", age: 33, gender: "f",
     portrait: asset("/assets/game/people/yenushi.webp"),
     descriptor: "一直找陆遥，皮肤她原来就推对了",
     tempers: ["loyal", "proud"],
@@ -767,7 +767,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。三十三岁，妆面已经稳，眼睛在找另一张工牌，不看价签。",
   },
   {
-    id: "lina", name: "李娜", role: "customer", age: 23,
+    id: "lina", name: "李娜", role: "customer", age: 23, gender: "f",
     portrait: asset("/assets/game/people/lina.webp"),
     descriptor: "保洁的女儿，年底第一次自己进这个柜",
     tempers: ["shy", "warm"],
@@ -787,7 +787,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十三岁，颈上还挂着后勤的工牌绳，指甲自己修过，站得很靠边。",
   },
   {
-    id: "yinxiaojie", name: "尹小姐", role: "customer", age: 30,
+    id: "yinxiaojie", name: "尹小姐", role: "customer", age: 30, gender: "f",
     portrait: asset("/assets/game/people/yinxiaojie.webp"),
     descriptor: "来听你把功效说满，包带里有录音",
     tempers: ["wary", "proud"],
@@ -808,7 +808,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。三十岁，包带内侧有一支不拿出手的录音笔，脸上看不出委托。",
   },
   {
-    id: "qianjie", name: "钱姐", role: "customer", age: 40,
+    id: "qianjie", name: "钱姐", role: "customer", age: 40, gender: "f",
     portrait: asset("/assets/game/people/qianjie.webp"),
     descriptor: "女儿在微信里，屏幕扣着",
     tempers: ["face", "thrifty"],
@@ -828,7 +828,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。四十岁，手机扣在柜面上，亮起时能看见女儿的一行字。",
   },
   {
-    id: "gaoyuan", name: "高远", role: "customer", age: 27,
+    id: "gaoyuan", name: "高远", role: "customer", age: 27, gender: "m",
     portrait: asset("/assets/game/people/gaoyuan.webp"),
     descriptor: "女友在镜头外，T区出油",
     tempers: ["shy", "face"],
@@ -848,7 +848,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十七岁，T区出油，身体侧着，像知道镜头外还有一个人。",
   },
   {
-    id: "cenning", name: "岑宁", role: "customer", age: 27,
+    id: "cenning", name: "岑宁", role: "customer", age: 27, gender: "f",
     portrait: asset("/assets/game/people/cenning.webp"),
     descriptor: "高远的女友，要自己的颜色，人有时不进镜",
     tempers: ["face", "proud"],
@@ -867,7 +867,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十七岁，站在镜头外半步，妆要被看见，手不碰男朋友的凳子。",
   },
   {
-    id: "chenke", name: "陈柯", role: "customer", age: 29,
+    id: "chenke", name: "陈柯", role: "customer", age: 29, gender: "m",
     portrait: asset("/assets/game/people/chenke.webp"),
     descriptor: "广告公司，给女友买，自己的嘴没参考价值",
     tempers: ["wary", "loyal"],
@@ -888,7 +888,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     artBrief: "右向半身。二十九岁，手机相册停在女友近照，袖口没有口红印。",
   },
   {
-    id: "tanwan", name: "谭晚", role: "customer", age: 28,
+    id: "tanwan", name: "谭晚", role: "customer", age: 28, gender: "f",
     portrait: asset("/assets/game/people/tanwan.webp"),
     descriptor: "陈柯的女友，不要正红，很少自己来",
     tempers: ["shy", "thrifty"],

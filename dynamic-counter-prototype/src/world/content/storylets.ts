@@ -21,7 +21,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ bond: ["$a", "$b"], kind: "friend" }],
     weight: 5, tension: 1, cooldown: 4,
-    text: "{$a}进门就说，听说你推得很狠。{$b}还没表态，人站在她旁边。",
+    text: "{$a}进门就说，听说你推得很狠。{$b}还没表态，人站在{$a}旁边。",
     choices: [
       {
         label: "先问{$b}，那句先放下",
@@ -53,7 +53,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "honest-advice", valence: 1, subject: "player" } },
           { appoint: { person: "$a", inDays: 3, slot: 2 } },
         ],
-        result: "{$a}要自己看见。{$b}听见你没躲，下回还肯跟她一起来。",
+        result: "{$a}要自己看见。{$b}听见你没躲，下回还肯跟{$a}一起来。",
       },
       {
         label: "还是按{$a}进门要的那支推",
@@ -197,7 +197,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
           { appoint: { person: "$b", inDays: 4, slot: 2 } },
         ],
-        result: "{$b}被当成另一个人。{$a}少了点面子，人还是她带来的。",
+        result: "{$b}被当成另一个人。{$a}少了点面子，人还是{$a}带来的。",
       },
       {
         label: "按{$a}上次的用法给{$b}",
@@ -207,7 +207,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "wrong-face", valence: -2, subject: "player" } },
           { remember: { holder: "$a", act: "hard-sell", valence: -1, subject: "player" } },
         ],
-        result: "熟客高兴。新来的记住：你看的是带来的人，不是她。",
+        result: "熟客高兴。{$b}记住：你看的是带来的人，不是自己。",
       },
       {
         label: "{$b}已经听说了，你先认",
@@ -229,7 +229,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "stood-aside", valence: 1, subject: "player" } },
           { appoint: { person: "$a", inDays: 3, slot: 1, bring: ["$b"] } },
         ],
-        result: "怕被围的人没有被围。下次还是{$a}带她来，她自己也会进门。",
+        result: "怕被围的人没有被围。下次还是{$a}带{$b}来，{$b}自己也会进门。",
       },
     ],
   },
@@ -251,7 +251,7 @@ export const STORYLETS: Storylet[] = [
           { bond: ["$a", "$b"], delta: -2 },
           { remember: { holder: "$b", act: "kept-secret", valence: 1, subject: "player" } },
         ],
-        result: "话没有传完。{$a}觉得你挡了她，{$b}还没拿到可以转述的句子。",
+        result: "话没有传完。{$a}觉得你把话头挡了，{$b}还没拿到可以转述的句子。",
       },
       {
         label: "把原话补全",
@@ -262,7 +262,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "hard-sell", valence: -1, subject: "player" } },
           { remember: { holder: "$a", act: "leaked", valence: -1, subject: "$b" } },
         ],
-        result: "{$b}拿走的是补全之后的坏话。下一张桌子，说的人会换成她。",
+        result: "{$b}拿走的是补全之后的坏话。下一张桌子，说的人会换成{$b}。",
       },
       {
         label: "让{$b}自己看，别信耳闻",
@@ -282,7 +282,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "talked-down", valence: -1, subject: "$b" } },
           { remember: { holder: "$b", act: "leaked", valence: -1, subject: "player" } },
         ],
-        result: "{$b}知道是谁在说她。这句还能再传，而且带着名字。",
+        result: "{$b}知道是谁在说自己。这句还能再传，而且带着名字。",
       },
     ],
   },
@@ -290,7 +290,7 @@ export const STORYLETS: Storylet[] = [
     id: "social-rival-snatch",
     kind: "social",
     cast: {
-      a: { where: [{ role: "$self", is: "rival" }] },
+      a: { where: [{ role: "$self", is: "rival" }, { gender: "$self", is: "f" }] },
       b: { where: [{ role: "$self", is: "customer" }] },
     },
     when: [{ role: "$a", is: "rival" }, { role: "$b", is: "customer" }],
@@ -327,7 +327,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "took-client", valence: -2, subject: "player" } },
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
         ],
-        result: "{$b}要一个清楚的答案，她留下了。{$a}记住这单是被你截回去的。",
+        result: "{$b}要一个清楚的答案，人留下了。{$a}记住这单是被你截回去的。",
       },
       {
         label: "把人让给{$a}",
@@ -483,7 +483,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "wrong-face", valence: -2, subject: "player" } },
           { appoint: { person: "$b", inDays: 2, slot: 2 } },
         ],
-        result: "{$a}拿走她要的东西。{$b}回来的时候，退的是这张脸。",
+        result: "{$a}拿走自己要的东西。{$b}回来的时候，退的是这张脸。",
       },
       {
         label: "等{$b}自己来，今天不包",
@@ -559,7 +559,7 @@ export const STORYLETS: Storylet[] = [
           { bond: ["$a", "$b"], delta: -4 },
           { remember: { holder: "$a", act: "sidelined", valence: -1, subject: "player" } },
         ],
-        result: "本来就淡的同伴关系又冷一截。{$a}觉得你也看着她下不来台。",
+        result: "本来就淡的同伴关系又冷一截。{$a}觉得你也看着自己下不来台。",
       },
     ],
   },
@@ -572,7 +572,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ bond: ["$a", "$b"], kind: "mentor" }],
     weight: 4, tension: 0, cooldown: 4,
-    text: "{$a}要{$b}照她的句子说。{$b}想自己问，嘴已经张开了。",
+    text: "{$a}要{$b}照{$a}说过的句子说。{$b}想自己问，嘴已经张开了。",
     choices: [
       {
         label: "让{$b}问完",
@@ -582,7 +582,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "broke-word", valence: -1, subject: "player" } },
         ],
-        result: "徒弟问出了自己的一句。带的人觉得你拆了她的场。",
+        result: "徒弟问出了自己的一句。带的人觉得你拆了{$a}的场。",
       },
       {
         label: "让{$a}把句子说完",
@@ -591,7 +591,7 @@ export const STORYLETS: Storylet[] = [
           { bond: ["$a", "$b"], delta: 3 },
           { remember: { holder: "$b", act: "copied-line", valence: -1, subject: "player" } },
         ],
-        result: "{$b}把那句背下去了。下一张脸，她还会原样说。",
+        result: "{$b}把那句背下去了。下一张脸，{$b}还会原样说。",
       },
       {
         label: "你补一句，问题仍由{$b}问",
@@ -602,7 +602,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "kept-word", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
         ],
-        result: "怕开口的人问完了自己的问题。带她的人没有被当众放下。",
+        result: "怕开口的人问完了自己的问题。带{$b}的人没有被当众放下。",
       },
     ],
   },
@@ -615,17 +615,17 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ temper: "$a", is: "warm" }, { absent: "$b" }, { bond: ["$a", "$b"], kind: "friend" }],
     weight: 4, tension: -1, cooldown: 5,
-    text: "{$a}说，{$b}也该来看看。人今天不在，她问你收不收。",
+    text: "{$a}说，{$b}也该来看看。人今天不在，{$a}问你收不收。",
     choices: [
       {
-        label: "让她把{$b}约来",
+        label: "让{$a}把{$b}约来",
         effects: [
           { opinion: "$a", delta: 6 },
           { bond: ["$a", "$b"], delta: 4 },
           { remember: { holder: "$a", act: "brought-friend", valence: 1, subject: "player" } },
           { appoint: { person: "$a", inDays: 2, slot: 2, bring: ["$b"] } },
         ],
-        result: "热心的人得到一个日子。来的时候她会把{$b}带在身边。",
+        result: "热心的人得到一个日子。来的时候{$a}会把{$b}带在身边。",
       },
       {
         label: "今天说柜上没位",
@@ -634,10 +634,10 @@ export const STORYLETS: Storylet[] = [
           { bond: ["$a", "$b"], delta: -3 },
           { remember: { holder: "$a", act: "refused-intro", valence: -1, subject: "player" } },
         ],
-        result: "她不再主动带人。{$b}若自己来，也不会提她的名字。",
+        result: "{$a}不再主动带人。{$b}若自己来，也不会提{$a}的名字。",
       },
       {
-        label: "先让她问过{$b}",
+        label: "先让{$a}问过{$b}",
         when: [{ temper: "$b", is: "shy" }],
         effects: [
           { opinion: "$a", delta: 3 }, { opinion: "$b", delta: 2 },
@@ -645,7 +645,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "kept-secret", valence: 1, subject: "player" } },
           { appoint: { person: "$b", inDays: 4, slot: 1 } },
         ],
-        result: "怕被推销的人不会被突然带来。她若来，是自己走进来的。",
+        result: "怕被推销的人不会被突然带来。{$b}若来，是自己走进来的。",
       },
     ],
   },
@@ -668,7 +668,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "stood-aside", valence: 2, subject: "player" } },
           { appoint: { person: "$a", inDays: 3, slot: 2 } },
         ],
-        result: "怕被围的人把话说完了。她肯再来，是因为你退过。",
+        result: "怕被围的人把话说完了。{$a}肯再来，是因为你退过。",
       },
       {
         label: "让{$b}先说完",
@@ -678,10 +678,10 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "crowded", valence: -2, subject: "player" } },
           { leave: "$a" },
         ],
-        result: "{$a}走了。{$b}还在，她会把「一围就走」说给下一个人。",
+        result: "{$a}走了。{$b}还在，会把「一围就走」说给下一个人。",
       },
       {
-        label: "把{$b}请开，不当她的面说",
+        label: "把{$b}请开，不当{$a}的面说",
         when: [{ temper: "$a", is: "face" }],
         effects: [
           { opinion: "$a", delta: 8 }, { opinion: "$b", delta: -3 },
@@ -734,7 +734,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "kept-secret", valence: 1, subject: "player" } },
           { remember: { holder: "$b", act: "leaked", valence: -1, subject: "player" } },
         ],
-        result: "爱传话的人被你挡住。她跟{$a}之间少了一句能一起说的价。",
+        result: "爱传话的人被你挡住。{$b}跟{$a}之间少了一句能一起说的价。",
       },
     ],
   },
@@ -750,7 +750,7 @@ export const STORYLETS: Storylet[] = [
     text: "{$a}跟{$b}提起你以前的一次。她说得很慢，像这句还算数。",
     choices: [
       {
-        label: "让她把好的那次说完",
+        label: "让{$a}把好的那次说完",
         when: [{ remembers: "$a", valence: "good", subject: "player" }],
         effects: [
           { opinion: "$a", delta: 4 }, { opinion: "$b", delta: 5 },
@@ -866,7 +866,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "sidelined", valence: -2, subject: "player" } },
           { leave: "$a" },
         ],
-        result: "{$a}不等了。她走的时候{$b}还在，外面的人会看见谁被留下。",
+        result: "{$a}不等了。走的时候{$b}还在，外面的人会看见谁被留下。",
       },
       {
         label: "请{$b}先接{$a}的时间",
@@ -908,10 +908,10 @@ export const STORYLETS: Storylet[] = [
           { bond: ["$a", "$b"], delta: -4 },
           { remember: { holder: "$a", act: "sidelined", valence: -1, subject: "player" } },
         ],
-        result: "耳闻被你加了一遍。{$a}更不信，{$b}却觉得你站在她那边。",
+        result: "耳闻被你加了一遍。{$a}更不信，{$b}却觉得你站在{$a}那边。",
       },
       {
-        label: "跟她说这是听来的",
+        label: "跟{$a}说这是听来的",
         when: [{ remembers: "$a", valence: "good", heard: true, subject: "player" }],
         effects: [
           { opinion: "$a", delta: 4 }, { opinion: "$b", delta: -3 },
@@ -1018,7 +1018,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ bond: ["$b", "$a"], kind: "fan", gte: 30 }],
     weight: 4, tension: 0, cooldown: 4,
-    text: "{$b}跟着{$a}进来，话都替她说。{$a}自己还没开口。",
+    text: "{$b}跟着{$a}进来，话都替{$a}说。{$a}自己还没开口。",
     choices: [
       {
         label: "先问{$a}",
@@ -1027,7 +1027,7 @@ export const STORYLETS: Storylet[] = [
           { bond: ["$b", "$a"], delta: -3 },
           { remember: { holder: "$a", act: "honest-advice", valence: 1, subject: "player" } },
         ],
-        result: "被跟着的人说了自己的话。粉丝少了一次替她做主的机会。",
+        result: "被跟着的人说了自己的话。粉丝少了一次替{$a}做主的机会。",
       },
       {
         label: "让{$b}复述上次",
@@ -1072,7 +1072,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "kept-word", valence: 1, subject: "player" } },
           { appoint: { person: "$b", inDays: 1, slot: 2 } },
         ],
-        result: "盒子还在。{$b}来对的时候，退不退由她自己说。",
+        result: "盒子还在。{$b}来对的时候，退不退由{$b}自己说。",
       },
       {
         label: "按{$a}说的拆开",
@@ -1196,7 +1196,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "on-camera", valence: -2, subject: "player" } },
           { remember: { holder: "$a", act: "on-camera", valence: 1, subject: "$b" } },
         ],
-        result: "切片有了。{$b}今晚就会让认识她的人知道，是你让镜头对着她。",
+        result: "切片有了。{$b}今晚就会让认识自己的人知道，是你让镜头对着{$b}。",
       },
       {
         label: "给{$b}一个镜头外面的位置",
@@ -1207,7 +1207,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "kept-secret", valence: 2, subject: "player" } },
           { remember: { holder: "$a", act: "stood-aside", valence: 0, subject: "player" } },
         ],
-        result: "又怕又要面子的人没有被拍到。灯还开着，只是没有对着她。",
+        result: "又怕又要面子的人没有被拍到。灯还开着，只是没有对着{$b}。",
       },
     ],
   },
@@ -1413,7 +1413,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ slot: [0, 1] }],
     weight: 4, tension: 0, cooldown: 4,
-    text: "{$a}拿着中庭的活动单。这一小时要一个人，柜上{$b}还在，她问你空不空得出来。",
+    text: "{$a}拿着中庭的活动单。这一小时要一个人，柜上{$b}还在，{$a}问你空不空得出来。",
     choices: [
       {
         label: "你去，柜留给{$b}",
@@ -1457,10 +1457,10 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ day: { gte: 8 } }],
     weight: 5, tension: 1, cooldown: 4,
-    text: "{$a}把你上午那句原样说给{$b}。客人已经皱眉，她还在等你点头。",
+    text: "{$a}把你上午那句原样说给{$b}。客人已经皱眉，{$a}还在等你点头。",
     choices: [
       {
-        label: "私下拦，让她换一句",
+        label: "私下拦，让{$a}换一句",
         effects: [
           { opinion: "$a", delta: 4 }, { opinion: "$b", delta: 3 },
           { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
@@ -1469,7 +1469,7 @@ export const STORYLETS: Storylet[] = [
         result: "错句没有落地。{$a}记下的是你拦的方式，不是那句本身。",
       },
       {
-        label: "当着{$b}说她学错了",
+        label: "当着{$b}说{$a}学错了",
         when: [{ temper: "$b", is: "face" }],
         effects: [
           { opinion: "$a", delta: -8 }, { opinion: "$b", delta: -4 },
@@ -1668,7 +1668,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ day: { gte: 12 } }],
     weight: 5, tension: 0, cooldown: 6,
-    text: "{$a}停在入口，不进柜。她只问{$b}一句：晚班现在是谁在看。",
+    text: "{$a}停在入口，不进柜。只问{$b}一句：晚班现在是谁在看。",
     choices: [
       {
         label: "说晚班你自己看",
@@ -1678,7 +1678,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "kept-word", valence: 1, subject: "player" } },
           { bond: ["$a", "$b"], delta: 2 },
         ],
-        result: "她没有进柜。楼层经理听见的名字，和你之后要守的班是同一个。",
+        result: "{$a}没有进柜。楼层经理听见的名字，和你之后要守的班是同一个。",
       },
       {
         label: "把名字让给同事",
@@ -1687,7 +1687,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "yielded-client", valence: 0, subject: "player" } },
           { bond: ["peilan", "suman"], delta: 4 },
         ],
-        result: "她记下的不是你。被让到的人没有被问过，下一季的表上会先出现她。",
+        result: "{$a}记下的不是你。被让到的人没有被问过，下一季的表上会先出现{$a}。",
       },
       {
         label: "说今天的原话在记录里",
@@ -1697,7 +1697,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "kept-word", valence: 2, subject: "player" } },
           { bond: ["peilan", "fangmin"], delta: 3 },
         ],
-        result: "她要的是对得上的句子。记录在，她这一趟不再多问。",
+        result: "{$a}要的是对得上的句子。记录在，这一趟不再多问。",
       },
     ],
   },
@@ -1803,7 +1803,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ not: { quality: "arc:shen", gte: 1 } }],
     weight: 24, tension: 0, once: true,
-    text: "{$a}把{$b}带进镜子。她说团队要同一句，{$b}的脸还没被你看过。",
+    text: "{$a}把{$b}带进镜子。{$a}说团队要同一句，{$b}的脸还没被你看过。",
     choices: [
       {
         label: "分开说，两张脸不是一套",
@@ -1837,7 +1837,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$b", act: "honest-advice", valence: 1, subject: "player" } },
           { remember: { holder: "$a", act: "sidelined", valence: -1, subject: "player" } },
         ],
-        result: "急性子的队员先说完了。{$a}记住你让她等，团队的下一句还没给。",
+        result: "急性子的队员先说完了。{$a}记住你让{$b}等，团队的下一句还没给。",
       },
     ],
   },
@@ -2262,7 +2262,7 @@ export const STORYLETS: Storylet[] = [
         result: "她没截成。她厌烦的那个词，这一次没有被你按回去。",
       },
       {
-        label: "当着{$b}压过她",
+        label: "当着{$b}压过{$a}",
         effects: [
           { quality: "arc:luyao", set: 1 },
           { opinion: "$a", delta: -10 }, { opinion: "$b", delta: -3 },
@@ -2342,7 +2342,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "yielded-client", valence: 2, subject: "player" } },
           { remember: { holder: "$b", act: "kept-word", valence: 1, subject: "player" } },
         ],
-        result: "今天你没有这笔。{$b}以后回来找的是她，她还肯跟你商量这个人。",
+        result: "今天你没有这笔。{$b}以后回来找的是{$a}，{$a}还肯跟你商量这个人。",
       },
       {
         label: "开成你的",
@@ -2363,7 +2363,7 @@ export const STORYLETS: Storylet[] = [
           { appoint: { person: "$b", inDays: 2, slot: 1, bring: ["$a"] } },
           { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
         ],
-        result: "今天谁也没有这单。她们会一起回来，名字等到牌换完。",
+        result: "今天谁也没有这单。两个人会一起回来，名字等到牌换完。",
       },
     ],
   },
@@ -2475,7 +2475,7 @@ export const STORYLETS: Storylet[] = [
     },
     when: [{ quality: "arc:suman", gte: 1 }, { not: { quality: "arc:suman", gte: 2 } }],
     weight: 8, tension: 0, once: true,
-    text: "{$a}把一句交代给你：有人进门，让她先坐，{$b}不能先开口。",
+    text: "{$a}把一句交代给你：有人进门，让{$b}先坐，{$b}不能先开口。",
     choices: [
       {
         label: "你自己记住",
@@ -2498,7 +2498,7 @@ export const STORYLETS: Storylet[] = [
         result: "{$b}会背。背错的时候，{$a}算的是你没把交代留在自己身上。",
       },
       {
-        label: "问她这句能不能让{$b}听见",
+        label: "问{$a}这句能不能让{$b}听见",
         when: [{ opinion: "$a", gte: 8 }],
         effects: [
           { quality: "arc:suman", set: 2 },
@@ -2507,7 +2507,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "kept-word", valence: 1, subject: "player" } },
           { remember: { holder: "$b", act: "kept-secret", valence: 1, subject: "player" } },
         ],
-        result: "她自己决定{$b}听不听。你没有把老客的交代当成教材。",
+        result: "{$a}自己决定{$b}听不听。你没有把老客的交代当成教材。",
       },
     ],
   },
