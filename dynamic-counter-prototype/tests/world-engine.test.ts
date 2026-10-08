@@ -356,3 +356,19 @@ test("角色槽：前一个槽的人配不上后面的槽时，回头换人", ()
     assert.ok(["shen", "he"].includes(drawn.binding.a));
   }
 });
+
+test("柜位：人情动作加柜位，一天只算第一次", () => {
+  let w = stage(newWorld("standing-social", PEOPLE), ["suman", "tangke"], "counter");
+  const start = w.standing;
+  w = doVerb(w, PEOPLE, "help", ["suman"]);
+  assert.equal(w.standing, start + 1, "第一次帮同事，柜位 +1");
+  w = doVerb(w, PEOPLE, "help", ["tangke"]);
+  assert.equal(w.standing, start + 1, "同一天再帮另一位，柜位不再涨");
+});
+
+test("柜位：每晚把离起点的差距回落一成", () => {
+  const high = { ...newWorld("standing-drift", PEOPLE), standing: 90 };
+  assert.equal(endDay(high, PEOPLE).standing, 86);
+  const low = { ...newWorld("standing-drift", PEOPLE), standing: 20 };
+  assert.equal(endDay(low, PEOPLE).standing, 23);
+});

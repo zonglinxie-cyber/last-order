@@ -96,6 +96,13 @@ export const HANDOFF_STAFF_OPINION = 4;
 export const HANDOFF_CUSTOMER_OPINION = 2;
 /** 托同事接手能成交的门槛：同事对你够熟才肯替你开这单，一个同事一天最多一单。 */
 export const HANDOFF_SALE_MIN_OPINION = 20;
+/** 柜位不只认卖货：同事看在眼里的人情也算。一天里只有第一次人情动作加柜位，免得刷。 */
+const socialStanding = (w: World, delta: number): World =>
+  qualityOf(w, "standing:social-day") === w.day ? w
+    : setQuality({ ...w, standing: clamp(w.standing + delta, 0, 100) }, "standing:social-day", w.day);
+export const HELP_STANDING = 1;
+export const MEDIATE_STANDING = 2;
+export const INTRODUCE_STANDING = 1;
 export const HELP_OPINION = 6;
 export const HELP_REPEAT_OPINION = 2;
 
@@ -698,6 +705,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
         } else {
           w = setBond(w, aId, bId!, "friend", INTRODUCE_WARMTH);
           w = setBond(w, bId!, aId, "friend", INTRODUCE_WARMTH);
+          w = socialStanding(w, INTRODUCE_STANDING);
           w = remember(w, aId, "introduced", 1, bId!);
           w = remember(w, bId!, "introduced", 1, aId);
           w = say(w, `你介绍${a.name}和${b!.name}认识，两个人聊开了。`, targets);
@@ -719,6 +727,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       if (r < chance) {
         w = addWarmth(w, people, aId, bId!, MEDIATE_WARMTH);
         w = addWarmth(w, people, bId!, aId, MEDIATE_WARMTH);
+        w = socialStanding(w, MEDIATE_STANDING);
         w = addOpinion(w, aId, MEDIATE_OK_OPINION);
         w = addOpinion(w, bId!, MEDIATE_OK_OPINION);
         w = remember(w, aId, "mediated", 2);
@@ -757,6 +766,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
     case "help": {
       const helped = w.memories.some(m => m.holder === aId && m.act === "helped-out" && m.day === w.day);
       w = addOpinion(w, aId, helped ? HELP_REPEAT_OPINION : HELP_OPINION);
+      if (!helped) w = socialStanding(w, HELP_STANDING);
       w = remember(w, aId, "helped-out", 1);
       w = say(w, `你帮${a.name}把手上的活接了一截。`, [aId]);
       return w;
@@ -877,8 +887,13 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
 
 // —— 夜里：微信群传话、加过微信的人约回来、精力重置 ——
 
+/** 柜位是动态评估：每晚把离起点的差距回落一成，近期的表现比一季前的更算数，也免得一路顶到 100。
+ *  平衡点约是"起点 + 每天净涨幅 × 10"：天天做好能稳在高处，停下来就慢慢掉回去。 */
+export const STANDING_DRIFT_RATE = 0.1;
+
 export function endDay(world: World, people: Person[]): World {
   let w = world;
+  w = { ...w, standing: Math.round(w.standing + (START_STANDING - w.standing) * STANDING_DRIFT_RATE) };
   const mems = w.memories; // 今晚读的记忆快照：夜里讲出去的话不当晚再传。
   const nightPairs: Array<[Person, Person]> = [];
   for (const a of people) for (const b of people) {

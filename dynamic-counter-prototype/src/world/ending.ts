@@ -25,7 +25,7 @@ const CATALOG: Array<SeasonEnding & { rank: number; when: Gate }> = [
     rank: 2,
     title: "文件夹跟着你",
     body: "方敏把文件夹放到你桌上。她说这季写下来的原话都在里面，下一季她还认。",
-    when: s => s.compliance >= 62 && s.standing >= 58 && s.money >= 4000
+    when: s => s.compliance >= 62 && s.standing >= 58 && s.money >= 30_000
       && has(s.allies, "fangmin") && s.enemies.length <= 2,
   },
   {
@@ -57,7 +57,7 @@ const CATALOG: Array<SeasonEnding & { rank: number; when: Gate }> = [
     rank: 6,
     title: "账还对得上",
     body: "柜位比来的时候高，台账还对得上。团队和婚礼都没有把下一句指定给你。",
-    when: s => s.compliance >= 48 && s.standing >= 58 && s.money >= 8000
+    when: s => s.compliance >= 48 && s.standing >= 58 && s.money >= 40_000
       && s.allies.length >= 2 && s.enemies.length <= s.allies.length,
   },
   {
@@ -65,7 +65,7 @@ const CATALOG: Array<SeasonEnding & { rank: number; when: Gate }> = [
     rank: 7,
     title: "老客留在这三米",
     body: "苏蔓把老客交给你。你没有把柜位做成自己的数，认她的人还来这三米。",
-    when: s => s.standing === 50 && s.compliance >= 28 && s.money >= 500
+    when: s => s.standing >= 50 && s.compliance >= 28
       && has(s.allies, "suman") && s.allies.length >= 2,
   },
   {

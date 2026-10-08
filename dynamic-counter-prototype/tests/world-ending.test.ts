@@ -35,7 +35,7 @@ test("每个结局都能构造出来，更好的条件优先", () => {
       opinion: { shen: 20, anjie: 20 },
     })],
     ["folder-follows", at({
-      compliance: 70, standing: 65, money: 20000,
+      compliance: 70, standing: 65, money: 35000,
       opinion: { fangmin: 50 },
     })],
     ["speaks-first", at({
@@ -54,7 +54,7 @@ test("每个结局都能构造出来，更好的条件优先", () => {
       opinion: { anjie: 20 },
     })],
     ["books-hold", at({
-      compliance: 55, standing: 64, money: 18000,
+      compliance: 55, standing: 64, money: 45000,
       opinion: { mei: 45, zhou: 42 },
     })],
     ["regulars-stay", at({
@@ -84,7 +84,7 @@ test("每个结局都能构造出来，更好的条件优先", () => {
   }
 
   const bothAndFolder = at({
-    compliance: 70, standing: 65, money: 20000,
+    compliance: 70, standing: 65, money: 35000,
     qualities: { "arc:shen:end": 1, "arc:anjie:end": 1 },
     opinion: { shen: 20, anjie: 20, fangmin: 50 },
   });
@@ -93,7 +93,7 @@ test("每个结局都能构造出来，更好的条件优先", () => {
   assert.ok(rank(top.id) < rank("folder-follows"));
 
   const teamAndBooks = at({
-    compliance: 55, standing: 64, money: 18000,
+    compliance: 55, standing: 64, money: 45000,
     qualities: { "arc:shen:end": 1 },
     opinion: { shen: 20, mei: 45, zhou: 42 },
   });
