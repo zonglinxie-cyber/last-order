@@ -21,7 +21,7 @@ export const STORYLETS_SOCIAL2: Storylet[] = [
     choices: [
       {
         label: "把两个人引到同一面镜子前",
-        when: [{ not: { any: [{ temper: "$a", is: "proud" }, { temper: "$b", is: "proud" }, { temper: "$a", is: "wary" }, { temper: "$b", is: "wary" }] } }],
+        when: [{ not: { temper: "$a", is: "wary" } }, { not: { temper: "$b", is: "wary" } }, { any: [{ not: { temper: "$a", is: "proud" } }, { not: { temper: "$b", is: "proud" } }] }],
         effects: [
           { bond: ["$a", "$b"], kind: "friend", set: 20 }, { bond: ["$b", "$a"], kind: "friend", set: 20 },
           { opinion: "$a", delta: 3 }, { opinion: "$b", delta: 3 },
@@ -43,7 +43,7 @@ export const STORYLETS_SOCIAL2: Storylet[] = [
       },
       {
         label: "把两个人引到同一面镜子前",
-        when: [{ any: [{ temper: "$a", is: "wary" }, { temper: "$b", is: "wary" }] }],
+        when: [{ any: [{ temper: "$a", is: "wary" }, { temper: "$b", is: "wary" }] }, { any: [{ not: { temper: "$a", is: "proud" } }, { not: { temper: "$b", is: "proud" } }] }],
         effects: [
           { bond: ["$a", "$b"], kind: "friend", set: 5 }, { bond: ["$b", "$a"], kind: "friend", set: 5 },
           { opinion: "$a", delta: 1 }, { opinion: "$b", delta: 1 },

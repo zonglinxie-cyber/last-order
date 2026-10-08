@@ -225,3 +225,16 @@ test("故事碎片的槽、占位、落点和关系效果", () => {
     assert.ok(ends && ends.size >= 2, `${id} 的落点只有 ${ends ? [...ends].join(",") : "没有"}`);
   }
 });
+
+test("同名选项互斥且全覆盖：任何一对人，介绍那张卡恰好只露出一颗'引到同一面镜子前'", async () => {
+  const { choiceVisible, newWorld } = await import("../src/world/engine.ts");
+  const card = STORYLETS.find(s => s.id === "social-intro-mirror")!;
+  const label = "把两个人引到同一面镜子前";
+  const w = newWorld("intro-mirror", PEOPLE);
+  for (const a of PEOPLE) for (const b of PEOPLE) {
+    if (a.id === b.id) continue;
+    const drawn = { storylet: card, binding: { a: a.id, b: b.id } };
+    const shown = card.choices.filter(c => c.label === label && choiceVisible(w, PEOPLE, drawn, c)).length;
+    assert.equal(shown, 1, `${a.id} × ${b.id} 露出 ${shown} 颗`);
+  }
+});
