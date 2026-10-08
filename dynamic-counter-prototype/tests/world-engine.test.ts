@@ -641,3 +641,11 @@ test("陆遥在时段末带走没顾上的人，她当天不再回来", () => {
   }
   assert.fail("60 个种子里没有一次抢客，概率常量可能被改坏了");
 });
+
+test("条件 season：只在某一季之后才成立", () => {
+  const w1 = newWorld("season-cond", PEOPLE);
+  const w2 = { ...w1, season: 2 };
+  assert.equal(evalCond(w1, PEOPLE, { season: { gte: 2 } }), false);
+  assert.equal(evalCond(w2, PEOPLE, { season: { gte: 2 } }), true);
+  assert.equal(evalCond(w2, PEOPLE, { season: { lte: 1 } }), false);
+});

@@ -266,6 +266,7 @@ export function evalCond(world: World, people: Person[], cond: Cond, binding: Bi
   }
   if ("temper" in cond) { const id = at(cond.temper); return !!id && hasTemper(personOf(people, id), cond.is); }
   if ("role" in cond) { const id = at(cond.role); return !!id && personOf(people, id)?.role === cond.is; }
+  if ("season" in cond) return (cond.season.gte === undefined || world.season >= cond.season.gte) && (cond.season.lte === undefined || world.season <= cond.season.lte);
   if ("day" in cond) return (cond.day.gte === undefined || world.day >= cond.day.gte) && (cond.day.lte === undefined || world.day <= cond.day.lte);
   if ("slot" in cond) return cond.slot.includes(world.slot);
   if ("festival" in cond) return world.festival === cond.festival;

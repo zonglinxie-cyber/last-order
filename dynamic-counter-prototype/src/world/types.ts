@@ -152,6 +152,8 @@ export type Cond =
   | { temper: Ref; is: Temper }
   | { role: Ref; is: Role }
   | { day: { gte?: number; lte?: number } }
+  /** 第几季（从 1 起）。只在某一季之后才开的线写 { season: { gte: 2 } }。 */
+  | { season: { gte?: number; lte?: number } }
   | { slot: Slot[] }
   | { festival: string }
   | { stat: "money" | "standing" | "compliance" | "energy" | "samples"; gte?: number; lte?: number }
