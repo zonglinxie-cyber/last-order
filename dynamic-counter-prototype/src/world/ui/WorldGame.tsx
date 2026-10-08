@@ -30,7 +30,7 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { SLOT_WORD } from "./words.ts";
+import { opinionWord, SLOT_WORD } from "./words.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
@@ -534,9 +534,10 @@ export default function WorldGame() {
             {avatar(m.id)}
             <div className="recap-person-main">
               <b>{nameOf(m.id)}</b>
-              <p>{m.from === undefined ? `开季还没认识${person(m.id) ? ta(person(m.id)!) : "她"}` : `从 ${m.from} 到 ${m.to}`}</p>
+              {/* 看法只用话说（opinionWord），不把数值摊给玩家。 */}
+              <p>{m.from === undefined ? `开季还没认识，如今${opinionWord(m.to)}` : `从「${opinionWord(m.from)}」到「${opinionWord(m.to)}」`}</p>
             </div>
-            <span className={"recap-delta" + (m.to - (m.from ?? 0) < 0 ? " down" : "")}>{m.to - (m.from ?? 0) > 0 ? "+" : ""}{m.to - (m.from ?? 0)}</span>
+            <span className={"recap-delta" + (m.to - (m.from ?? 0) < 0 ? " down" : "")} aria-hidden="true">{m.to - (m.from ?? 0) > 0 ? "近了" : "远了"}</span>
           </li>)}</ul> : <p className="recap-empty">这一季没人改主意。</p>}
         </section>
 
@@ -558,10 +559,12 @@ export default function WorldGame() {
           </div>
         </section>
       </main></MobileScroll>
-      <div className="report-foot">
-        <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+      <div className="report-foot recap-foot">
         <button className="world-primary" type="button" onClick={startNextSeason}>进入第 {world.season + 1} 季</button>
-        <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
+        <div className="recap-foot-row">
+          <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+          <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
+        </div>
       </div>
       {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
     </div>;

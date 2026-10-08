@@ -235,3 +235,7 @@
 /* 顶栏静音开关：沿用 duel-mute 的一颗字按钮 */
 .world-mute { flex:0 0 auto; min-width:44px; min-height:44px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff0a; color:#efd6b0; font:600 13px 'Noto Serif SC',serif; }
 .world-mute[aria-pressed="true"] { color:#8d7a6d; }
+
+/* 季末脚：主按钮一整行，档案与重开并排在下一行，少占一截屏 */
+.recap-foot .recap-foot-row { display:flex; gap:8px; margin-top:8px; }
+.recap-foot .recap-foot-row button { flex:1 1 0; margin:0; min-height:44px; }
