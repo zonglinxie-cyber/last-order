@@ -111,6 +111,8 @@ export const WEB_PEOPLE: Person[] = [
 
 export const WEB_WORLD: World = {
   seed: "fixture-web",
+  touched: [],
+  rngCalls: 0,
   day: 3,
   slot: 1,
   money: 12_400,
@@ -138,15 +140,15 @@ export const WEB_WORLD: World = {
   },
   memories: [
     { day: 2, holder: "shen", subject: "player", act: "honest-advice", valence: 2 },
-    { day: 3, holder: "shen", subject: "player", act: "sample-gift", valence: 1, heardFrom: "tangke" },
-    { day: 3, holder: "shen", subject: "luyao", act: "bad-recommend", valence: -1 },
+    { day: 3, holder: "shen", subject: "player", act: "got-sample", valence: 1, heardFrom: "tangke" },
+    { day: 3, holder: "shen", subject: "luyao", act: "wrong-pick", valence: -1 },
     { day: 1, holder: "tangke", subject: "player", act: "kept-secret", valence: 1 },
     { day: 3, holder: "suman", subject: "player", act: "honest-advice", valence: 1, heardFrom: "tangke" },
     { day: 1, holder: "mei", subject: "player", act: "hard-sell", valence: -2 },
     { day: 2, holder: "zhou", subject: "player", act: "hard-sell", valence: -1, heardFrom: "mei" },
-    { day: 3, holder: "luyao", subject: "player", act: "took-my-client", valence: -2 },
+    { day: 3, holder: "luyao", subject: "player", act: "heard-rival-pitch", valence: -2 },
     { day: 2, holder: "anjie", subject: "player", act: "kept-secret", valence: 2 },
-    { day: 3, holder: "helan", subject: "player", act: "sample-gift", valence: 1, heardFrom: "tangke" },
+    { day: 3, holder: "helan", subject: "player", act: "got-sample", valence: 1, heardFrom: "tangke" },
   ],
   qualities: { "arc:shen": 2 },
   present: { shen: "counter", luyao: "rival", tangke: "backroom", mei: "entrance", roman: "cashier" },

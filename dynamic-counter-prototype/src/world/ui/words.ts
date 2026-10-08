@@ -2,7 +2,7 @@
 // 界面不许自己拼这些句子；引擎新增 act 代号时只在这里补一行。
 import type { BondKind, Slot, Temper } from "../types.ts";
 
-export const PLAYER_NAME = "许愿";
+export { PLAYER_NAME } from "../engine.ts";
 
 export const TEMPER_WORD: Record<Temper, string> = {
   face: "爱面子",
@@ -18,7 +18,7 @@ export const TEMPER_WORD: Record<Temper, string> = {
 
 export const BOND_KIND_WORD: Record<BondKind, string> = {
   family: "家人",
-  friend: "闺蜜",
+  friend: "朋友",
   partner: "伴侣",
   colleague: "同事",
   mentor: "师徒",
@@ -31,13 +31,32 @@ export const SLOT_WORD: Record<Slot, string> = { 0: "上午", 1: "午后", 2: "�
 
 // 事件代号 → 中文短句。写成能被「亲眼看你……」「听她说……」接住的样子。
 export const ACT_WORD: Record<string, string> = {
-  "hard-sell": "把不适合的东西硬推给她",
+  // 卖货
   "honest-advice": "给了她实在的建议",
+  "wrong-pick": "推荐的东西不太对她的路",
+  "hard-sell": "把不适合的东西硬推给她",
+  "sold-anyway": "明知不合适还是卖给了她",
+  "returned-goods": "让她跑回来退了货",
+  "came-back-bought": "她回头又在你这儿买了",
+  // 招呼与人情
+  "greeted": "主动招呼了她",
+  "pestered": "一趟趟围上来推销",
+  "got-sample": "留了一份小样给她",
+  "added-wechat": "加了她的微信",
+  "helped-out": "搭了把手",
+  "looked-after": "忙不过来时托同事好好接待了她",
+  // 介绍与打圆场
+  "introduced": "介绍了一个合得来的人给她",
+  "awkward-intro": "硬把她和一个不熟的人凑到一起",
+  "one-upping": "介绍来的人处处跟她较劲",
+  "mediated": "在她跟人闹僵的时候打了圆场",
+  "botched-mediation": "打圆场没打好，反而更僵",
+  // 秘密
+  "secret": "从你这儿听到了别人的私事",
   "kept-secret": "替她保守了秘密",
-  "took-my-client": "抢了她手头的客人",
-  "sample-gift": "留了一份小样给她",
-  "public-callout": "当众拆穿过她",
-  "bad-recommend": "推错了东西还说成合适",
+  "betrayed": "把她的秘密说了出去",
+  // 对面
+  "heard-rival-pitch": "让对面柜把她请走了",
 };
 
 /** 未知代号原样念出来，不编一句假话盖过去。 */
