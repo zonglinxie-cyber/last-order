@@ -1,0 +1,24 @@
+/* 路人层：压在在场的人物（z-index 从 20 起）下面，整层不吃点击，稍微透明一点。
+   走路图是 1536×1024 的 4 帧 × 2 行，一格 384×512，所以宽永远是高的 0.75。
+   尺寸跟着地图容器走（cqh），再用 min() 兜一个下限，矮屏上不会缩成一粒米。 */
+.wf-passersby { position:absolute; inset:0; z-index:19; opacity:.85; pointer-events:none; }
+/* 切到后台：位移和脚都停住，人留在原地等回来 */
+.wf-passersby.is-paused .wf-pb,.wf-passersby.is-paused .wf-pb-figure { animation-play-state:paused; }
+
+.wf-pb { --pb-h:max(9.4cqh,42px); --pb-w:calc(var(--pb-h) * .75);
+  position:absolute; width:var(--pb-w); height:var(--pb-h);
+  /* 脚落在通道坐标上。位移交给 transform（keyframes 由 Passersby 按通道生成），
+     这条独立的 translate 只用来对准，不跟动画抢同一个属性。 */
+  translate:-50% -97%; animation-timing-function:linear; animation-fill-mode:both; will-change:transform; }
+.wf-pb-figure { display:block; width:100%; height:100%; background-repeat:no-repeat;
+  background-size:calc(var(--pb-w) * 4) calc(var(--pb-h) * 2);
+  transform:scaleX(var(--pb-face,1)); filter:drop-shadow(0 3px 4px #0007);
+  animation:wf-pb-step .52s steps(4) infinite; }
+.pb-v0,.pb-v1 { background-image:url('/assets/game/toy-customers-walk.png'); }
+.pb-v2,.pb-v3 { background-image:url('/assets/game/customers-walk.png'); }
+.pb-v1,.pb-v3 { --pb-row:calc(var(--pb-h) * -1); }
+/* 四帧一圈：steps(4) 停在 0 / -1 / -2 / -3 格，最后一格不落进循环里 */
+@keyframes wf-pb-step {
+  from { background-position:0 var(--pb-row,0px); }
+  to { background-position:calc(var(--pb-w) * -4) var(--pb-row,0px); }
+}
