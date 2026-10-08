@@ -115,6 +115,29 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".world-bar-info")).toContainText("第 2 天");
     });
 
+    test("季末能进第 2 季：天数回到 1、看法收一半还在", async ({ page }) => {
+      // 同事不是顾客，时段末没人把她带走 —— 用苏蔓和唐可的看法钉换季。
+      await enter(page, envelope({ day: 28, slot: 3, opinion: { suman: 40, tangke: -30 } }));
+      await page.getByRole("button", { name: /下一时段/ }).click();
+      await expect(page.locator(".world-report")).toBeVisible();
+      await expect(page.locator(".report-eyebrow")).toContainText("第 1 季");
+      await page.getByRole("button", { name: "进入第 2 季" }).click();
+      await expect(page.locator(".world-bar-info")).toContainText("第 2 季");
+      await expect(page.locator(".world-bar-info")).toContainText("第 1 天");
+      // 直接读落盘的存档：开季抽出的卡还没选，看法就是换季收一半的原值。
+      await expect.poll(async () => page.evaluate(([key]) => {
+        const raw = window.localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as { world: World }).world.season : 0;
+      }, [SAVE_KEY])).toBe(2);
+      const saved = await page.evaluate(([key]) =>
+        (JSON.parse(window.localStorage.getItem(key)!) as { world: World }).world, [SAVE_KEY]);
+      expect(saved.season).toBe(2);
+      expect(saved.day).toBe(1);
+      expect(saved.opinion.suman).toBe(20);   // 40 往 0 收一半
+      expect(saved.opinion.tangke).toBe(-15); // -30 → -15
+      expect(saved.log.some(l => l.text.includes("第 2 季开始"))).toBe(true);
+    });
+
     test("刷新以后接着玩，天数不变", async ({ page }) => {
       await enter(page, envelope({ day: 5, slot: 2 }));
       await expect(page.locator(".world-bar-info")).toContainText("第 5 天");

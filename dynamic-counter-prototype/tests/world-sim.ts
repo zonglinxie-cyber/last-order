@@ -1,12 +1,13 @@
-// 人情场无界面模拟器：四种玩法风格 × N 个种子 × 28 天，量"结果有多少种"。
-// 跑法：node --experimental-strip-types tests/world-sim.ts [种子数，默认 16]
+// 人情场无界面模拟器：四种玩法风格 × N 个种子 × 28 天 × 可选多季，量"结果有多少种"。
+// 跑法：node --experimental-strip-types tests/world-sim.ts [种子数，默认 16] [季数，默认 1]
+// 季数 ≥2 时第 2 季起用 nextSeason 接着上一季的世界跑，并报告相对上一季谁倒戈了。
 // 内容目录 src/world/content/ 存在时吃正式内容（导出 PEOPLE/STORYLETS 或 people/storylets），否则用测试夹具。
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, beginSlot, bestFit, choiceVisible, doVerb, drawStorylet, endDay,
-  newWorld, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
+  newWorld, nextSeason, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
 import type { Festival, Person, PersonId, Slot, Storylet, World } from "../src/world/types.ts";
@@ -101,11 +102,10 @@ function takeTurns(style: Style, w: World, people: Person[]): World {
   return w;
 }
 
-/** 每种风格下每张卡被抽到的次数（跨种子累计），用来找"写了却永远出不来"的卡。 */
+/** 每种风格下每张卡被抽到的次数（跨种子、跨季累计），用来找"写了却永远出不来"的卡。 */
 const fireCount = new Map<Style, Map<string, number>>();
 
-function playSeason(style: Style, seed: string, people: Person[], storylets: Storylet[], festivals: Festival[]): World {
-  let w = newWorld(seed, people);
+function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[]): World {
   while (w.day <= DAYS) {
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
@@ -131,16 +131,19 @@ function playSeason(style: Style, seed: string, people: Person[], storylets: Sto
 
 // —— 内容加载 ——
 
-async function loadContent(): Promise<{ people: Person[]; storylets: Storylet[]; festivals: Festival[]; source: string }> {
+type FestivalsFor = (season: number) => Festival[];
+
+async function loadContent(): Promise<{ people: Person[]; storylets: Storylet[]; festivalsFor: FestivalsFor; source: string }> {
   const url = new URL("../src/world/content/index.ts", import.meta.url);
   if (existsSync(fileURLToPath(url))) {
     const mod = await import(url.href) as Record<string, unknown>;
     const people = (mod.PEOPLE ?? mod.people ?? (mod.default as { people?: Person[] })?.people) as Person[] | undefined;
     const storylets = (mod.STORYLETS ?? mod.storylets ?? (mod.default as { storylets?: Storylet[] })?.storylets) as Storylet[] | undefined;
-    const festivals = (mod.FESTIVALS ?? []) as Festival[];
-    if (people?.length && storylets?.length) return { people, storylets, festivals, source: "src/world/content" };
+    const flat = mod.FESTIVALS as Festival[] | undefined;
+    const festivalsFor = (mod.festivalsFor as FestivalsFor | undefined) ?? (flat ? () => flat : () => []);
+    if (people?.length && storylets?.length) return { people, storylets, festivalsFor, source: "src/world/content" };
   }
-  return { people: FIXTURE_PEOPLE, storylets: FIXTURE_STORYLETS, festivals: [], source: "tests/fixtures/world-fixture.ts" };
+  return { people: FIXTURE_PEOPLE, storylets: FIXTURE_STORYLETS, festivalsFor: () => [], source: "tests/fixtures/world-fixture.ts" };
 }
 
 // —— 统计 ——
@@ -152,27 +155,47 @@ const median = (xs: number[]) => {
 const dist = (xs: number[]) =>
   `min ${Math.min(...xs)} / med ${median(xs)} / max ${Math.max(...xs)}`;
 
-const { people, storylets, festivals, source } = await loadContent();
+const { people, storylets, festivalsFor, source } = await loadContent();
 const N = Math.max(1, Number(process.argv[2]) || 16);
+const SEASON_COUNT = Math.max(1, Number(process.argv[3]) || 1);
 console.log(`== 人情场模拟 · 内容来源 ${source} · ${people.length} 人 · ${storylets.length} 张卡 ==`);
-console.log(`== ${N} 个种子 × ${DAYS} 天 × ${STYLES.length} 种风格 ==\n`);
+console.log(`== ${N} 个种子 × ${DAYS} 天${SEASON_COUNT > 1 ? ` × ${SEASON_COUNT} 季` : ""} × ${STYLES.length} 种风格 ==\n`);
 
 type Result = {
   style: Style; seed: string; money: number; standing: number; compliance: number;
   signature: string; ending: string; arcs: Record<PersonId, Record<string, number>>;
 };
+type Flip = { style: Style; seed: string; allyToEnemy: PersonId[]; enemyToAlly: PersonId[] };
+const resultOf = (style: Style, seed: string, w: World): Result => {
+  const s = seasonSummary(w, people);
+  const ending = seasonEnding(w, people);
+  return {
+    style, seed, money: w.money, standing: w.standing, compliance: w.compliance,
+    signature: `盟友[${[...s.allies].sort().join(",")}] 仇人[${[...s.enemies].sort().join(",")}]`,
+    ending: ending.id, arcs: s.arcs,
+  };
+};
 const results: Result[] = [];
+/** 第 2 季起每季一格：结局与"相对上一季谁倒戈了"。 */
+const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
-    const w = playSeason(style, seed, people, storylets, festivals);
-    const s = seasonSummary(w, people);
-    const ending = seasonEnding(w, people);
-    results.push({
-      style, seed, money: w.money, standing: w.standing, compliance: w.compliance,
-      signature: `盟友[${[...s.allies].sort().join(",")}] 仇人[${[...s.enemies].sort().join(",")}]`,
-      ending: ending.id, arcs: s.arcs,
-    });
+    let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1));
+    let s = seasonSummary(w, people);
+    results.push(resultOf(style, seed, w));
+    for (let k = 2; k <= SEASON_COUNT; k++) {
+      w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k));
+      const next = seasonSummary(w, people);
+      const bag = (later[k - 2] ??= { season: k, results: [], flips: [] });
+      bag.results.push(resultOf(style, seed, w));
+      bag.flips.push({
+        style, seed,
+        allyToEnemy: s.allies.filter(id => next.enemies.includes(id)),
+        enemyToAlly: s.enemies.filter(id => next.allies.includes(id)),
+      });
+      s = next;
+    }
   }
 }
 
@@ -236,6 +259,40 @@ console.log("\n每条个人线的落点分布（全风格合计）:");
 for (const p of people) {
   const row = arcTable.get(p.id)!;
   console.log(`  ${p.id.padEnd(8)} ${[...row.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(" · ")}`);
+}
+
+// 第 2 季起：接着上一季的世界再跑一季，报结局分布和"谁倒戈了"。
+for (const { season, results: rs2, flips } of later) {
+  console.log(`\n== 第 ${season} 季（接着上一季的世界再跑 ${DAYS} 天）==`);
+  console.log("风格      不同签名数   钱 (min/med/max)              柜位 (min/med/max)   台账 (min/med/max)");
+  for (const style of STYLES) {
+    const rs = rs2.filter(r => r.style === style);
+    const signatures = new Set(rs.map(r => r.signature));
+    console.log(`${style.padEnd(9)} ${String(signatures.size).padStart(4)}/${N}    ${dist(rs.map(r => r.money)).padEnd(30)} ${dist(rs.map(r => r.standing)).padEnd(22)} ${dist(rs.map(r => r.compliance))}`);
+  }
+  console.log("结局分布（rank 越小越好）:");
+  for (const style of STYLES) {
+    const rs = rs2.filter(r => r.style === style);
+    const counts = new Map<string, number>();
+    for (const r of rs) counts.set(r.ending, (counts.get(r.ending) ?? 0) + 1);
+    const line = [...counts.entries()]
+      .sort((a, b) => rank(a[0]) - rank(b[0]) || b[1] - a[1])
+      .map(([id, n]) => `${id}(r${rank(id)})×${n}`)
+      .join(" · ");
+    console.log(`  ${style.padEnd(8)} ${line}`);
+  }
+  console.log("倒戈（相对上一季盘点）:");
+  for (const style of STYLES) {
+    const fs = flips.filter(f => f.style === style);
+    const tally = (key: "allyToEnemy" | "enemyToAlly") => {
+      const ids = fs.flatMap(f => f[key]);
+      const c = new Map<PersonId, number>();
+      for (const id of ids) c.set(id, (c.get(id) ?? 0) + 1);
+      const names = [...c.entries()].map(([id, n]) => (n > 1 ? `${id}×${n}` : id)).join(", ");
+      return `${ids.length} 人次 / ${fs.filter(f => f[key].length).length} 个种子${names ? `（${names}）` : ""}`;
+    };
+    console.log(`  ${style.padEnd(8)} 盟友→仇人 ${tally("allyToEnemy")} · 仇人→盟友 ${tally("enemyToAlly")}`);
+  }
 }
 
 // 卡的覆盖面：每种风格抽到过几张；所有风格合起来都没抽到过的卡单独列出来 —— 写了却出不来，要么条件写死，要么引擎没接上。
