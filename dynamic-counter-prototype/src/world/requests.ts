@@ -194,8 +194,12 @@ const TEMPLATES: Template[] = [
  * 开门：slot 0 落定之后调。当天已有委托就不再开（beginSlot 重复进同一个时段不重复发）。
  * 每条委托写一条现场 log；rebook 顺手把她明天的约排进 appointments。
  */
+/** 第一季第 1 天不托事：新玩家先认楼层，开局那一屏只留引导一层。 */
+export const FIRST_REQUEST_DAY = 2;
+
 export function openDay(world: World, people: Person[]): World {
   if (world.slot !== 0) return world;
+  if (world.season === 1 && world.day < FIRST_REQUEST_DAY) return world;
   if (world.requests.some(r => r.day === world.day)) return world;
   let w = world;
   const usedBy = new Set<PersonId>();

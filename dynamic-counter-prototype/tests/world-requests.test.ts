@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  beginSlot, endDay, newWorld, opinionOf, parseWorld, serializeWorld, warmthOf,
+  beginSlot, endDay, newWorld as engineNewWorld, opinionOf, parseWorld, serializeWorld, warmthOf,
 } from "../src/world/engine.ts";
 import {
   checkRequest, openDay, resolveRequestChoice, settleRequests, seenKey, soldUnitsKey,
@@ -15,6 +15,9 @@ import {
 import type { Slot, World, WorldRequest } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
+
+// 第一季第 1 天不发委托（FIRST_REQUEST_DAY）。这里测的是委托本身，开在第 2 季的第 1 天，天数口径不变。
+const newWorld: typeof engineNewWorld = (seed, people) => ({ ...engineNewWorld(seed, people), season: 2 });
 
 /** 手动摆一个场面：不经过 beginSlot，直接指定谁在场（openDay 读的就是这份 present）。 */
 const stage = (w: World, ids: string[], zone = "atrium"): World =>
@@ -320,4 +323,11 @@ test("存档：委托随档往返，旧档缺字段按空读，坏档拒收", ()
   assert.equal(parseWorld(JSON.stringify(bad)), null, "kind 不认得拒收");
   bad.world.requests = [{ id: "x", kind: "quota", by: "roman", day: 1, due: 0, state: "open", text: "t", reward: "r" }];
   assert.equal(parseWorld(JSON.stringify(bad)), null, "期限早于提起日拒收");
+});
+
+test("第一季第 1 天不托事，第 2 天起才开始", () => {
+  const first = stage(engineNewWorld("req-first-day", PEOPLE), ["roman", "fangmin", "tangke", "suman"], "counter");
+  assert.equal(openDay(first, PEOPLE).requests.length, 0);
+  const second = { ...first, day: 2 };
+  assert.ok(openDay(second, PEOPLE).requests.length > 0);
 });

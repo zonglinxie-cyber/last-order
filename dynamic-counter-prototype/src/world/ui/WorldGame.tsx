@@ -36,8 +36,8 @@ import "./world.css";
 
 const SEASON_DAYS = 28; // 与 content/festivals.ts 的一季同长
 const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
-// public/assets/game/chibi/ 里按 id 对得上的小人图；对不上的用「头像圆牌 + 通用身体」。
-const CHIBI = new Set(["anjie", "duan", "fangmin", "luyao", "mei", "roman", "shen", "suman", "tangke", "xiaoyu", "zhao", "zhou"]);
+// public/assets/game/chibi/ 里按 id 对得上的小人图（WebP 透明底）；对不上的用头像圆牌。
+const CHIBI = new Set(["anjie", "baijie", "caiaiyi", "cenning", "chendao", "chenke", "dongayi", "duan", "fangmin", "gaoyuan", "guyan", "hanlei", "heqing", "huojie", "jiangning", "laokang", "liangxia", "ligui", "lina", "linyi", "luyao", "mei", "miduo", "peilan", "qianjie", "qiaowan", "roman", "ruanxiaoman", "shen", "songjie", "suman", "suxiao", "tangke", "tangtang", "tanwan", "wulaoshi", "xiaoyu", "yenushi", "yinxiaojie", "zhao", "zhaoning", "zhou"]);
 const TWO_TARGET: Verb[] = ["introduce", "mediate", "handoff", "tell"];
 // 代词按人物性别念（pronoun.ts 的 ta），不写死"她"。
 const verbWord = (verb: Verb, person: Person): string => ({
@@ -588,7 +588,7 @@ export default function WorldGame() {
             <span className="wf-tag">{p.name}</span>
             <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
               {CHIBI.has(id)
-                ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.png`)} alt="" aria-hidden="true" draggable={false} />
+                ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.webp`)} alt="" aria-hidden="true" draggable={false} />
                 : <span className="wf-token">{p.portrait ? <img src={p.portrait} alt="" aria-hidden="true" /> : <b aria-hidden="true">{p.name.slice(0, 1)}</b>}</span>}
             </span>
             <i className="wf-glow" aria-hidden="true" />
@@ -665,6 +665,7 @@ export default function WorldGame() {
       <div className="world-web-body"><WebView world={world} people={PEOPLE} /></div>
     </div>}
 
-    <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < ENERGY_PER_DAY }} />
+    {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
+    {!reqCardOpen && !reqPanelOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < ENERGY_PER_DAY }} />}
   </div>;
 }
