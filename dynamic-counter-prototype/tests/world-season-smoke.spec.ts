@@ -1,9 +1,10 @@
-// 人情场（?mode=world）整季通关冒烟：扮演一个普通玩家，从新档开局一路玩到第 28 天散场。
+// 人情场（?mode=world）整季通关冒烟：扮演一个普通玩家，从新档开局一路玩到第 28 天散场，
+// 进季末回顾页（.world-recap），再开第 2 季玩三天，确认跨季内容能开出来。
 // 跑法：cd dynamic-counter-prototype && MOBILE_RUNTIME_TEST_PORT=4474 npx playwright test tests/world-season-smoke.spec.ts
 // 两条引导路径各跑一遍：一条全程点「知道了」，一条开局点「跳过引导」。
 // 玩家的选择由固定种子决定；开局那颗骰子（Date.now + Math.random）也一起钉住，同一个 SEED 玩出来的整季内容可复现。
 // 逐时段记进 ../audit/world-smoke/report-<路径>.json：点了谁、做了什么、她那边念到什么，以及卡死/遮挡/缺字。
-// 除散场页那句结局（已按主控要求补进 src/）之外，发现问题只记录、只截图，不改 src/；钉不住的用 test.fail() 标出来。
+// 发现问题只记录、只截图，不改 src/，由主控分派。
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
@@ -11,16 +12,18 @@ import type { World } from "../src/world/types.ts";
 import { COACH_KEY } from "../src/world/ui/coach.ts";
 import { WORLD_PROGRESS_KEY } from "../src/world/progress.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import { seasonEnding } from "../src/world/ending.ts";
+import { ENDINGS, seasonEnding } from "../src/world/ending.ts";
 
 const AUDIT_DIR = "../audit/world-smoke";
 const SEED = 20261009;
 const FIXED_NOW = 1_800_000_000_000;
 const STEP_MS = 5_000; // 单步超过 5 秒算卡死
 const SEASON_DAYS = 28;
+const S2_DAYS = 3; // 进第 2 季后再玩三天
 const SLOTS_PER_DAY = 4;
 const SLOT_WORDS = ["上午", "午后", "傍晚", "晚高峰"];
 const MAX_STEPS = SEASON_DAYS * (SLOTS_PER_DAY + 2) + 40;
+const MAX_STEPS_S2 = S2_DAYS * (SLOTS_PER_DAY + 2) + 30;
 
 mkdirSync(AUDIT_DIR, { recursive: true });
 
@@ -132,12 +135,13 @@ const probe = (page: Page): Promise<Probe> =>
       return `被 ${hit.tagName.toLowerCase()}.${String(hit.className).split(" ").join(".")} 挡住`;
     };
     const bubble = shown(".world-coach");
-    const layer = [...document.querySelectorAll<HTMLElement>('[role="dialog"], .world-request, .request-popup')]
-      .find(el => live(el) && /请求/.test(el.textContent ?? "") && !el.querySelector(".story-choices, .world-verbs, .pc-close"));
-    const goEl = shown(".world-report-page .report-foot .world-primary") ?? shown(".world-next");
-    const seasonPage = /天散场/.test(text(document.querySelector(".world-report-page .report-eyebrow")));
+    // 开门那张「今天的请求」卡（Requests.tsx）
+    const layer = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')]
+      .find(el => live(el) && /今天的请求/.test(el.textContent ?? "") && !el.querySelector(".story-choices, .world-verbs, .pc-close"));
+    const goEl = shown(".world-report-page:not(.world-recap-page) .report-foot .world-primary") ?? shown(".world-next");
     const screen = shown(".world-intro-screen") ? "intro"
-      : shown(".world-report-page") ? (seasonPage ? "season" : "report")
+      : shown(".world-recap") ? "season"
+      : shown(".world-report-page") ? "report"
       : "floor";
     const scanned = (document.body as HTMLElement).innerText ?? "";
     const peek = (at: number) => scanned.slice(Math.max(0, at - 24), at + 34).replace(/\s+/g, " ");
@@ -181,23 +185,42 @@ const tapCoach = async (page: Page, coach: "know" | "skip"): Promise<void> => {
 };
 
 /**
- * 「今天的请求」这类弹层由另一位同事在做、还没合进来：有就关掉，没有就立刻跳过。
- * 只在 DOM 里找带「请求」字样的可见浮层，不等、不猜。
+ * 开门那张「今天的请求」卡：有能按的「应下」就应下，「应下」被灰掉（小样不够）就按「回绝」，
+ * 最后点「知道了」收卡。返回这一屏替玩家做了什么；没有卡返回 null，不等、不猜。
+ * 每按一次都重新查 DOM：一次点击就是一次重渲染，行节点会被换掉。
  */
-const dismissRequestPopup = (page: Page): Promise<string | null> =>
+const answerRequestCard = (page: Page): Promise<string | null> =>
   page.evaluate(() => {
-    const layers = [...document.querySelectorAll<HTMLElement>('[role="dialog"], .world-request, .request-popup')];
-    const layer = layers.find(el => {
+    const live = (el: Element) => {
       const r = el.getBoundingClientRect();
-      return r.width > 0 && r.height > 0 && /请求/.test(el.textContent ?? "") && !el.querySelector(".story-choices, .world-verbs, .pc-close");
-    });
-    if (!layer) return null;
-    const closer = [...layer.querySelectorAll<HTMLButtonElement>("button")].find(b =>
-      /关闭|知道了|不用了|先不|稍后|取消|收下/.test(b.textContent ?? "") || b.getAttribute("aria-label") === "关闭");
-    if (!closer) return `有请求浮层但找不到关闭按钮：${(layer.textContent ?? "").slice(0, 40)}`;
-    closer.click();
-    return `已关闭请求浮层：${(layer.querySelector("h1,h2,h3,b")?.textContent ?? "").trim().slice(0, 20)}`;
-  }).catch(err => `探测请求浮层失败：${String(err)}`);
+      return r.width > 0 && r.height > 0;
+    };
+    const card = () => [...document.querySelectorAll<HTMLElement>('[role="dialog"]')]
+      .find(el => live(el) && /今天的请求/.test(el.textContent ?? "") && !el.querySelector(".story-choices, .world-verbs, .pc-close"));
+    if (!card()) return null;
+    const log: string[] = [];
+    for (let round = 0; round < 6; round++) {
+      const layer = card();
+      if (!layer) { log.push("卡自己收掉了"); break; }
+      const rows = [...layer.querySelectorAll<HTMLElement>(".req-row")];
+      const row = rows.find(r => r.querySelector(".req-yes:not([disabled])")) ?? rows.find(r => r.querySelector(".req-yes"));
+      if (!row) { log.push("今天没有当场可应的请求"); break; }
+      const who = row.querySelector(".req-by b")?.textContent?.trim() ?? "";
+      const yes = row.querySelector<HTMLButtonElement>(".req-yes")!;
+      if (!yes.disabled) { yes.click(); log.push(`应下 ${who}`); continue; }
+      const no = row.querySelector<HTMLButtonElement>(".req-no");
+      if (no) { no.click(); log.push(`「应下」灰着（小样不够），回绝 ${who}`); continue; }
+      log.push(`${who} 的请求「应下」按不动又没有「回绝」`);
+      break;
+    }
+    const layer = card();
+    if (layer) {
+      const closer = layer.querySelector<HTMLButtonElement>(".req-close");
+      if (closer) { closer.click(); log.push("点「知道了」收卡"); }
+      else log.push("有请求卡但找不到「知道了」");
+    }
+    return log.join("；");
+  }).catch(err => `处理请求卡失败：${String(err)}`);
 
 /** 故事卡：有就选第一个可见选项；只剩「先记下这一幕」时点它。返回这一幕说了什么、我们选了什么。 */
 const chooseStory = async (page: Page): Promise<{ text: string; chose: string } | null> => {
@@ -352,71 +375,29 @@ const closeDrawer = async (page: Page): Promise<void> => {
   if (await visible(closer)) await closer.click({ timeout: STEP_MS }).catch(() => undefined);
 };
 
-/** 开局落进存档的世界种子：整季内容跟着它确定，打出来好复现。 */
-const readWorldSeed = (page: Page): Promise<string> =>
-  page.evaluate(key => {
-    try {
-      const raw = window.localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as { world?: { seed?: string } }).world?.seed ?? "?" : "?";
-    } catch { return "?"; }
-  }, SAVE_KEY);
+/** 一局冒烟的全部现场：页、策略、记录本和走到哪了。 */
+type Session = {
+  page: Page; coach: "know" | "skip"; label: string;
+  notes: Note[]; actions: string[]; errors: string[]; noise: string[];
+  /** 内部字段名漏在玩家眼前的那几行：另记一份，交给主控定怎么改。 */
+  rawWords: Set<string>;
+  state: { season: number; day: number; slot: number; screen: string };
+  rnd: () => number;
+  steps: number; startedAt: number;
+  where: () => string;
+  note: (n: Note) => void;
+  writeReport: () => void;
+};
 
-/** 玩完整一季：返回用时、走了多少步、一路上记下的问题、做过的动作与控制台报错。 */
-async function playSeason(page: Page, coach: "know" | "skip") {
-  const label = coach === "know" ? "知道了" : "跳过引导";
-  const notes: Note[] = [];
-  const startedAt = Date.now();
-  const actions: string[] = [];
-  const errors: string[] = [];
-  const noise: string[] = [];
-  /** 内部字段名漏在玩家眼前的那几行：另记一份，不拦整季冒烟，交给主控定怎么改。 */
-  const rawWords = new Set<string>();
-  const rnd = makeRng(SEED + (coach === "know" ? 1 : 2));
-  const state = { day: 1, slot: 0, screen: "intro" };
-  const where = () => `${state.screen} · 第 ${state.day} 天 ${SLOT_WORDS[state.slot] ?? state.slot}`;
-
-  page.on("console", msg => {
-    if (msg.type() !== "error") return;
-    const text = msg.text();
-    const url = msg.location()?.url ?? "";
-    // worktree 与原仓库共用 node_modules，Vite 的 server.fs.allow 会把 @fontsource 的 woff2 挡成 403。
-    // 这是跑测试的机器环境，不是游戏里的报错，但仍单记一行，别悄悄吞掉。
-    if (/Failed to load resource/.test(text) && /font|woff/i.test(`${url} ${text}`)) noise.push(`${where()} · 字体资源加载失败（环境）：${url || text}`);
-    else errors.push(`${where()} · console.error：${text}${url ? ` @${url}` : ""}`);
-  });
-  page.on("pageerror", err => errors.push(`${where()} · pageerror：${err.message}`));
-
-  // 新档开局：世界档、引导已读、跨季档案三把钥匙都清掉。
-  await page.addInitScript(keys => {
-    try { for (const k of keys) window.localStorage.removeItem(k); } catch { /* 存不进就算了 */ }
-  }, [SAVE_KEY, COACH_KEY, WORLD_PROGRESS_KEY]);
-  // 开局那颗骰子：Date.now 固定、Math.random 换成同种子的线性同余，世界种子跟着定下来，整季内容可复现。
-  await page.addInitScript(([now, seed]) => {
-    Date.now = () => now;
-    let s = seed >>> 0;
-    Math.random = () => {
-      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-      return s / 4294967296;
-    };
-  }, [FIXED_NOW, SEED] as [number, number]);
-
-  // 一路走一路落盘：中途卡死也留得下"哪一天哪一步做了什么看到什么"。
-  const writeReport = () => writeFileSync(`${AUDIT_DIR}/report-${coach}.json`, JSON.stringify({
-    coach, seed, elapsedMs: Date.now() - startedAt, steps, day: state.day, slot: state.slot, screen: state.screen,
-    actions, notes, errors, noise, rawFields: [...rawWords],
-  }, null, 2));
-  const note = (n: Note) => { notes.push(n); writeReport(); };
-  await page.goto("/?mode=world");
-  await expect(page.locator(".world-intro-screen")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "开这一季" }).click({ timeout: 15_000 });
-  await page.locator(".world-next").waitFor({ state: "visible", timeout: 15_000 });
-  const seed = await readWorldSeed(page);
-  console.log(`〔${label}〕开局世界种子：${seed}`);
-
-  let steps = 0;
+/**
+ * 一段连续游玩：每屏先收浮层（引导 / 故事卡 / 请求卡），再点人做动作，再走下一时段。
+ * stop 在每个时段开始时判；第 1 季用它停在散场页，第 2 季用它玩满三天。
+ */
+async function playSlots(s: Session, stop: (p: Probe) => boolean, maxSteps: number): Promise<Probe | null> {
+  const { page, coach, note, actions } = s;
   let skippedOnce = false;
 
-  /** 一层层收掉压在这一屏上面的东西：引导、故事卡、请求浮层。返回每收到一件事。 */
+  /** 一层层收掉压在这一屏上面的东西：引导、故事卡、请求卡。返回每收到一件事。 */
   async function clearOverlays(): Promise<string[]> {
     const seen: string[] = [];
     for (let round = 0; round < 5; round++) {
@@ -424,9 +405,9 @@ async function playSeason(page: Page, coach: "know" | "skip") {
       if (q.coachText) {
         seen.push(`引导：${q.coachText}`);
         if (!q[coach === "skip" ? "coachSkip" : "coachOk"]) {
-          note({ where: where(), did: "引导", saw: `${q.coachText}：气泡里没有${coach === "skip" ? "「跳过引导」" : "「知道了」"}按钮` });
+          note({ where: s.where(), did: "引导", saw: `${q.coachText}：气泡里没有${coach === "skip" ? "「跳过引导」" : "「知道了」"}按钮` });
         } else if (coach === "skip" && skippedOnce) {
-          note({ where: where(), did: "引导", saw: `开局点过「跳过引导」之后又冒出一句：${q.coachText}` });
+          note({ where: s.where(), did: "引导", saw: `开局点过「跳过引导」之后又冒出一句：${q.coachText}` });
         }
         skippedOnce = true;
         await tapCoach(page, coach);
@@ -439,9 +420,9 @@ async function playSeason(page: Page, coach: "know" | "skip") {
         continue;
       }
       if (q.request) {
-        const closed = await dismissRequestPopup(page);
-        seen.push(`请求浮层：${closed ?? q.request}`);
-        if (closed?.startsWith("有请求浮层")) note({ where: where(), did: "请求浮层", saw: closed });
+        const done = await answerRequestCard(page);
+        seen.push(`请求卡：${done ?? q.request}`);
+        if (done?.includes("找不到") || done?.includes("按不动")) note({ where: s.where(), did: "请求卡", saw: done });
         continue;
       }
       break;
@@ -449,70 +430,134 @@ async function playSeason(page: Page, coach: "know" | "skip") {
     return seen;
   }
 
-  for (let guard = 0; guard < MAX_STEPS; guard++) {
-    const p = await step(page, "看这一屏", where, label, note, () => probe(page));
+  for (let guard = 0; guard < maxSteps; guard++) {
+    const p = await step(page, "看这一屏", s.where, s.label, note, () => probe(page));
     const hit = /第 (\d+) 季 · 第 (\d+) 天 · (上午|午后|傍晚|晚高峰)/.exec(p.bar);
     if (hit) {
-      state.day = Number(hit[2]);
-      state.slot = SLOT_WORDS.indexOf(hit[3]);
+      s.state.season = Number(hit[1]);
+      s.state.day = Number(hit[2]);
+      s.state.slot = SLOT_WORDS.indexOf(hit[3]);
     }
-    state.screen = p.screen;
-    steps++;
-    if (p.defect) note({ where: where(), did: "读这一屏", saw: `文案缺字嫌疑：…${p.defect}…` });
-    if (p.rawField) rawWords.add(`${p.screen} · ${p.rawField}`);
-    if (p.screen === "season") break;
+    s.state.screen = p.screen;
+    s.steps++;
+    if (p.defect) note({ where: s.where(), did: "读这一屏", saw: `文案缺字嫌疑：…${p.defect}…` });
+    if (p.rawField) s.rawWords.add(`${p.screen} · ${p.rawField}`);
+    if (stop(p)) return p;
 
     if (p.screen === "intro") {
-      await step(page, "开这一季", where, label, note, () =>
+      await step(page, "开这一季", s.where, s.label, note, () =>
         page.getByRole("button", { name: /开这一季|继续/ }).first().click({ timeout: STEP_MS }));
       continue;
     }
 
-    // 开头：请求浮层与引导气泡先收掉，别让它俩挡住后面的操作。
-    const before = await step(page, "收开头的浮层", where, label, note, clearOverlays);
-    before.forEach(s => actions.push(`${where()} ${s}`));
+    // 开头：引导、故事卡与请求卡先收掉，别让它仨挡住后面的操作。
+    const before = await step(page, "收开头的浮层", s.where, s.label, note, clearOverlays);
+    before.forEach(x => actions.push(`${s.where()} ${x}`));
 
     if (p.screen === "report") {
-      console.log(`〔${label}〕${where()} → 小结页（${p.bar}）`);
-      if (state.day === 1) await page.screenshot({ path: `${AUDIT_DIR}/report-day1-${coach}.png` });
-      if (!p.reportTitle) note({ where: where(), did: "日小结", saw: "小结页没有标题" });
-      if (p.goBlock) note({ where: where(), did: `日小结「${p.go}」`, saw: p.goBlock });
-      await step(page, "进入下一天", where, label, note, () =>
+      console.log(`〔${s.label}〕${s.where()} → 小结页（${p.bar}）`);
+      if (s.state.day === 1 && s.state.season === 1) await page.screenshot({ path: `${AUDIT_DIR}/report-day1-${coach}.png` });
+      if (!p.reportTitle) note({ where: s.where(), did: "日小结", saw: "小结页没有标题" });
+      if (p.goBlock) note({ where: s.where(), did: `日小结「${p.go}」`, saw: p.goBlock });
+      await step(page, "进入下一天", s.where, s.label, note, () =>
         page.locator(".report-foot .world-primary").click({ timeout: STEP_MS }));
       continue;
     }
 
     // 楼层：先处理故事卡，再点在场的人做一次动作（约四成时段多做一次）。
-    const times = rnd() < 0.4 ? 2 : 1;
-    const moving = await step(page, "等走动的人停下", where, label, note, () => settleActors(page));
-    if (moving.length) actions.push(`${where()} 到点还在走动：${moving.slice(0, 8).join("、")}`);
+    const times = s.rnd() < 0.4 ? 2 : 1;
+    const moving = await step(page, "等走动的人停下", s.where, s.label, note, () => settleActors(page));
+    if (moving.length) actions.push(`${s.where()} 到点还在走动：${moving.slice(0, 8).join("、")}`);
     for (let i = 0; i < times; i++) {
       const did = `点人做动作 第${i + 1}次`;
-      const done = await step(page, did, where, label, note, async () => {
-        const r = await doOneAction(page, rnd, i === 0);
+      const done = await step(page, did, s.where, s.label, note, async () => {
+        const r = await doOneAction(page, s.rnd, i === 0);
         return r.problem ? r : { ...r, result: await readOutcome(page) };
       });
-      if (done.problem) note({ where: where(), did, saw: done.problem });
-      if (done.note) actions.push(`${where()} ${done.note}${done.result ? ` → ${done.result}` : ""}`);
+      if (done.problem) note({ where: s.where(), did, saw: done.problem });
+      if (done.note) actions.push(`${s.where()} ${done.note}${done.result ? ` → ${done.result}` : ""}`);
       await closeDrawer(page);
     }
 
-    // 动作做完可能又引出故事卡、请求浮层或一句新引导。
-    const after = await step(page, "收动作之后的浮层", where, label, note, clearOverlays);
-    after.forEach(s => actions.push(`${where()} ${s}`));
+    // 动作做完可能又引出故事卡、请求卡或一句新引导。
+    const after = await step(page, "收动作之后的浮层", s.where, s.label, note, clearOverlays);
+    after.forEach(x => actions.push(`${s.where()} ${x}`));
 
-    const q = await step(page, "看「下一时段」能不能按", where, label, note, () => probe(page));
-    if (q.goBlock) note({ where: where(), did: `点「${q.go}」之前`, saw: q.goBlock });
-    await step(page, "下一时段", where, label, note, () => page.locator(".world-next").click({ timeout: STEP_MS }));
-    if (state.slot === SLOTS_PER_DAY - 1) state.slot = 0;
+    const q = await step(page, "看「下一时段」能不能按", s.where, s.label, note, () => probe(page));
+    if (q.goBlock) note({ where: s.where(), did: `点「${q.go}」之前`, saw: q.goBlock });
+    await step(page, "下一时段", s.where, s.label, note, () => page.locator(".world-next").click({ timeout: STEP_MS }));
+    if (s.state.slot === SLOTS_PER_DAY - 1) s.state.slot = 0;
 
-    if (state.day === 1 && steps === 1) await page.screenshot({ path: `${AUDIT_DIR}/floor-day1-${coach}.png` });
-    if (state.day === 14 && state.slot === 1 && steps % 4 === 2) await page.screenshot({ path: `${AUDIT_DIR}/floor-day14-${coach}.png` });
+    if (s.state.season === 1 && s.state.day === 1 && s.steps === 1) await page.screenshot({ path: `${AUDIT_DIR}/floor-day1-${coach}.png` });
+    if (s.state.season === 1 && s.state.day === 14 && s.state.slot === 1 && s.steps % 4 === 2) await page.screenshot({ path: `${AUDIT_DIR}/floor-day14-${coach}.png` });
   }
+  return null;
+}
 
-  const elapsed = Date.now() - startedAt;
-  writeReport();
-  return { label, seed, notes, actions, errors, noise, rawFields: [...rawWords], elapsed, steps, reached: state.screen === "season", where: where() };
+/** 开局落进存档的世界种子：整季内容跟着它确定，打出来好复现。 */
+const readWorldSeed = (page: Page): Promise<string> =>
+  page.evaluate(key => {
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as { world?: { seed?: string } }).world?.seed ?? "?" : "?";
+    } catch { return "?"; }
+  }, SAVE_KEY);
+
+/** 新档一路玩到散场页：返回现场（还没做季末页断言，交给调用方）。 */
+async function playSeason(page: Page, coach: "know" | "skip"): Promise<Session> {
+  const label = coach === "know" ? "知道了" : "跳过引导";
+  const s: Session = {
+    page, coach, label,
+    notes: [], actions: [], errors: [], noise: [], rawWords: new Set<string>(),
+    state: { season: 1, day: 1, slot: 0, screen: "intro" },
+    rnd: makeRng(SEED + (coach === "know" ? 1 : 2)),
+    steps: 0, startedAt: Date.now(),
+    where: () => `${s.state.screen} · 第 ${s.state.season} 季第 ${s.state.day} 天 ${SLOT_WORDS[s.state.slot] ?? s.state.slot}`,
+    note: n => { s.notes.push(n); s.writeReport(); },
+    writeReport: () => writeFileSync(`${AUDIT_DIR}/report-${coach}.json`, JSON.stringify({
+      coach, day: s.state.day, slot: s.state.slot, screen: s.state.screen,
+      elapsedMs: Date.now() - s.startedAt, steps: s.steps,
+      actions: s.actions, notes: s.notes, errors: s.errors, noise: s.noise, rawFields: [...s.rawWords],
+    }, null, 2)),
+  };
+
+  page.on("console", msg => {
+    if (msg.type() !== "error") return;
+    const text = msg.text();
+    const url = msg.location()?.url ?? "";
+    // worktree 与原仓库共用 node_modules，Vite 的 server.fs.allow 会把 @fontsource 的 woff2 挡成 403。
+    // 这是跑测试的机器环境，不是游戏里的报错，但仍单记一行，别悄悄吞掉。
+    if (/Failed to load resource/.test(text) && /font|woff/i.test(`${url} ${text}`)) s.noise.push(`${s.where()} · 字体资源加载失败（环境）：${url || text}`);
+    else s.errors.push(`${s.where()} · console.error：${text}${url ? ` @${url}` : ""}`);
+  });
+  page.on("pageerror", err => s.errors.push(`${s.where()} · pageerror：${err.message}`));
+
+  // 新档开局：世界档、引导已读、跨季档案三把钥匙都清掉。
+  await page.addInitScript(keys => {
+    try { for (const k of keys) window.localStorage.removeItem(k); } catch { /* 存不进就算了 */ }
+  }, [SAVE_KEY, COACH_KEY, WORLD_PROGRESS_KEY]);
+  // 开局那颗骰子：Date.now 固定、Math.random 换成同种子的线性同余，世界种子跟着定下来，整季内容可复现。
+  await page.addInitScript(([now, seed]) => {
+    Date.now = () => now;
+    let r = seed >>> 0;
+    Math.random = () => {
+      r = (Math.imul(r, 1664525) + 1013904223) >>> 0;
+      return r / 4294967296;
+    };
+  }, [FIXED_NOW, SEED] as [number, number]);
+
+  const seed = (await (async () => {
+    await page.goto("/?mode=world");
+    await expect(page.locator(".world-intro-screen")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "开这一季" }).click({ timeout: 15_000 });
+    await page.locator(".world-next").waitFor({ state: "visible", timeout: 15_000 });
+    return readWorldSeed(page);
+  })());
+  console.log(`〔${label}〕开局世界种子：${seed}`);
+
+  await playSlots(s, p => p.screen === "season", MAX_STEPS);
+  s.writeReport();
+  return s;
 }
 
 test.describe.configure({ mode: "serial" });
@@ -522,24 +567,40 @@ for (const coach of ["know", "skip"] as const) {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, actionTimeout: STEP_MS });
     test.setTimeout(900_000);
 
-    test(`从新档一路玩到第 ${SEASON_DAYS} 天散场，再进第 2 季`, async ({ page }) => {
-      const run = await playSeason(page, coach);
-      console.log(`〔${run.label}〕整季用时 ${(run.elapsed / 1000).toFixed(1)}s，走了 ${run.steps} 步，记下 ${run.actions.length} 行流水、${run.notes.length} 条问题`);
-      if (run.noise.length) console.log(`〔${run.label}〕环境噪音（不计为游戏报错）：1 类 ${run.noise.length} 条（worktree 共用 node_modules 的字体 403），详见 report-${coach}.json`);
-      if (run.rawFields.length) console.log(`〔${run.label}〕内部字段名漏在眼前 ${run.rawFields.length} 处：\n${run.rawFields.map(s => `  · ${s}`).join("\n")}`);
-      console.log(`〔${run.label}〕逐时段明细与问题清单：${AUDIT_DIR}/report-${coach}.json`);
-      expect(run.reached, `${run.label}：没走到第 ${SEASON_DAYS} 天之后的散场页，停在 ${run.where}`).toBe(true);
-      expect(run.errors, `控制台报错：\n${run.errors.join("\n")}`).toEqual([]);
+    test(`从新档玩到第 ${SEASON_DAYS} 天散场，过季末回顾页，再进第 2 季玩 ${S2_DAYS} 天`, async ({ page }) => {
+      const s = await playSeason(page, coach);
+      const elapsed = Date.now() - s.startedAt;
+      console.log(`〔${s.label}〕整季用时 ${(elapsed / 1000).toFixed(1)}s，走了 ${s.steps} 步，记下 ${s.actions.length} 行流水、${s.notes.length} 条问题`);
+      if (s.noise.length) console.log(`〔${s.label}〕环境噪音（不计为游戏报错）：${s.noise.length} 条（worktree 共用 node_modules 的字体 403），详见 report-${coach}.json`);
+      if (s.rawWords.size) console.log(`〔${s.label}〕内部字段名漏在眼前 ${s.rawWords.size} 处：\n${[...s.rawWords].map(x => `  · ${x}`).join("\n")}`);
+      console.log(`〔${s.label}〕逐时段明细与问题清单：${AUDIT_DIR}/report-${coach}.json`);
+      expect(s.state.screen, `${s.label}：没走到第 ${SEASON_DAYS} 天之后的季末页，停在 ${s.where()}`).toBe("season");
+      expect(s.errors, `控制台报错：\n${s.errors.join("\n")}`).toEqual([]);
 
-      // —— 季末总结页：要念出这一季做成了什么，不能只剩数字 ——
-      await expect(page.locator(".world-report-page").first()).toBeVisible();
+      // —— 季末回顾页：结局当标题、有高光时间轴、三颗按钮都在脚下 ——
+      const recap = page.locator(".world-recap").first();
+      await expect(recap).toBeVisible();
+      const endingTitle = (await recap.locator("h1").first().textContent().catch(() => ""))?.trim() ?? "";
+      const endingTitles = ENDINGS.map(e => e.title);
+      expect(endingTitles, `季末页 h1「${endingTitle}」不是 ENDINGS 里的任何一档结局`).toContain(endingTitle);
+      await expect(recap).toContainText("这一季的高光");
       await expect(page.locator(".report-eyebrow")).toContainText(`${SEASON_DAYS} 天散场`);
-      const endingTitle = (await page.locator(".world-report-page h1").first().textContent().catch(() => ""))?.trim() ?? "";
-      const endingBody = (await page.locator(".report-ending").first().textContent().catch(() => ""))?.trim() ?? "";
-      expect(endingTitle, "散场页没有结局标题").not.toBe("");
-      expect(endingTitle, "散场页还停在旧的那句「这一季散场了」").not.toBe("这一季散场了");
-      expect(endingBody, `散场页没有解释这一季做成了什么（标题：${endingTitle}）`).not.toBe("");
-      await page.screenshot({ path: `${AUDIT_DIR}/season-end-${coach}.png` });
+      await page.screenshot({ path: `${AUDIT_DIR}/season-end-${coach}.png`, fullPage: false });
+
+      for (const name of [/进入第 2 季/, /档案/, /重开一季/] as const) {
+        const btn = page.getByRole("button", { name }).first();
+        await expect(btn, `季末页缺「${name}」这颗按钮`).toBeVisible();
+        const blocker = await hitBlocker(btn);
+        expect(blocker, `季末页「${name}」按不到：${blocker}`).toBeNull();
+      }
+
+      // —— 走完的线：念落点标题，不许把内部字段名摊给玩家 ——
+      const arcsBlock = page.locator(".recap-block", { hasText: "走完的线" });
+      const arcsText = (await arcsBlock.innerText().catch(() => "")).replace(/\s+/g, " ");
+      expect(arcsText, "季末页没有「走完的线」这一块").not.toBe("");
+      expect(arcsText, `走完的线念出了内部字段：${arcsText}`).not.toMatch(/end/);
+      expect(arcsText, `走完的线念出了「· 数字」的落点编号：${arcsText}`).not.toMatch(/·\s*\d/);
+      expect(arcsText, `走完的线念出了裸下划线：${arcsText}`).not.toMatch(/_/);
 
       // —— 档案能打开、能返回 ——
       const progressOf = () => page.evaluate(key => {
@@ -555,7 +616,7 @@ for (const coach of ["know", "skip"] as const) {
       await page.screenshot({ path: `${AUDIT_DIR}/season-archive-${coach}.png` });
       await page.locator(".archive-back").click({ timeout: STEP_MS });
       await expect(page.locator(".world-archive-page")).toHaveCount(0);
-      await expect(page.locator(".report-eyebrow")).toContainText("散场");
+      await expect(recap).toBeVisible();
 
       // —— 进入第 2 季 ——
       await page.getByRole("button", { name: /进入第 2 季/ }).click({ timeout: STEP_MS });
@@ -567,12 +628,28 @@ for (const coach of ["know", "skip"] as const) {
       expect(afterSeason2.endings, "这一季的散场没进档案").toBeGreaterThan(0);
       expect(afterSeason2.seen, `进第 2 季之后档案里的人从 ${beforeSeason2.seen} 位变成 ${afterSeason2.seen} 位`).toBeGreaterThanOrEqual(beforeSeason2.seen);
 
-      expect(run.notes, `一路上记下的问题：\n${run.notes.map(n => `${n.where} · ${n.did} → ${n.saw}`).join("\n")}`).toEqual([]);
+      // —— 第 2 季再玩三天：跨季内容（节日卡、同事线卡）要开得出门，一路不许报错 ——
+      await playSlots(s, () => s.state.season >= 2 && s.state.day > S2_DAYS, MAX_STEPS_S2);
+      s.writeReport();
+      await page.screenshot({ path: `${AUDIT_DIR}/season-2-day${S2_DAYS}-${coach}.png` });
+
+      const s2Fired = await page.evaluate(key => {
+        try {
+          const raw = window.localStorage.getItem(key);
+          const fired = (raw ? (JSON.parse(raw) as { world?: { fired?: Record<string, number> } }).world?.fired : {}) ?? {};
+          return Object.keys(fired).filter(id => /^(s2-|arc-(tangke|roman|fangmin|qiaowan))/.test(id));
+        } catch { return []; }
+      }, SAVE_KEY);
+      console.log(`〔${s.label}〕第 2 季前 ${S2_DAYS} 天开出来的跨季卡：${s2Fired.length ? s2Fired.join("、") : "一张都没有"}`);
+      expect(s2Fired.length, `第 2 季前 ${S2_DAYS} 天一张跨季卡（s2-* / 唐可罗曼范敏巧婉的线）都没开出来`).toBeGreaterThan(0);
+
+      expect(s.errors, `第 2 季报错：\n${s.errors.join("\n")}`).toEqual([]);
+      expect(s.notes, `一路上记下的问题：\n${s.notes.map(n => `${n.where} · ${n.did} → ${n.saw}`).join("\n")}`).toEqual([]);
     });
   });
 }
 
-/** 把世界状态直接落到收季那一屏（ui.screen = "season"），不用玩完整一季就能稳定复现散场页。 */
+/** 把世界状态直接落到收季那一屏（ui.screen = "season"），不用玩完整一季就能稳定复现季末回顾页。 */
 const openSeasonScreen = async (page: Page, world: World) => {
   await page.addInitScript(([k, v]) => window.localStorage.setItem(k, v),
     [SAVE_KEY, JSON.stringify({ version: WORLD_SAVE_VERSION, world, ui: { screen: "season" } })] as [string, string]);
@@ -580,11 +657,11 @@ const openSeasonScreen = async (page: Page, world: World) => {
     [COACH_KEY, JSON.stringify(["open", "card", "action", "story", "poach", "web", "report"])] as [string, string]);
   await page.goto("/?mode=world");
   await page.getByRole("button", { name: /继续/ }).click({ timeout: 10_000 });
-  await expect(page.locator(".world-report-page")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".world-recap")).toBeVisible({ timeout: 10_000 });
 };
 
 const EMPTY_LEAGUE: World = { ...newWorld("season-shot", PEOPLE), day: SEASON_DAYS + 1, slot: 3 };
-/** 个人线走过两段的 arc:<人> 与三段的 arc:<人>:<阶段>，散场页两种都会念出来。 */
+/** 个人线走过两段的 arc:<人> 与三段的 arc:<人>:<阶段>，季末页两种都会念出来。 */
 const RAW_ARCS: World = {
   ...newWorld("season-raw", PEOPLE),
   day: SEASON_DAYS + 1, slot: 3, money: 12_000,
@@ -598,81 +675,79 @@ const LONG_LANDING: World = {
   qualities: { "arc:shen:start": 2, "arc:mei:end": 1 },
 };
 
-test.describe("季末总结页", () => {
+test.describe("季末回顾页", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   test.setTimeout(60_000);
 
-  test("念出这一季的结局标题", async ({ page }) => {
+  test("结局当标题，高光、三本账与三颗按钮都在", async ({ page }) => {
     await openSeasonScreen(page, EMPTY_LEAGUE);
     const ending = seasonEnding(EMPTY_LEAGUE, PEOPLE);
     await page.screenshot({ path: `${AUDIT_DIR}/season-ending-title.png` });
-    const page0 = page.locator(".world-report-page").first();
-    await expect(page0).toContainText(ending.title);
-    await expect(page0).toContainText(ending.body);
-    await expect(page0.locator("h1")).toHaveText(ending.title);
+    const recap = page.locator(".world-recap").first();
+    await expect(recap.locator("h1")).toHaveText(ending.title);
+    await expect(recap.locator(".recap-ending-body")).toHaveText(ending.body);
+    await expect(recap).toContainText("这一季的高光");
+    await expect(recap).toContainText("三本账");
+    for (const name of [/进入第 2 季/, /档案/, /重开一季/]) {
+      await expect(page.getByRole("button", { name }).first()).toBeVisible();
+    }
   });
 
-  test("散场页不许把内部字段名念给玩家", async ({ page }) => {
-    // 整季冒烟在第 28 天散场页复现过：「几条线走到哪里了」念成「_ ：suman · 3，luyao · 3…」和「苏蔓 ：end · 1」。
-    // 归并口径在 engine 的 seasonSummary、展示在 WorldGame，两处都不该把内部键摊到玩家眼前。测试只钉住，不改 src/。
-    test.fail(true, "散场页念出内部字段名（_ / suman / end · 1），等主控定改哪一侧");
+  test("走完的线按落点标题念，不许把内部字段名摊给玩家", async ({ page }) => {
+    // 上一轮整季冒烟在第 28 天散场页复现过：「几条线走到哪里了」念成「_ ：suman · 3，luyao · 3…」和「苏蔓 ：end · 1」。
+    // 现在季末回顾页由 recap.ts 的 arcLandings 出标题；这一条从 test.fail 转成正常断言，防回退。
     await openSeasonScreen(page, RAW_ARCS);
     await page.screenshot({ path: `${AUDIT_DIR}/season-raw-fields.png` });
-    const body = (await page.locator(".world-report").innerText()).replace(/\s+/g, " ");
-    expect(body).not.toMatch(/[A-Za-z]{2,}|arc:|_/);
+    const arcs = page.locator(".recap-block", { hasText: "走完的线" });
+    const block = (await arcs.innerText()).replace(/\s+/g, " ");
+    expect(block, "走完的线这一块是空的（RAW_ARCS 里沈薇走到了第 1 档）").not.toBe("");
+    expect(block).not.toMatch(/end/);
+    expect(block).not.toMatch(/·\s*\d/);
+    expect(block).not.toMatch(/_/);
+    // 整页也认不回来内部字段：旗子前缀与人名拼音一律不许露面
+    const body = (await page.locator(".world-recap").innerText()).replace(/\s+/g, " ");
+    expect(body).not.toMatch(/arc:|quality:|flag:|storylet/);
+    for (const id of ["suman", "shen", "luyao", "anjie"]) {
+      expect(body, `季末回顾页念出了人名拼音 ${id}`).not.toMatch(new RegExp(`\\b${id}\\b`));
+    }
   });
 
   for (const [width, height] of [[390, 844], [320, 568]] as const) {
     for (const [name, world] of [["空手散场", EMPTY_LEAGUE], ["长标题散场", LONG_LANDING]] as const) {
-      test.describe(`散场页结局排版 · ${width}×${height} · ${name}`, () => {
+      test.describe(`季末回顾页排版 · ${width}×${height} · ${name}`, () => {
         test.use({ viewport: { width, height } });
 
-        test("标题与那句解释不用滚就看得完，按钮仍 ≥44px、不横向溢出", async ({ page }) => {
+        test("不横向溢出、脚上三颗按钮 ≥44px 且点得中", async ({ page }) => {
           await openSeasonScreen(page, world);
           const ending = seasonEnding(world, PEOPLE);
-          const title = page.locator(".world-report h1");
-          const lead = page.locator(".report-ending");
+          const title = page.locator(".world-recap h1");
           await expect(title).toHaveText(ending.title);
-          await expect(lead).toHaveText(ending.body);
+          await expect(page.locator(".recap-ending-body")).toHaveText(ending.body);
 
-          // 第一屏（scrollTop=0）就要读完结局：两者完整落在滚动容器可视区内。
-          const box = async (loc: Locator) => loc.evaluate(el => {
-            const r = el.getBoundingClientRect();
-            const band = el.closest(".world-report-scroll")?.getBoundingClientRect();
-            return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, bandTop: band?.top ?? 0, bandBottom: band?.bottom ?? 0 };
-          });
-          const t = await box(title);
-          const l = await box(lead);
-          expect(t.top, "结局标题被滚动可视区顶边切掉了").toBeGreaterThanOrEqual(t.bandTop - 1);
-          expect(l.bottom, "结局那句解释的第一屏里看不完（被滚动区底边或脚部按钮切掉）").toBeLessThanOrEqual(l.bandBottom + 1);
-
-          // 字号底线与横向溢出
-          const titleSize = await title.evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-          expect(titleSize).toBeGreaterThanOrEqual(20);
-          const leadSize = await lead.evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-          expect(leadSize).toBeGreaterThanOrEqual(12);
+          // 横向溢出
           const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-          expect(overflow, "散场页横向溢出").toBeLessThanOrEqual(1);
-          const clipped = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>(".world-report *")]
+          expect(overflow, "季末回顾页横向溢出").toBeLessThanOrEqual(1);
+          const clipped = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>(".world-recap *")]
             .filter(el => el.getBoundingClientRect().width > 0)
             .filter(el => el.getBoundingClientRect().right > window.innerWidth + 1)
             .map(el => `${el.tagName.toLowerCase()}.${el.className}`));
           expect(clipped, "有内容压过右边界").toEqual([]);
 
-          // 脚上三个按钮都在视口内、都能被点到自己
-          for (const label of [/进入第 2 季/, /重开一季/, /档案/]) {
+          // 脚上三颗按钮：够大、在视口里、中心点落在自己身上
+          for (const label of [/进入第 2 季/, /档案/, /重开一季/]) {
             const btn = page.getByRole("button", { name: label }).first();
+            await expect(btn).toBeVisible();
             const size = await btn.evaluate(el => {
               const r = el.getBoundingClientRect();
               return { h: r.height, top: r.top, bottom: r.bottom, inView: r.top >= 0 && r.bottom <= window.innerHeight };
             });
-            expect(size.h, `${label} 这个按钮高度不足 44px`).toBeGreaterThanOrEqual(44);
-            expect(size.inView, `${label} 这个按钮不在视口里`).toBe(true);
+            expect(size.h, `「${label}」这颗按钮高度不足 44px`).toBeGreaterThanOrEqual(44);
+            expect(size.inView, `「${label}」这颗按钮不在视口里`).toBe(true);
             const blocker = await hitBlocker(btn);
-            expect(blocker, `${label} 被挡住：${blocker}`).toBeNull();
+            expect(blocker, `「${label}」被挡住：${blocker}`).toBeNull();
           }
 
-          await page.screenshot({ path: `${AUDIT_DIR}/season-ending-${width}x${height}-${name}.png` });
+          await page.screenshot({ path: `${AUDIT_DIR}/season-recap-${width}x${height}-${name}.png` });
 
           // 进第 2 季那一脚按得下去
           await page.getByRole("button", { name: /进入第 2 季/ }).click({ timeout: 10_000 });
