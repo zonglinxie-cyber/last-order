@@ -406,6 +406,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
   },
   {
     id: "miduo", name: "米朵", role: "customer", age: 24,
+    portrait: asset("/assets/game/people/miduo.png"),
     descriptor: "新主播，灯是她的",
     tempers: ["proud", "gossip"],
     skin: {
@@ -444,6 +445,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
   },
   {
     id: "liangxia", name: "梁夏", role: "customer", age: 29,
+    portrait: asset("/assets/game/people/liangxia.png"),
     descriptor: "安姐的伴娘，今天不是来被拍的",
     tempers: ["face", "shy"],
     skin: {
@@ -840,6 +842,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
   },
   {
     id: "chenke", name: "陈柯", role: "customer", age: 29,
+    portrait: asset("/assets/game/people/chenke.png"),
     descriptor: "广告公司，给女友买，自己的嘴没参考价值",
     tempers: ["wary", "loyal"],
     skin: {
