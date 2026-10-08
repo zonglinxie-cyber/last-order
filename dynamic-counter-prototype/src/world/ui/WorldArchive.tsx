@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { MobileScroll } from "../../mobile";
 import { ENDINGS, rank } from "../ending.ts";
 import { endingHint } from "../ending-hints.ts";
-import { ARC_PEOPLE, emptyWorldProgress, parseWorldProgress, readWorldProgress, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
+import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWorldProgress, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
 import { PEOPLE, STORYLETS } from "../content/index.ts";
 import type { PersonId } from "../types.ts";
 import { opinionWord } from "./words.ts";
@@ -13,21 +13,6 @@ import "../../archive.css";
 import "./world-archive.css";
 
 type Tab = "people" | "arcs" | "endings";
-
-/** 落点标题：从对应「arc-<id>-end」卡里那个 set 到这一档的选项 label 现取，内容改了标签跟着走。 */
-function arcLandings(id: PersonId): Array<{ landing: number; title: string }> {
-  const out: Array<{ landing: number; title: string }> = [];
-  for (const card of STORYLETS) {
-    for (const choice of card.choices) {
-      for (const effect of choice.effects) {
-        if ("quality" in effect && effect.quality === `arc:${id}:end` && typeof effect.set === "number") {
-          if (!out.some(x => x.landing === effect.set)) out.push({ landing: effect.set, title: choice.label });
-        }
-      }
-    }
-  }
-  return out.sort((a, b) => a.landing - b.landing);
-}
 
 const nameOf = (id: PersonId): string => PEOPLE.find(p => p.id === id)?.name ?? id;
 
@@ -94,7 +79,7 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
       })}</section>}
 
       {tab === "arcs" && <section className="wa-arcs">{ARC_PEOPLE.map(id => {
-        const landings = arcLandings(id);
+        const landings = arcLandings(STORYLETS, id);
         const reached = progress.arcEnds[id] ?? [];
         return <article className="wa-arc" key={id}>
           <h3>{nameOf(id)}</h3>

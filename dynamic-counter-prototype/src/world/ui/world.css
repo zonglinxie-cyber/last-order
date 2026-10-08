@@ -148,6 +148,55 @@
 .report-block p b { color:#ffe8b6; margin-right:6px; }
 .report-foot { flex:0 0 auto; padding:10px 14px calc(12px + env(safe-area-inset-bottom)); }
 
+/* —— 季末回顾：领奖时刻。金/奶油/酒红/深褐；时间轴从上往下讲这一季 —— */
+.world-recap-page { background:linear-gradient(178deg,#261016 0,#1a100f 30%,#17100f 60%); }
+.world-recap .recap-ending { margin:0 0 8px; color:#ffe8b6; font:700 28px 'Noto Serif SC',serif; letter-spacing:.05em; }
+.recap-ending-body { margin:0 0 20px; padding-left:12px; border-left:3px solid #f0c97888; color:#e8d4bb; font-size:13px; line-height:1.75; }
+.recap-block { margin:0 0 16px; }
+.recap-block > h2 { margin:0 0 10px; display:flex; align-items:center; gap:10px; color:#f4dfbd; font:600 14px 'Noto Serif SC',serif; letter-spacing:.14em; }
+.recap-block > h2::after { content:""; flex:1 1 auto; border-top:1px solid #f0cf9126; }
+.recap-empty { margin:0; color:#a99689; font-size:13px; line-height:1.6; }
+
+/* 高光时刻：圆点 + 竖线的时间轴，按天讲下去 */
+.recap-timeline { margin:0; padding:0; list-style:none; }
+.recap-timeline li { position:relative; padding:0 0 12px 20px; }
+.recap-timeline li::before { content:""; position:absolute; left:4px; top:5px; width:7px; height:7px; border-radius:50%; background:#f0c978; box-shadow:0 0 7px #f0c97866; }
+.recap-timeline li::after { content:""; position:absolute; left:7px; top:17px; bottom:-3px; width:1px; background:#f0cf912e; }
+.recap-timeline li:last-child::after { display:none; }
+.recap-day { display:block; margin-bottom:2px; color:#c7a993; font:600 12px 'Noto Serif SC',serif; letter-spacing:.08em; }
+.recap-timeline-main p { margin:0; color:#eee0d5; font-size:13px; line-height:1.65; }
+.recap-who { display:inline-flex; margin-left:6px; vertical-align:-3px; }
+
+/* 头像：有真肖像用真肖像，没有的用名字首字圆牌（与 wf-token 同一套画法） */
+.recap-avatar { flex:0 0 auto; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; overflow:hidden; border-radius:50%; border:1px solid #f0cf9155; background:radial-gradient(circle at 35% 30%,#5a3d35,#2a1a16); }
+.recap-avatar img { width:100%; height:100%; object-fit:cover; object-position:50% 22%; -webkit-user-drag:none; }
+.recap-avatar.letter b { color:#ffe8b6; font:700 14px 'Noto Serif SC',serif; }
+.recap-who .recap-avatar { width:20px; height:20px; margin-left:-5px; border-color:#1a100f; }
+.recap-who .recap-avatar:first-child { margin-left:0; }
+.recap-who .recap-avatar.letter b { font-size:12px; }
+
+/* 你的人 / 记着你的人 / 谁变了：头像 + 名 + 一句话 */
+.recap-people { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+.recap-person { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid #f0cf9122; border-radius:12px; background:#ffffff05; }
+.recap-people-grudge .recap-person { border-color:#8a4a5a55; }
+.recap-person-main { flex:1 1 auto; min-width:0; }
+.recap-person-main > b { display:flex; align-items:baseline; gap:8px; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
+.recap-person-main > b small { color:#a99689; font-size:12px; font-weight:400; }
+.recap-person-main > p { margin:2px 0 0; color:#ddd0c2; font-size:12px; line-height:1.55; }
+.recap-delta { flex:0 0 auto; color:#9fc49f; font:700 15px 'Noto Serif SC',serif; }
+.recap-delta.down { color:#d98a97; }
+
+/* 走完的线：名字 + 落点标题 + 落定那天 */
+.recap-arcs { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.recap-arcs li { display:flex; align-items:baseline; gap:8px; padding:8px 11px; border:1px solid #f0cf9122; border-radius:10px; background:#ffffff05; }
+.recap-arcs b { flex:0 0 auto; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
+.recap-arcs span { flex:1 1 auto; min-width:0; color:#e8d4bb; font-size:13px; line-height:1.5; }
+.recap-arcs small { flex:0 0 auto; color:#a99689; font-size:12px; }
+
+/* 三本账：只在最后念三个数，各带一句评价 */
+.recap-numbers { margin-bottom:0; }
+.recap-numbers em { color:#b99b7f; font-size:12px; font-style:normal; line-height:1.4; }
+
 .world-primary { width:100%; min-height:52px; border:0; border-radius:14px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 16px 'Noto Serif SC',serif; }
 .world-ghost { width:100%; min-height:48px; margin-top:8px; border:1px solid #f0cf9133; border-radius:14px; background:transparent; color:#efd6b0; font:600 14px 'Noto Serif SC',serif; }
 

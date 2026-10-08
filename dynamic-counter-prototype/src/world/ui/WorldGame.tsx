@@ -8,10 +8,11 @@ import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, seasonSummary, substitute,
+  drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, substitute,
   verbOptions, ENERGY_PER_DAY, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
+import { seasonRecap } from "../recap.ts";
 import { quarrelPairs } from "../exchanges.ts";
 import { askedToday, dueToday, resolveRequestChoice } from "../requests.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
@@ -478,28 +479,83 @@ export default function WorldGame() {
   }
 
   if (phase === "season") {
-    const s = seasonSummary(world, PEOPLE);
-    const arcRows = Object.entries(s.arcs).filter(([, arc]) => Object.keys(arc).length);
-    return <div className="app-screen world-app world-report-page">
-      <MobileScroll className="world-report-scroll"><main className="world-report">
-        <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
-        <h1>这一季散场了</h1>
-        <div className="report-numbers">
-          <span><small>这一季进账</small><b>{yuan(s.money)}</b></span>
-          <span><small>柜位</small><b>{s.standing}</b></span>
-          <span><small>台账</small><b>{s.compliance}</b></span>
+    const ending = seasonEnding(world, PEOPLE);
+    const recap = seasonRecap(world, PEOPLE, STORYLETS);
+    const person = (id: PersonId) => PEOPLE.find(p => p.id === id);
+    const avatar = (id: PersonId, key?: string | number) => {
+      const p = person(id);
+      return <span key={key} className={"recap-avatar" + (p?.portrait ? "" : " letter")} aria-hidden="true">
+        {p?.portrait ? <img src={p.portrait} alt="" /> : <b>{(p?.name ?? id).slice(0, 1)}</b>}
+      </span>;
+    };
+    const personRow = (r: { id: PersonId; line: string; day?: number }) => {
+      const p = person(r.id);
+      return <li className="recap-person" key={r.id}>
+        {avatar(r.id)}
+        <div className="recap-person-main">
+          <b>{nameOf(r.id)}{r.day !== undefined ? <small>第 {r.day} 天</small> : null}</b>
+          <p>{p ? `${ta(p)}` : ""}{r.line}</p>
         </div>
-        <section className="report-block">
-          <h2>谁是你的人</h2>
-          {s.allies.length ? <p>{s.allies.map(nameOf).join("、")}</p> : <p>没有一个人把你当自己人。</p>}
+      </li>;
+    };
+    return <div className="app-screen world-app world-report-page world-recap-page">
+      <MobileScroll className="world-report-scroll"><main className="world-report world-recap">
+        <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
+        <h1 className="recap-ending">{ending.title}</h1>
+        <p className="recap-ending-body">{ending.body}</p>
+
+        <section className="recap-block">
+          <h2>这一季的高光</h2>
+          <ol className="recap-timeline">
+            {recap.highlights.map((h, i) => <li key={i}>
+              <span className="recap-day">第 {h.day} 天</span>
+              <div className="recap-timeline-main">
+                <p>{h.text}</p>
+                {h.who.length ? <span className="recap-who">{h.who.map(id => avatar(id, id))}</span> : null}
+              </div>
+            </li>)}
+          </ol>
         </section>
-        <section className="report-block">
-          <h2>谁记了你的仇</h2>
-          {s.enemies.length ? <p>{s.enemies.map(nameOf).join("、")}</p> : <p>没人跟你结仇。</p>}
+
+        <section className="recap-block">
+          <h2>你的人</h2>
+          {recap.allies.length
+            ? <ul className="recap-people">{recap.allies.map(personRow)}</ul>
+            : <p className="recap-empty">没有一个人把你当自己人。</p>}
         </section>
-        <section className="report-block">
-          <h2>几条线走到哪里了</h2>
-          {arcRows.length ? arcRows.map(([id, arc]) => <p key={id}><b>{nameOf(id)}</b>：{Object.entries(arc).map(([k, v]) => `${k} · ${v}`).join("，")}</p>) : <p>谁的线都没走起来。</p>}
+        {recap.remembered.length ? <section className="recap-block">
+          <h2>记着你的人</h2>
+          <ul className="recap-people recap-people-grudge">{recap.remembered.map(personRow)}</ul>
+        </section> : null}
+
+        <section className="recap-block">
+          <h2>这一季谁变了</h2>
+          {recap.movers.length ? <ul className="recap-people recap-movers">{recap.movers.map(m => <li className="recap-person" key={m.id}>
+            {avatar(m.id)}
+            <div className="recap-person-main">
+              <b>{nameOf(m.id)}</b>
+              <p>{m.from === undefined ? `开季还没认识${person(m.id) ? ta(person(m.id)!) : "她"}` : `从 ${m.from} 到 ${m.to}`}</p>
+            </div>
+            <span className={"recap-delta" + (m.to - (m.from ?? 0) < 0 ? " down" : "")}>{m.to - (m.from ?? 0) > 0 ? "+" : ""}{m.to - (m.from ?? 0)}</span>
+          </li>)}</ul> : <p className="recap-empty">这一季没人改主意。</p>}
+        </section>
+
+        <section className="recap-block">
+          <h2>走完的线</h2>
+          {recap.arcs.length
+            ? <ul className="recap-arcs">{recap.arcs.map(a => <li key={a.id}>
+              <b>{nameOf(a.id)}</b><span>「{a.title}」</span>{a.day !== undefined ? <small>第 {a.day} 天落定</small> : null}
+            </li>)}</ul>
+            : <p className="recap-empty">谁的线都没走到头。</p>}
+        </section>
+
+        <section className="recap-block recap-numbers-block">
+          <h2>三本账</h2>
+          <div className="report-numbers recap-numbers">
+            <span><small>这一季进账</small><b>{yuan(recap.stats.money.value)}</b><em>{recap.stats.money.line}</em></span>
+            <span><small>柜位</small><b>{recap.stats.standing.value}</b><em>{recap.stats.standing.line}</em></span>
+            <span><small>台账</small><b>{recap.stats.compliance.value}</b><em>{recap.stats.compliance.line}</em></span>
+          </div>
         </section>
       </main></MobileScroll>
       <div className="report-foot">

@@ -171,6 +171,10 @@ export type World = {
   festival?: string;
   /** 已消耗的抽数：每个随机决定都从 seed+rngCalls 推导，存档往返后确定性不断 */
   rngCalls: number;
+  /** 季初快照：这一季开局那一刻的看法。季末回顾的"变化最大"从这里读；旧存档缺字段按空读。 */
+  opinionAtSeasonStart: Record<PersonId, number>;
+  /** 季初快照：开季那一刻的柜位与台账。季末"比开季"从这里读；旧存档没有就只念季末数。 */
+  statsAtSeasonStart?: { standing: number; compliance: number };
   /** 被效果排定的来访："第几天 第几时段 谁来，带谁"；reason 记她为什么来（退货要退款） */
   appointments: Array<{ day: number; slot: Slot; person: PersonId; bring?: PersonId[]; reason?: "visit" | "refund" | "wechat"; amount?: number }>;
   /** 每日委托：开门那阵在场或熟悉的人提的请求；旧存档缺字段按空读 */
