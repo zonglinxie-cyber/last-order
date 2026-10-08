@@ -185,10 +185,12 @@ test("个人线走到终点的，换季以后那条线的卡不再抽得到", ()
   };
   const w: World = nextSeason(ended, PEOPLE);
   assert.equal(w.day, 1, "换季后天数回到 1");
+  assert.equal(w.season, 2);
   const all = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone]));
+  const seasonOneArc = /^arc-(shen|anjie|luyao|suman)-/;
   for (let i = 0; i < 20; i++) {
     const { drawn } = drawStorylet({ ...w, seed: `arc-done-${i}`, present: { ...all } }, PEOPLE, STORYLETS);
-    assert.ok(!drawn || drawn.storylet.kind !== "arc",
+    assert.ok(!drawn || !seasonOneArc.test(drawn.storylet.id),
       `第 2 季还抽到了已终结的个人线 ${drawn?.storylet.id}`);
   }
 });
@@ -200,6 +202,7 @@ test("故事碎片的槽、占位、落点和关系效果", () => {
   const arcCards = new Map<string, number>();
   const arcEnds = new Map<string, Set<number>>();
 
+  const festivalIds = new Set([...festivalsFor(1), ...festivalsFor(2)].map(item => item.id));
   for (const story of STORYLETS) {
     count[story.kind] += 1;
     tension[story.tension] += 1;
@@ -231,7 +234,7 @@ test("故事碎片的槽、占位、落点和关系效果", () => {
     }
     for (const ref of refs) assertRef(ref, slots, story.id, social);
     for (const cond of story.when) {
-      if ("festival" in cond) assert.ok(FESTIVALS.some(item => item.id === cond.festival), `${story.id} 的节日`);
+      if ("festival" in cond) assert.ok(festivalIds.has(cond.festival), `${story.id} 的节日 ${cond.festival}`);
     }
     if (story.kind === "arc") {
       const qualities: string[] = [];
@@ -269,5 +272,36 @@ test("同名选项互斥且全覆盖：任何一对人，介绍那张卡恰好�
     const drawn = { storylet: card, binding: { a: a.id, b: b.id } };
     const shown = card.choices.filter(c => c.label === label && choiceVisible(w, PEOPLE, drawn, c)).length;
     assert.equal(shown, 1, `${a.id} × ${b.id} 露出 ${shown} 颗`);
+  }
+});
+
+test("第 2 季同名选项互斥且全覆盖", async () => {
+  const { choiceVisible, newWorld } = await import("../src/world/engine.ts");
+  const w = newWorld("s2-labels", PEOPLE);
+
+  const hand = STORYLETS.find(s => s.id === "s2-d11-hand")!;
+  const handLabel = "把到手价念完";
+  for (const person of PEOPLE) {
+    const drawn = { storylet: hand, binding: { a: person.id } };
+    const shown = hand.choices.filter(c => c.label === handLabel && choiceVisible(w, PEOPLE, drawn, c)).length;
+    assert.equal(shown, 1, `${person.id} 的到手价露出 ${shown} 颗`);
+  }
+
+  const unload = STORYLETS.find(s => s.id === "arc-qiaowan-unload")!;
+  const unloadLabel = "让她把那句卸掉";
+  for (const secret of [0, 1]) {
+    const world = { ...w, qualities: secret ? { "secret-known:qiaowan": 1 } : {} };
+    const drawn = { storylet: unload, binding: { a: "qiaowan" } };
+    const shown = unload.choices.filter(c => c.label === unloadLabel && choiceVisible(world, PEOPLE, drawn, c)).length;
+    assert.equal(shown, 1, `乔晚秘密 ${secret} 露出 ${shown} 颗`);
+  }
+
+  const who = STORYLETS.find(s => s.id === "arc-fangmin-who")!;
+  const whoLabel = "问她缺口是谁的";
+  for (const secret of [0, 1]) {
+    const world = { ...w, qualities: secret ? { "secret-known:fangmin": 1 } : {} };
+    const drawn = { storylet: who, binding: { a: "fangmin" } };
+    const shown = who.choices.filter(c => c.label === whoLabel && choiceVisible(world, PEOPLE, drawn, c)).length;
+    assert.equal(shown, 1, `方敏秘密 ${secret} 露出 ${shown} 颗`);
   }
 });

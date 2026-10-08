@@ -293,6 +293,23 @@ for (const { season, results: rs2, flips } of later) {
     };
     console.log(`  ${style.padEnd(8)} 盟友→仇人 ${tally("allyToEnemy")} · 仇人→盟友 ${tally("enemyToAlly")}`);
   }
+  console.log("个人线走到终点（end≥1）:");
+  for (const id of ["tangke", "roman", "fangmin", "qiaowan"] as const) {
+    const bits = STYLES.map(style => {
+      const rs = rs2.filter(r => r.style === style);
+      const n = rs.filter(r => (r.arcs[id]?.end ?? 0) >= 1).length;
+      return `${style} ${n}/${N}`;
+    });
+    const all = rs2.filter(r => (r.arcs[id]?.end ?? 0) >= 1).length;
+    const ends = [1, 2, 3, 4].map(n => `end=${n} ${rs2.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+    console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · 合计 ${all}/${rs2.length} · ${ends}`);
+  }
+  console.log("第 2 季新结局:");
+  for (const id of ["names-stay", "own-sentence", "file-and-sheet"]) {
+    const hits = rs2.filter(r => r.ending === id);
+    const styles = STYLES.filter(style => hits.some(r => r.style === style));
+    console.log(`  ${id.padEnd(16)} ${hits.length}/${rs2.length}（${styles.join(", ") || "无"}）`);
+  }
 }
 
 // 卡的覆盖面：每种风格抽到过几张；所有风格合起来都没抽到过的卡单独列出来 —— 写了却出不来，要么条件写死，要么引擎没接上。

@@ -88,6 +88,22 @@ export const ACT_WORD: Record<string, string> = {
   "refused-gap": "没替她补那个缺口",
   "turned-friend": "没按熟客那套待她，把她处成了朋友",
   "passed-word": "把一句好话原样带到了她面前",
+  // 第 2 季故事碎片（content/storylets-season2.ts）
+  "presale-matched": "把预售核销和票对上了",
+  "presale-forced": "预售没核上，还是收了尾款",
+  "hand-price": "把线上到手价说清楚了",
+  "ledger-matched": "年终盘点照小票对上了",
+  "ledger-padded": "年终盘点补了一行票上没有的数",
+  "records-opened": "把记录摊开给区域经理看了",
+  "records-held": "没把记录摊给区域经理",
+  "came-for-last": "带着之前的事回到了柜前",
+  "quota-held": "转正名额的来历没有往下传",
+  "quota-said": "说了转正名额不是总部写的",
+  "posted-stay": "调岗表上还留在这面柜",
+  "posted-out": "调岗表上离开了这面柜",
+  "unlearned": "把背错的那句卸掉了",
+  "own-line": "用自己的句子把客人送走了",
+  "folder-kept": "把原话留在文件夹里，下一季还认",
 };
 
 /** 未知代号原样念出来，不编一句假话盖过去。 */
