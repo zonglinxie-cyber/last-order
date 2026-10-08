@@ -6,7 +6,7 @@ import {
   resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
-import type { Person, World } from "../src/world/types.ts";
+import type { Person, Storylet, World } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
 import { PRODUCTS } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
@@ -326,4 +326,33 @@ test("endDay：精力重置、天数推进、加了微信的人会约回来", ()
   assert.equal(w.samples, 4);
   // 夜里传话沿关系网走一遍，世界仍在推进（rngCalls 前进）。
   assert.ok(w.rngCalls > 0);
+});
+
+test("角色槽：同一个人不会同时填进两个槽", () => {
+  const pair: Storylet = {
+    id: "t-two-customers", kind: "social", tension: 0, weight: 1, text: "{$a}和{$b}",
+    cast: { a: { where: [{ role: "$self", is: "customer" }] }, b: { where: [{ role: "$self", is: "customer" }] } },
+    when: [], choices: [{ label: "好", effects: [], result: "好" }],
+  };
+  for (let i = 0; i < 40; i++) {
+    const w = stage(newWorld(`distinct-${i}`, PEOPLE), ["mei", "shen"]);
+    const { drawn } = drawStorylet(w, PEOPLE, [pair]);
+    assert.ok(drawn, "两位顾客在场，这张卡必须抽得出来");
+    assert.notEqual(drawn.binding.a, drawn.binding.b);
+  }
+});
+
+test("角色槽：前一个槽的人配不上后面的槽时，回头换人", () => {
+  const friends: Storylet = {
+    id: "t-friends", kind: "social", tension: 0, weight: 1, text: "{$a}带着{$b}",
+    cast: { a: { where: [{ role: "$self", is: "customer" }] }, b: { where: [{ bond: ["$a", "$self"], gte: 1 }] } },
+    when: [], choices: [{ label: "好", effects: [], result: "好" }],
+  };
+  // 梅女士在场但谁也不认识；只有沈薇和何太互为熟人。不回溯的话，先抽到梅女士的种子会整张作废。
+  for (let i = 0; i < 40; i++) {
+    const w = stage(newWorld(`backtrack-${i}`, PEOPLE), ["mei", "shen", "he"]);
+    const { drawn } = drawStorylet(w, PEOPLE, [friends]);
+    assert.ok(drawn, `种子 backtrack-${i} 应该绑得出来`);
+    assert.ok(["shen", "he"].includes(drawn.binding.a));
+  }
 });

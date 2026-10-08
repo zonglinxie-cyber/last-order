@@ -485,18 +485,33 @@ export function ambient(world: World, people: Person[]): World {
 
 export type DrawnStorylet = { storylet: Storylet; binding: Record<string, PersonId> };
 
+// 角色槽按声明顺序回溯绑定：同一个人不进两个槽；前面的槽换人能让后面的槽成立时就换，
+// 整张卡的 when 也算进搜索里。每个槽从一个由种子定下的起点轮着试，所以同种子结果逐位相同，
+// 而且每张卡只消耗"槽数"次随机，不随回溯的步数增长。
 function bindCast(w: World, people: Person[], storylet: Storylet): [Binding | null, World] {
+  const slots = Object.entries(storylet.cast);
+  const base = w.rngCalls;
+  const next = { ...w, rngCalls: w.rngCalls + slots.length };
   const binding: Binding = {};
-  for (const [name, slot] of Object.entries(storylet.cast)) {
+  const search = (depth: number): boolean => {
+    if (depth === slots.length) return storylet.when.every(c => evalCond(w, people, c, binding));
+    const [name, slot] = slots[depth];
     const pool = slot.id !== undefined ? people.filter(p => p.id === slot.id) : people;
+    const bound = new Set(Object.values(binding));
     const candidates = pool.filter(p =>
-      (slot.mustBePresent === false || p.id in w.present)
+      !bound.has(p.id)
+      && (slot.mustBePresent === false || p.id in w.present)
       && slot.where.every(c => evalCond(w, people, c, binding, p.id)));
-    if (!candidates.length) return [null, w];
-    let i: number; [i, w] = [drawIndex(w.seed, w.rngCalls, candidates.length), { ...w, rngCalls: w.rngCalls + 1 }];
-    binding[name] = candidates[i].id;
-  }
-  return [binding, w];
+    if (!candidates.length) return false;
+    const start = drawIndex(w.seed, base + depth, candidates.length);
+    for (let k = 0; k < candidates.length; k++) {
+      binding[name] = candidates[(start + k) % candidates.length].id;
+      if (search(depth + 1)) return true;
+    }
+    delete binding[name];
+    return false;
+  };
+  return [search(0) ? binding : null, next];
 }
 
 const storyWeight = (storylet: Storylet, heat: number): number => {
@@ -517,7 +532,6 @@ export function drawStorylet(world: World, people: Person[], storylets: Storylet
     let binding: Binding | null;
     [binding, w] = bindCast(w, people, storylet);
     if (!binding) continue;
-    if (!storylet.when.every(c => evalCond(w, people, c, binding))) continue;
     eligible.push({ storylet, binding, weight: storyWeight(storylet, heat) });
   }
   const i = drawWeighted(w.seed, w.rngCalls, eligible.map(e => e.weight));
