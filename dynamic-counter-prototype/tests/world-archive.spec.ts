@@ -68,11 +68,18 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("个人线：走到过的落点亮起，没走到的压成？？？", async ({ page }) => {
       await page.getByRole("button", { name: "个人线" }).click();
-      await expect(page.locator(".wa-arc")).toHaveCount(8);
+      await expect(page.locator(".wa-arc")).toHaveCount(12);
       const shenArc = page.locator(".wa-arc", { hasText: "沈薇" }).first();
       await expect(shenArc.locator(".wa-arc-row.lit")).not.toHaveCount(0);
       await expect(shenArc.locator(".wa-arc-row:not(.lit)")).not.toHaveCount(0);
       await expect(shenArc.locator(".wa-arc-row:not(.lit) b").first()).toHaveText("？？？");
+      for (const name of ["小雨", "周姐", "赵女士", "米朵"]) {
+        const arc = page.locator(".wa-arc", { hasText: name });
+        await arc.scrollIntoViewIfNeeded();
+        await expect(arc).toBeVisible();
+        await expect(arc.locator(".wa-arc-row")).toHaveCount(4);
+        await expect(arc.locator(".wa-arc-row b").first()).toHaveText("？？？");
+      }
     });
 
     test("结局：按 rank 排好，拿到的认标题、没拿到的只给不剧透提示", async ({ page }) => {

@@ -250,13 +250,14 @@ for (const style of STYLES) {
 }
 
 console.log("\n个人线走到终点（end≥1）:");
-for (const id of ["shen", "anjie", "luyao", "suman"] as const) {
+for (const id of ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo"] as const) {
   const bits = STYLES.map(style => {
     const rs = results.filter(r => r.style === style);
     const n = rs.filter(r => ended(r, id)).length;
     return `${style} ${n}/${N}`;
   });
-  console.log(`  ${id.padEnd(8)} ${bits.join(" · ")}`);
+  const ends = [1, 2, 3, 4].map(n => `end=${n} ${results.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+  console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · ${ends}`);
 }
 
 // 每个种子里结局更好的风格是谁（rank 越小越好）；并列都算赢。
