@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   ambient, beginSlot, drawStorylet, newWorld, SAVE_KEY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
+import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { FESTIVALS, PEOPLE, STORYLETS } from "../src/world/content/index.ts";
 import type { World } from "../src/world/types.ts";
 
@@ -41,8 +42,11 @@ const cardEnvelope = (): string => {
   throw new Error("几个种子里都抽不到卡，内容或引擎变了");
 };
 
-const saveWorld = async (page: Page, payload: string) => {
+const saveWorld = async (page: Page, payload: string, coachSeen = true) => {
   await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [SAVE_KEY, payload]);
+  // 引导气泡不该影响楼层走查：默认预置"引导全部看过"；要看引导本身的用例传 false。
+  if (coachSeen) await page.addInitScript(([key, value]) =>
+    window.localStorage.setItem(key, value), [COACH_KEY, JSON.stringify(COACH_STEPS)]);
 };
 
 const dismissCard = async (page: Page) => {
@@ -53,8 +57,8 @@ const dismissCard = async (page: Page) => {
   } catch { /* 这个时段没抽卡 */ }
 };
 
-const enter = async (page: Page, payload: string) => {
-  await saveWorld(page, payload);
+const enter = async (page: Page, payload: string, coachSeen = true) => {
+  await saveWorld(page, payload, coachSeen);
   await page.goto("/?mode=world");
   await page.getByRole("button", { name: /继续/ }).click();
   await dismissCard(page);
@@ -187,3 +191,42 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
   });
 }
+
+test.describe("新手引导 390×844", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test("新档第一次进来能看到开局那句；点「跳过引导」后刷新也不再出现", async ({ page }) => {
+    await page.goto("/?mode=world");
+    await page.getByRole("button", { name: "开这一季" }).click();
+    await dismissCard(page);
+    const coach = page.locator(".world-coach");
+    await expect(coach).toBeVisible();
+    await expect(coach).toContainText("先点一个人看看她是谁");
+    await expect(coach.getByText("苏蔓")).toBeVisible();
+    await page.getByRole("button", { name: "跳过引导" }).click();
+    await expect(coach).toHaveCount(0);
+    await page.reload();
+    await page.getByRole("button", { name: /继续/ }).click();
+    await dismissCard(page);
+    await expect(page.locator(".world-coach")).toHaveCount(0);
+  });
+
+  test("引导气泡不遮住「下一时段」按钮", async ({ page }) => {
+    // 花过精力的档：「就点右上角的下一时段」那句就指着这颗按钮，气泡得落在旁边。
+    await enter(page, envelope({ energy: 80 }), false);
+    const coach = page.locator(".world-coach");
+    await expect(coach).toBeVisible();
+    await expect(coach).toContainText("下一时段");
+    const hitNext = async () => page.locator(".world-next").evaluate(el => {
+      const r = el.getBoundingClientRect();
+      const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return t === el || el.contains(t);
+    });
+    expect(await hitNext()).toBe(true);
+
+    // 换一档看「先点一个人」那句：只在开局那个上午讲，指着地图上的人，同样不许盖住顶栏按钮。
+    await enter(page, envelope({ day: 1, slot: 0 }), false);
+    await expect(page.locator(".world-coach")).toContainText("先点一个人看看她是谁");
+    expect(await hitNext()).toBe(true);
+  });
+});
