@@ -1216,9 +1216,10 @@ export const STORYLETS: Storylet[] = [
     kind: "social",
     cast: {
       a: { where: [] },
-      b: { where: [{ bond: ["$self", "$a"], lte: 5 }] },
+      // 真有旧冷才算：互不认识的两个人冷暖默认是 0，不该被说成"冷是早就有的"。
+      b: { where: [{ bond: ["$self", "$a"], lte: -10 }] },
     },
-    when: [{ bond: ["$a", "$b"], lte: 5 }, { bond: ["$b", "$a"], lte: 5 }],
+    when: [{ bond: ["$a", "$b"], lte: -10 }, { bond: ["$b", "$a"], lte: -10 }],
     weight: 3, tension: -1, cooldown: 4,
     text: "{$a}和{$b}并排站着，谁也不看谁。冷是早就有的，不是今天才开始。",
     choices: [
@@ -1230,7 +1231,7 @@ export const STORYLETS: Storylet[] = [
           { remember: { holder: "$a", act: "brought-friend", valence: 1, subject: "$b" } },
           { remember: { holder: "$b", act: "brought-friend", valence: 1, subject: "$a" } },
         ],
-        result: "冷暖动了。他们算认识你介绍的人，原来的关系种类还是原来的。",
+        result: "你让两个人互相留了名字。冷着的那层薄了一点，谈不上熟，见面能点个头了。",
       },
       {
         label: "放到镜子两边，不介绍",
