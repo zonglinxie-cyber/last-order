@@ -16,7 +16,10 @@ import { PEOPLE, STORYLETS, FESTIVALS } from "../content/index.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { WebView } from "./WebView.tsx";
+import { WorldArchive } from "./WorldArchive.tsx";
 import { SLOT_WORD } from "./words.ts";
+import { seasonEnding } from "../ending.ts";
+import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
 
 const SEASON_DAYS = 28; // 与 content/festivals.ts 的一季同长
@@ -126,6 +129,7 @@ export default function WorldGame() {
   const [serveProduct, setServeProduct] = useState<ProductId | null>(null);
   const [serveUnits, setServeUnits] = useState(1);
   const [webOpen, setWebOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
@@ -159,7 +163,9 @@ export default function WorldGame() {
   useEffect(() => {
     if (phase === "intro") return;
     try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
-  }, [envelope, phase]);
+    // 每次存档顺手并一次跨季档案；收季那一档才把结局 id 记进去。
+    commitWorldProgress(world, phase === "season" ? seasonEnding(world, PEOPLE).id : undefined);
+  }, [envelope, phase, world]);
   useEffect(() => {
     if (!result) return;
     const timer = window.setTimeout(() => setResult(null), 3800);
@@ -302,7 +308,9 @@ export default function WorldGame() {
           {boot ? `继续 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
         </button>
         {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}
+        <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
       </section>
+      {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
     </div>;
   }
 
@@ -331,7 +339,11 @@ export default function WorldGame() {
           {arcRows.length ? arcRows.map(([id, arc]) => <p key={id}><b>{nameOf(id)}</b>：{Object.entries(arc).map(([k, v]) => `${k} · ${v}`).join("，")}</p>) : <p>谁的线都没走起来。</p>}
         </section>
       </main></MobileScroll>
-      <div className="report-foot"><button className="world-primary" type="button" onClick={startNew}>再开一季</button></div>
+      <div className="report-foot">
+        <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+        <button className="world-primary" type="button" onClick={startNew}>再开一季</button>
+      </div>
+      {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
     </div>;
   }
 
