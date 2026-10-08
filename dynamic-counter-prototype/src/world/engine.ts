@@ -214,6 +214,8 @@ export function newWorld(seed: string, _people: Person[]): World {
     energy: ENERGY_PER_DAY, samples: START_SAMPLES,
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
     present: {}, touched: [], rngCalls: 0, appointments: [], requests: [], fired: {}, log: [],
+    opinionAtSeasonStart: {},
+    statsAtSeasonStart: { standing: START_STANDING, compliance: START_COMPLIANCE },
   };
 }
 
@@ -1067,16 +1069,20 @@ export function nextSeason(world: World, people: Person[]): World {
   const qualities: Record<string, number> = {};
   for (const [key, v] of Object.entries(world.qualities)) if (carriedAcrossSeasons(key)) qualities[key] = v;
   const season = world.season + 1;
+  const standing = Math.round(START_STANDING + (world.standing - START_STANDING) / 2);
+  const compliance = Math.round(START_COMPLIANCE + (world.compliance - START_COMPLIANCE) / 2);
   return {
     seed: world.seed, season, day: 1, slot: 0, money: 0,
-    standing: Math.round(START_STANDING + (world.standing - START_STANDING) / 2),
-    compliance: Math.round(START_COMPLIANCE + (world.compliance - START_COMPLIANCE) / 2),
+    standing, compliance,
     energy: ENERGY_PER_DAY, samples: START_SAMPLES,
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
     qualities, present: {}, touched: [], rngCalls: world.rngCalls,
     appointments: [], requests: [], fired: {},
     log: [{ day: 1, slot: 0, text: `第 ${season} 季开始。` }],
+    // 季初快照记的是新季开局那一刻：看法收过一半之后的样子。
+    opinionAtSeasonStart: { ...opinion },
+    statsAtSeasonStart: { standing, compliance },
   };
 }
 
@@ -1163,9 +1169,13 @@ export function parseWorld(data: unknown): World | null {
   if (!Array.isArray(w.log) || !w.log.every((l: unknown) => isRecord(l)
     && isInt((l as LogEntry).day) && isInt((l as LogEntry).slot) && isStr((l as LogEntry).text)
     && ((l as LogEntry).who === undefined || isStrArray((l as LogEntry).who)))) return null;
+  if (w.opinionAtSeasonStart !== undefined && !isNumRecord(w.opinionAtSeasonStart)) return null;
+  if (w.statsAtSeasonStart !== undefined && !(isRecord(w.statsAtSeasonStart)
+    && isNum(w.statsAtSeasonStart.standing) && isNum(w.statsAtSeasonStart.compliance))) return null;
   const world = w as unknown as World;
   world.bondKinds ??= {};
   world.requests ??= []; // 旧存档没有委托：按今天没人提读
   world.season ??= 1; // 旧存档没有这个字段：那是第一季写的
+  world.opinionAtSeasonStart ??= {}; // 旧存档没有季初快照：按空读，变化榜只认这季攒下的
   return world;
 }
