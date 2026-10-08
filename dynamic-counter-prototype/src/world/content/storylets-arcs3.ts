@@ -350,6 +350,7 @@ export const STORYLETS_ARCS3: Storylet[] = [
       },
       {
         label: "去对对面那句",
+        when: [{ not: { knowsSecret: "luyao" } }],
         effects: [
           { quality: "arc:zhou", set: 1 },
           ...nextZhou(["mei"]),
@@ -359,6 +360,31 @@ export const STORYLETS_ARCS3: Storylet[] = [
           { remember: { holder: "luyao", act: "took-client", valence: -1, subject: "player" } },
         ],
         result: "你在赢对面。{$a}要的那句回答，没有落在她自己的脸上。",
+      },
+      {
+        label: "去对对面那句",
+        when: [{ knowsSecret: "luyao" }],
+        effects: [
+          { quality: "arc:zhou", set: 1 },
+          ...nextZhou(["mei"]),
+          { opinion: "$a", delta: -4 }, { opinion: "luyao", delta: -6 },
+          { bond: ["luyao", "zhou"], delta: -4 },
+          { remember: { holder: "$a", act: "took-client", valence: -1, subject: "player" } },
+          { remember: { holder: "luyao", act: "broke-warning", valence: -2, subject: "player" } },
+        ],
+        result: "你知道对面厌烦被人截，还是去对了。{$a}要的那句回答，没有落在她自己的脸上。",
+      },
+      {
+        label: "这句不拿去截",
+        when: [{ knowsSecret: "luyao" }],
+        effects: [
+          { quality: "arc:zhou", set: 1 },
+          ...nextZhou(["mei"]),
+          { opinion: "$a", delta: 3 }, { opinion: "luyao", delta: 2 },
+          { remember: { holder: "$a", act: "kept-secret", valence: 2, subject: "player" } },
+          { remember: { holder: "luyao", act: "kept-warning", valence: 1, subject: "player" } },
+        ],
+        result: "你没把对面那句接过来。{$a}把对比表折上，说这句她自己留着。",
       },
     ],
   },
@@ -500,7 +526,8 @@ export const STORYLETS_ARCS3: Storylet[] = [
           { opinion: "zhou", gte: 4 },
           { not: { remembers: "zhou", act: "took-client", valence: "bad" } },
           { any: [
-            { opinion: "luyao", gte: 5 },
+            { knowsSecret: "luyao" },
+            { remembers: "zhou", act: "kept-secret", valence: "good" },
             { opinion: "mei", gte: 5 },
             { remembers: "zhou", act: "own-face", valence: "good" },
             { remembers: "zhou", act: "honest-advice", valence: "good" },
