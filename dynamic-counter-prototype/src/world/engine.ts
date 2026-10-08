@@ -9,6 +9,7 @@ import {
   type Customer, type ProductId, type BundleId,
 } from "../campaign.ts";
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
+import { clearQuarrel, exchanges } from "./exchanges.ts";
 import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
   Storylet, Verb, Visits, World, Zone,
@@ -152,8 +153,8 @@ const clamp100 = (v: number) => clamp(v, -100, 100);
 
 // —— 基础读写 ——
 
-const personOf = (people: Person[], id: PersonId) => people.find(p => p.id === id);
-const hasTemper = (person: Person | undefined, t: Person["tempers"][number]) =>
+export const personOf = (people: Person[], id: PersonId) => people.find(p => p.id === id);
+export const hasTemper = (person: Person | undefined, t: Person["tempers"][number]) =>
   !!person && person.tempers.includes(t);
 
 export const opinionOf = (world: World, id: PersonId) => world.opinion[id] ?? 0;
@@ -181,28 +182,28 @@ const isPresent = (world: World, id: PersonId) => id in world.present;
 const reachable = (world: World, id: PersonId) => isPresent(world, id) && world.present[id] !== "rival";
 
 /** 抽一次：返回 [0..1 的值, 前进过 rngCalls 的新 World]。 */
-const roll = (w: World): [number, World] => [draw(w.seed, w.rngCalls), { ...w, rngCalls: w.rngCalls + 1 }];
+export const roll = (w: World): [number, World] => [draw(w.seed, w.rngCalls), { ...w, rngCalls: w.rngCalls + 1 }];
 
-const addOpinion = (w: World, id: PersonId, delta: number): World =>
+export const addOpinion = (w: World, id: PersonId, delta: number): World =>
   ({ ...w, opinion: { ...w.opinion, [id]: clamp100(opinionOf(w, id) + Math.round(delta)) } });
 
-const addWarmth = (w: World, people: Person[], a: PersonId, b: PersonId, delta: number): World =>
+export const addWarmth = (w: World, people: Person[], a: PersonId, b: PersonId, delta: number): World =>
   ({ ...w, bonds: { ...w.bonds, [bondKey(a, b)]: clamp100(warmthOf(w, people, a, b) + delta) } });
 
 const setBond = (w: World, a: PersonId, b: PersonId, kind: BondKind, warmth: number): World =>
   ({ ...w, bonds: { ...w.bonds, [bondKey(a, b)]: clamp100(warmth) },
      bondKinds: { ...(w.bondKinds ?? {}), [bondKey(a, b)]: kind } });
 
-const remember = (w: World, holder: PersonId, act: string, valence: Memory["valence"], subject: PersonId = PLAYER, heardFrom?: PersonId): World =>
+export const remember = (w: World, holder: PersonId, act: string, valence: Memory["valence"], subject: PersonId = PLAYER, heardFrom?: PersonId): World =>
   ({ ...w, memories: [...w.memories, { day: w.day, holder, subject, act, valence, ...(heardFrom ? { heardFrom } : {}) }] });
 
-const say = (w: World, text: string, who?: PersonId[]): World =>
+export const say = (w: World, text: string, who?: PersonId[]): World =>
   ({ ...w, log: [...w.log, { day: w.day, slot: w.slot, text, ...(who?.length ? { who } : {}) }] });
 
-const setQuality = (w: World, key: string, value: number): World =>
+export const setQuality = (w: World, key: string, value: number): World =>
   ({ ...w, qualities: { ...w.qualities, [key]: value } });
 
-const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
+export const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
 
 export function newWorld(seed: string, _people: Person[]): World {
   return {
@@ -559,7 +560,10 @@ export function ambient(world: World, people: Person[]): World {
       w = say(w, `${a.name}从${blabbed.name}嘴里听到了自己的秘密，${kept ? "你答应过保密的" : "她知道是你说的"}。`, [a.id, blabbed.id]);
     }
   }
-  return w;
+
+  // 在场的人之间自己长出来的事：闲聊、拌嘴、较劲、替你说话、背后抱怨、拉人 ——
+  // 规则在 exchanges.ts。放在最后，前面几步（传话、抢客、对号）的抽数位置不动。
+  return exchanges(w, people);
 }
 
 // —— 说书人 ——
@@ -795,6 +799,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       if (r < chance) {
         w = addWarmth(w, people, aId, bId!, MEDIATE_WARMTH);
         w = addWarmth(w, people, bId!, aId, MEDIATE_WARMTH);
+        w = clearQuarrel(w, aId, bId!); // 劝成了：两人头顶的火气收掉
         w = socialStanding(w, MEDIATE_STANDING);
         w = addOpinion(w, aId, MEDIATE_OK_OPINION);
         w = addOpinion(w, bId!, MEDIATE_OK_OPINION);

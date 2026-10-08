@@ -12,6 +12,7 @@ import {
   verbOptions, ENERGY_PER_DAY, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
+import { quarrelPairs } from "../exchanges.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
@@ -247,6 +248,8 @@ export default function WorldGame() {
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
   const spots = useMemo(() => layOut(world), [world]);
+  // 正在拌嘴的人头顶冒火气；点其中一个，打圆场就在动作排里。
+  const quarreling = useMemo(() => new Set(quarrelPairs(world).flat()), [world]);
   const calls = useMemo(() => (selected ? verbOptions(world, PEOPLE).filter(c => c.targets.includes(selected)) : []),
     [world, selected]);
   const verbs = selected ? availableVerbs(world, PEOPLE, [selected]) : [];
@@ -550,6 +553,7 @@ export default function WorldGame() {
             style={{ left: `${spot.x}%`, top: `${spot.y}%`, zIndex: 20 + Math.round(spot.y) } as CSSProperties}
             aria-label={`${pick ? "选" : "查看"}${p.name}`}
             onClick={() => tapPerson(id)}>
+            {quarreling.has(id) && <i className="wf-heat" aria-hidden="true" />}
             <span className="wf-tag">{p.name}</span>
             <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
               {CHIBI.has(id)

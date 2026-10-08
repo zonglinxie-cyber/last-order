@@ -10,6 +10,7 @@ import {
   newWorld, nextSeason, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
+import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
 import type { Festival, Person, PersonId, Slot, Storylet, World } from "../src/world/types.ts";
 import { PRODUCTS, type ProductId } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
@@ -176,16 +177,20 @@ const resultOf = (style: Style, seed: string, w: World): Result => {
   };
 };
 const results: Result[] = [];
+/** 自主社交动作的发生次数：每跑完一季记一行（exn: 计数换季自动清零，一行就是一季）。 */
+const exTallies: Array<{ style: Style; tally: Record<string, number> }> = [];
 /** 第 2 季起每季一格：结局与"相对上一季谁倒戈了"。 */
 const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
     let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1));
+    exTallies.push({ style, tally: exchangeTally(w) });
     let s = seasonSummary(w, people);
     results.push(resultOf(style, seed, w));
     for (let k = 2; k <= SEASON_COUNT; k++) {
       w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k));
+      exTallies.push({ style, tally: exchangeTally(w) });
       const next = seasonSummary(w, people);
       const bag = (later[k - 2] ??= { season: k, results: [], flips: [] });
       bag.results.push(resultOf(style, seed, w));
@@ -242,6 +247,17 @@ console.log(`\n按种子算账（结局更好者赢，并列都算）: ${STYLES.
 console.log(dominant.length
   ? `⚠ ${dominant.join(",")} 在所有种子上都最优 —— 规则可能写坏了`
   : `没有哪种风格在所有种子上都最优`);
+
+// 自主社交动作：每种动作一季平均发生几次（跨种子、跨季平均）。
+console.log("\n自主社交（每种动作一季平均几次）:");
+for (const act of EXCHANGE_ACTS) {
+  const bits = STYLES.map(style => {
+    const xs = exTallies.filter(r => r.style === style).map(r => r.tally[act] ?? 0);
+    const avg = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    return `${style} ${avg.toFixed(1)}`;
+  });
+  console.log(`  ${act.padEnd(8)} ${bits.join(" · ")}`);
+}
 
 // 每条个人线的落点分布（跨风格合计）。
 const arcTable = new Map<PersonId, Map<string, number>>();
