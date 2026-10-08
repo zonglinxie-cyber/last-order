@@ -86,6 +86,8 @@ export const ACT_WORD: Record<string, string> = {
   "broke-warning": "她提醒过的那句，你还是说了",
   "covered-gap": "替她补上了缺口，写明是你补的",
   "refused-gap": "没替她补那个缺口",
+  "turned-friend": "没按熟客那套待她，把她处成了朋友",
+  "passed-word": "把一句好话原样带到了她面前",
 };
 
 /** 未知代号原样念出来，不编一句假话盖过去。 */
