@@ -4,6 +4,7 @@
 // 约束：每个时段最多 MAX_EXCHANGES_PER_SLOT 次；同一对人同一天同一种动作只来一次。
 // 这里的 helpers 全部从 engine.ts 拿（同一个物理），两个文件互相 import，但谁都不在
 // 模块顶层调对方的函数，加载顺序无所谓。
+import { ta } from "./pronoun.ts";
 import {
   GOSSIP_OPINION, PLAYER_NAME, WARY_HEARSAY_MULT,
   addOpinion, addWarmth, hasTemper, kindOf, opinionOf, personOf, qualityOf, related,
@@ -133,7 +134,7 @@ const SPECS: Record<ExchangeAct, Spec> = {
       w = remember(w, a, "walked-out", -1);
       w = addOpinion(w, b, PULL_FOLLOW_OPINION);
       w = remember(w, b, "stormed-off", -1); // 她就在场看着，算亲眼所见
-      return say(w, `${pa.name}沉着脸要走，${pb.name}抓起东西跟着她一起走了。`, [a, b]);
+      return say(w, `${pa.name}沉着脸要走，${pb.name}抓起东西跟着${ta(pa)}一起走了。`, [a, b]);
     },
   },
   quarrel: {

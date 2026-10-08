@@ -161,3 +161,16 @@ test("同名选项必须带 when 且两两互斥", () => {
   }
   assert.deepEqual(bad, []);
 });
+
+test("引擎自己拼的话术不写死'她'：say(...) 里一律用 pronoun.ts 的 ta()", async () => {
+  const { readFileSync } = await import("node:fs");
+  const offenders: string[] = [];
+  for (const file of ["../src/world/engine.ts", "../src/world/exchanges.ts"]) {
+    const lines = readFileSync(new URL(file, import.meta.url), "utf8").split("\n");
+    lines.forEach((line, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
+      if (line.includes("say(") && /她|他/.test(line.replace(/\/\/.*$/, ""))) offenders.push(`${file}:${i + 1} ${line.trim()}`);
+    });
+  }
+  assert.deepEqual(offenders, []);
+});

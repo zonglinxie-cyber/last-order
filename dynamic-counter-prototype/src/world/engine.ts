@@ -15,6 +15,7 @@ import type {
   Storylet, Verb, Visits, World, Zone,
 } from "./types.ts";
 import { PLAYER } from "./types.ts";
+import { ta } from "./pronoun.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
 
@@ -540,7 +541,7 @@ export function ambient(world: World, people: Person[]): World {
           w = addOpinion(w, mark.id, POACH_OPINION);
           w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
           w = setQuality(w, `away:${mark.id}`, w.day);
-          w = say(w, `你没顾上${mark.name}，${rival.name}把她请去了对面维珞，今天不会再回来。`, [rival.id, mark.id]);
+          w = say(w, `你没顾上${mark.name}，${rival.name}把${ta(mark)}请去了对面维珞，今天不会再回来。`, [rival.id, mark.id]);
         }
       }
     }
@@ -557,7 +558,7 @@ export function ambient(world: World, people: Person[]): World {
       w = addOpinion(w, a.id, kept ? SECRET_BETRAY_KEPT_OPINION : SECRET_BETRAY_OPINION);
       w = remember(w, a.id, "betrayed", -2);
       w = setQuality(w, `secret-backfired:${a.id}`, 1);
-      w = say(w, `${a.name}从${blabbed.name}嘴里听到了自己的秘密，${kept ? "你答应过保密的" : "她知道是你说的"}。`, [a.id, blabbed.id]);
+      w = say(w, `${a.name}从${blabbed.name}嘴里听到了自己的秘密，${kept ? "你答应过保密的" : `${ta(a)}知道是你说的`}。`, [a.id, blabbed.id]);
     }
   }
 
@@ -762,7 +763,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       w = { ...w, samples: w.samples - 1 };
       w = addOpinion(w, aId, bonus);
       w = remember(w, aId, "got-sample", 1);
-      w = say(w, `你塞给${a.name}一支小样${hasTemper(a, "thrifty") ? "，她拿得很仔细" : ""}。`, [aId]);
+      w = say(w, `你塞给${a.name}一支小样${hasTemper(a, "thrifty") ? `，${ta(a)}拿得很仔细` : ""}。`, [aId]);
       return witnessed(w, people, targets, "got-sample", 1);
     }
     case "introduce": {
@@ -829,7 +830,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
           w = { ...w, money: w.money + amount };
           w = setQuality(w, gate, 1);
           w = setQuality(w, `bought:${b.id}`, w.day);
-          w = say(w, `你请${a.name}照看${b.name}，她替你开出了一支${PRODUCTS[product].name}，进账 ¥${amount}。`, targets);
+          w = say(w, `你请${a.name}照看${b.name}，${ta(a)}替你开出了一支${PRODUCTS[product].name}，进账 ¥${amount}。`, targets);
           return w;
         }
       }
@@ -931,7 +932,7 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
           person: personId, reason: "refund", amount: price * refundUnits }] };
       w = say(w, `你硬是把${person.name}的${PRODUCTS[productId].name}开出了 ${sold} 件，进账 ¥${amount}。`, [personId]);
     } else {
-      w = say(w, `你硬是把${PRODUCTS[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，她认了。`, [personId]);
+      w = say(w, `你硬是把${PRODUCTS[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，${ta(person)}认了。`, [personId]);
     }
     w = setQuality(w, `bought:${personId}`, w.day);
     return witnessed(w, people, [personId], "hard-sell", -2);
