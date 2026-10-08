@@ -135,3 +135,23 @@
 .world-web-bar button { min-height:44px; min-width:88px; padding:0 14px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff0a; color:#efd6b0; font:600 13px 'Noto Serif SC',serif; }
 .world-web-body { position:relative; flex:1 1 auto; min-height:0; }
 .world-web-body .web-view { position:absolute; inset:0; }
+
+/* —— 苏蔓的新手引导：固定层只托一颗气泡，层本身不挡点按；气泡指着它在说的东西，
+   位置由组件按锚点方框算出来（side 决定箭头朝上还是朝下，箭头落在 10px 的空隙里，不盖锚点）—— */
+.world-coach-layer { position:absolute; inset:0; z-index:100; pointer-events:none; }
+.world-coach { position:absolute; width:min(250px, calc(100% - 16px)); padding:10px 12px 8px; border:1px solid #f0cf9155; border-radius:14px; background:linear-gradient(150deg,#33201bfa,#1c110efa); box-shadow:0 12px 34px #000c; pointer-events:auto; }
+.world-coach .wc-arrow { position:absolute; width:0; height:0; margin-left:-8px; border:8px solid transparent; filter:drop-shadow(0 0 2px #f0cf9177); }
+.world-coach.wc-below .wc-arrow { top:-15px; border-bottom-color:#33201b; }
+.world-coach.wc-above .wc-arrow { bottom:-15px; border-top-color:#1c110e; }
+.wc-head { display:flex; align-items:center; gap:6px; margin:0 0 4px; }
+.wc-head img { width:22px; height:22px; border-radius:50%; object-fit:cover; object-position:50% 18%; border:1px solid #f0cf9166; }
+.wc-head b { color:#f4dfbd; font:600 12px 'Noto Serif SC',serif; letter-spacing:.08em; }
+.wc-text { margin:0 0 8px; color:#f2e6d8; font-size:13px; line-height:1.6; }
+.wc-actions { display:flex; gap:8px; }
+.wc-actions button { flex:1 1 0; min-height:44px; border-radius:10px; font:600 13px 'Noto Serif SC',serif; }
+.wc-ok { border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
+.wc-skip { border:1px solid #ffffff1e; background:transparent; color:#a99689; }
+
+/* 顶栏静音开关：沿用 duel-mute 的一颗字按钮 */
+.world-mute { flex:0 0 auto; min-width:44px; min-height:44px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff0a; color:#efd6b0; font:600 13px 'Noto Serif SC',serif; }
+.world-mute[aria-pressed="true"] { color:#8d7a6d; }

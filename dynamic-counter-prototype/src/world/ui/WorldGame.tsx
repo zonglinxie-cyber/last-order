@@ -1,14 +1,15 @@
 // 人情场楼层界面（?mode=world）：一天四个时段的循环、可左右拖的横版大地图、
 // 点人开抽屉做事、说书人的卡。规则全部问 engine.ts —— 这里只摆人、摆按钮、
 // 念 engine 写进 log 的句子；世界状态走 serializeWorld/parseWorld 落盘。
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { MobileScroll } from "../../mobile";
 import { demandBudgetWord, PRODUCTS, TRAIT_LABELS, type Customer, type ProductId } from "../../campaign.ts";
 import { asset } from "../../base.ts";
+import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
   drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, seasonSummary, substitute,
-  verbOptions, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  verbOptions, ENERGY_PER_DAY, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
@@ -17,6 +18,11 @@ import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts"
 import { PersonCard } from "./PersonCard.tsx";
 import { WebView } from "./WebView.tsx";
 import { WorldArchive } from "./WorldArchive.tsx";
+import {
+  COACH_KEY, coachAlive, coachAnchorSelector, coachPoached, coachTip, coachUrgency,
+  markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
+  type CoachStep, type CoachTip, type CoachView,
+} from "./coach.ts";
 import { SLOT_WORD } from "./words.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
@@ -116,6 +122,109 @@ function buildReport(before: World, after: World, base: DayBase): DayReport {
   return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0 };
 }
 
+// —— 音效：五个时刻。看法动到这个数才算"明显"，招呼那点 +3 不响 ——
+const OPINION_CUE = 5;
+const cueOutcome = (before: World, after: World) => {
+  let up = 0, down = 0;
+  const ids = new Set([...Object.keys(before.opinion), ...Object.keys(after.opinion)]);
+  for (const id of ids) {
+    const d = (after.opinion[id] ?? 0) - (before.opinion[id] ?? 0);
+    if (d > up) up = d;
+    if (d < down) down = d;
+  }
+  // 看法明显变坏最该被听见（硬推当场也入账，但先让她翻脸的声音出来），然后才轮到进账。
+  if (down <= -OPINION_CUE) sfx("down");
+  else if (after.money > before.money) sfx("register");
+  else if (up >= OPINION_CUE) sfx("up");
+};
+
+// —— 苏蔓的新手引导：一句一个固定层气泡，指着它在说的那个东西 ——
+
+type CoachPos = { left: number; top: number; arrowX: number; below: boolean };
+
+function CoachLayer({ view, world }: { view: CoachView; world: World }) {
+  const [seen, setSeen] = useState<CoachStep[]>(() => {
+    try { return parseCoachSeen(window.localStorage.getItem(COACH_KEY)); } catch { return []; }
+  });
+  const [active, setActive] = useState<{ tip: CoachTip; stamp: string } | null>(null);
+  const [pos, setPos] = useState<CoachPos | null>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  const stamp = `${world.day}:${world.slot}`;
+  const suggested = coachTip(view, world, PEOPLE, seen);
+  const commit = (step: CoachStep) => setSeen(prev => {
+    const next = markCoachSeen(prev, step);
+    try { window.localStorage.setItem(COACH_KEY, serializeCoachSeen(next)); } catch { /* 存不进就算 */ }
+    return next;
+  });
+
+  // 一句的生命周期：念出来那刻就算看过；更贴当下的新句插队（顶掉的不是"没看"，是看过）；
+  // 它说的那个场面翻篇就收掉。「知道了」/「跳过引导」走下面按钮。
+  useEffect(() => {
+    if (!active) {
+      if (suggested) { commit(suggested.step); setActive({ tip: suggested, stamp }); }
+      return;
+    }
+    if (suggested && suggested.step !== active.tip.step && coachUrgency(suggested.step) < coachUrgency(active.tip.step))
+      { commit(suggested.step); setActive({ tip: suggested, stamp }); }
+    else if (active.stamp !== stamp || !coachAlive(active.tip, view)) setActive(null);
+  });
+
+  // 整个层卸载（换屏）时正在念的那句也按看过落盘 —— 出现过就算出现过。
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  useEffect(() => () => {
+    const a = activeRef.current;
+    if (!a) return;
+    try {
+      const seen = markCoachSeen(parseCoachSeen(window.localStorage.getItem(COACH_KEY)), a.tip.step);
+      window.localStorage.setItem(COACH_KEY, serializeCoachSeen(seen));
+    } catch { /* 存不进就算 */ }
+  }, []);
+
+  // 气泡贴着锚点摆：元素没了就收掉这句。每一帧 + 定时都量一次 —— 人会走动、地图能拖。
+  useLayoutEffect(() => {
+    if (!active) { setPos(null); return; }
+    const measure = () => {
+      const layer = layerRef.current, bubble = bubbleRef.current;
+      const el = layer?.parentElement?.querySelector(coachAnchorSelector(active.tip.anchor));
+      if (!layer || !bubble || !el) { commit(active.tip.step); setActive(null); return; }
+      const lr = layer.getBoundingClientRect(), ar = el.getBoundingClientRect(), br = bubble.getBoundingClientRect();
+      const cx = ar.left - lr.left + ar.width / 2;
+      const below = active.tip.side === "below";
+      const left = Math.min(Math.max(cx - br.width / 2, 8), Math.max(8, lr.width - br.width - 8));
+      const t = below ? ar.bottom - lr.top + 10 : ar.top - lr.top - 10 - br.height;
+      const top = Math.min(Math.max(t, 8), Math.max(8, lr.height - br.height - 8));
+      const arrowX = Math.min(Math.max(cx - left, 16), Math.max(16, br.width - 16));
+      setPos(prev => prev && prev.left === left && prev.top === top && prev.arrowX === arrowX && prev.below === below
+        ? prev : { left, top, arrowX, below });
+    };
+    measure();
+    const timer = window.setInterval(measure, 300);
+    return () => window.clearInterval(timer);
+  });
+
+  return <div className="world-coach-layer" ref={layerRef}>
+    {active && <div className={`world-coach wc-${active.tip.side}`} ref={bubbleRef} role="dialog" aria-label="苏蔓的提示"
+        style={pos ? { left: pos.left, top: pos.top } : { visibility: "hidden" }}>
+      <i className="wc-arrow" style={pos ? { left: pos.arrowX } : undefined} aria-hidden="true" />
+      <header className="wc-head">
+        <img src={asset("/assets/game/staff-portraits/suman.png")} alt="" aria-hidden="true" /><b>苏蔓</b>
+      </header>
+      <p className="wc-text">{active.tip.text}</p>
+      <div className="wc-actions">
+        <button type="button" className="wc-ok" onClick={() => { commit(active.tip.step); setActive(null); }}>知道了</button>
+        <button type="button" className="wc-skip" onClick={() => {
+          const next = skipCoachSeen();
+          try { window.localStorage.setItem(COACH_KEY, serializeCoachSeen(next)); } catch { /* 存不进就算 */ }
+          setSeen(next); setActive(null);
+        }}>跳过引导</button>
+      </div>
+    </div>}
+  </div>;
+}
+
 export default function WorldGame() {
   const boot = useMemo(restore, []);
   const [world, setWorld] = useState<World>(() => boot?.world ?? newWorld("empty", PEOPLE));
@@ -131,6 +240,7 @@ export default function WorldGame() {
   const [webOpen, setWebOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [muted, setMuted] = useState(sfxMuted());
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
   const spots = useMemo(() => layOut(world), [world]);
@@ -184,6 +294,7 @@ export default function WorldGame() {
     const { world: w, drawn } = runPipeline(fresh);
     setWorld(w); setPending(drawn); setReport(null);
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
+    if (drawn) sfx("card");
     setPhase("play");
   };
   const continueGame = () => {
@@ -205,6 +316,9 @@ export default function WorldGame() {
   const nextTurn = () => {
     setSelected(null); setPick(null); setServing(false); setResult(null);
     const settled = ambient(world, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
+    if (coachPoached(settled, PEOPLE) && !coachPoached(world, PEOPLE)) sfx("down");
+    else cueOutcome(world, settled);
+    sfx("bell");
     if (world.slot === 3) {
       const w = endDay(settled, PEOPLE);
       const rep = buildReport(world, w, dayBase ?? { day: world.day, money: 0, opinion: {} });
@@ -217,10 +331,12 @@ export default function WorldGame() {
     }
     const { world: w, drawn } = runPipeline(advanceSlot(settled));
     setWorld(w); setPending(drawn);
+    if (drawn) sfx("card");
   };
   const startNextDay = () => {
     const { world: w, drawn } = runPipeline(world);
     setWorld(w); setPending(drawn); setReport(null);
+    if (drawn) sfx("card");
     setPhase("play");
   };
   // 季末「进入第 N+1 季」：人和关系网带过去，天数回到 1，从开季那个上午接着玩。
@@ -229,6 +345,7 @@ export default function WorldGame() {
     setDayBase({ day: next.day, money: next.money, opinion: { ...next.opinion } });
     const { world: w, drawn } = runPipeline(next);
     setWorld(w); setPending(drawn); setReport(null);
+    if (drawn) sfx("card");
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
     setPhase("play");
   };
@@ -237,10 +354,12 @@ export default function WorldGame() {
   const apply = (call: VerbCall) => {
     const next = doVerb(world, PEOPLE, call.verb, call.targets);
     if (next === world) return;
+    cueOutcome(world, next);
     setWorld(next); setPick(null);
     setResult(next.log.at(-1)?.text ?? null);
   };
   const tapPerson = (id: PersonId) => {
+    sfx("tap");
     if (pick) {
       const call = pick.calls.find(c => c.targets.includes(id));
       if (call) { apply(call); return; }
@@ -252,6 +371,7 @@ export default function WorldGame() {
     if (!selected || !serveProduct) return;
     const next = resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force);
     if (next === world) return;
+    cueOutcome(world, next);
     setWorld(next); setServing(false);
     setResult(next.log.at(-1)?.text ?? null);
   };
@@ -259,6 +379,7 @@ export default function WorldGame() {
     if (!pending) return;
     const next = applyChoice(world, PEOPLE, pending, index);
     if (next === world) return;
+    cueOutcome(world, next);
     setWorld(next); setPending(null);
   };
 
@@ -387,6 +508,7 @@ export default function WorldGame() {
         </section>}
       </main></MobileScroll>
       <div className="report-foot"><button className="world-primary" type="button" onClick={startNextDay}>进入第 {world.day} 天</button></div>
+      <CoachLayer world={world} view={{ screen: "report", reportDay: report.day, storyOpen: false, webOpen: false, cardOpen: false, acted: false }} />
     </div>;
   }
 
@@ -400,6 +522,8 @@ export default function WorldGame() {
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
         <span>{yuan(world.money)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
       </div>
+      <button className="world-mute" type="button" aria-label={muted ? "开声音" : "静音"} aria-pressed={muted}
+        onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "静" : "声"}</button>
       <button className="world-web-btn" type="button" aria-label="人情网" onClick={() => setWebOpen(true)}>人情网</button>
       <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
     </header>
@@ -417,7 +541,7 @@ export default function WorldGame() {
           const spot = spots.get(id);
           if (!spot) return null;
           const isTarget = pickTargets.includes(id);
-          return <button type="button" key={id}
+          return <button type="button" key={id} data-pid={id}
             className={`wf-actor${selected === id ? " is-sel" : ""}${isTarget ? " is-target" : ""}`}
             style={{ left: `${spot.x}%`, top: `${spot.y}%`, zIndex: 20 + Math.round(spot.y) } as CSSProperties}
             aria-label={`${pick ? "选" : "查看"}${p.name}`}
@@ -490,5 +614,7 @@ export default function WorldGame() {
       <div className="world-web-bar"><button type="button" onClick={() => setWebOpen(false)}>‹ 返回楼层</button></div>
       <div className="world-web-body"><WebView world={world} people={PEOPLE} /></div>
     </div>}
+
+    <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < ENERGY_PER_DAY }} />
   </div>;
 }

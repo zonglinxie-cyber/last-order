@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
+import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { World } from "../src/world/types.ts";
 
@@ -41,6 +42,8 @@ const UNKNOWN_COUNT = PEOPLE.length - Object.keys(KNOWN).length; // 没见过也
 
 const openWeb = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [SAVE_KEY, envelope()]);
+  // 引导已全看过：气泡指着顶栏返回键，不挡走查。
+  await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [COACH_KEY, JSON.stringify(COACH_STEPS)]);
   await page.goto("/?mode=world");
   await page.getByRole("button", { name: /继续/ }).click();
   await page.getByRole("button", { name: "人情网" }).click();
