@@ -145,3 +145,48 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
   });
 }
+
+/**
+ * 四季跑到第 4 幕、把自己的名字写进区域总表那一档（落点 14）以后的一份进度。
+ * 上面那两份种子停在下标 2 的收法（第 2 幕），本子上从来没有亮过第 4 幕那两条 ——
+ * 这一屏要钉的是"玩家自己签过的那一格，档案要念得出名字"。
+ */
+const act4Progress = (): string => JSON.stringify(observeWorldProgress(emptyWorldProgress(), {
+  ...newWorld("a4-ui", PEOPLE),
+  season: 4,
+  present: { fangmin: "cashier", peilan: "counter" },
+  qualities: { "mainline:act": 4, "thread:return-slip": 14, "clue:slip-desk": 1, "clue:slip-roster": 1 },
+}));
+
+for (const [width, height] of [[390, 844], [320, 568]] as const) {
+  test.describe(`档案 · 第 4 幕那一栏 ${width}×${height}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+
+    test("第 6 条线索与总表那一格都亮着，没落过的收法还是？？？", async ({ page }) => {
+      await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value),
+        [WORLD_PROGRESS_KEY, act4Progress()]);
+      await openArchiveFromCover(page);
+      await page.getByRole("button", { name: "本子" }).click();
+      const book = page.locator(".wa-arc").first();
+      await expect(book.getByText("那张退货单")).toBeVisible();
+      await expect(page.getByText(`本子上攒了 2 / ${CLUES.length} 条`)).toBeVisible();
+      // 第 4 幕那条线索的原文（本子上最长的一句）
+      await expect(book.locator(".wa-arc-row.lit b", { hasText: "第四页那一栏每季空着，等一个当时顶班的号" })).toBeVisible();
+      // 收法那一行认的是玩家自己点过的那一格 label
+      await expect(book.locator(".wa-arc-row.lit b", { hasText: "让裴岚把这一行写进区域总表" })).toBeVisible();
+      // 两条线索 + 一种收法；没落过的那几格连名字都不许露（档案不许替玩家说结论）
+      await expect(book.locator(".wa-arc-row.lit")).toHaveCount(3);
+      await expect(book.locator(".wa-arc-row.lit b", { hasText: "把自己的名字写进那一栏" })).toHaveCount(0);
+      const dimmed = await book.locator(".wa-arc-row:not(.lit) b").allTextContents();
+      expect(dimmed.length).toBeGreaterThan(0);
+      expect(dimmed.every(t => t === "？？？")).toBe(true);
+      // 新加的那一条不许把这一屏挤出右边界、也不许用小于 12px 的字念
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+      const smallText = await page.evaluate(() => [...document.querySelectorAll(".world-archive-page *")]
+        .filter(el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent?.trim()))
+        .filter(el => parseFloat(getComputedStyle(el as HTMLElement).fontSize) < 12)
+        .map(el => `${el.tagName}:${el.className}`));
+      expect(smallText).toEqual([]);
+    });
+  });
+}
