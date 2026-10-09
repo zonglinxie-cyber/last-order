@@ -170,6 +170,16 @@ export const ACT_WORD: Record<string, string> = {
   "slip-owned-line": "把自己那句原话交了出去",
   "slip-waited": "等这一页自己归档，没先开口",
   "slip-punted": "把单子推给了别人的名字",
+  // 主线第 2 季那三张（storylets-mainline.ts）：幕号还没抬，但本子上先有了下一幕要用的东西
+  "act2-copied-line": "把原件抄了一份留在自己手里",
+  "act2-admitted-held": "问到她承认那一行是她按的",
+  "act2-slip-fled": "说那张单子早并进柜位账了",
+  "act2-tape-whole": "听完了那一段没有剪过的",
+  "act2-tape-why": "问她为什么留到这一季",
+  "act2-tape-hushed": "劝她把那支笔收回去",
+  "act2-traded-slip": "跟对面换了一张复印件",
+  "act2-asked-source": "问了对面那张是谁给她的",
+  "act2-showed-own": "把自己那张单子摊给她看了",
   // 主线第 3 幕：那一行是谁的手写的（storylets-mainline.ts）
   "act3-asked-roster": "把那几天的排班调出来对了一遍",
   "act3-asked-held": "问了她这一页按了几季",

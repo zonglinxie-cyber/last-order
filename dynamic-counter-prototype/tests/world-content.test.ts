@@ -585,3 +585,45 @@ test("第 2 季同名选项互斥且全覆盖", async () => {
     assert.equal(shown, 1, `方敏秘密 ${secret} 露出 ${shown} 颗`);
   }
 });
+
+test("主线整段只演一次，而且第 2 季还有新的一幕可演", () => {
+  // 探针量出来的两个毛病一起钉住：
+  // ① nextSeason 把 fired 整份清空（engine.ts:1227），而 mainline:act、thread:return-slip 都带着过季 ——
+  //    于是第 2 幕那三张收法（once: true）在每一季把同一句话原样重演一遍。12 个种子的探针里
+  //    main-slip-after-own 第 1、2、3 季各演 12 次，一次不落。
+  // ② 第 1 季关掉第 1 幕之后，唯一通向第 3 幕的 main-act3-open 压在第 3 季第 10 天（中位第 66 天），
+  //    而第 2 幕的收法中位在第 19~20 天 —— 中间 46 天主线没有一句新话。
+  //    「剧情太短，没玩就结束了」在主线层就是这一条：不是结局早，是故事在半路停了整整一季。
+  const perSeed = (seed: number): string[][] => {
+    const bySeason: string[][] = [[], [], []];
+    let w = newWorld(`mainline-${seed}`, PEOPLE);
+    for (let season = 1; season <= 3; season++) {
+      while (w.day <= SEASON_DAYS) {
+        for (const slot of [0, 1, 2, 3] as const) {
+          w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+          for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+          const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+          if (!drawn) continue;
+          if (drawn.storylet.kind === "mainline") bySeason[season - 1].push(drawn.storylet.id);
+          const idx = drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c));
+          if (idx >= 0) w = applyChoice(w, PEOPLE, drawn, idx);
+        }
+        w = endDay(w, PEOPLE);
+      }
+      if (season < 3) w = nextSeason(w, PEOPLE);
+    }
+    return bySeason;
+  };
+
+  for (let seed = 0; seed < 6; seed++) {
+    const [s1, s2, s3] = perSeed(seed);
+    const seenSeason = new Map<string, number[]>();
+    [s1, s2, s3].forEach((ids, i) => ids.forEach(id => seenSeason.set(id, [...(seenSeason.get(id) ?? []), i + 1])));
+    const replay = [...seenSeason].filter(([, seasons]) => new Set(seasons).size > 1);
+    assert.equal(replay.length, 0,
+      `种子 ${seed}：这些主线卡跨季原样重演了 —— ${replay.map(([id, n]) => `${id}(${n.join("/")})`).join("、")}。`
+      + `门槛只认过季带着走的 quality，卡自己必须留一个过得了季的「已经演过」记号。`);
+    const fresh = s2.filter(id => !s1.includes(id));
+    assert.ok(fresh.length >= 1, `种子 ${seed}：第 2 季主线一张新卡都没有（第 1 季演过 ${s1.length} 张，第 2 季只剩重演）`);
+  }
+});

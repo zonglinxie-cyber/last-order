@@ -119,6 +119,18 @@ function takeTurns(style: Style, w: World, people: Person[]): World {
 /** 每种风格下每张卡被抽到的次数（跨种子、跨季累计），用来找"写了却永远出不来"的卡。 */
 const fireCount = new Map<Style, Map<string, number>>();
 
+/** 落点卡被抽到那一刻，五格里摆上桌几格。
+ *  为什么量这个：某一档只占 15/160 有两种完全不同的解释 —— 玩家撞不到（本节下面那个均匀随机政策的算术），
+ *  或者那一格根本没摆上桌（内容写坏了）。露出率把这两者分开：露出高而到达低 = 政策问题，露出 0 = 死档。 */
+type EndExposure = { seen: number; onlyDefault: number; vis: number[]; perIndex: number[]; slots: number };
+const endExposure = new Map<PersonId, EndExposure>();
+const endCardOf = (s: Storylet): PersonId | null => {
+  for (const c of s.choices) for (const e of c.effects) {
+    if ("quality" in e) { const m = /^arc:([^:]+):end$/.exec(e.quality); if (m) return m[1] as PersonId; }
+  }
+  return null;
+};
+
 /** 内容燃烧曲线：一个种子从第 1 季到最后一季连着算，天数是跨季累计的绝对天。
     第一次见到的卡算"新内容"，之后每次抽到已经见过的卡算重复 —— 曲线见底的绝对天
     就是"没玩就结束了"那个体感的天数。 */
@@ -150,6 +162,17 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
         fireCount.set(style, counts);
         const visibleIdx = drawn.storylet.choices.map((c, i) => i)
           .filter(i => choiceVisible(w, people, drawn, drawn.storylet.choices[i]));
+        const endLine = endCardOf(drawn.storylet);
+        if (endLine) {
+          // 只读上面已经算好的可见格，不再多问一次 choiceVisible、也不碰随机流
+          const ex = endExposure.get(endLine) ?? { seen: 0, onlyDefault: 0, vis: [], perIndex: [], slots: drawn.storylet.choices.length };
+          ex.seen++;
+          ex.vis.push(visibleIdx.length);
+          for (const i of visibleIdx) ex.perIndex[i] = (ex.perIndex[i] ?? 0) + 1;
+          const ungated = drawn.storylet.choices.map((c, i) => i).filter(i => !drawn.storylet.choices[i].when);
+          if (ungated.length && visibleIdx.every(i => ungated.includes(i))) ex.onlyDefault++;
+          endExposure.set(endLine, ex);
+        }
         let k: number; [k, w] = simIndex(w, Math.max(1, visibleIdx.length));
         w = applyChoice(w, people, drawn, visibleIdx[k] ?? 0);
       }
@@ -466,7 +489,9 @@ for (const { season, results: rs2, flips } of later) {
     const ends = [1, 2, 3, 4].map(n => `end=${n} ${rs2.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
     console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · 合计 ${all}/${rs2.length} · ${ends}`);
   }
-  console.log("第 2 季新结局:");
+  // 这三个 id 是第 2 季才有的结局（ENDINGS 表里没有季号字段，只能这么点名）；
+  // 第 3 季起这一行念的是"同一组在第 ${season} 季还出不出得来"，不是"本季新出"。
+  console.log(`第 2 季那三个新结局（第 ${season} 季读数）:`);
   for (const id of ["names-stay", "own-sentence", "file-and-sheet"]) {
     const hits = rs2.filter(r => r.ending === id);
     const styles = STYLES.filter(style => hits.some(r => r.style === style));
@@ -476,6 +501,16 @@ for (const { season, results: rs2, flips } of later) {
 
 // 内容燃烧曲线：新内容在第几天见底，见底之后每一抽都在重播已经看过的卡。
 // "见底天"= 这个种子最后一个新内容（第一次抽到的卡）出现的绝对天；剩下的日子全是重复。
+console.log("\n落点那一屏摆上桌几格（收尾卡被抽到那一刻，含四风格四种子的全部读数）:");
+console.log("  线          抽到   中位露出  只给默认   各格露出率（#1 起按卡片里的顺序；门是死的会露出 0%）");
+for (const id of ARC_PEOPLE) {
+  const ex = endExposure.get(id);
+  if (!ex?.seen) continue;
+  const cells = Array.from({ length: ex.slots }, (_, i) => `#${i + 1} ${Math.round(((ex.perIndex[i] ?? 0) / ex.seen) * 100)}%`).join(" · ");
+  console.log(`  ${id.padEnd(11)} ${String(ex.seen).padStart(4)}   ${String(median(ex.vis)).padStart(4)} 格  ` +
+    `${String(Math.round((ex.onlyDefault / ex.seen) * 100)).padStart(4)}%    ${cells}`);
+}
+
 console.log(`\n内容燃烧曲线（${SEASON_COUNT} 季 × ${DAYS} 天 = ${SEASON_COUNT * DAYS} 天，跨季连着算）:`);
 console.log("风格      见过的卡数   半池在第几天  八成在第几天  新内容见底  见底后还剩几天  整段重复率  第1季重复率");
 for (const style of STYLES) {

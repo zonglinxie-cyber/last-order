@@ -1,5 +1,6 @@
 // 主线第 1 幕「一张署了别人名字的单子」→ 第 2 幕「名字在谁手里」→ 第 3 幕「那一行是谁的手写的」。
-// 第 3 幕只在第 3 季以后开（幕号抬到 3 就锁死第 2 幕那三张收法，所以开头那张压到第 10 天）。
+// 第 3 幕只在第 3 季以后开（幕号抬到 3 就锁死第 2 幕那三张收法，所以开头那张压到第 10 天）；
+// 第 2 季那一段由 main-a2-* 三张接着演 —— 它们不抬幕号，只把第 3 幕要用的线索提前摆上本子。
 // 悬念用的是人物圣经里已经埋下的四条秘密（沈薇的退货单、宋姐群里借出去的名字、
 // 尹小姐包带里的录音笔、方敏按住不念的那一行）。翻面的每一个落点都必须先有本子上的
 // 线索才按得出来 —— 反转不许凭空掉下来的这条，由 tests/world-content.test.ts 钉住。
@@ -10,6 +11,11 @@ const ACT = (eq: number) => ({ quality: "mainline:act", eq } as const);
 const OPEN = { not: { quality: "thread:return-slip", gte: 1 } } as const;
 /** 这一栏还没有玩家自己落过的名（落点 7/8/9 = 第 3 幕那三张已经收过尾）。 */
 const NOT_OWNED = { not: { quality: "thread:return-slip", gte: 7 } } as const;
+/** `once` 挡不住跨季重演：nextSeason 把 fired 整份清空（engine.ts:1227），而 mainline:act 和
+ *  thread:return-slip 都带着过季 —— 门槛一直成立的收法卡会在每一季把同一句话原样演一遍。
+ *  所以每张会跨季重演的卡自己留一个带得过季的记号（`mainline:` 前缀在过季白名单里）。 */
+const SEEN = (id: string) => ({ not: { quality: `mainline:seen:${id}`, gte: 1 } } as const);
+const MARK = (id: string) => ({ quality: `mainline:seen:${id}`, set: 1 } as const);
 
 export const STORYLETS_MAINLINE: Storylet[] = [
   {
@@ -730,4 +736,145 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       },
     ],
   },
+
+  // —— 第 2 幕与第 3 幕之间的那一季 ——
+  // 上面三张收法演完，幕号还是 2，而唯一抬幕号的那张压在第 3 季第 10 天。探针量到中间空了 46 天：
+  // 玩家在第 1 季就知道"单子上是别人的名字"，然后要等一整个季度才等到下一句。
+  // 这三张填那一段 —— 都不抬幕号（第 3 幕仍由 main-act3-open 开），但把第 3 幕要用、
+  // 也要反证的那几条线索（slip-gap / slip-tape / slip-hand / slip-borrowed）提前一年摆到本子上，
+  // 并把「那一行是谁按下来的」这个反转放在玩家自己开口问的那一格。
+  {
+    id: "main-a2-audit",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] } },
+    when: [ACT(2), { season: { gte: 2 } }, { day: { gte: 6 } }, { present: "fangmin" }],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}把一张年检单摊在柜台上，说要上一季那张退货单的原件，查台账的人就在楼下等。她把笔尖压在签名那一栏，没有抬眼。",
+    choices: [
+      {
+        label: "给她原件，自己抄一份",
+        effects: [
+          { clue: "slip-gap" },
+          { remember: { holder: "fangmin", act: "act2-copied-line", valence: 1, subject: "player" } },
+          { stat: "compliance", delta: 5 },
+          { opinion: "fangmin", delta: 3 },
+        ],
+        result: "她抄得比你快，快到你来得及看清：领用表那一行和单子上的落款，起笔是同一个手势。原件下去了，你手里剩一份副本。",
+      },
+      {
+        label: "问她这一行为什么按到今年",
+        effects: [
+          { clue: "slip-borrowed" },
+          { remember: { holder: "fangmin", act: "act2-admitted-held", valence: 2, subject: "player" } },
+          { stat: "standing", delta: 2 },
+          { opinion: "fangmin", delta: -3 },
+        ],
+        result: "她隔了一会儿才答：按下来就不用问是谁的手。这一行是她自己按的，不是台账要按 —— 楼下那个人今天看不到这一页。",
+      },
+      {
+        label: "说单子早并进柜位账了",
+        effects: [
+          { remember: { holder: "fangmin", act: "act2-slip-fled", valence: -1, subject: "player" } },
+          { stat: "compliance", delta: -2 },
+          { opinion: "fangmin", delta: -4 },
+        ],
+        result: "她说年检不认柜位账，只认那张纸。年检单留在柜台上，她明早再来拿一次。",
+      },
+    ],
+  },
+  {
+    id: "main-a2-tape",
+    kind: "mainline",
+    cast: { a: { id: "yinxiaojie", where: [] } },
+    when: [ACT(2), { season: { gte: 2 } }, { day: { gte: 8 } }, { present: "yinxiaojie" }],
+    weight: 26,
+    tension: 1,
+    once: true,
+    text: "{$a}坐在老位置，包带里没有露出那支录音笔。她说上一季被剪进群里的那句话，她留的是完整的一段。",
+    choices: [
+      {
+        label: "听完整的那段",
+        effects: [
+          { clue: "slip-tape" },
+          { remember: { holder: "yinxiaojie", act: "act2-tape-whole", valence: 1, subject: "player" } },
+          { opinion: "yinxiaojie", delta: 6 },
+        ],
+        result: "完整那段里先开口报名字的不是她。你听清了那句是在谁走了之后才补上的 —— 补的那个人声音你很熟。",
+      },
+      {
+        label: "问她为什么留到现在",
+        effects: [
+          { clue: "slip-hand" },
+          { remember: { holder: "yinxiaojie", act: "act2-tape-why", valence: 1, subject: "player" } },
+          { stat: "standing", delta: -1 },
+          { opinion: "yinxiaojie", delta: 2 },
+        ],
+        result: "她说：因为没人问过我。她把笔推过来一寸，说那三天柜上站的是谁，她自己也没查出来。",
+      },
+      {
+        label: "劝她别把这东西拿出来",
+        effects: [
+          { remember: { holder: "yinxiaojie", act: "act2-tape-hushed", valence: -2, subject: "player" } },
+          { stat: "compliance", delta: 2 },
+          { opinion: "yinxiaojie", delta: -8 },
+        ],
+        result: "她把笔收回包带最里面，说这一句她本来就只打算问一次。",
+      },
+    ],
+  },
+  {
+    id: "main-a2-mirror",
+    kind: "mainline",
+    cast: { a: { id: "luyao", where: [] } },
+    when: [ACT(2), { season: { gte: 2 } }, { present: "luyao" }],
+    weight: 28,
+    tension: 1,
+    once: true,
+    text: "{$a}把一张复印的退货单压在你这面柜台的边角，说对面也有一张，落款是同一个名字。她问换不换：她那边的日期，换你这边的字。",
+    choices: [
+      {
+        label: "换",
+        effects: [
+          { clue: "slip-gap" },
+          { remember: { holder: "luyao", act: "act2-traded-slip", valence: 1, subject: "player" } },
+          { bond: ["luyao", "player"], delta: 8 },
+          { stat: "money", delta: -300 },
+        ],
+        result: "她把复印件推过来，日期那一格是空的。你说这一张不值三千，她说：值，因为你手里那张也没写日期。",
+      },
+      {
+        label: "问她对面这张是谁给的",
+        effects: [
+          { clue: "slip-borrowed" },
+          { remember: { holder: "luyao", act: "act2-asked-source", valence: 2, subject: "player" } },
+          { opinion: "luyao", delta: -4 },
+          { stat: "standing", delta: 2 },
+        ],
+        result: "她说这层楼给过她单子的人不止一个，名字她不念。她把复印件抽回去：那你自己去对那两个字。",
+      },
+      {
+        label: "把自己的那张拿出来给她看",
+        effects: [
+          { clue: "slip-hand" },
+          { remember: { holder: "luyao", act: "act2-showed-own", valence: 1, subject: "player" } },
+          { bond: ["luyao", "player"], delta: 12 },
+          { stat: "standing", delta: -3 },
+        ],
+        result: "她看了三秒，说你这张的字和领用表那一行是同一只手。她把复印件留在柜台上，没有带走。",
+      },
+    ],
+  },
 ];
+
+// 这些卡的门槛在过季之后照样成立（幕号、落点、本子里的线索都带着走），所以每张的每一个分支
+// 都自动补一个「已经演过」的记号，并把记号写回门槛 —— 漏掉一格就会有一季原样重演一遍。
+// 其余的主线卡靠带着走的 quality 自己关掉：第 1 幕那几张被 OPEN 挡住，第 3 幕的阀门被 NOT_OWNED 挡住。
+// 判据在 tests/world-content.test.ts「主线整段只演一次，而且第 2 季还有新的一幕可演」。
+for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-after-quiet",
+  "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror"]) {
+  const s = STORYLETS_MAINLINE.find(x => x.id === id)!;
+  s.when.push(SEEN(id));
+  for (const c of s.choices) c.effects.push(MARK(id));
+}
