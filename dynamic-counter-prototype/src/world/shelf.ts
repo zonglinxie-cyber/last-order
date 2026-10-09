@@ -12,7 +12,16 @@ export type ShelfItem = {
   name: string; short: string; price: number;
   /** 界面 serve-note 那句：它适合什么样的脸，代价在哪。 */
   note: string;
+  /** 货架格子上那行短标签：把 note 里"它管什么"压成两三个词，八支一眼扫完，不必逐支点。
+   *  只能由 TAG_WORD 里那五个词拼（world-shelf.test.ts 钉着"不许虚标"）。 */
+  tag: string;
   traits: Record<Trait, number>;
+};
+
+/** 短标签里唯一能出现的五个词，每个词就是一句诉求的缩写。
+ *  写了这个词，这一支在该条上必须至少 1 分 —— 标签是承诺，不能是营销。 */
+export const TAG_WORD: Record<string, Trait> = {
+  薄: "natural", 见效: "correct", 退红: "soothe", 不闷: "steady", 撑妆: "wear",
 };
 
 export const SHELF: Record<ShelfId, ShelfItem> = {
@@ -20,44 +29,52 @@ export const SHELF: Record<ShelfId, ShelfItem> = {
   plain: {
     name: "素肌裸感霜", short: "裸感", price: 400,
     note: "平替，薄且不闷，四百块一支；要说当天看出什么，它给不了",
+    tag: "薄·不闷",
     traits: { natural: 2, correct: 0, soothe: 0, steady: 2, wear: 0 },
   },
   // 便宜那一档只管"先别泛红"，带妆和遮瑕一律不沾。
   mist: {
     name: "冷调舒缓喷雾", short: "喷雾", price: 680,
     note: "舒缓干燥与泛红，六百八一支；它是急救，不撑一整天",
+    tag: "退红",
     traits: { natural: 1, correct: 0, soothe: 2, steady: 1, wear: 0 },
   },
   balm: {
     name: "维稳净肤霜", short: "稳肤", price: 880,
     note: "低风险不闷痘，八百八一支；见效慢，红得厉害时它压不住",
+    tag: "不闷",
     traits: { natural: 1, correct: 0, soothe: 1, steady: 2, wear: 0 },
   },
   soft: {
     name: "云纱柔焦粉底", short: "柔焦", price: 980,
     note: "轻薄分区叠加，镜头近看更自然；带妆时间越长越需要补",
+    tag: "薄·撑妆",
     traits: { natural: 2, correct: 1, soothe: 0, steady: 2, wear: 1 },
   },
   // 妆前比柔焦多一条"能稳住泛红"，代价是带妆那条让出去了。
   base: {
     name: "打底润色妆前", short: "妆前", price: 1180,
     note: "又薄又能撑住干燥，一千一百八；带妆一整天它不占这条",
+    tag: "薄·退红",
     traits: { natural: 2, correct: 1, soothe: 1, steady: 2, wear: 0 },
   },
   glow: {
     name: "鎏光持妆套组", short: "持妆", price: 1280,
     note: "高遮瑕，强灯光和长时间带妆才站得住；皮肤正不稳时会发干",
+    tag: "见效·撑妆",
     traits: { natural: 0, correct: 2, soothe: 0, steady: 0, wear: 2 },
   },
   repair: {
     name: "夜兰修护精华", short: "修护", price: 1680,
     note: "舒缓干燥与泛红，见效不靠厚重遮盖；它是护肤，不是当天的妆",
+    tag: "退红·不闷",
     traits: { natural: 0, correct: 1, soothe: 2, steady: 2, wear: 0 },
   },
   // 最贵那一档：三条都给到，但"薄"那条是 0 —— 怕被看出化妆的人一律接不住。
   mask: {
     name: "夜兰密集面敷", short: "面敷", price: 2280,
     note: "稳住、见效、低风险三条都占，两千二百八一支；它不是一张妆",
+    tag: "见效·退红",
     traits: { natural: 0, correct: 2, soothe: 2, steady: 2, wear: 1 },
   },
 };

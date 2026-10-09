@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { STORYLETS } from "../src/world/content/index.ts";
-import { ACT_WORD, guestKindWord, newGuestWord, scoreBrief, scoreWord } from "../src/world/ui/words.ts";
+import {
+  ACT_WORD, guestKindWord, newGuestWord, scoreBrief, scoreWord, verbsEmptyWord,
+} from "../src/world/ui/words.ts";
+import { PEOPLE } from "../src/world/content/index.ts";
 
 test("引擎写进记忆的每个事件代号，界面都有一句中文", () => {
   const source = ["../src/world/engine.ts", "../src/world/exchanges.ts"]
@@ -37,4 +40,19 @@ test("新客与回头客的说法，和「现场」那半句只在 words.ts 写�
   const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
   assert.equal(ui.includes('"新客"') || ui.includes("'新客'"), false, "界面上不该出现硬写的「新客」");
   assert.ok(ui.includes("guestKindWord") && ui.includes("newGuestWord"));
+});
+
+test("动作条空着那三句：只说一个原因，不许「或者」", () => {
+  const mei = PEOPLE.find(p => p.id === "mei")!;
+  assert.equal(verbsEmptyWord(mei, false, true), "她被请去了对面，这个时段够不着。");
+  // 没劲那句必须自己给出路：一天的精力只在打烊那一下回满，能做的只有翻时段。
+  const tired = verbsEmptyWord(mei, true, false);
+  assert.ok(tired.includes("劲用完了") && tired.includes("下一时段"), tired);
+  assert.equal(verbsEmptyWord(mei, false, false), "这会儿对她做不了什么。");
+  for (const line of [verbsEmptyWord(mei, true, false), verbsEmptyWord(mei, false, false)])
+    assert.ok(!line.includes("或者"), `这句把两条原因一起推给玩家：${line}`);
+  // 界面不许再自己拼这句（上一版就是写在 WorldGame 里的，所以改口径时只改了一处）
+  const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
+  assert.equal(ui.includes("或者精力不够了"), false);
+  assert.ok(ui.includes("verbsEmptyWord"));
 });

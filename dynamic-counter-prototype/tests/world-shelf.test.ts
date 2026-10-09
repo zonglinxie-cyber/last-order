@@ -9,7 +9,7 @@ import {
   ENERGY_PER_DAY, PRICE_MISS_OPINION, SERVE_GOOD_OPINION, newWorld, opinionOf, resolveServe,
 } from "../src/world/engine.ts";
 import {
-  PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, SHELF_IDS, affordableUnits, fitOfPerson, shelfFitTier,
+  PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPerson, shelfFitTier,
   type ShelfId,
 } from "../src/world/shelf.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
@@ -127,4 +127,24 @@ test("货架只有一张：引擎和界面都不再从旧五日版拿货", () =>
   const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
   assert.equal(/\bPRODUCTS\b/.test(ui), false, "接待面板该读 shelf.ts 的 SHELF");
   assert.equal(SHELF_IDS.length, 8);
+});
+
+test("八支货的短标签不许虚标：写着「见效」这一支就得真有见效这条", () => {
+  // 标签是格子上那行小字，玩家不点就靠它扫完八支（tests/world-newbie.spec.ts 钉它在 320 那一档没被裁）。
+  // 所以它是承诺不是营销：提到的每一条，这一支在该条上必须至少 1 分。
+  const covered = new Set<string>();
+  for (const id of SHELF_IDS) {
+    const tag = SHELF[id].tag;
+    const claimed = Object.keys(TAG_WORD).filter(word => tag.includes(word));
+    assert.ok(claimed.length >= 1, `${SHELF[id].short}「${tag}」一个诉求词都没用，等于没标`);
+    for (const word of claimed) {
+      const trait = TAG_WORD[word];
+      assert.ok(SHELF[id].traits[trait] >= 1, `${SHELF[id].short}「${tag}」写着「${word}」，它在 ${trait} 这条上是 0 分`);
+      covered.add(trait);
+    }
+    assert.ok([...tag].length <= 5, `${SHELF[id].short}「${tag}」${[...tag].length} 个字，320 那一档一格只有 70px`);
+  }
+  assert.equal(new Set(SHELF_IDS.map(id => SHELF[id].tag)).size, SHELF_IDS.length, "八支标签两两不同，扫一眼才分得开");
+  assert.deepEqual([...covered].sort(), ["correct", "natural", "soothe", "steady", "wear"],
+    "她会被问到的五条诉求，货架上要每条都读得出来");
 });

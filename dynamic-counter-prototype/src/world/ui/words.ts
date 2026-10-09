@@ -1,6 +1,7 @@
 // 人情网界面的中文说法唯一出处：act 代号、脾气、关系类型、看法与冷暖的成句。
 // 界面不许自己拼这些句子；引擎新增 act 代号时只在这里补一行。
-import type { BondKind, Slot, Temper } from "../types.ts";
+import { ta } from "../pronoun.ts";
+import type { BondKind, Person, Slot, Temper } from "../types.ts";
 
 export { PLAYER_NAME } from "../engine.ts";
 
@@ -321,3 +322,10 @@ export const guestKindWord = (returning: boolean): string => returning ? "回头
 
 /** 「现场 · N 位客人」后面跟的那半句。一位新客都没有就不念 —— 全是熟人不算一条消息。 */
 export const newGuestWord = (fresh: number): string => fresh ? ` · 新客 ${fresh}` : "";
+
+/** 动作条空着时那一句 —— 只说真正的原因，不许「或者」把两条推给玩家自己猜。
+ *  一天的精力只在打烊那一下回满（endDay），所以"没劲"这件事的出路只有一条：翻时段熬到明早。 */
+export const verbsEmptyWord = (person: Person, outOfEnergy: boolean, atRival: boolean): string =>
+  atRival ? `${ta(person)}被请去了对面，这个时段够不着。`
+    : outOfEnergy ? "你今儿的劲用完了，点「下一时段」熬到明早。"
+    : `这会儿对${ta(person)}做不了什么。`;

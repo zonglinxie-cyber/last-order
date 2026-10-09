@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
-  newWorld, nextSeason, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
+  newWorld, nextSeason, seasonSummary, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
@@ -103,7 +103,9 @@ function answerRequests(style: Style, w: World, people: Person[]): World {
   return w;
 }
 
-function takeTurns(style: Style, w: World, people: Person[]): World {
+/** 这个时段玩家实际做成了几件事（第二个返回值）—— 节奏仪表要读它，判定本身没改。 */
+function takeTurns(style: Style, w: World, people: Person[]): [World, number] {
+  let acted = 0;
   for (let n = 0; n < ACTIONS_PER_SLOT; n++) {
     let action: { call: VerbCall; args?: VerbArgs } | null;
     [action, w] = pickAction(style, w, people);
@@ -111,8 +113,9 @@ function takeTurns(style: Style, w: World, people: Person[]): World {
     const before = w;
     w = doVerb(w, people, action.call.verb, action.call.targets, action.args ?? {});
     if (w === before) break; // 动作没生效（精力不够之类）就收手
+    acted++;
   }
-  return w;
+  return [w, acted];
 }
 
 /** 每种风格下每张卡被抽到的次数（跨种子、跨季累计），用来找"写了却永远出不来"的卡。 */
@@ -137,6 +140,9 @@ type SeasonBurn = {
   season: number; draws: number; repeats: number;
   /** 这一季抽到的故事卡（个人线 + 主线）次数，和第一次抽到的张数 —— 「这一季到底有没有新剧情」看这两列 */
   story: number; arcFirst: Set<string>; mainFirst: Set<string>;
+  /** 节奏（第 23 轮加的仪表，纯读）：一季 112 个时段里，有多少个时段玩家手上真的有事做。
+   *  「没玩就结束了」的反面不是卡不够多，是**点下一时段的次数**太多。 */
+  slots: number; noStory: number; readOnly: number; acted: number; starved: number[];
 };
 type RunBurn = { firstDay: Map<string, number>; draws: number; repeats: number; perSeason: SeasonBurn[] };
 const runBurn = new Map<string, RunBurn>();
@@ -148,13 +154,17 @@ const burnOf = (style: Style, seed: string): RunBurn => {
 };
 
 function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn): World {
-  const seasonTally: SeasonBurn = { season: seasonNo, draws: 0, repeats: 0, story: 0, arcFirst: new Set(), mainFirst: new Set() };
+  const seasonTally: SeasonBurn = { season: seasonNo, draws: 0, repeats: 0, story: 0, arcFirst: new Set(), mainFirst: new Set(),
+    slots: 0, noStory: 0, readOnly: 0, acted: 0, starved: [] };
   burn.perSeason.push(seasonTally);
   while (w.day <= DAYS) {
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
       w = beginSlot(w, people, festivals);
       w = answerRequests(style, w, people); // 开门提的当场类委托，先答了再抽卡做动作
+      // 节奏仪表（纯读）：进场这一刻手上有没有牌 —— 场上还点得到人、精力还够做最便宜的那件事。
+      const hands = Object.values(w.present).filter(z => z !== "rival").length;
+      const canAct = w.energy >= VERB_ENERGY.greet && hands > 0;
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
@@ -185,7 +195,14 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
         let k: number; [k, w] = simIndex(w, Math.max(1, visibleIdx.length));
         w = applyChoice(w, people, drawn, visibleIdx[k] ?? 0);
       }
-      w = takeTurns(style, w, people);
+      let acted = 0;
+      [w, acted] = takeTurns(style, w, people);
+      seasonTally.slots++;
+      seasonTally.acted += acted;
+      if (!drawn) seasonTally.noStory++;
+      if (!canAct) seasonTally.starved.push(s);
+      // 「只能读不能做」：这一段剧情给了你，可这一刻连一句最便宜的招呼都接不住 —— 纯看客的时段。
+      if (drawn && !canAct) seasonTally.readOnly++;
       w = ambient(w, people); // 时段末：传话、陆遥带走没顾上的人（与界面同一个顺序）
     }
     w = endDay(w, people);
@@ -539,6 +556,26 @@ for (let season = 1; season <= SEASON_COUNT; season++) {
     `${String(story).padStart(7)} 次  ${String(fresh).padStart(4)} 张  ${String(med(p => p.arcFirst.size)).padStart(7)} 张` +
     `  ${String(med(p => p.mainFirst.size)).padStart(6)} 张      ${Math.round((story / Math.max(1, med(p => p.draws))) * 100)}%` +
     (fresh === 0 ? "   ← 这一季一张新剧情都没有，只剩过场在重演" : ""));
+}
+
+// 节奏表（第 23 轮）：回答「没玩就结束了」的另一半 —— 卡够不够是一回事，
+// 有多少个时段玩家只能干点「下一时段」是另一回事。这一张表量后者。
+const SLOT_WORDS = ["上午", "午后", "傍晚", "晚高峰"];
+console.log(`\n每季的节奏（各列取 ${runBurn.size} 副牌的中位；"做不动" = 进这个时段时精力连最便宜的招呼（${VERB_ENERGY.greet} 点）都不够、或场上点不到人）:`);
+console.log("季   时段数   抽到卡   做不动   只能读不能做   每时段做成几件  每天做成几件   做不动的时段落在哪一档");
+for (let season = 1; season <= SEASON_COUNT; season++) {
+  const rows = [...runBurn.values()].map(b => b.perSeason.find(p => p.season === season)).filter((p): p is SeasonBurn => !!p);
+  if (!rows.length) continue;
+  const med = (f: (p: SeasonBurn) => number) => median(rows.map(f));
+  const slots = Math.max(1, med(p => p.slots));
+  const starvedAll = rows.flatMap(p => p.starved);
+  const hist = SLOT_WORDS.map((_, s) => `${SLOT_WORDS[s]} ${Math.round((starvedAll.filter(x => x === s).length / Math.max(1, starvedAll.length)) * 100)}%`).join(" · ");
+  console.log(` ${String(season).padStart(2)}  ${String(slots).padStart(6)}  ` +
+    `${String(Math.round((med(p => p.draws) / slots) * 100)).padStart(5)}%  ` +
+    `${String(Math.round((starvedAll.length / rows.length / slots) * 100)).padStart(5)}%  ` +
+    `${String(Math.round((med(p => p.readOnly) / slots) * 100)).padStart(7)}%  ` +
+    `${(med(p => p.acted) / slots).toFixed(2).padStart(9)} 件  ` +
+    `${(med(p => p.acted) / DAYS).toFixed(2).padStart(9)} 件   ${starvedAll.length ? hist : "整季都有劲"}`);
 }
 
 console.log(`\n内容燃烧曲线（${SEASON_COUNT} 季 × ${DAYS} 天 = ${SEASON_COUNT * DAYS} 天，跨季连着算）:`);

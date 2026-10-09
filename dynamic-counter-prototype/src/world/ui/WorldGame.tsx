@@ -31,7 +31,7 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { guestKindWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD } from "./words.ts";
+import { guestKindWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
@@ -714,17 +714,19 @@ export default function WorldGame() {
         {serveSaid?.veto && <p className="serve-veto">{ta(person)}把底线也讲了出来：{serveSaid.veto}</p>}
         {serveSaid?.hold && <p className="serve-hold">{serveSaid.hold}</p>}
         <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
-        <div className="serve-products">{SHELF_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><b>{SHELF[pid].short}</b><small>{yuan(SHELF[pid].price)}</small></button>)}</div>
-        <p className="serve-note">{serveProduct ? `${SHELF[serveProduct].note} · 这个价${ta(person)}最多带走 ${affordableUnits(person, serveProduct)} 件` : `先挑一支，这里会写它适合什么样的脸，对照${ta(person)}刚才说的`}</p>
-        <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
-        <div className="serve-actions">
-          <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>
-          <button className="serve-force" type="button" disabled={!serveProduct} onClick={() => doServe(true)}>硬推</button>
+        <div className="serve-products">{SHELF_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><b>{SHELF[pid].short}</b><small>{yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>)}</div>
+        <p className="serve-note">{serveProduct ? `${SHELF[serveProduct].note} · 这个价${ta(person)}最多带走 ${affordableUnits(person, serveProduct)} 件` : `先读上面${ta(person)}说过的那句，再对着每支货底下那行小字挑 —— 对症的常常不止一支，价签会替你砍件数`}</p>
+        <div className="serve-foot">
+          <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
+          <div className="serve-actions">
+            <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>
+            <button className="serve-force" type="button" disabled={!serveProduct} onClick={() => doServe(true)}>硬推</button>
+          </div>
         </div>
       </div> : <div className="world-verbs">
         {verbs.map(v => <button key={v} type="button" onClick={() => v === "serve" ? (setServing(true), setServeProduct(null), setServeUnits(1)) : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
         {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力 · 再点一人</small></button>)}
-        {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{world.present[person.id] === "rival" ? `${ta(person)}被请去了对面，这个时段够不着。` : `这会儿对${ta(person)}做不了什么，或者精力不够了。`}</p>}
+        {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
       </div>}
     </div>}
 
