@@ -18,6 +18,8 @@ const AUDIT_DIR = "../audit/world-smoke";
 const SEED = 20261009;
 const FIXED_NOW = 1_800_000_000_000;
 const STEP_MS = 5_000; // 单步超过 5 秒算卡死
+/** 读一句在场的话：textContent 会等元素挂上来，不封顶就是整个 actionTimeout（实测 5002ms），一步的预算全吃在这。 */
+const READ_MS = 400;
 const SEASON_DAYS = 28;
 const S2_DAYS = 3; // 进第 2 季后再玩三天
 const SLOTS_PER_DAY = 4;
@@ -226,10 +228,10 @@ const answerRequestCard = (page: Page): Promise<string | null> =>
 const chooseStory = async (page: Page): Promise<{ text: string; chose: string } | null> => {
   const card = page.locator(".world-story");
   if (!(await visible(card))) return null;
-  const text = ((await card.locator(".story-text").first().textContent().catch(() => "")) ?? "").trim();
+  const text = ((await card.locator(".story-text").first().textContent({ timeout: READ_MS }).catch(() => "")) ?? "").trim();
   const options = card.locator(".story-choices button");
   const first = (await options.count()) ? options.first() : card.locator("button").first();
-  const chose = ((await first.textContent().catch(() => "")) ?? "").trim();
+  const chose = ((await first.textContent({ timeout: READ_MS }).catch(() => "")) ?? "").trim();
   await first.click({ timeout: STEP_MS });
   await card.waitFor({ state: "hidden", timeout: STEP_MS }).catch(() => undefined);
   return { text: text.slice(0, 70), chose: chose.slice(0, 30) };
@@ -297,10 +299,10 @@ type ActionResult = { note: string; result?: string; problem?: string };
 const readOutcome = async (page: Page): Promise<string> => {
   const toast = page.locator(".world-toast").first();
   await toast.waitFor({ state: "visible", timeout: 1_200 }).catch(() => undefined);
-  const said = (await toast.textContent().catch(() => ""))?.trim() ?? "";
+  const said = (await toast.textContent({ timeout: READ_MS }).catch(() => ""))?.trim() ?? "";
   if (said) return said.slice(0, 80);
   const card = page.locator(".world-story .story-text").first();
-  if (await visible(card)) return `故事：${((await card.textContent().catch(() => "")) ?? "").trim().slice(0, 60)}`;
+  if (await visible(card)) return `故事：${((await card.textContent({ timeout: READ_MS }).catch(() => "")) ?? "").trim().slice(0, 60)}`;
   return "";
 };
 
@@ -331,7 +333,7 @@ async function doOneAction(page: Page, rnd: () => number, wantServe: boolean): P
     .map((w, i) => ({ w, i }))
     .filter(x => x.w);
   if (!labelled.length) {
-    const emptyText = (await drawer.locator(".verbs-empty").textContent().catch(() => ""))?.trim() ?? "";
+    const emptyText = (await drawer.locator(".verbs-empty").textContent({ timeout: READ_MS }).catch(() => ""))?.trim() ?? "";
     return { note: `${actor.name}这会儿没动作可做${emptyText ? `（${emptyText}）` : ""}` };
   }
 
