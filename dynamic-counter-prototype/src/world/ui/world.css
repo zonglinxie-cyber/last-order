@@ -142,6 +142,7 @@
 .report-numbers span { flex:1 1 0; display:flex; flex-direction:column; gap:3px; padding:10px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
 .report-numbers small { color:#a99689; font-size:12px; }
 .report-numbers b { color:#ffedca; font:700 15px 'Noto Serif SC',serif; }
+.report-numbers em { color:#b99b7f; font-size:12px; font-style:normal; line-height:1.4; }
 .report-block { margin:0 0 14px; padding:12px 14px; border:1px solid #f0cf9122; border-radius:14px; background:#ffffff05; }
 .report-block h2 { margin:0 0 6px; color:#f4dfbd; font:600 14px 'Noto Serif SC',serif; }
 .report-block p { margin:0 0 4px; color:#eee0d5; font-size:13px; line-height:1.6; }
@@ -196,6 +197,8 @@
 /* 三本账：只在最后念三个数，各带一句评价 */
 .recap-numbers { margin-bottom:0; }
 .recap-numbers em { color:#b99b7f; font-size:12px; font-style:normal; line-height:1.4; }
+/* 比分：三本账念完再念对面那一行 */
+.recap-score { margin:10px 0 0; color:#e8d4bb; font-size:13px; line-height:1.6; }
 
 .world-primary { width:100%; min-height:52px; border:0; border-radius:14px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 16px 'Noto Serif SC',serif; }
 .world-ghost { width:100%; min-height:48px; margin-top:8px; border:1px solid #f0cf9133; border-radius:14px; background:transparent; color:#efd6b0; font:600 14px 'Noto Serif SC',serif; }

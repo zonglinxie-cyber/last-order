@@ -24,12 +24,21 @@ export const REQUEST_FAIL_OPINION = -5;
 /** 当场回绝（唐可那类）：比晾到打烊体面一点。 */
 export const REQUEST_DECLINE_OPINION = -3;
 
-/** 罗曼的件数：按前几天平均每天卖出算，夹在 MIN..MAX 里别太难。 */
-export const QUOTA_LOOKBACK = 3;
+/** 罗曼的件数：固定阶梯，按天往上加，不看前几天卖了多少。
+ *  原来是自校准的（读前几日的平均），你卖得少他就少要 —— 这条委托永远够得着，等于没有输。
+ *  台阶高度量出来的（tests/world-sim.ts 20 种子 × 2 季的「每天开出几件」）：
+ *  会玩的 honest 一天中位 2 件，只顾经营的 social 中位 0 件。
+ *  要 4 件的那组阶梯（2→4 / 每 5 天）honest 也只有 31% 的天数做得完，等于必输；
+ *  这组（2→3 / 第 15 天拧一格）达成率 honest 41%（277/682）· random 29% · social 1% —— 有得赢、也真会输。 */
 export const QUOTA_MIN = 2;
-export const QUOTA_MAX = 5;
+/** 几天上一格。 */
+export const QUOTA_STEP_DAYS = 14;
+/** 封顶件数（第 15 天起）。 */
+export const QUOTA_TOP = 3;
 /** 件数达标，柜位也认。 */
 export const QUOTA_STANDING = 2;
+/** 差一件也算失约：柜位扣回去，且这季不会再自动回落补上。 */
+export const QUOTA_MISS_STANDING = -3;
 
 /** 苏蔓：留住了，老客跟她更亲。 */
 export const KEEP_OPINION = 7;
@@ -86,14 +95,9 @@ const reachableNow = (w: World, id: PersonId) => id in w.present && w.present[id
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** 前几天平均每天开出几件；一天都没开过张按 0 算进平均，别因为没记录就抬高。 */
-const quotaTarget = (w: World): number => {
-  const days = Math.min(QUOTA_LOOKBACK, w.day - 1);
-  if (days <= 0) return QUOTA_MIN;
-  let sum = 0;
-  for (let d = w.day - days; d < w.day; d++) sum += qualityOf(w, soldUnitsKey(d));
-  return clamp(Math.ceil(sum / days), QUOTA_MIN, QUOTA_MAX);
-};
+/** 罗曼今天要几件：季初下限件数起步，每 STEP_DAYS 天加一件，到 TOP 封顶。跟历史业绩无关。 */
+const quotaTarget = (w: World): number =>
+  Math.min(QUOTA_TOP, QUOTA_MIN + Math.floor((w.day - 1) / QUOTA_STEP_DAYS));
 
 const TEMPLATES: Template[] = [
   {
@@ -104,8 +108,10 @@ const TEMPLATES: Template[] = [
       return [{
         by: "roman", kind: "quota", n,
         text: `今天卖出 ${n} 件`,
-        reward: "罗曼认这个数，柜位跟着记一笔",
-        log: `早会罗曼点了你的名：今天卖出 ${n} 件。`,
+        reward: `做到柜位 +${QUOTA_STANDING}，差一件也算失约，柜位 ${QUOTA_MISS_STANDING}`,
+        log: n > QUOTA_MIN
+          ? `早会罗曼把单子往上拧了一格：今天卖出 ${n} 件。`
+          : `早会罗曼点了你的名：今天卖出 ${n} 件。`,
       }];
     },
   },
@@ -320,7 +326,9 @@ function failRequest(w: World, people: Person[], req: WorldRequest): World {
   w = remember(w, req.by, ACT_BROKE, -1);
   switch (req.kind) {
     case "quota":
-      return say(w, `罗曼翻着单子：说好的 ${req.n} 件呢。`, [req.by]);
+      // 件数不够是真会输的：看法掉一档之外，柜位也扣 —— 这季不再有夜里回落把这笔抹平。
+      w = { ...w, standing: clamp(w.standing + QUOTA_MISS_STANDING, 0, 100) };
+      return say(w, `罗曼翻着单子：说好的 ${req.n} 件呢。柜位 ${QUOTA_MISS_STANDING}。`, [req.by]);
     case "keep": {
       const t = nameOf(people, req.target ?? req.by);
       return say(w, qualityOf(w, `away:${req.target ?? ""}`) === w.day

@@ -152,6 +152,9 @@ export type World = {
   day: number;
   slot: Slot;
   money: number;
+  /** 这一季对面（陆遥）做成的单数与入账：同屏比分读它，和 money 一样换季清零。旧存档缺字段按 0 读。 */
+  rivalMoney: number;
+  rivalWins: number;
   standing: number;    // 柜位：0..100
   compliance: number;  // 台账：0..100
   energy: number;      // 今天还剩的精力

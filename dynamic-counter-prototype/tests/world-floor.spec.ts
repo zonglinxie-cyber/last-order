@@ -153,10 +153,39 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".world-bar-info")).toContainText("第 2 天");
     });
 
+    test("比分在页顶：对面的进账和自己的数同屏，不用拖才露出来", async ({ page }) => {
+      await enter(page, envelope({ money: 4_600, rivalMoney: 6_280, rivalWins: 4 }));
+      const score = page.locator(".world-score");
+      await expect(score).toHaveText("对面 ¥6,280");
+      const box = await score.boundingBox();
+      expect(box, "页顶那一格没渲染出来").not.toBeNull();
+      // 页顶是一条能横滑的带子：看得见不等于在眼前，比分不该藏在要拖一下才露出来的那一头。
+      expect(box!.x + box!.width, `比分右边界 ${box!.x + box!.width} 出屏了`).toBeLessThanOrEqual(width);
+    });
+
+    test("打烊那屏念比分：对面的数与落后多少都在账那一排", async ({ page }) => {
+      // touched 写满在场那五位：时段末的 ambient 会截走一位「这个时段没顾上」的顾客，
+      // 把她那一单记到对面账上 —— 不留痕的话下面那几个数是会自己变的（实测确实截走沈薇 +¥2,940）。
+      await enter(page, envelope({
+        day: 1, slot: 3, money: 4_600, rivalMoney: 6_280, rivalWins: 4,
+        touched: ["mei", "zhou", "xiaoyu", "shen", "duan"],
+      }));
+      await page.getByRole("button", { name: /下一时段/ }).click();
+      await dismissCard(page);
+      const report = page.locator(".world-report");
+      await expect(report).toBeVisible();
+      await expect(report.locator(".report-numbers")).toContainText("对面这一季");
+      await expect(report.locator(".report-numbers")).toContainText("¥6,280");
+      await expect(report.locator(".report-numbers")).toContainText("落后对面 ¥1,680");
+      // 四个数一排不许挤到换行溢出：这一排是打烊那屏的账目，横向溢出等于没写完。
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+    });
+
     test("季末回顾：高光时刻、你的人、底部三颗按钮都在且点得中", async ({ page }) => {
       // 第 28 天打完的档：ui.screen="season" 直接落在季末屏。
       await enter(page, envelope({
-        day: 29, money: 24_000, standing: 66, compliance: 58,
+        day: 29, money: 24_000, rivalMoney: 21_400, rivalWins: 9, standing: 66, compliance: 58,
         opinion: { suman: 50, mei: 45, luyao: -40 },
         opinionAtSeasonStart: { suman: 20, mei: 10 },
         statsAtSeasonStart: { standing: 50, compliance: 55 },
@@ -180,6 +209,9 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(allies).toContainText("苏蔓");
       await expect(allies).toContainText("梅女士");
       await expect(allies).toContainText("记着你替她保守了秘密");
+
+      // 比分：三本账念完，对面那一行跟着念 —— 这一季赢了多少要说得出对比。
+      await expect(recap).toContainText("对面维珞这一季做成 9 单、进账 ¥21,400 —— 比对面多 ¥2,600");
 
       // 回顾页不许横向溢出。
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

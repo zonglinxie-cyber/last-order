@@ -227,7 +227,7 @@ export const clueIds = (w: World): string[] =>
 
 export function newWorld(seed: string, _people: Person[]): World {
   return {
-    seed, season: 1, day: 1, slot: 0, money: 0,
+    seed, season: 1, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing: START_STANDING, compliance: START_COMPLIANCE,
     energy: ENERGY_PER_DAY, samples: START_SAMPLES,
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
@@ -572,7 +572,11 @@ export function ambient(world: World, people: Person[]): World {
           w = addOpinion(w, mark.id, POACH_OPINION);
           w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
           w = setQuality(w, `away:${mark.id}`, w.day);
-          w = say(w, `你没顾上${mark.name}，${rival.name}把${ta(mark)}请去了对面维珞，今天不会再回来。`, [rival.id, mark.id]);
+          // 被截走不是"今天她没来"那么轻：对面货全、不限精力，她在那边把单开满了。
+          // 比分要有得输，玩家才知道自己漏掉的是钱，不是人次。
+          const sale = poachSale(mark);
+          if (sale.units) w = { ...w, rivalMoney: w.rivalMoney + sale.amount, rivalWins: w.rivalWins + 1 };
+          w = say(w, `你没顾上${mark.name}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
         }
       }
     }
@@ -914,6 +918,20 @@ export const bestFit = (person: Person): ProductId =>
 
 const bundleFor = (units: number): BundleId => units >= 4 ? "bulk" : units === 3 ? "set" : units === 2 ? "pair" : "single";
 
+/** 对面那一单开多大：维珞不缺货、不限精力，按她自己的正解开单，件数仍受她的预算和用量上限约束。
+ *  漏掉一位客人，账上少的就是这个数 —— 比分要算钱，不算人次。
+ *  预算连一支都够不着的那几位，谁来都开不了单（units 为 0），人照样被请走。 */
+export function poachSale(person: Person): { product: ProductId; units: number; amount: number; word: string } {
+  const product = bestFit(person);
+  // skin 是可选的（同事/对手没有诉求表）：没有这张表就没人能被说服，对面也开不了单。
+  const customer = person.skin ? asCustomer(person) : null;
+  const units = customer
+    ? unitsWanted(customer, product, bundleFor(customer.maxUnits), fitTier(fitFor(person, product))) : 0;
+  const amount = units * PRODUCTS[product].price;
+  return { product, units, amount,
+    word: units ? `那边开了 ${units} 件${PRODUCTS[product].name}，进账 ¥${amount}` : `那边一支也没卖出去` };
+}
+
 export function resolveServe(world: World, people: Person[], personId: PersonId, productId: ProductId, units: number, force = false): World {
   const person = personOf(people, personId);
   if (!person?.skin || !reachable(world, personId) || world.energy < VERB_ENERGY.serve) return world;
@@ -996,13 +1014,14 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
 
 // —— 夜里：微信群传话、加过微信的人约回来、精力重置 ——
 
-/** 柜位是动态评估：每晚把离起点的差距回落一成，近期的表现比一季前的更算数，也免得一路顶到 100。
- *  平衡点约是"起点 + 每天净涨幅 × 10"：天天做好能稳在高处，停下来就慢慢掉回去。 */
-export const STANDING_DRIFT_RATE = 0.1;
-
+/** 柜位这一晚不回落。原来每晚收走离起点差距的一成（STANDING_DRIFT_RATE = 0.1）：
+ *  涨到 85 那天起，一天的净涨幅就抵不过夜里那 −3.5（(85−50)×0.1），柜位被钉死在 85 上下 ——
+ *  赢的分留不住，输掉的三分过三天又自己长回来。现在这一季之内只有做错事才掉分
+ *  （硬推 / 退货 / 失约各带自己的扣数），往起点收回去是换季那一次的事（nextSeason 折一半）。
+ *  去掉回落之后实测（20 种子 × 2 季，第 1 季柜位）：会玩的 honest min 72 / med 90 / max 98，
+ *  硬推的 pushy med 27、八面玲珑的 social med 31 —— 没有一季钉在 100，掉下去也真掉下去了。 */
 export function endDay(world: World, people: Person[]): World {
   let w = world;
-  w = { ...w, standing: Math.round(w.standing + (START_STANDING - w.standing) * STANDING_DRIFT_RATE) };
   // 到期的委托在今夜结账：做到了的记人情，失约的记"说好的事没做" ——
   // 放在传话快照之前，这条坏话今晚就能被带出去。
   w = settleRequests(w, people);
@@ -1096,7 +1115,7 @@ export function nextSeason(world: World, people: Person[]): World {
   const standing = Math.round(START_STANDING + (world.standing - START_STANDING) / 2);
   const compliance = Math.round(START_COMPLIANCE + (world.compliance - START_COMPLIANCE) / 2);
   return {
-    seed: world.seed, season, day: 1, slot: 0, money: 0,
+    seed: world.seed, season, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing, compliance,
     energy: ENERGY_PER_DAY, samples: START_SAMPLES,
     opinion, bonds, bondKinds,
@@ -1194,6 +1213,8 @@ export function parseWorld(data: unknown): World | null {
     && isInt((l as LogEntry).day) && isInt((l as LogEntry).slot) && isStr((l as LogEntry).text)
     && ((l as LogEntry).who === undefined || isStrArray((l as LogEntry).who)))) return null;
   if (w.opinionAtSeasonStart !== undefined && !isNumRecord(w.opinionAtSeasonStart)) return null;
+  for (const k of ["rivalMoney", "rivalWins"] as const)
+    if (w[k] !== undefined && !isNum(w[k])) return null;
   if (w.statsAtSeasonStart !== undefined && !(isRecord(w.statsAtSeasonStart)
     && isNum(w.statsAtSeasonStart.standing) && isNum(w.statsAtSeasonStart.compliance))) return null;
   const world = w as unknown as World;
@@ -1201,5 +1222,7 @@ export function parseWorld(data: unknown): World | null {
   world.requests ??= []; // 旧存档没有委托：按今天没人提读
   world.season ??= 1; // 旧存档没有这个字段：那是第一季写的
   world.opinionAtSeasonStart ??= {}; // 旧存档没有季初快照：按空读，变化榜只认这季攒下的
+  world.rivalMoney ??= 0; // 对面这本账是后来加的：老档缺字段按"那一季她还没开张"读，不为一个新字段丢整份档
+  world.rivalWins ??= 0;
   return world;
 }

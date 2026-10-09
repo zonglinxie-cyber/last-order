@@ -30,7 +30,7 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { opinionWord, SLOT_WORD } from "./words.ts";
+import { opinionWord, scoreBrief, scoreWord, SLOT_WORD } from "./words.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
@@ -570,6 +570,7 @@ export default function WorldGame() {
             <span><small>柜位</small><b>{recap.stats.standing.value}</b><em>{recap.stats.standing.line}</em></span>
             <span><small>台账</small><b>{recap.stats.compliance.value}</b><em>{recap.stats.compliance.line}</em></span>
           </div>
+          <p className="recap-score">对面维珞这一季做成 {world.rivalWins} 单、进账 {yuan(world.rivalMoney)} —— {scoreWord(world.money, world.rivalMoney)}。</p>
         </section>
       </main></MobileScroll>
       <div className="report-foot recap-foot">
@@ -593,6 +594,7 @@ export default function WorldGame() {
         <div className="report-numbers">
           <span><small>今天进账</small><b>{report.moneyDelta === 0 ? "没开单" : `${report.moneyDelta > 0 ? "+" : "−"}${yuan(Math.abs(report.moneyDelta))}`}</b></span>
           <span><small>累计</small><b>{yuan(world.money)}</b></span>
+          <span><small>对面这一季</small><b>{yuan(world.rivalMoney)}</b><em>{scoreWord(world.money, world.rivalMoney)}</em></span>
           <span><small>柜位 / 台账</small><b>{world.standing} / {world.compliance}</b></span>
         </div>
         <section className="report-block">
@@ -629,7 +631,7 @@ export default function WorldGame() {
     <header className="world-bar">
       <div className="world-bar-info">
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
-        <span>{yuan(world.money)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
+        <span>{yuan(world.money)}</span><span className="world-score">{scoreBrief(world.rivalMoney)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
       </div>
       <button className="world-mute" type="button" aria-label={muted ? "开声音" : "静音"} aria-pressed={muted}
         onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "🔇" : "🔊"}</button>

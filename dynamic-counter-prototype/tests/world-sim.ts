@@ -13,7 +13,7 @@ import { rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
 import { threadLandings } from "../src/world/progress.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
-import { INSTANT_KINDS, resolveRequestChoice } from "../src/world/requests.ts";
+import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestChoice, soldUnitsKey } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
 import { PRODUCTS, type ProductId } from "../src/campaign.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
@@ -195,6 +195,7 @@ console.log(`== ${N} 个种子 × ${DAYS} 天${SEASON_COUNT > 1 ? ` × ${SEASON_
 
 type Result = {
   style: Style; seed: string; money: number; standing: number; compliance: number;
+  rival: number; rivalWins: number;
   signature: string; ending: string; arcs: Record<PersonId, Record<string, number>>;
 };
 type Flip = { style: Style; seed: string; allyToEnemy: PersonId[]; enemyToAlly: PersonId[] };
@@ -203,6 +204,7 @@ const resultOf = (style: Style, seed: string, w: World): Result => {
   const ending = seasonEnding(w, people);
   return {
     style, seed, money: w.money, standing: w.standing, compliance: w.compliance,
+    rival: w.rivalMoney, rivalWins: w.rivalWins,
     signature: `盟友[${[...s.allies].sort().join(",")}] 仇人[${[...s.enemies].sort().join(",")}]`,
     ending: ending.id, arcs: s.arcs,
   };
@@ -226,6 +228,11 @@ const tallyRequests = (w: World): { tally: Record<RequestState, number>; byKind:
 };
 /** 第 2 季起每季一格：结局与"相对上一季谁倒戈了"。 */
 const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
+/** 每天在柜上开出几件（季内的天号，两季都算）：罗曼的 quota 阶梯按这个分布定。 */
+const dayUnits: Array<{ style: Style; season: number; day: number; units: number }> = [];
+const pushDayUnits = (style: Style, season: number, w: World) => {
+  for (let d = 1; d <= DAYS; d++) dayUnits.push({ style, season, day: d, units: w.qualities[soldUnitsKey(d)] ?? 0 });
+};
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
@@ -234,6 +241,7 @@ for (const style of STYLES) {
     reqTallies.push({ style, ...tallyRequests(w) });
     let s = seasonSummary(w, people);
     results.push(resultOf(style, seed, w));
+    pushDayUnits(style, 1, w);
     for (let k = 2; k <= SEASON_COUNT; k++) {
       w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed));
       exTallies.push({ style, tally: exchangeTally(w) });
@@ -241,6 +249,7 @@ for (const style of STYLES) {
       const next = seasonSummary(w, people);
       const bag = (later[k - 2] ??= { season: k, results: [], flips: [] });
       bag.results.push(resultOf(style, seed, w));
+      pushDayUnits(style, k, w);
       bag.flips.push({
         style, seed,
         allyToEnemy: s.allies.filter(id => next.enemies.includes(id)),
@@ -261,6 +270,49 @@ for (const style of STYLES) {
   const rs = results.filter(r => r.style === style);
   const signatures = new Set(rs.map(r => r.signature));
   console.log(`${style.padEnd(9)} ${String(signatures.size).padStart(4)}/${N}    ${dist(rs.map(r => r.money)).padEnd(30)} ${dist(rs.map(r => r.standing)).padEnd(22)} ${dist(rs.map(r => r.compliance))}`);
+}
+
+// 同屏比分（第 1 季）：对面这一季从你手上截走多少。赢面太大说明比分给不出压力，落后太多说明名额分配有问题。
+console.log("\n比分（第 1 季，我 vs 对面维珞）:");
+{
+  const all = results;
+  const ahead = all.filter(r => r.money > r.rival).length;
+  const tie = all.filter(r => r.money === r.rival).length;
+  const behind = all.filter(r => r.money < r.rival).length;
+  console.log(`  全盘 ${ahead} 领先 / ${tie} 打平 / ${behind} 落后（共 ${all.length}）`);
+  for (const style of STYLES) {
+    const rs = results.filter(r => r.style === style);
+    const n = (f: (r: Result) => boolean) => rs.filter(f).length;
+    console.log(`  ${style.padEnd(8)} 对面 ${dist(rs.map(r => r.rival))} · 成交 ${dist(rs.map(r => r.rivalWins))} 单`
+      + ` · 领先 ${n(r => r.money > r.rival)}/打平 ${n(r => r.money === r.rival)}/落后 ${n(r => r.money < r.rival)}`);
+  }
+}
+
+// 每天开出几件：罗曼的 quota 阶梯按这个分布定。
+// 阶梯不改变模拟里的手法（honest 只按她的 maxUnits 开单），所以任一阶梯的达成率能在这里直接算出来 ——
+// 一次跑完把几组候选都摆出来，选中哪组就写回 requests.ts 的常量。
+console.log("\n每天开出几件（quota 阶梯按这个定）:");
+{
+  for (const style of STYLES) {
+    const us = dayUnits.filter(x => x.style === style).map(x => x.units).sort((a, b) => a - b);
+    const q = (p: number) => us[Math.min(us.length - 1, Math.floor(us.length * p))];
+    console.log(`  ${style.padEnd(8)} 中位 ${q(0.5)} · P75 ${q(0.75)} · P90 ${q(0.9)} · 最高 ${us[us.length - 1]} 件/天`);
+  }
+  const ladder = (min: number, step: number, top: number) => (d: number) => Math.min(top, min + Math.floor((d - 1) / step));
+  const rateOf = (t: (d: number) => number, style: Style) => {
+    const us = dayUnits.filter(x => x.style === style);
+    return Math.round(us.filter(x => x.units >= t(x.day)).length * 100 / us.length);
+  };
+  const now = ladder(QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP);
+  console.log(`  现在写死的这组（${QUOTA_MIN}→${QUOTA_TOP} 件，每 ${QUOTA_STEP_DAYS} 天一格）：`
+    + `  ${STYLES.map(s => `${s} ${rateOf(now, s)}%`).join(" · ")}`);
+  // 阶梯不改模拟里的手法（各风格按自己的方针卖货），任一组合的达成率都能在这里直接算完再挑。
+  console.log("  候选（起步件数 → 封顶件数，每 N 天一格）：");
+  for (const min of [2, 3]) for (const step of [28, 14, 10, 5]) for (const top of [min, min + 1, min + 2]) {
+    const t = ladder(min, step, top);
+    console.log(`    ${min}→${top} 件 / 每 ${String(step).padStart(2)} 天  `
+      + STYLES.map(s => `${s} ${String(rateOf(t, s)).padStart(2)}%`).join(" · "));
+  }
 }
 
 const ended = (r: Result, id: PersonId) => (r.arcs[id]?.end ?? 0) >= 1;

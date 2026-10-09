@@ -8,7 +8,8 @@ import {
 } from "../src/world/engine.ts";
 import {
   checkRequest, openDay, resolveRequestChoice, settleRequests, seenKey, soldUnitsKey,
-  QUOTA_MIN, REQUEST_DONE_OPINION, REQUEST_FAIL_OPINION, REQUEST_DECLINE_OPINION,
+  QUOTA_MIN, QUOTA_TOP, QUOTA_STEP_DAYS, QUOTA_MISS_STANDING,
+  REQUEST_DONE_OPINION, REQUEST_FAIL_OPINION, REQUEST_DECLINE_OPINION,
   SAMPLES_UNITS, SAMPLES_OPINION, KEEP_OPINION, KEEP_WARMTH, CLEAN_OPINION, CLEAN_COMPLIANCE,
   QUOTA_STANDING, REBOOK_OPINION, REQUESTS_PER_DAY,
 } from "../src/world/requests.ts";
@@ -60,8 +61,8 @@ test("openDay 确定性：同一种子提出同一批委托", () => {
   assert.equal(serializeWorld(make()), serializeWorld(make()));
 });
 
-test("模板生成条件：罗曼的件数按前几天平均，苏蔓只托她的老客，唐可要有得借", () => {
-  // 只有罗曼在场：只有 quota 可提。第 1 天没历史，按下限开。
+test("模板生成条件：罗曼的件数走固定阶梯，苏蔓只托她的老客，唐可要有得借", () => {
+  // 只有罗曼在场：只有 quota 可提。第 1 天按下限开。
   let w = stage(newWorld("req-q", PEOPLE), ["roman"], "counter");
   let reqs = openDay({ ...w, slot: 0 as Slot }, PEOPLE).requests;
   assert.equal(reqs.length, 1);
@@ -69,11 +70,17 @@ test("模板生成条件：罗曼的件数按前几天平均，苏蔓只托她�
   assert.equal(reqs[0]!.n, QUOTA_MIN);
   assert.equal(reqs[0]!.due, 1, "当天打烊结算");
 
-  // 第 4 天：前三天分别卖出 6、0、9 件 → 平均 5 → 按 5 件开。
-  w = { ...stage(newWorld("req-q", PEOPLE), ["roman"], "counter"), day: 4,
-    qualities: { [soldUnitsKey(1)]: 6, [soldUnitsKey(3)]: 9 } };
-  reqs = openDay({ ...w, slot: 0 as Slot }, PEOPLE).requests;
-  assert.equal(reqs[0]!.n, 5, "(6+0+9)/3 向上取整");
+  // 阶梯看第几天，不看前几天卖了多少：卖得少不会让下一天的数变小，卖得多也不会。
+  const onDay = (day: number, sold: Record<string, number>) => openDay({
+    ...{ ...stage(newWorld("req-q", PEOPLE), ["roman"], "counter"), day, qualities: sold }, slot: 0 as Slot }, PEOPLE).requests[0]!.n;
+  assert.equal(onDay(4, { [soldUnitsKey(1)]: 6, [soldUnitsKey(3)]: 9 }), QUOTA_MIN, "第 4 天还是下限：一天都没开过张也是这个数");
+  assert.equal(onDay(4, {}), QUOTA_MIN, "件数与历史无关：同一天两种历史同一个数");
+  assert.equal(onDay(QUOTA_STEP_DAYS + 1, {}), QUOTA_MIN + 1, "过一格加一件");
+  assert.equal(onDay(1 + (QUOTA_TOP - QUOTA_MIN) * QUOTA_STEP_DAYS, {}), QUOTA_TOP, "爬到顶那天正好封顶");
+  assert.equal(onDay(30, { [soldUnitsKey(29)]: 20 }), QUOTA_TOP, "封顶之后不再往上");
+  // 台阶高度是量出来的（tests/world-sim.ts 的「每天开出几件」）：改这三个数要重跑模拟器再对一遍达成率。
+  assert.deepEqual([QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP], [2, 14, 3],
+    "2 件起步、第 15 天拧到 3 件封顶 —— 再高就是 honest 也做不完，等于没有得赢");
 
   // 苏蔓 + 她的老客梅女士在场：能提 keep；老客不在场就不提。
   w = stage(newWorld("req-k", PEOPLE), ["suman", "mei"], "counter");
@@ -149,10 +156,12 @@ test("quota：卖出件数够就成，不够就失约；做到柜位也认", () 
   assert.ok(w.log.some(l => l.text.includes("做到了")));
 
   w = withReq(stage(newWorld("t", PEOPLE), ["roman"], "counter"), r);
-  w = { ...w, qualities: { [soldUnitsKey(1)]: 2 } };
+  w = { ...w, qualities: { [soldUnitsKey(1)]: 2 }, standing: 50 };
   w = settleRequests(w, PEOPLE);
   assert.equal(stateOf(w), "failed");
   assert.equal(opinionOf(w, "roman"), REQUEST_FAIL_OPINION);
+  assert.equal(w.standing, 50 + QUOTA_MISS_STANDING, "差一件要掉柜位：这条委托从此有得输");
+  assert.ok(w.log.some(l => l.text.includes(String(QUOTA_MISS_STANDING))), "失约那一句要念出扣了几分，不能让人盲选");
   const mem = w.memories.find(m => m.holder === "roman" && m.act === "broke-promise");
   assert.ok(mem && mem.valence === -1 && mem.subject === PLAYER && !mem.heardFrom,
     "失约要留一条能被传出去的负面记忆");

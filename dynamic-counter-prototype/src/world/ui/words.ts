@@ -160,3 +160,17 @@ export const bondWarmWord = (w: number): string => {
   if (w > -60) return "不太对付";
   return "有过节";
 };
+
+const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
+
+/** 同屏比分：这一季我 vs 对面维珞的进账，比的是钱不是人次。
+ *  页顶、打烊、季末三处都读这一句，界面不许各拼一份。 */
+export const scoreWord = (mine: number, hers: number): string => {
+  if (!hers) return "对面一单没开";
+  if (mine > hers) return `比对面多 ${yuan(mine - hers)}`;
+  if (mine < hers) return `落后对面 ${yuan(hers - mine)}`;
+  return "和对面打平";
+};
+
+/** 页顶那一格用的短式：只报对面的账，不带比较句。 */
+export const scoreBrief = (hers: number): string => `对面 ${yuan(hers)}`;

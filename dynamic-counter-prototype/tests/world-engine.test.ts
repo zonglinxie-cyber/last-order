@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
-  evalCond, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld,
+  evalCond, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
   related, resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
 import type { Cond, Effect, Person, Storylet, World } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
 import { PRODUCTS } from "../src/campaign.ts";
+import { PEOPLE as CONTENT_PEOPLE } from "../src/world/content/index.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 const PEOPLE = FIXTURE_PEOPLE;
@@ -332,13 +333,24 @@ test("存档：旧档没有 season 按第 1 季读，乱写拒收", () => {
   assert.equal(parseWorld(JSON.stringify(bad)), null, "season 0 拒收");
   bad.world.season = "two";
   assert.equal(parseWorld(JSON.stringify(bad)), null, "season 不是整数拒收");
+
+  // 比分是后来加的字段：老档缺了按 0 读，不为一个新字段丢整份档；写坏了才拒。
+  const noScore = JSON.parse(serializeWorld(w));
+  delete noScore.world.rivalMoney;
+  delete noScore.world.rivalWins;
+  const revived = parseWorld(JSON.stringify(noScore));
+  assert.equal(revived?.rivalMoney, 0, "旧档没有对面那本账：按她还没开张读");
+  assert.equal(revived?.rivalWins, 0);
+  const badScore = JSON.parse(serializeWorld(w));
+  badScore.world.rivalMoney = "很多";
+  assert.equal(parseWorld(JSON.stringify(badScore)), null, "rivalMoney 不是数就整份拒收");
 });
 
 test("换季：看法往 0 收一半，关系网原样带走，只留大事", () => {
   let w = newWorld("season-turn", PEOPLE);
   w = {
     ...w,
-    day: 28, slot: 3, money: 12_000, standing: 80, compliance: 30,
+    day: 28, slot: 3, money: 12_000, rivalMoney: 9_800, rivalWins: 4, standing: 80, compliance: 30,
     energy: 12, samples: 0, festival: "qixi",
     opinion: { mei: 45, shen: -25, ghost: 60 },
     bonds: { "mei>shen": 12, "peng>zhao": -35, "mei>ghost": 8 },
@@ -367,6 +379,8 @@ test("换季：看法往 0 收一半，关系网原样带走，只留大事", ()
   assert.equal(n.day, 1, "天数回到 1");
   assert.equal(n.slot, 0);
   assert.equal(n.money, 0, "钱清零");
+  assert.equal(n.rivalMoney, 0, "对面那本账一起清零：比分是季内的");
+  assert.equal(n.rivalWins, 0);
   assert.equal(n.energy, 100);
   assert.equal(n.samples, 8);
   assert.equal(n.standing, 65, "柜位往起点收一半：80 → 65");
@@ -464,11 +478,14 @@ test("柜位：人情动作加柜位，一天只算第一次", () => {
   assert.equal(w.standing, start + 1, "同一天再帮另一位，柜位不再涨");
 });
 
-test("柜位：每晚把离起点的差距回落一成", () => {
-  const high = { ...newWorld("standing-drift", PEOPLE), standing: 90 };
-  assert.equal(endDay(high, PEOPLE).standing, 86);
-  const low = { ...newWorld("standing-drift", PEOPLE), standing: 20 };
-  assert.equal(endDay(low, PEOPLE).standing, 23);
+test("柜位：这一季之内不回落，回落只在换季那一次", () => {
+  // 原来每晚收走离起点差距的一成（STANDING_DRIFT_RATE = 0.1）：赢 40 分只稳得住 35，
+  // 输掉的三分三天就自己长回来 —— 玩家感觉不到自己在赢。现在这季之内只有做错事才掉分。
+  const high = { ...newWorld("standing-keep", PEOPLE), standing: 90 };
+  assert.equal(endDay(high, PEOPLE).standing, 90, "过一夜不该把 90 磨成 86");
+  const low = { ...newWorld("standing-keep", PEOPLE), standing: 20 };
+  assert.equal(endDay(low, PEOPLE).standing, 20, "夜里也不白送 3 点");
+  assert.equal(nextSeason(high, PEOPLE).standing, 70, "换季折一半：50 + (90−50)/2，一季只回落这一次");
 });
 
 test("场子不空：每个时段至少两位客人；开局上午沈薇和梅女士在柜台前", () => {
@@ -637,9 +654,35 @@ test("陆遥在时段末带走没顾上的人，她当天不再回来", () => {
       w = beginSlot({ ...w, slot: slot as 0 | 1 | 2 | 3 }, PEOPLE);
       assert.ok(!(gone in w.present), `${gone} 当天被请走，第 ${slot} 时段不该再出现`);
     }
+    // 被截走不是"今天她没来"那么轻：她在那边把单开了，对面这一季的账上多一笔。
+    assert.equal(w.rivalMoney, poachSale(person(gone)).amount, "截走要按她那单的金额入账");
+    assert.equal(w.rivalWins, 1);
     return;
   }
   assert.fail("60 个种子里没有一次抢客，概率常量可能被改坏了");
+});
+
+test("比分：被截走的那位在那边把单开了，对面这一季多一笔账", () => {
+  // 这一条用正式内容里的人：只有她们有诉求表，才谈得上"对面开了多大一单"。
+  const shen = CONTENT_PEOPLE.find(p => p.id === "shen")!;
+  const sale = poachSale(shen);
+  assert.ok(sale.units >= 1 && sale.amount === sale.units * PRODUCTS[sale.product].price,
+    `沈薇有正解、预算够，对面该开得出单（实测 ${sale.units} 件 ¥${sale.amount}）`);
+  // 抢客是概率事件（POACH_CHANCE），换种子试到截走为止。
+  let hit: World | null = null;
+  for (let i = 1; i <= 40 && !hit; i++) {
+    const w = ambient({ ...newWorld(`score-${i}`, CONTENT_PEOPLE),
+      present: { shen: "counter", luyao: "rival" }, opinion: { shen: -10 } }, CONTENT_PEOPLE);
+    if (w.present.shen === "rival") hit = w;
+  }
+  assert.ok(hit, "40 个种子里一次都没截走，概率或在场判定可能被改坏了");
+  assert.equal(hit.rivalWins, 1);
+  assert.equal(hit.rivalMoney, sale.amount, "对面进账 = 她那一单的金额");
+  assert.ok(hit.log.some(l => l.text.includes(`进账 ¥${sale.amount}`)), "截走那一句要当场念出对面进了多少");
+  // skin 是可选的：没有诉求表的人谁也说服不了，对面一单都开不出来（夹具里的何清）。
+  const bare = poachSale(person("he"));
+  assert.equal(bare.units, 0, "没有诉求表的人不该给对面记一笔钱");
+  assert.equal(bare.amount, 0);
 });
 
 test("条件 season：只在某一季之后才成立", () => {
