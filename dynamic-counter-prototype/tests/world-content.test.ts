@@ -6,7 +6,7 @@ import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { STORYLETS } from "../src/world/content/index.ts";
 import { ARC_PEOPLE } from "../src/world/progress.ts";
-import { applyChoice, beginSlot, choiceVisible, drawStorylet, endDay, newWorld, nextSeason } from "../src/world/engine.ts";
+import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, newWorld, nextSeason } from "../src/world/engine.ts";
 import { PLAYER, type Cond, type Effect, type Ref, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
@@ -225,39 +225,99 @@ test("个人线名册双向对得上：卡写的落点都在档案里，档案�
   for (const id of ARC_PEOPLE) assert.ok(ends.has(id), `档案里挂着 ${id} 的个人线，却没有一张卡能落到点上`);
 });
 
+/** 每条个人线在第几季开张（判据同 tests/world-sim.ts：第 1 张卡上那道 season 门槛）。 */
+const lineSeason = (id: string): number => {
+  const openers = STORYLETS.filter(s => s.kind === "arc"
+    && s.when.some(c => "not" in c && (c.not as { quality?: unknown }).quality === `arc:${id}`
+      && (c.not as { gte?: unknown }).gte === 1));
+  return openers.reduce((max, s) => {
+    const gate = s.when.find(c => "season" in c) as { season?: { gte?: number } } | undefined;
+    return Math.max(max, gate?.season?.gte ?? 1);
+  }, 1);
+};
+
 test("梅女士的十分钟：一路给她时间，一季之内必定走到反转和落点", () => {
   // 「人物线太乱、每条线不够完整」的验收方式：不数卡片数，直接拿引擎跑十二副牌。
-  // 抽到自己线上的卡就按指定选项走（那颗按不了退到备选），跑完必须看见 arc:mei:end。
+  // 抽到自己线上的卡按指定选项走（那颗按不了退到备选），跑完必须看见 arc:mei:end。
+  // 柜上抽到的别人的卡也必须落一手：界面上除了「一颗都按不动」以外没有第二条出路（WorldGame 那句
+  // 「先记下这一幕」只在 storyChoices 为空时才出现）。丢着不按是引擎到不了的状态 —— 那张卡的 fired
+  // 永远不写，同一条线的第一章能整季反复占着柜（上一版 11/12 就是这么来的，不是说书人偏心）。
   const route = new Map<string, string[]>([
     ["arc-mei-ten", ["十分钟里只讲一支"]],
     ["arc-mei-late", ["再给她十分钟"]],
     ["arc-mei-form", ["让她自己说完", "把表推回去，不问"]],
     ["arc-mei-end", ["这一支是给她自己的", "这单做完，不问下一次"]],
   ]);
+  const seasonOne = ARC_PEOPLE.filter(id => lineSeason(id) === 1);
 
   let landed = 0;
+  const unfinished: string[] = [];
   for (let i = 0; i < 12; i++) {
     let w = newWorld(`mei-line-${i}`, PEOPLE);
     while (w.day <= SEASON_DAYS) {
       for (let slot = 0; slot < 4; slot++) {
         w = beginSlot({ ...w, slot: slot as 0 | 1 | 2 | 3 }, PEOPLE, festivalsFor(1));
         const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
-        const labels = drawn ? route.get(drawn.storylet.id) : undefined;
-        if (!drawn || !labels) continue;
+        // 「一路给她时间」在真实游戏里不只是等她开口：她站到柜前，你先招呼一句 ——
+        // 那一句花体力，也正是「她明天还来不来」的那一步。完全不招呼的玩家不能当验收基线。
+        if (w.present["mei"] === "counter") w = doVerb(w, PEOPLE, "greet", ["mei"]);
+        if (!drawn) continue;
+        const labels = route.get(drawn.storylet.id) ?? drawn.storylet.choices.map(c => c.label);
         const choice = labels
           .map(label => drawn.storylet.choices.find(c => c.label === label))
-          .find((c): c is Storylet["choices"][number] => !!c && choiceVisible(w, PEOPLE, drawn, c));
+          .find((c): c is Storylet["choices"][number] => !!c && choiceVisible(w, PEOPLE, drawn, c))
+          ?? drawn.storylet.choices.find(c => choiceVisible(w, PEOPLE, drawn, c));
         if (!choice) continue;
         w = applyChoice(w, PEOPLE, drawn, drawn.storylet.choices.indexOf(choice));
       }
       w = endDay(w, PEOPLE);
     }
+    for (const id of seasonOne)
+      if ((w.qualities[`arc:${id}:end`] ?? 0) < 1) unfinished.push(`${id}@种子${i}`);
     if ((w.qualities["arc:mei:end"] ?? 0) >= 1) {
       landed++;
       assert.ok(w.qualities["secret-known:mei"], `种子 ${i}：走到了落点却没揭开那句「明早要见客户」`);
     }
   }
   assert.equal(landed, 12, "十二副牌跑完整季，有种子一次都没能走到梅女士的终点");
+  assert.deepEqual(unfinished, [],
+    `第 1 季挂着的线里有这些没能走完：${unfinished.join("、")}（线数或节奏变了先改 docs/人情场设计.md「一季讲几条线」）`);
+});
+
+test("第 2 季才开的那几条线：连着玩两季，每一条都开得了张、走得到落点", () => {
+  // 「没玩就结束了」不止是第 1 季的事：第 2 季如果只把上一季的人再念一遍，玩家看到的是一层楼在重复。
+  // 这一条把三条新线（尹小姐、段小姐、赵宁）和原有的四条一起钉在第 2 季那张名单上。
+  const later = ARC_PEOPLE.filter(id => lineSeason(id) === 2);
+  assert.deepEqual(later, ["yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan"],
+    "第 2 季开张的线名单变了 —— 改这条之前先改 docs/人情场设计.md「一季讲几条线」");
+
+  const played = (world: World) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        // 每条线都按「玩家顺着她」走：拿第一个看得见的选项，不预设哪条线该被偏爱。
+        const idx = drawn ? drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c)) : -1;
+        if (!drawn || idx < 0) continue;
+        w = applyChoice(w, PEOPLE, drawn, idx);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+
+  let landed = 0;
+  for (let i = 0; i < 6; i++) {
+    let w = played(newWorld(`s2-lines-${i}`, PEOPLE));
+    w = played(nextSeason(w, PEOPLE));
+    assert.equal(w.season, 2, `种子 ${i}：换季没走到第 2 季`);
+    const none = later.filter(id => (w.qualities[`arc:${id}`] ?? 0) < 1);
+    assert.equal(none.length, 0, `种子 ${i}：第 2 季这 ${none.length} 条线一次都没开张（${none.join(", ")}）`);
+    if (later.every(id => (w.qualities[`arc:${id}:end`] ?? 0) >= 1)) landed++;
+  }
+  assert.equal(landed, 6, "六副牌连着跑两季，有种子没把第 2 季那几条线走到落点");
 });
 
 test("故事碎片的槽、占位、落点和关系效果", () => {

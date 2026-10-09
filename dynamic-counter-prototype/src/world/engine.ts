@@ -700,18 +700,42 @@ const isFollowUp = (storylet: Storylet, world: World) =>
     return id !== undefined && (world.qualities[`arc:${id}`] ?? 0) >= 1 && (world.qualities[`arc:${id}:end`] ?? 0) < 1;
   });
 
-/** 这条线的主角此刻就站在柜台前（还没开头的那一张才用它，开了头走续章那一档）。 */
+/** 这条线的主角此刻就站在柜台前，而且这条线还没开头（开了头的走 isDueChapter 那一档）。 */
 const isAtCounter = (storylet: Storylet, world: World) =>
   Object.values(storylet.cast).some(slot =>
     slot.id !== undefined && world.present[slot.id] === "counter" && (world.qualities[`arc:${slot.id}`] ?? 0) < 1);
 
-/** 该讲的那一章：线开过头、还没收尾，而且她这一柜就是为你回来的（站在柜台前）。
- *  每一章末尾都留了一句「明天这个时候再来」，人如约站到柜前，这一柜就先讲她的下一章 ——
- *  这条不等权重。五条线同时挂着续章优先，一季又只有一百来次抽卡，
- *  实测十二副牌里梅女士那条只走得完八副；「每一条线不够完整、没玩就结束了」卡的就是这里。 */
+/** 这一柜该讲的那一章：她已经开了头、还没收尾，而且她这一柜就是为你回来的（站在柜台前）。 */
 const isDueChapter = (storylet: Storylet, world: World) =>
   storylet.kind === "arc" && isFollowUp(storylet, world) &&
   Object.values(storylet.cast).some(slot => slot.id !== undefined && world.present[slot.id] === "counter");
+
+/** 这条线还没开头，她人已经在楼层上：这一柜可以是那条线的第 1 张。
+ *  不等她站到柜前 —— 续章才要「如约站到柜前」，那一句是她答应过的（上一章末尾的 appoint）。
+ *  量过（20 种子 × 2 季 × 4 风格，只认柜前的那一版）：第 1 季九条里掉两条（沈薇 honest 19/20、
+ *  梅女士 social 19/20），第 2 季尹小洁 78/80、段小姐 79/80，honest 比分从 16 领先退回 14。
+ *  倒是赵宁（一天只来午后那一格）72/80 对 75/80 —— 她卡的不是这道门，别把她的账记在这条上。 */
+const isOpeningChapter = (storylet: Storylet, world: World) =>
+  storylet.kind === "arc" && Object.values(storylet.cast).some(slot => {
+    const id = slot.id;
+    return id !== undefined && world.present[id] !== undefined && (world.qualities[`arc:${id}`] ?? 0) < 1;
+  });
+
+/** 这一柜的那一章：她已经开了头、还没收尾，而且她这一柜就是为你回来的（站在柜台前）；
+ *  或者这条线还没开头，她人已经在楼层上。两处让路，都量在同一套验收牌上（十二副 / 三十六副，
+ *  每张抽出来的卡都落一手，判据见 tests/world-content.test.ts「梅女士的十分钟」）：
+ *  1) 当天已经讲过一章以后，第二格先给还没开头的线。十二副验收牌上只给续章开门：
+ *     梅女士 11/12、米朵 11/12（108 个落点只到 106）；开了开头这一档以后 108/108，三十六副 324/324。
+ *  2) 等开头的先叫站在柜前那一位（atDesk 收窄）。同一套牌不收窄（整层楼都在这一档里）实测 323/324：
+ *     米朵有一副整季没开张。收窄以后 324/324。她线一开头就退出这一档（isAtCounter 认 arc:<id> 未置起来），
+ *     所以收窄不会把续章挤到身后。 */
+const pickDue = (eligible: Array<{ storylet: Storylet; binding: Binding }>, world: World, toldToday: number) => {
+  const pending = eligible.filter(e => isDueChapter(e.storylet, world));
+  const opening = eligible.filter(e => isOpeningChapter(e.storylet, world));
+  const atDesk = opening.filter(e => isAtCounter(e.storylet, world));
+  const door = atDesk.length ? atDesk : opening;
+  return door.length > 0 && (!pending.length || toldToday >= 1) ? door : pending;
+};
 
 const storyWeight = (storylet: Storylet, heat: number, world: World): number => {
   let w = Math.max(0, storylet.weight) * (SPINE_KINDS.includes(storylet.kind) ? ARC_WEIGHT_MULT : 1);
@@ -735,9 +759,9 @@ export function drawStorylet(world: World, people: Person[], storylets: Storylet
     if (!binding) continue;
     eligible.push({ storylet, binding, weight: storyWeight(storylet, heat, w) });
   }
-  // 有人如约站到柜前、她的线还挂着没收尾 —— 这一柜就是她的，只从这些里挑（一天最多两章）。
+  // 有人如约站到柜前 —— 这一柜先从这些里挑（一天最多 ARC_CHAPTERS_PER_DAY 章，见 pickDue）。
   const toldToday = storylets.reduce((n, s) => n + (s.kind === "arc" && w.fired[s.id] === w.day ? 1 : 0), 0);
-  const due = toldToday >= ARC_CHAPTERS_PER_DAY ? [] : eligible.filter(e => isDueChapter(e.storylet, w));
+  const due = toldToday >= ARC_CHAPTERS_PER_DAY ? [] as typeof eligible : pickDue(eligible, w, toldToday);
   const i = drawWeighted(w.seed, w.rngCalls, due.length ? due.map(() => 1) : eligible.map(e => e.weight));
   w = { ...w, rngCalls: w.rngCalls + 1 };
   if (i < 0) return { world: w, drawn: null };

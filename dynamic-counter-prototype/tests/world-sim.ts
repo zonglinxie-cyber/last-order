@@ -11,7 +11,7 @@ import {
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
-import { threadLandings } from "../src/world/progress.ts";
+import { ARC_PEOPLE, threadLandings } from "../src/world/progress.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
 import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestChoice, soldUnitsKey } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
@@ -188,6 +188,24 @@ const dist = (xs: number[]) =>
   `min ${Math.min(...xs)} / med ${median(xs)} / max ${Math.max(...xs)}`;
 
 const { people, storylets, festivalsFor, source } = await loadContent();
+/** 每条个人线在第几季开张：看它第 1 张卡（写着 { not: { quality: "arc:<她>", gte: 1 } } 的那张）上的 season 门槛。
+ *  下面的两张名单都从这里推，不再手写 id —— 上一版把梅女士漏在第 1 季那张表外面，第 2 季那张表只挂着四条线。
+ *  取最大的那一档：线上的第 2、3 张也写着「她还没开张」（挡重头），它们不带 season，默认成第 1 季会把整条线错归到第 1 季。 */
+const lineSeason = new Map<PersonId, number>();
+for (const card of storylets) {
+  if (card.kind !== "arc") continue;
+  for (const c of card.when) {
+    if (!("not" in c)) continue;
+    const inner = c.not as { quality?: unknown; gte?: unknown };
+    if (typeof inner.quality !== "string" || inner.gte !== 1) continue;
+    const opened = /^arc:([^:]+)$/.exec(inner.quality);
+    if (!opened) continue;
+    const gate = card.when.find(w => "season" in w) as { season?: { gte?: number } } | undefined;
+    const id = opened[1] as PersonId;
+    lineSeason.set(id, Math.max(lineSeason.get(id) ?? 1, gate?.season?.gte ?? 1));
+  }
+}
+const linesOf = (season: number) => ARC_PEOPLE.filter(id => (lineSeason.get(id) ?? season) === season);
 const N = Math.max(1, Number(process.argv[2]) || 16);
 const SEASON_COUNT = Math.max(1, Number(process.argv[3]) || 1);
 console.log(`== 人情场模拟 · 内容来源 ${source} · ${people.length} 人 · ${storylets.length} 张卡 ==`);
@@ -329,7 +347,7 @@ for (const style of STYLES) {
 }
 
 console.log("\n个人线走到终点（end≥1）:");
-for (const id of ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo"] as const) {
+for (const id of linesOf(1)) {
   const bits = STYLES.map(style => {
     const rs = results.filter(r => r.style === style);
     const n = rs.filter(r => ended(r, id)).length;
@@ -438,7 +456,7 @@ for (const { season, results: rs2, flips } of later) {
     console.log(`  ${style.padEnd(8)} 盟友→仇人 ${tally("allyToEnemy")} · 仇人→盟友 ${tally("enemyToAlly")}`);
   }
   console.log("个人线走到终点（end≥1）:");
-  for (const id of ["tangke", "roman", "fangmin", "qiaowan"] as const) {
+  for (const id of linesOf(season)) {
     const bits = STYLES.map(style => {
       const rs = rs2.filter(r => r.style === style);
       const n = rs.filter(r => (r.arcs[id]?.end ?? 0) >= 1).length;

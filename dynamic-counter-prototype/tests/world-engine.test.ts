@@ -171,25 +171,45 @@ const crowd = (n: number): Storylet[] => Array.from({ length: n }, (_, i) => ({
   choices: [{ label: "过去招呼", effects: [{ opinion: "$a", delta: 1 }], result: "{$a}点了点头。" }],
 }) as Storylet);
 
-test("说书人续章优先：线开过头以后，钉着她的下一张比第一章更容易被讲到", () => {
-  // 这一档治的是「没玩就结束了」：第一章抽到以后，第二章又掉回两百张牌里，
-  // 实测十二副牌里只有两副走得完一条线。陪衬牌固定 140 权重，只换她那一张的进度。
-  const deck = (chapter: Storylet) => [chapter, ...crowd(7)];
-  const rate = (seed: string, chapter: Storylet, qualities: Record<string, number>) => {
+/** 造一张钉死某个人的个人线卡：when 决定它在线上的哪一节才合法。 */
+const lineChapter = (id: string, person: Person["id"], when: Cond[]): Storylet => ({
+  id, kind: "arc", tension: 0, weight: 4, once: true,
+  cast: { m: { id: person, where: [] } }, when,
+  text: "{$m}在柜台前站住。",
+  choices: [{ label: "听她说", effects: [{ opinion: "$m", delta: 1 }], result: "{$m}说完了。" }],
+});
+
+test("说书人的两扇门：没有待续的章时第一章也必定讲到；柜前挂着别人的续章时第一章让位", () => {
+  // 这一档治的是「没玩就结束了」。旧规矩只给续章开门，实测十二条线一起挂时，
+  // 十二副牌里有两副整季抽不到梅女士的第 1 张 —— 第一章永远埋在两百张牌里，线根本没开始过。
+  const crowd7 = crowd(7);
+  const rate = (seed: string, cards: Storylet[], target: string, present: Record<string, Zone>, qualities: Record<string, number>) => {
     let hits = 0;
     for (let i = 0; i < 120; i++) {
-      const w = { ...stage(newWorld(`${seed}-${i}`, PEOPLE), ["mei", "shen"]), qualities };
-      if (drawStorylet(w, PEOPLE, deck(chapter)).drawn?.storylet.id === chapter.id) hits++;
+      const w = { ...newWorld(`${seed}-${i}`, PEOPLE), present, qualities };
+      if (drawStorylet(w, PEOPLE, [...cards, ...crowd7]).drawn?.storylet.id === target) hits++;
     }
     return hits;
   };
-  const first = rate("first", meiChapter("ch-first", []), {});
-  const next = rate("next", meiChapter("ch-next", [{ quality: "arc:mei", gte: 1 }]), { "arc:mei": 1 });
-  assert.ok(next >= first * 3, `开了头的线（${next}/120）没有比没开（${first}/120）明显更该被讲`);
+  const onFloor: Record<string, Zone> = { mei: "atrium", shen: "atrium" };
+  const meiFirst = meiChapter("ch-first", []);
+  const shenDue = lineChapter("shen-next", "shen", [{ quality: "arc:shen", gte: 1 }]);
 
-  // 走到终点的不再抬：落点以后这条线不该再来占牌堆
-  const done = rate("done", meiChapter("ch-done", [{ quality: "arc:mei", gte: 1 }]), { "arc:mei": 3, "arc:mei:end": 2 });
-  assert.ok(done <= first + 4, `线已经收场（${done}/120），续章还压在第一章之上`);
+  // 门一：这一柜没有待续的章，她在楼层上、线还没开头 —— 第一章不再跟陪衬牌抢权重。
+  const first = rate("door1", [meiFirst], "ch-first", onFloor, {});
+  assert.equal(first, 120, "没有待续的章时，她的第一章该每一柜都讲到");
+
+  // 门二：沈薇开了头、这一柜就是她回来的 —— 先讲她的下一章，梅女士的第一章退回按权重抽。
+  const atDesk = { ...onFloor, shen: "counter" as Zone };
+  assert.equal(rate("door2", [meiFirst, shenDue], "shen-next", atDesk, { "arc:shen": 1 }), 120,
+    "她如约站到柜前，续章该压过还没开头的第一章");
+  const crowded = rate("door2b", [meiFirst, shenDue], "ch-first", atDesk, { "arc:shen": 1 });
+  assert.ok(crowded <= 40, `柜前挂着别人的续章时，第一章占了 ${crowded}/120，把续章挤掉了`);
+
+  // 开过头、还没收尾的比已经收场的更该被讲到（这一条没变：收场以后不再抬）。
+  const next = rate("next", [meiChapter("ch-next", [{ quality: "arc:mei", gte: 1 }])], "ch-next", onFloor, { "arc:mei": 1 });
+  const done = rate("done", [meiChapter("ch-done", [{ quality: "arc:mei", gte: 1 }])], "ch-done", onFloor, { "arc:mei": 3, "arc:mei:end": 2 });
+  assert.ok(next > done, `线已经收场（${done}/120），续章还压在没收尾的那张之上（${next}/120）`);
 });
 
 test("说书人如约开章：她站到柜前、这条线还挂着，这一柜必定讲到她的下一章", () => {
