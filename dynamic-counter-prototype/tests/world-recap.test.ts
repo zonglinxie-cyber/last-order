@@ -231,3 +231,32 @@ test("parseWorld：快照字段有就校验，没有按空读，坏了整份丢"
   badStats2.world.statsAtSeasonStart = { standing: "高", compliance: 55 };
   assert.equal(parseWorld(badStats2), null);
 });
+
+// —— 季末回顾的「本子」那一块 ——
+
+test("本子：幕一开过就把那条悬念挂上回顾页，一条线索都没攒也念得出问话", () => {
+  const r = seasonRecap(recapWorld({ qualities: { "mainline:act": 1 } }), FIXTURE_PEOPLE, []);
+  assert.equal(r.threads.length, 1);
+  const t = r.threads[0];
+  assert.equal(t.landing, 0);
+  assert.equal(t.name, "那张退货单");
+  assert.match(t.question, /退的不是她/);
+  assert.deepEqual(t.held, []);
+  // 幕号还没开：这一页不该凭空冒出主线
+  assert.deepEqual(seasonRecap(recapWorld({}), FIXTURE_PEOPLE, []).threads, []);
+});
+
+test("本子：攒到的线索按学到的先后排，拧过来的那一档认得出收法名字", () => {
+  const storylets: Storylet[] = [{
+    id: "turn", kind: "mainline", tension: 0, weight: 1, once: true,
+    cast: { a: { id: "mei", where: [] } }, when: [], text: "x",
+    choices: [{ label: "把日期、笔迹和你自己那句一起交出去", effects: [{ quality: "thread:return-slip", set: 1 }], result: "y" }],
+  }];
+  const r = seasonRecap(recapWorld({
+    qualities: { "mainline:act": 2, "clue:slip-borrowed": 9, "clue:slip-hand": 4, "thread:return-slip": 1 },
+  }), FIXTURE_PEOPLE, storylets);
+  const t = r.threads[0];
+  assert.deepEqual(t.held, ["slip-hand", "slip-borrowed"]);
+  assert.equal(t.landing, 1);
+  assert.equal(t.title, "把日期、笔迹和你自己那句一起交出去");
+});

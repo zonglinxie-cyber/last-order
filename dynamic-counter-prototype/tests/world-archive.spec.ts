@@ -9,13 +9,16 @@ import type { World } from "../src/world/types.ts";
 // 断言还是那一套：正文 ≥12px、按钮 ≥44px、390×844 与 320×568 都不横向溢出。
 
 // 手工累积两份世界读数：先把沈薇、梅女士见过（最好那一档），再把沈薇压到最差那一档，
-// 顺带揭开沈薇秘密、让她的线落到第 1 档，收一次场。
+// 顺带揭开沈薇秘密、让她的线落到第 1 档、本子上攒两条线索并把那条线拧到第 2 种收法，收一次场。
 const seededProgress = (): string => {
   const w1: World = {
     ...newWorld("a", PEOPLE),
     present: { shen: "counter", mei: "entrance" },
     opinion: { shen: 65, mei: 20 },
-    qualities: { "secret-known:shen": 1, "arc:shen:end": 1, "arc:shen": 3 },
+    qualities: {
+      "secret-known:shen": 1, "arc:shen:end": 1, "arc:shen": 3,
+      "clue:slip-hand": 4, "clue:slip-borrowed": 9, "thread:return-slip": 2,
+    },
   };
   const w2: World = { ...newWorld("b", PEOPLE), opinion: { shen: -10 } };
   let p = observeWorldProgress(emptyWorldProgress(), w1);
@@ -80,6 +83,22 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         await expect(arc.locator(".wa-arc-row")).toHaveCount(4);
         await expect(arc.locator(".wa-arc-row b").first()).toHaveText("？？？");
       }
+    });
+
+    test("本子：攒到的线索念得出，没攒到的压成？？？，拧过的收法亮起", async ({ page }) => {
+      await page.getByRole("button", { name: "本子" }).click();
+      await expect(page.getByText("本子上攒了 2 / 4 条")).toBeVisible();
+      const book = page.locator(".wa-arc").first();
+      // 那条线抛给玩家的问话，没弄清也照样挂在页上（跨季的钩子）
+      await expect(book.getByText("单子上写的是沈薇，退的不是她。那是谁？")).toBeVisible();
+      await expect(book.locator(".wa-arc-row.lit")).toHaveCount(3); // 两条线索 + 一种收法
+      await expect(book.locator(".wa-arc-row:not(.lit) b")).not.toHaveCount(0);
+      await expect(book.locator(".wa-arc-row.lit b").first()).toHaveText("退货单上的日期比她那一单晚三天。那三天她没上过这层楼。");
+      await expect(book.locator(".wa-arc-row.lit", { hasText: "只说名字是从群里借的" })).toBeVisible();
+      // 没弄清的每一条都压成？？？：档案不许把结论替玩家说出来
+      const dimmed = await book.locator(".wa-arc-row:not(.lit) b").allTextContents();
+      expect(dimmed.length).toBeGreaterThan(0);
+      expect(dimmed.every(t => t === "？？？")).toBe(true);
     });
 
     test("结局：按 rank 排好，拿到的认标题、没拿到的只给不剧透提示", async ({ page }) => {
