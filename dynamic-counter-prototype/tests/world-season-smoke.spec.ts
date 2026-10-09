@@ -18,7 +18,10 @@ const AUDIT_DIR = "../audit/world-smoke";
 const SEED = 20261009;
 const FIXED_NOW = 1_800_000_000_000;
 const STEP_MS = 5_000; // 单步超过 5 秒算卡死
-/** 读一句在场的话：textContent 会等元素挂上来，不封顶就是整个 actionTimeout（实测 5002ms），一步的预算全吃在这。 */
+/**
+ * 读一句在场的话：textContent 会等元素挂上来，不封顶就是整个 actionTimeout（实测 5002ms），一步的预算全吃在这。
+ * 反证过：把 READ_MS 抬到 5000 只有 know 那条路在第 12 天踩到（skip 那条仍 1 passed，3.0m）。
+ */
 const READ_MS = 400;
 const SEASON_DAYS = 28;
 const S2_DAYS = 3; // 进第 2 季后再玩三天
