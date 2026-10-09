@@ -627,3 +627,96 @@ test("主线整段只演一次，而且第 2 季还有新的一幕可演", () =>
     assert.ok(fresh.length >= 1, `种子 ${seed}：第 2 季主线一张新卡都没有（第 1 季演过 ${s1.length} 张，第 2 季只剩重演）`);
   }
 });
+
+test("第 4 季才开的那两条线和那一句主线的话：连着玩四季，前三季一张都抽不到", () => {
+  // 内容燃烧曲线量到的是「半池 29 天 / 八成 60 天」，第 4 季（第 85~112 天）原本一张新个人线、
+  // 一张主线卡都没有 —— 愿意连玩四季的人只在循环过路社交。这一条把裴岚、梁夏钉在第 4 季那张名单上，
+  // 并且钉住「第 4 季主线还有一句话要说」：main-a4-page 是那一季唯一的主线卡。
+  const fourth = ARC_PEOPLE.filter(id => lineSeason(id) === 4);
+  assert.deepEqual(fourth, ["peilan", "liangxia"],
+    "第 4 季开张的线名单变了 —— 改这条之前先改 docs/人情场设计.md「一季讲几条线」");
+
+  const played = (world: World, mainline: string[]) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        if (drawn && drawn.storylet.kind === "mainline") mainline.push(drawn.storylet.id);
+        const idx = drawn ? drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c)) : -1;
+        if (!drawn || idx < 0) continue;
+        w = applyChoice(w, PEOPLE, drawn, idx);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+
+  for (let i = 0; i < 6; i++) {
+    // played() 一跑就是一整季（while 到 day > 28 就收），所以每一季都得先 nextSeason 再玩 —— 判据同第 3 季那一条。
+    const notOpenYet = (w: World, season: number) => { for (const id of fourth)
+      assert.equal(w.qualities[`arc:${id}`] ?? 0, 0, `种子 ${i}：${id} 的线在第 ${season} 季就开张了，season gte 4 那道门槛没生效`); };
+    let w = played(newWorld(`s4-lines-${i}`, PEOPLE), []);
+    notOpenYet(w, 1);
+    w = played(nextSeason(w, PEOPLE), []);
+    notOpenYet(w, 2);
+    w = played(nextSeason(w, PEOPLE), []);
+    notOpenYet(w, 3);
+    const mainS4: string[] = [];
+    const end = played(nextSeason(w, PEOPLE), mainS4);
+    assert.equal(end.season, 4, `种子 ${i}：连着玩四季没走到第 4 季`);
+    const none = fourth.filter(id => (end.qualities[`arc:${id}`] ?? 0) < 1);
+    assert.equal(none.length, 0, `种子 ${i}：第 4 季这 ${none.length} 条线一次都没开张（${none.join(", ")}）`);
+    const landed = fourth.filter(id => (end.qualities[`arc:${id}:end`] ?? 0) < 1);
+    assert.equal(landed.length, 0, `种子 ${i}：第 4 季这两条线走到了开头却没落到终点（${landed.join(", ")}）—— 四张卡里有一张在季节内接不上`);
+    // 第 4 季的主线那句话要说出来：这张卡是那一季唯一的主线卡，也是「第 2 幕空了一整季」那个毛病不许复发的判据。
+    assert.ok(mainS4.includes("main-a4-page"), `种子 ${i}：第 4 季主线一张卡都没抽到（抽到的主线卡：${mainS4.join(", ") || "无"}）`);
+  }
+});
+
+test("第 4 季那两条线的分支门：只认换季带得下来的东西", () => {
+  // 判据同第 3 季那一条：裴岚的反转读主线的本子（clue: 前缀过季带着走）和她自己那条记忆（±2 才留得住），
+  // 梁夏的反转读苏蔓的秘密（secret-known:）和第 1 季那场婚礼的落点（arc:）。
+  // 门槛写歪成读不带着走的东西，第 4 季永远看不见那张卡，而单季内测全是绿的。
+  const who = STORYLETS.find(s => s.id === "arc-pl-who")!;
+  const drawnWho = { storylet: who, binding: { a: "peilan" } };
+  const labelHeld = "那一页是你自己按住的";
+  const withClue: World = { ...newWorld("pl-who", PEOPLE), qualities: { "arc:peilan": 1, "clue:slip-gap": 1 } };
+  const withoutClue: World = { ...withClue, qualities: { "arc:peilan": 1 } };
+  assert.equal(who.choices.filter(c => c.label === labelHeld && choiceVisible(withClue, PEOPLE, drawnWho, c)).length, 1,
+    "本子上有「方敏按住了领用表那一行」，这一格就该露出来");
+  assert.equal(who.choices.filter(c => c.label === labelHeld && choiceVisible(withoutClue, PEOPLE, drawnWho, c)).length, 0,
+    "本子上没有那条线索，反转不能凭空掉下来");
+
+  const page = STORYLETS.find(s => s.id === "main-a4-page")!;
+  const drawnPage = { storylet: page, binding: { a: "fangmin" } };
+  const labelQuarter = "问那一页每季是谁要的";
+  for (const qualities of [{ "mainline:act": 2, "clue:slip-roster": 1 }, { "mainline:act": 2, "arc:peilan": 1 }] as Array<Record<string, number>>) {
+    const w: World = { ...newWorld("a4-page", PEOPLE), season: 4, day: 6, qualities };
+    assert.equal(page.choices.filter(c => c.label === labelQuarter && choiceVisible(w, PEOPLE, drawnPage, c)).length, 1,
+      `${JSON.stringify(qualities)}：第 4 季那句「是谁每季都要那一页」该露出来`);
+  }
+  const bare: World = { ...newWorld("a4-page", PEOPLE), season: 4, day: 6, qualities: { "mainline:act": 2 } };
+  assert.equal(page.choices.filter(c => c.label === labelQuarter && choiceVisible(bare, PEOPLE, drawnPage, c)).length, 0,
+    "既没摸到第 3 幕那条线索、也没跟裴岚谈过表，就不许直接报出工号");
+
+  const set = STORYLETS.find(s => s.id === "arc-lx-set")!;
+  const drawnSet = { storylet: set, binding: { a: "liangxia" } };
+  const labelKept = "这套图你一直留着";
+  const withSecret: World = { ...newWorld("lx-set", PEOPLE), qualities: { "arc:liangxia": 1, "secret-known:suman": 1 } };
+  const withoutSecret: World = { ...withSecret, qualities: { "arc:liangxia": 1 } };
+  assert.equal(set.choices.filter(c => c.label === labelKept && choiceVisible(withSecret, PEOPLE, drawnSet, c)).length, 1,
+    "知道苏蔓那句「别让梁夏上镜」，才问得出这套原图是谁按的");
+  assert.equal(set.choices.filter(c => c.label === labelKept && choiceVisible(withoutSecret, PEOPLE, drawnSet, c)).length, 0,
+    "那句秘密没听过，反转不能凭空掉下来");
+
+  // 过季带得下来的那一档：这些分支门认的记忆必须钉在 ±2 —— 换季筛记忆留的就是这一档。
+  for (const [cardId, act] of [["arc-pl-end", "quarter-held-known"], ["arc-pl-end", "quarter-list-named"],
+    ["arc-lx-end", "camera-base-natural"], ["arc-lx-end", "camera-set-kept"]] as const) {
+    const writer = STORYLETS.find(s => s.choices.some(c => c.effects.some(e => "remember" in e && e.remember.act === act)))!;
+    const effect = writer.choices.flatMap(c => c.effects).find(e => "remember" in e && e.remember.act === act)!;
+    assert.equal(Math.abs((effect as { remember: { valence: number } }).remember.valence), 2,
+      `${cardId} 的分支门认 ${act}，可写它的那张卡挂在 ${writer.id} 的 valence 不是 ±2 —— 过不了季，第 4 季那一格永远按不出来`);
+  }
+});

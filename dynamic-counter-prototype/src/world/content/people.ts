@@ -462,7 +462,9 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "她要的是上班八小时，不是再上一支厚的" },
       budget: 2200, maxUnits: 2,
     },
-    visits: { days: [6, 7], slots: [1, 2], chance: 0.5, fromDay: 10 },
+    // 第 4 季她自己接跟妆的活，来得更早也更勤。原来的 days[6,7]×slots[1,2]×0.5、fromDay 10 只有 6.0 格在场期望，
+    // 低于 tests/world-content.test.ts 给个人线开头卡钉的下限 8 —— 线会整季开不了张。改到 11.2 格（赵宁 8.8、段小姐 12 同一档）。
+    visits: { days: [6, 7], slots: [1, 2], chance: 0.7, fromDay: 3 },
     voice: {
       greet: "先把手机放下。我今天不是来被拍的。",
       pleased: "灯你偏开了。我把八小时说完。",

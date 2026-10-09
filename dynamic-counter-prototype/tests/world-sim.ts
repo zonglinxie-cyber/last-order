@@ -134,7 +134,12 @@ const endCardOf = (s: Storylet): PersonId | null => {
 /** 内容燃烧曲线：一个种子从第 1 季到最后一季连着算，天数是跨季累计的绝对天。
     第一次见到的卡算"新内容"，之后每次抽到已经见过的卡算重复 —— 曲线见底的绝对天
     就是"没玩就结束了"那个体感的天数。 */
-type RunBurn = { firstDay: Map<string, number>; draws: number; repeats: number; perSeason: Array<{ season: number; draws: number; repeats: number }> };
+type SeasonBurn = {
+  season: number; draws: number; repeats: number;
+  /** 这一季抽到的故事卡（个人线 + 主线）次数，和第一次抽到的张数 —— 「这一季到底有没有新剧情」看这两列 */
+  story: number; arcFirst: Set<string>; mainFirst: Set<string>;
+};
+type RunBurn = { firstDay: Map<string, number>; draws: number; repeats: number; perSeason: SeasonBurn[] };
 const runBurn = new Map<string, RunBurn>();
 const burnOf = (style: Style, seed: string): RunBurn => {
   const key = `${style}|${seed}`;
@@ -144,7 +149,7 @@ const burnOf = (style: Style, seed: string): RunBurn => {
 };
 
 function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn): World {
-  const seasonTally = { season: seasonNo, draws: 0, repeats: 0 };
+  const seasonTally: SeasonBurn = { season: seasonNo, draws: 0, repeats: 0, story: 0, arcFirst: new Set(), mainFirst: new Set() };
   burn.perSeason.push(seasonTally);
   while (w.day <= DAYS) {
     for (let s = 0; s < 4; s++) {
@@ -155,7 +160,12 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
       w = w2;
       if (drawn) {
         const absDay = (seasonNo - 1) * DAYS + w.day;
-        if (burn.firstDay.has(drawn.storylet.id)) { burn.repeats++; seasonTally.repeats++; } else burn.firstDay.set(drawn.storylet.id, absDay);
+        const isNew = !burn.firstDay.has(drawn.storylet.id);
+        if (isNew) burn.firstDay.set(drawn.storylet.id, absDay); else { burn.repeats++; seasonTally.repeats++; }
+        if (drawn.storylet.kind === "arc" || drawn.storylet.kind === "mainline") {
+          seasonTally.story++;
+          if (isNew) (drawn.storylet.kind === "arc" ? seasonTally.arcFirst : seasonTally.mainFirst).add(drawn.storylet.id);
+        }
         burn.draws++; seasonTally.draws++;
         const counts = fireCount.get(style) ?? new Map<string, number>();
         counts.set(drawn.storylet.id, (counts.get(drawn.storylet.id) ?? 0) + 1);
@@ -369,6 +379,12 @@ for (const style of STYLES) {
   console.log(`  ${style.padEnd(8)} ${line}`);
 }
 
+/** 落点分布从读数里现推，不写死 1~4：梁夏那条有六档，第 5、6 档以前折在表外，只能拿 160 去减。 */
+const endTally = (rows: Result[], id: string): string => {
+  const seen = [...new Set(rows.map(r => r.arcs[id]?.end ?? 0))].filter(n => n >= 1).sort((a, b) => a - b);
+  return seen.map(n => `end=${n} ${rows.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+};
+
 console.log("\n个人线走到终点（end≥1）:");
 for (const id of linesOf(1)) {
   const bits = STYLES.map(style => {
@@ -376,7 +392,7 @@ for (const id of linesOf(1)) {
     const n = rs.filter(r => ended(r, id)).length;
     return `${style} ${n}/${N}`;
   });
-  const ends = [1, 2, 3, 4].map(n => `end=${n} ${results.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+  const ends = endTally(results, id);
   console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · ${ends}`);
 }
 
@@ -486,7 +502,7 @@ for (const { season, results: rs2, flips } of later) {
       return `${style} ${n}/${N}`;
     });
     const all = rs2.filter(r => (r.arcs[id]?.end ?? 0) >= 1).length;
-    const ends = [1, 2, 3, 4].map(n => `end=${n} ${rs2.filter(r => r.arcs[id]?.end === n).length}`).join(" ");
+    const ends = endTally(rs2, id);
     console.log(`  ${id.padEnd(8)} ${bits.join(" · ")} · 合计 ${all}/${rs2.length} · ${ends}`);
   }
   // 这三个 id 是第 2 季才有的结局（ENDINGS 表里没有季号字段，只能这么点名）；
@@ -509,6 +525,21 @@ for (const id of ARC_PEOPLE) {
   const cells = Array.from({ length: ex.slots }, (_, i) => `#${i + 1} ${Math.round(((ex.perIndex[i] ?? 0) / ex.seen) * 100)}%`).join(" · ");
   console.log(`  ${id.padEnd(11)} ${String(ex.seen).padStart(4)}   ${String(median(ex.vis)).padStart(4)} 格  ` +
     `${String(Math.round((ex.onlyDefault / ex.seen) * 100)).padStart(4)}%    ${cells}`);
+}
+
+// 燃烧曲线看不出"这一季有没有剧情" —— 它数的是所有卡，而且见底那一列被窗口末尾夹住了（四季跑满永远是 112）。
+// 这张表按 kind 只数个人线与主线，某一季中位新演 0 张就是那一季空着（第 4 季曾经整季只有过场）。
+console.log(`\n每季的故事卡（个人线 + 主线；"新演" = 这副牌里第一次抽到它。各列取 ${runBurn.size} 副牌的中位）:`);
+console.log("季   天数区间    抽到故事卡   新演   其中个人线  其中主线   故事卡占本季抽牌");
+for (let season = 1; season <= SEASON_COUNT; season++) {
+  const rows = [...runBurn.values()].map(b => b.perSeason.find(p => p.season === season)).filter((p): p is SeasonBurn => !!p);
+  if (!rows.length) continue;
+  const med = (f: (p: SeasonBurn) => number) => median(rows.map(f));
+  const story = med(p => p.story), fresh = med(p => p.arcFirst.size + p.mainFirst.size);
+  console.log(` ${String(season).padStart(2)}  ${String((season - 1) * DAYS + 1).padStart(3)}~${String(season * DAYS).padEnd(4)}  ` +
+    `${String(story).padStart(7)} 次  ${String(fresh).padStart(4)} 张  ${String(med(p => p.arcFirst.size)).padStart(7)} 张` +
+    `  ${String(med(p => p.mainFirst.size)).padStart(6)} 张      ${Math.round((story / Math.max(1, med(p => p.draws))) * 100)}%` +
+    (fresh === 0 ? "   ← 这一季一张新剧情都没有，只剩过场在重演" : ""));
 }
 
 console.log(`\n内容燃烧曲线（${SEASON_COUNT} 季 × ${DAYS} 天 = ${SEASON_COUNT * DAYS} 天，跨季连着算）:`);

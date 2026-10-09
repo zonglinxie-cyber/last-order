@@ -1,6 +1,7 @@
 // 主线第 1 幕「一张署了别人名字的单子」→ 第 2 幕「名字在谁手里」→ 第 3 幕「那一行是谁的手写的」。
 // 第 3 幕只在第 3 季以后开（幕号抬到 3 就锁死第 2 幕那三张收法，所以开头那张压到第 10 天）；
-// 第 2 季那一段由 main-a2-* 三张接着演 —— 它们不抬幕号，只把第 3 幕要用的线索提前摆上本子。
+// 第 2 季那一段由 main-a2-* 三张接着演 —— 它们不抬幕号，只把第 3 幕要用的线索提前摆上本子；
+// 第 4 季那一段由 main-a4-page 一张收：第 3 幕说完「那一行是谁的手写的」，它问「是谁每季都要那一页」。
 // 悬念用的是人物圣经里已经埋下的四条秘密（沈薇的退货单、宋姐群里借出去的名字、
 // 尹小姐包带里的录音笔、方敏按住不念的那一行）。翻面的每一个落点都必须先有本子上的
 // 线索才按得出来 —— 反转不许凭空掉下来的这条，由 tests/world-content.test.ts 钉住。
@@ -866,6 +867,48 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       },
     ],
   },
+  {
+    id: "main-a4-page",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] } },
+    when: [{ quality: "mainline:act", gte: 2 }, { season: { gte: 4 } }, { day: { gte: 5 } }, { present: "fangmin" }],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}把一张抄件放在柜面上，日期写的是这一季。她说区域每季跟她要那一页的抄件，四季了，抄件上一直有那一行 —— 按住的是她，要抄件的不是你。",
+    choices: [
+      {
+        label: "这一季的抄件由你柜上签",
+        effects: [
+          { clue: "slip-gap" },
+          { remember: { holder: "fangmin", act: "act4-signed-copy", valence: 2, subject: "player" } },
+          { opinion: "fangmin", delta: 5 },
+          { stat: "compliance", delta: 4 },
+        ],
+        result: "你签的是那一行原本就在表上的这一季。{$a}说这一签之后她不用再一个人按着，也没有说这一签省下的是谁。",
+      },
+      {
+        label: "问那一页每季是谁要的",
+        when: [{ any: [{ clue: "slip-roster" }, { quality: "arc:peilan", gte: 1 }] }],
+        effects: [
+          { clue: "slip-roster" },
+          { remember: { holder: "fangmin", act: "act4-quarter-known", valence: 2, subject: "player" } },
+          { opinion: "fangmin", delta: -2 },
+          { stat: "standing", delta: 3 },
+        ],
+        result: "{$a}报了裴岚的工号，不是名字。她说这一行不上表是四季里每一季都要的事，要的人从不进柜。",
+      },
+      {
+        label: "把抄件烧了",
+        effects: [
+          { remember: { holder: "fangmin", act: "act4-copy-burned", valence: -2, subject: "player" } },
+          { opinion: "fangmin", delta: -6 },
+          { stat: "compliance", delta: -7 },
+        ],
+        result: "{$a}看着纸角烧起来，没有抢。她说下一季的抄件她会照抄，只是那一行她不再自己写。",
+      },
+    ],
+  },
 ];
 
 // 这些卡的门槛在过季之后照样成立（幕号、落点、本子里的线索都带着走），所以每张的每一个分支
@@ -873,7 +916,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
 // 其余的主线卡靠带着走的 quality 自己关掉：第 1 幕那几张被 OPEN 挡住，第 3 幕的阀门被 NOT_OWNED 挡住。
 // 判据在 tests/world-content.test.ts「主线整段只演一次，而且第 2 季还有新的一幕可演」。
 for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-after-quiet",
-  "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror"]) {
+  "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror", "main-a4-page"]) {
   const s = STORYLETS_MAINLINE.find(x => x.id === id)!;
   s.when.push(SEEN(id));
   for (const c of s.choices) c.effects.push(MARK(id));
