@@ -105,7 +105,9 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       // 每条线索卡都留着「拿着本子上已有那条再问下去」这条路：不认识她也能顺着问。
       { any: [{ knowsSecret: "songjie" }, { opinion: "songjie", gte: 15 }, { clue: "slip-hand" }, { clue: "slip-gap" }] },
     ],
-    weight: 24,
+    // 量过（80 副）：她 21% 的时段在场、门槛过 62%，两个都过的格子每副牌 5.6 个，weight 24 只讲到 38/80。
+    // 门（个人线）只占这些格子的 23% —— 卡她的是两百多张牌的抽签，不是那扇门。十二副验收牌：24 → 7/12 副摸到三条以上。
+    weight: 38,
     tension: 1,
     once: true,
     text: "{$a}在你跟前翻她的群。置顶那条是退货的截图，名字写的是沈薇。她抬头看你，等你先开口。",
@@ -148,7 +150,9 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       ACT(1), OPEN, { present: "yinxiaojie" },
       { any: [{ knowsSecret: "yinxiaojie" }, { remembers: "yinxiaojie", act: "hard-sell", valence: "bad" }, { clue: "slip-hand" }, { clue: "slip-borrowed" }] },
     ],
-    weight: 22,
+    // 同 main-slip-song：她在场少（原来 9% 的时段）、门槛过 56%，两个都过的格子每副牌只有 2.5 个，weight 22 讲到 23/80。
+    // 在场那一边已经把她的工作日补了一格（people.ts），这一边把抽签的那一半补上。
+    weight: 36,
     tension: 1,
     once: true,
     text: "{$a}把包搁在柜台上，包带没合。她问这支是不是两周就能看出来，语气跟上次一模一样。",

@@ -502,7 +502,9 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "香精一碰上就红，清单是她自己写的" },
       budget: 1800, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [1], chance: 0.4 },
+    // 一周两个周末日、只有午后那一格：整季量到她在楼层上 1.38 个时段，12/160 副一次都没遇见过她，
+    // 那条线的第 1 张因此开不了张（开了头的 148/148 全部走到了落点）。加傍晚那一格、概率提到 0.55。
+    visits: { days: [6, 7], slots: [1, 2], chance: 0.55 },
     secret: { text: "清单上那一格是她写的，妈妈背的时候串了行。", reveal: [{ present: "zhaoning" }, { opinion: "zhaoning", gte: 12 }] },
     voice: {
       greet: "让她先别替我说。单子在我手机里。",
@@ -799,7 +801,9 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "她要的是你说出备案以外的话" },
       budget: 3500, maxUnits: 2,
     },
-    visits: { days: [1, 4, 6], slots: [1, 2], chance: 0.45, fromDay: 5 },
+    // 她这层楼的存在感决定两张卡出不出得来：main-slip-yin（第 1 季主线线索）和她自己的线第 1 张。
+    // 原来 9% 的时段在场、每副牌约 4 格 → 线索卡 49/160 副讲到过。加一个工作日、概率 0.45→0.55。
+    visits: { days: [1, 3, 4, 6], slots: [1, 2], chance: 0.55, fromDay: 5 },
     secret: { text: "录音笔在包带里。她买两支的时候，买的是证据。", reveal: [{ remembers: "yinxiaojie", act: "hard-sell", valence: "bad" }] },
     voice: {
       greet: "这瓶修护，斑到底能不能淡。你说实话。",

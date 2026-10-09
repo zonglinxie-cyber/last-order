@@ -7,7 +7,7 @@ import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { STORYLETS } from "../src/world/content/index.ts";
 import { ARC_PEOPLE } from "../src/world/progress.ts";
 import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, newWorld, nextSeason } from "../src/world/engine.ts";
-import { PLAYER, type Cond, type Effect, type Ref, type Temper, type World, type Zone } from "../src/world/types.ts";
+import { PLAYER, type Cond, type Effect, type Ref, type Storylet, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
 const TEMPERS: Temper[] = ["face", "wary", "warm", "gossip", "thrifty", "hasty", "loyal", "proud", "shy"];
@@ -320,9 +320,87 @@ test("第 2 季才开的那几条线：连着玩两季，每一条都开得了�
   assert.equal(landed, 6, "六副牌连着跑两季，有种子没把第 2 季那几条线走到落点");
 });
 
+/** 这个人一季预期能站上楼层几个时段（判据照 beginSlot 里访客那一段：日子 = 一周第几天、时段在她的 slots 里、fromDay 之后、按 chance 计权）。 */
+const floorChances = (id: string): number => {
+  const v = PEOPLE.find(p => p.id === id)?.visits;
+  if (!v) return 0;
+  if (v.festivals) return Infinity; // 只在节日窗口里来的人另算：那一格是节日给的，不在这里比
+  let n = 0;
+  for (let day = 1; day <= SEASON_DAYS; day++) {
+    if (v.fromDay !== undefined && day < v.fromDay) continue;
+    const dow = ((day - 1) % 7) + 1;
+    if (v.days !== "any" && !v.days.includes(dow)) continue;
+    n += v.slots.length * v.chance;
+  }
+  return n;
+};
+
+test("被故事点名的那个人得上得了楼：个人线开头卡与主线线索卡的在场期望有下限", () => {
+  // 这一条管的是「写了却碰不见」：开头那一张和主线的线索卡都只能在她在场的那一柜抽得到，
+  // 她整季不来，卡就整季不存在 —— 跟抽签名额、跟玩家怎么选都无关。
+  // 量过的两个反面（40 种子 × 4 风格，2026-10-09）：赵宁 days [6,7] × slots [1] × 0.4 = 3.2 格
+  // → 她的线 148/160，掉的 12 副全是「整季没遇见过她」而不是走到一半停住；尹小洁 9% 的时段在场
+  // → main-slip-yin 只讲到 49/160，主线本子停在 2/4。
+  const thin: string[] = [];
+  for (const story of STORYLETS) {
+    if (story.kind !== "arc" && story.kind !== "mainline") continue;
+    for (const slot of Object.values(story.cast)) {
+      const id = slot.id;
+      if (!id) continue;
+      const person = PEOPLE.find(p => p.id === id);
+      if (!person || person.role !== "customer") continue; // 同事、对面、商场的人天天在楼层上
+      const opener = story.kind === "arc" && story.when.some(c => "not" in c
+        && (c.not as { quality?: unknown }).quality === `arc:${id}` && (c.not as { gte?: unknown }).gte === 1);
+      if (story.kind !== "mainline" && !opener) continue;
+      const n = floorChances(id);
+      if (n < 8) thin.push(`${story.id} 点名的${person.name}一季只有 ${n.toFixed(1)} 格`);
+    }
+  }
+  assert.deepEqual(thin, [], `这些卡要靠她开口，但她上不了几次楼：${thin.join("；")}`);
+});
+
+test("主线本子：四条线索不是收藏册，但一副牌至少摸到两条、多数牌摸到三条", () => {
+  // 反转要有料：本子上只有两条时，「名字在谁手里」那一张是把四选一压成二选一。
+  // 十二副牌各跑两季（每张抽到的卡都落一手，判据同「梅女士的十分钟」），数每副牌讲到的线索卡张数。
+  const CLUES = ["main-slip-shen", "main-slip-song", "main-slip-yin", "main-slip-fang"];
+  const played = (start: World) => {
+    let w = start;
+    const seen = new Set<string>();
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        if (!drawn) continue;
+        if (CLUES.includes(drawn.storylet.id)) seen.add(drawn.storylet.id);
+        const idx = drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c));
+        if (idx < 0) continue;
+        w = applyChoice(w, PEOPLE, drawn, idx);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return { w, seen };
+  };
+
+  const hist = new Map<number, number>();
+  for (let i = 0; i < 12; i++) {
+    const run = played(newWorld(`slip-clues-${i}`, PEOPLE));
+    const next = played(nextSeason(run.w, PEOPLE));
+    for (const id of next.seen) run.seen.add(id);
+    const n = run.seen.size;
+    hist.set(n, (hist.get(n) ?? 0) + 1);
+    assert.ok(n >= 2, `种子 ${i}：整季两副只摸到 ${n} 条线索，本子上撑不起一次反转`);
+  }
+  const threeOrMore = [...hist.entries()].filter(([n]) => n >= 3).reduce((a, [, c]) => a + c, 0);
+  // 量过的两端：改之前 7/12 副（2 条×5、3 条×4、4 条×3），改之后 10/12 副（2 条×2、3 条×9、4 条×1）。
+  // 门槛钉在 8：留两副余量，哪天真把在场或 weight 动坏了，这一条先报红。
+  assert.ok(threeOrMore >= 8, `十二副牌里只有 ${threeOrMore} 副摸到三条以上线索（${[...hist.entries()].sort().map(([n, c]) => `${n} 条×${c} 副`).join(" ")}）`
+    + " —— 在场期望或线索卡的 weight 被动过，回看 docs/人情场设计.md「主线本子上有几条线索」");
+});
+
 test("故事碎片的槽、占位、落点和关系效果", () => {
   assert.equal(new Set(STORYLETS.map(s => s.id)).size, STORYLETS.length, "故事 id 重复");
-  const count = { social: 0, arc: 0, floor: 0 };
+  const count = { social: 0, arc: 0, floor: 0, mainline: 0 };
   const tension = { [-1]: 0, 0: 0, 1: 0 };
   const arcCards = new Map<string, number>();
   const arcEnds = new Map<string, Set<number>>();
@@ -378,6 +456,8 @@ test("故事碎片的槽、占位、落点和关系效果", () => {
   assert.ok(count.social >= 24, `社交局 ${count.social}`);
   assert.ok(count.floor >= 8, `楼层 ${count.floor}`);
   assert.ok(count.arc >= 12, `个人线 ${count.arc}`);
+  // 主线以前不在这个名目里：count["mainline"] 一直是 NaN，池子清点念不到那 11 张 spine 卡。
+  assert.ok(count.mainline >= 11, `主线 ${count.mainline}`);
   assert.ok(tension[-1] > 0 && tension[0] > 0 && tension[1] > 0, "张力要有冲突也要有缓和");
   assert.ok(arcCards.size >= 4, `个人线人数 ${arcCards.size}`);
   for (const [id, cards] of arcCards) {
