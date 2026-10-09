@@ -5,6 +5,7 @@ import {
   evalCond, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
   related, resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, STAFF_COUNTER_MAX, WORLD_SAVE_VERSION, ZONE_GUEST_CAPACITY,
+  ARC_CHAPTERS_PER_DAY,
 } from "../src/world/engine.ts";
 import type { Cond, Effect, Person, Storylet, World, Zone } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
@@ -153,6 +154,83 @@ test("说书人：角色槽按声明顺序绑定，once 与 cooldown 生效", ()
   }
   const later = { ...w, day: w.day + 3 };
   assert.ok(drawStorylet(later, PEOPLE, [quarrel]).drawn, "冷却结束又能抽了");
+});
+
+/** 造一张钉死梅女士的个人线卡：when 决定它在线上的哪一节才合法。 */
+const meiChapter = (id: string, when: Cond[]): Storylet => ({
+  id, kind: "arc", tension: 0, weight: 4, once: true,
+  cast: { m: { id: "mei", where: [] } }, when,
+  text: "{$m}在柜台前站住。",
+  choices: [{ label: "听她说", effects: [{ opinion: "$m", delta: 1 }], result: "{$m}说完了。" }],
+});
+/** 一堆路人社交局当陪衬：它们的权重不变，续章抬多少一比就知道。 */
+const crowd = (n: number): Storylet[] => Array.from({ length: n }, (_, i) => ({
+  id: `filler-${i}`, kind: "social", tension: 0, weight: 20,
+  cast: { a: { where: [{ role: "$self", is: "customer" }] } }, when: [],
+  text: "{$a}在中庭看了看。",
+  choices: [{ label: "过去招呼", effects: [{ opinion: "$a", delta: 1 }], result: "{$a}点了点头。" }],
+}) as Storylet);
+
+test("说书人续章优先：线开过头以后，钉着她的下一张比第一章更容易被讲到", () => {
+  // 这一档治的是「没玩就结束了」：第一章抽到以后，第二章又掉回两百张牌里，
+  // 实测十二副牌里只有两副走得完一条线。陪衬牌固定 140 权重，只换她那一张的进度。
+  const deck = (chapter: Storylet) => [chapter, ...crowd(7)];
+  const rate = (seed: string, chapter: Storylet, qualities: Record<string, number>) => {
+    let hits = 0;
+    for (let i = 0; i < 120; i++) {
+      const w = { ...stage(newWorld(`${seed}-${i}`, PEOPLE), ["mei", "shen"]), qualities };
+      if (drawStorylet(w, PEOPLE, deck(chapter)).drawn?.storylet.id === chapter.id) hits++;
+    }
+    return hits;
+  };
+  const first = rate("first", meiChapter("ch-first", []), {});
+  const next = rate("next", meiChapter("ch-next", [{ quality: "arc:mei", gte: 1 }]), { "arc:mei": 1 });
+  assert.ok(next >= first * 3, `开了头的线（${next}/120）没有比没开（${first}/120）明显更该被讲`);
+
+  // 走到终点的不再抬：落点以后这条线不该再来占牌堆
+  const done = rate("done", meiChapter("ch-done", [{ quality: "arc:mei", gte: 1 }]), { "arc:mei": 3, "arc:mei:end": 2 });
+  assert.ok(done <= first + 4, `线已经收场（${done}/120），续章还压在第一章之上`);
+});
+
+test("说书人如约开章：她站到柜前、这条线还挂着，这一柜必定讲到她的下一章", () => {
+  // 每一章末尾都留一句「明天这个时辰再来」。人如约站到柜台前，下一章就不再跟两百张牌抢权重 ——
+  // 只有续章优先（×6）时十二副牌仍走不完一条线，因为五条线同时抬着，她自己一季也只在场十几段。
+  const deck = [meiChapter("ch-due", [{ quality: "arc:mei", gte: 1 }]), ...crowd(7)];
+  const rate = (zone: Zone) => {
+    let hits = 0;
+    for (let i = 0; i < 120; i++) {
+      const w = { ...stage(newWorld(`due-${i}`, PEOPLE), ["mei", "shen"], zone), qualities: { "arc:mei": 1 } };
+      if (drawStorylet(w, PEOPLE, deck).drawn?.storylet.id === "ch-due") hits++;
+    }
+    return hits;
+  };
+  assert.equal(rate("counter"), 120, "她如约站到柜前，下一章该每一柜都讲到");
+  assert.ok(rate("atrium") < 120, "她没站到柜前，这一柜不该被她独占");
+});
+
+test("说书人一天只讲两章个人线：讲满以后，第三柜不再被她独占", () => {
+  // 一天四个时段，全用来开章节就成了"这一层楼只发生个人线"。闸的量级来处见 docs/人情场设计.md。
+  const toldCard = (k: number): Storylet => ({
+    id: `told-${k}`, kind: "arc", tension: 0, weight: 0, once: true,
+    cast: { m: { id: "shen", where: [] } }, when: [],
+    text: "{$m}的那一章今天已经讲过了。",
+    choices: [{ label: "听", effects: [{ opinion: "$m", delta: 1 }], result: "{$m}点了点头。" }],
+  });
+  const dueCard = meiChapter("ch-cap", [{ quality: "arc:mei", gte: 1 }]);
+  const rate = (told: number) => {
+    const deck = [dueCard, ...Array.from({ length: told }, (_, k) => toldCard(k)), ...crowd(7)];
+    const fired = Object.fromEntries(Array.from({ length: told }, (_, k) => [`told-${k}`, 1]));
+    let hits = 0;
+    for (let i = 0; i < 120; i++) {
+      const w: World = { ...stage(newWorld(`cap-${i}`, PEOPLE), ["mei", "shen"], "counter"),
+        day: 1, fired, qualities: { "arc:mei": 1 } };
+      if (drawStorylet(w, PEOPLE, deck).drawn?.storylet.id === "ch-cap") hits++;
+    }
+    return hits;
+  };
+  assert.equal(ARC_CHAPTERS_PER_DAY, 2, "这一档的值是量出来的（20 种子 × 2 季两张表），改之前看 docs/人情场设计.md「人物线走得完」");
+  assert.equal(rate(ARC_CHAPTERS_PER_DAY - 1), 120, "还没讲满，如约的那一章就该被讲到");
+  assert.ok(rate(ARC_CHAPTERS_PER_DAY) < 120, `讲满 ${ARC_CHAPTERS_PER_DAY} 章以后还独占这一柜（120/120），闸等于没设`);
 });
 
 test("说书人热度：冲突多了压低 tension=1 的卡", () => {

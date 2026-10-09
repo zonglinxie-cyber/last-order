@@ -1,4 +1,4 @@
-// 第 1 季顾客个人线：小雨、周姐、赵女士、米朵。每人四张，开头不早于第 5 天。
+// 第 1 季顾客个人线：小雨、周姐、赵女士、米朵、梅女士。每人四张，开头不早于第 5 天。
 // 主角用 CastSlot.id 钉住。每段结束用 appoint 把下一段要的人约来。
 // 终点读她的圈子：熟人怎么看你、她记着哪件事、秘密揭开没有、你介绍过谁。
 import type { Storylet } from "../types.ts";
@@ -7,6 +7,7 @@ const xiaoyu: Storylet["cast"][string] = { id: "xiaoyu", where: [] };
 const zhou: Storylet["cast"][string] = { id: "zhou", where: [] };
 const zhao: Storylet["cast"][string] = { id: "zhao", where: [] };
 const miduo: Storylet["cast"][string] = { id: "miduo", where: [] };
+const mei: Storylet["cast"][string] = { id: "mei", where: [] };
 
 /** 小雨旁边：宿舍的女性朋友，或柜上任何一位同事。同事每时段都在，线不会停在等人上。 */
 const xiaoyuWith: Storylet["cast"][string] = {
@@ -67,6 +68,19 @@ const nextZhao = (bring?: string[]): Storylet["choices"][number]["effects"] => [
 const nextMiduo = (bring?: string[]): Storylet["choices"][number]["effects"] => [
   { appoint: { person: "miduo", inDays: 1, slot: 2, ...(bring ? { bring } : {}) } },
 ];
+
+/** 梅女士圈子：苏蔓（她的老关系）、周姐（同事）、尹小姐（对头）。她在场时这三个总有一个在楼层上。
+ *  老康是她朋友，但 role 是 mall，appoint 的 bring 只放得下 customer，所以这一族一律用女性 customer/staff。 */
+const meiCircle: Storylet["cast"][string] = {
+  where: [
+    { gender: "$self", is: "f" },
+    { any: [
+      { bond: ["$self", "mei"], kind: "client" },
+      { bond: ["$self", "mei"], kind: "friend" },
+      { bond: ["$self", "mei"], kind: "rival" },
+    ] },
+  ],
+};
 
 export const STORYLETS_ARCS3: Storylet[] = [
 
@@ -1098,6 +1112,225 @@ export const STORYLETS_ARCS3: Storylet[] = [
           { leave: "$a" },
         ],
         result: "灯收了。没有切片，也没有一句留在台账上的话。",
+      },
+    ],
+  },
+
+  // —— 梅女士：十分钟。开头那句「明早要见客户」是这层楼说了二十多天的一句假话 ——
+  // 第 1 张定她进门的样子，第 2 张让她第一次不走，第 3 张用登记表把假话翻过来（reveal 就写在这里），
+  // 第 4 张读前三张攒下的东西：你替她瞒过、当传话讲出去了、还是她自己说出口的。
+
+  {
+    id: "arc-mei-ten",
+    kind: "arc",
+    cast: { a: mei },
+    when: [
+      { season: { gte: 1 } },
+      { day: { gte: 5 } },
+      { not: { quality: "arc:mei", gte: 1 } },
+    ],
+    weight: 30, tension: 0, once: true,
+    text: "{$a}看表比看你早。她说还有十分钟，明早要见客户。一支，别加。",
+    choices: [
+      {
+        label: "十分钟里只讲一支",
+        effects: [
+          { quality: "arc:mei", set: 1 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { opinion: "$a", delta: 4 },
+          { remember: { holder: "$a", act: "given-time", valence: 2, subject: "player" } },
+          { remember: { holder: "$a", act: "honest-advice", valence: 1, subject: "player" } },
+        ],
+        result: "一支讲完，表还没有响。{$a}把小样留在柜上，人走得干脆。",
+      },
+      {
+        label: "两支并成一单",
+        effects: [
+          { quality: "arc:mei", set: 1 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { opinion: "$a", delta: -5 },
+          { remember: { holder: "$a", act: "hard-sell", valence: -2, subject: "player" } },
+        ],
+        result: "{$a}只带走一支。另一支推到柜里侧，说表上真没有这十分钟。",
+      },
+      {
+        label: "问一句她那个客户",
+        when: [{ opinion: "mei", gte: 2 }],
+        effects: [
+          { quality: "arc:mei", set: 1 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { opinion: "$a", delta: 1 },
+          { remember: { holder: "$a", act: "asked-client", valence: 0, subject: "player" } },
+        ],
+        result: "{$a}顿了一下，报了个名字。手机扣上，这十分钟不再往回看。",
+      },
+    ],
+  },
+  {
+    id: "arc-mei-late",
+    kind: "arc",
+    cast: { a: mei, b: meiCircle },
+    when: [
+      { quality: "arc:mei", gte: 1 },
+      { not: { quality: "arc:mei", gte: 2 } },
+    ],
+    weight: 30, tension: 1, once: true,
+    text: "{$a}的电话响了，她按掉。十分钟过了，{$b}还在旁边，没有人走。",
+    choices: [
+      {
+        label: "再给她十分钟",
+        effects: [
+          { quality: "arc:mei", set: 2 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { opinion: "$a", delta: 5 }, { opinion: "$b", delta: 1 },
+          { bond: ["$a", "$b"], delta: 3 },
+          { remember: { holder: "$a", act: "given-time", valence: 2, subject: "player" } },
+          { remember: { holder: "$b", act: "saw-stay", valence: 1, subject: "player" } },
+        ],
+        result: "{$a}把表摘下来放在柜面上。她在这层楼第一次超过十分钟。",
+      },
+      {
+        label: "当着{$b}把客户问出来",
+        effects: [
+          { quality: "arc:mei", set: 2 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { opinion: "$a", delta: -4 },
+          { remember: { holder: "$a", act: "asked-client", valence: -1, subject: "player" } },
+          { remember: { holder: "$b", act: "heard-client", valence: 0, subject: "player", heardFrom: "$a" } },
+        ],
+        result: "{$a}说了一个名字，说得很快。{$b}听见了，也记住这个速度。",
+      },
+      {
+        label: "提醒她表已经过了",
+        effects: [
+          { quality: "arc:mei", set: 2 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { opinion: "$a", delta: -3 }, { opinion: "$b", delta: -1 },
+          { remember: { holder: "$a", act: "sent-off", valence: -1, subject: "player" } },
+        ],
+        result: "{$a}抓起袋子就走。门在她后面关上，十分钟还是十分钟。",
+      },
+    ],
+  },
+  {
+    id: "arc-mei-form",
+    kind: "arc",
+    cast: { a: mei, b: meiCircle },
+    when: [
+      { quality: "arc:mei", gte: 2 },
+      { not: { quality: "arc:mei", gte: 3 } },
+    ],
+    weight: 32, tension: 1, once: true,
+    text: "柜上摆出登记表。{$a}在客户那一栏停住，落笔写的还是自己的名字。",
+    choices: [
+      {
+        label: "把表推回去，不问",
+        effects: [
+          { quality: "arc:mei", set: 3 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { reveal: "mei" },
+          { opinion: "$a", delta: 3 },
+          { remember: { holder: "$a", act: "kept-secret", valence: 2, subject: "player" } },
+        ],
+        result: "那一栏填的是她自己的名字。{$a}没有解释，你也没有问。",
+      },
+      {
+        label: "替她把那一栏填成客户",
+        effects: [
+          { quality: "arc:mei", set: 3 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { reveal: "mei" },
+          { opinion: "$a", delta: 6 },
+          { bond: ["$a", "$b"], delta: 2 },
+          { remember: { holder: "$a", act: "covered-name", valence: 2, subject: "player" } },
+        ],
+        result: "你笔快，她话慢。{$a}把表折起来，说这一支还是买给客户的。",
+      },
+      {
+        label: "把这一句讲给柜上的人",
+        effects: [
+          { quality: "arc:mei", set: 3 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { reveal: "mei" },
+          { opinion: "$a", delta: -8 }, { opinion: "$b", delta: -2 },
+          { remember: { holder: "$a", act: "told-around", valence: -2, subject: "player" } },
+          { remember: { holder: "$b", act: "heard-mei-name", valence: -1, subject: "player", heardFrom: "player" } },
+        ],
+        result: "{$b}听见了名字那一栏是谁的。这层楼的话从来走不出这层楼。",
+      },
+      {
+        label: "让她自己说完",
+        when: [{ opinion: "mei", gte: 10 }, { remembers: "mei", act: "given-time" }],
+        effects: [
+          { quality: "arc:mei", set: 3 },
+          { appoint: { person: "mei", inDays: 1, slot: 2 } },
+          { reveal: "mei" },
+          { opinion: "$a", delta: 8 }, { opinion: "$b", delta: 2 },
+          { remember: { holder: "$a", act: "told-herself", valence: 2, subject: "player" } },
+        ],
+        result: "{$a}说没有客户。明天她只带一支，用法你说短一点。",
+      },
+    ],
+  },
+  {
+    id: "arc-mei-end",
+    kind: "arc",
+    cast: { a: mei, b: meiCircle },
+    when: [
+      { quality: "arc:mei", gte: 3 },
+      { not: { quality: "arc:mei:end", gte: 1 } },
+    ],
+    weight: 32, tension: 0, once: true,
+    text: "{$a}还是傍晚来，还是那块表。这一支买给谁，她等你先开口。",
+    choices: [
+      {
+        label: "这一支是给她自己的",
+        when: [
+          { knowsSecret: "mei" },
+          { opinion: "mei", gte: 8 },
+          { not: { remembers: "mei", act: "told-around", valence: "bad" } },
+        ],
+        effects: [
+          { quality: "arc:mei:end", set: 1 },
+          { appoint: { person: "mei", inDays: 3, slot: 2 } },
+          { stat: "standing", delta: 2 },
+          { opinion: "$a", delta: 8 }, { opinion: "$b", delta: 2 },
+          { remember: { holder: "$a", act: "own-face", valence: 2, subject: "player" } },
+        ],
+        result: "{$a}头一回按自己的脸挑。下一支她自己来拿，不赶时间。",
+      },
+      {
+        label: "这话已经传到柜外",
+        when: [{ remembers: "mei", act: "told-around", valence: "bad" }],
+        effects: [
+          { quality: "arc:mei:end", set: 2 },
+          { opinion: "$a", delta: -10 }, { opinion: "yinxiaojie", delta: -4 },
+          { bond: ["mei", "yinxiaojie"], delta: -8 },
+          { bond: ["yinxiaojie", "mei"], delta: -6 },
+          { remember: { holder: "yinxiaojie", act: "heard-mei-name", valence: -1, subject: "player" } },
+          { leave: "$a" },
+        ],
+        result: "{$a}知道是谁说出去的。她连那十分钟都不留了，人当场走。",
+      },
+      {
+        label: "这一支还是买给客户的",
+        when: [{ knowsSecret: "mei" }],
+        effects: [
+          { quality: "arc:mei:end", set: 3 },
+          { opinion: "$a", delta: -2 },
+          { remember: { holder: "$a", act: "kept-as-client", valence: 0, subject: "player" } },
+          { leave: "$a" },
+        ],
+        result: "{$a}把表收进袋子。这十分钟不是她的，她没有再多说一句。",
+      },
+      {
+        label: "这单做完，不问下一次",
+        effects: [
+          { quality: "arc:mei:end", set: 4 },
+          { opinion: "$a", delta: -1 },
+          { remember: { holder: "$a", act: "stood-aside", valence: 0, subject: "player" } },
+        ],
+        result: "她走的时候把表翻过去扣在柜面上，没有留名字。",
       },
     ],
   },

@@ -681,10 +681,42 @@ function bindCast(w: World, people: Person[], storylet: Storylet): [Binding | nu
 
 /** 写了剧情的卡优先：个人线和主线都比路过的社交局更该被讲。 */
 export const ARC_WEIGHT_MULT = 3;
+/** 续章优先：一个人已经走进自己的线（arc:<id> ≥1 且还没落到终点），
+ *  钉着她 id 的下一张卡再乘这个数。管的是她人在场上、但没站到柜前的那些时段。 */
+export const ARC_FOLLOW_MULT = 6;
+/** 站柜前的人先开口：她的个人线第一张（线还没开头）在她站到柜台前时再抬这个数。
+ *  一季只抽得出一百来张卡，谁站在柜前就该讲谁的事，不然第一章永远埋在两百张牌里。 */
+export const ARC_COUNTER_MULT = 3;
+/** 一天最多讲几章个人线（不管是不是如约来的）。不设这一档，说书人整晚只讲挂在柜前那几个人：实测主线本子上少一条线索
+ *  （honest 2/4 → 3/4）、台账 med 少 10 点（64 → 74）、八面玲珑在结局榜上少赢三颗种子。
+ *  代价是老实人的比分从 18 领先回到 16 —— 留两个时段给别的事。 */
+export const ARC_CHAPTERS_PER_DAY = 2;
 const SPINE_KINDS: Storylet["kind"][] = ["arc", "mainline"];
 
-const storyWeight = (storylet: Storylet, heat: number): number => {
-  const w = Math.max(0, storylet.weight) * (SPINE_KINDS.includes(storylet.kind) ? ARC_WEIGHT_MULT : 1);
+/** 这张卡是不是某条已经开过头、还没收尾的线的续章（个人线把主角钉在 cast 的 id 上）。 */
+const isFollowUp = (storylet: Storylet, world: World) =>
+  Object.values(storylet.cast).some(slot => {
+    const id = slot.id;
+    return id !== undefined && (world.qualities[`arc:${id}`] ?? 0) >= 1 && (world.qualities[`arc:${id}:end`] ?? 0) < 1;
+  });
+
+/** 这条线的主角此刻就站在柜台前（还没开头的那一张才用它，开了头走续章那一档）。 */
+const isAtCounter = (storylet: Storylet, world: World) =>
+  Object.values(storylet.cast).some(slot =>
+    slot.id !== undefined && world.present[slot.id] === "counter" && (world.qualities[`arc:${slot.id}`] ?? 0) < 1);
+
+/** 该讲的那一章：线开过头、还没收尾，而且她这一柜就是为你回来的（站在柜台前）。
+ *  每一章末尾都留了一句「明天这个时候再来」，人如约站到柜前，这一柜就先讲她的下一章 ——
+ *  这条不等权重。五条线同时挂着续章优先，一季又只有一百来次抽卡，
+ *  实测十二副牌里梅女士那条只走得完八副；「每一条线不够完整、没玩就结束了」卡的就是这里。 */
+const isDueChapter = (storylet: Storylet, world: World) =>
+  storylet.kind === "arc" && isFollowUp(storylet, world) &&
+  Object.values(storylet.cast).some(slot => slot.id !== undefined && world.present[slot.id] === "counter");
+
+const storyWeight = (storylet: Storylet, heat: number, world: World): number => {
+  let w = Math.max(0, storylet.weight) * (SPINE_KINDS.includes(storylet.kind) ? ARC_WEIGHT_MULT : 1);
+  if (storylet.kind === "arc" && isFollowUp(storylet, world)) w *= ARC_FOLLOW_MULT;
+  else if (storylet.kind === "arc" && isAtCounter(storylet, world)) w *= ARC_COUNTER_MULT;
   if (storylet.tension === 1) return w * (1 + Math.max(0, -heat)) / (1 + Math.max(0, heat));
   if (storylet.tension === -1) return w * (1 + Math.max(0, heat)) / (1 + Math.max(0, -heat));
   return w;
@@ -701,12 +733,15 @@ export function drawStorylet(world: World, people: Person[], storylets: Storylet
     let binding: Binding | null;
     [binding, w] = bindCast(w, people, storylet);
     if (!binding) continue;
-    eligible.push({ storylet, binding, weight: storyWeight(storylet, heat) });
+    eligible.push({ storylet, binding, weight: storyWeight(storylet, heat, w) });
   }
-  const i = drawWeighted(w.seed, w.rngCalls, eligible.map(e => e.weight));
+  // 有人如约站到柜前、她的线还挂着没收尾 —— 这一柜就是她的，只从这些里挑（一天最多两章）。
+  const toldToday = storylets.reduce((n, s) => n + (s.kind === "arc" && w.fired[s.id] === w.day ? 1 : 0), 0);
+  const due = toldToday >= ARC_CHAPTERS_PER_DAY ? [] : eligible.filter(e => isDueChapter(e.storylet, w));
+  const i = drawWeighted(w.seed, w.rngCalls, due.length ? due.map(() => 1) : eligible.map(e => e.weight));
   w = { ...w, rngCalls: w.rngCalls + 1 };
   if (i < 0) return { world: w, drawn: null };
-  const pick = eligible[i];
+  const pick = (due.length ? due : eligible)[i];
   return { world: w, drawn: { storylet: pick.storylet, binding: pick.binding } };
 }
 

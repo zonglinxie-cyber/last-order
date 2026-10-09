@@ -151,6 +151,9 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       budget: 1800, maxUnits: 1,
     },
     visits: { days: [1, 2, 3, 4, 5], slots: [2], chance: 0.55 },
+    // 个人线 arc-mei-* 的反转就钉在这一句上：她进门第一句里的「客户」从来不存在。
+    // 揭开走两条路：看法攒够（引擎自动）或 arc-mei-form 当场看见登记表。
+    secret: { text: "柜上那一支是给她自己的，「明早要见客户」是她给那十分钟找的台阶。", reveal: [{ opinion: "mei", gte: 15 }] },
     voice: {
       greet: "我明早要见客户。别给我一整套。",
       pleased: "就这一支。用法你说短一点。",

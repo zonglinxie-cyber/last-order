@@ -120,6 +120,17 @@ export const ACT_WORD: Record<string, string> = {
   "claim-full": "在镜头里把功效说满了",
   "claim-held": "镜头开着，功效没有说满",
   "rival-line": "把对面那句复述给她听了",
+  // 梅女士的十分钟（同一份文件，反转写在 arc-mei-form）
+  "given-time": "陪她把那十分钟过完，没有催",
+  "asked-client": "问了她那位客户",
+  "saw-stay": "看着你留在那十分钟里",
+  "heard-client": "从她嘴里听到了那位客户",
+  "sent-off": "提醒她表已经过了，把她送回忙里",
+  "covered-name": "替她在登记表上填了客户",
+  "told-around": "把她那一栏讲给了柜上的人",
+  "heard-mei-name": "听到她落在登记表上的那个名字",
+  "told-herself": "她当着人把自己的那句话说完",
+  "kept-as-client": "这一支还是记在客户名下，没有再问",
   // 主线：那张退货单（storylets-mainline.ts）
   "slip-asked-date": "先问了那单是哪天进来的",
   "slip-asked-tape": "问了她包带里开着什么",

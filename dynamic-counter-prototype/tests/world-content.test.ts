@@ -5,7 +5,8 @@ import { CUSTOMERS } from "../src/campaign.ts";
 import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { STORYLETS } from "../src/world/content/index.ts";
-import { drawStorylet, newWorld, nextSeason } from "../src/world/engine.ts";
+import { ARC_PEOPLE } from "../src/world/progress.ts";
+import { applyChoice, beginSlot, choiceVisible, drawStorylet, endDay, newWorld, nextSeason } from "../src/world/engine.ts";
 import { PLAYER, type Cond, type Effect, type Ref, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
@@ -184,25 +185,79 @@ test("节日按季取：四季各一套，第 5 季起循环", () => {
 });
 
 test("个人线走到终点的，换季以后那条线的卡不再抽得到", () => {
-  // 四条个人线全走到落点：arc:<id>:end 跟着换季带过去，下一季所有 arc 卡都该被条件挡住。
+  // 五条个人线全走到落点：arc:<id>:end 跟着换季带过去，下一季所有 arc 卡都该被条件挡住。
   const ended = {
     ...newWorld("arc-done", PEOPLE),
     day: 28,
     qualities: {
       "arc:shen": 3, "arc:shen:end": 2, "arc:anjie": 3, "arc:anjie:end": 4,
       "arc:luyao": 3, "arc:luyao:end": 1, "arc:suman": 3, "arc:suman:end": 3,
+      "arc:mei": 3, "arc:mei:end": 1,
     },
   };
   const w: World = nextSeason(ended, PEOPLE);
   assert.equal(w.day, 1, "换季后天数回到 1");
   assert.equal(w.season, 2);
   const all = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone]));
-  const seasonOneArc = /^arc-(shen|anjie|luyao|suman)-/;
+  const seasonOneArc = /^arc-(shen|anjie|luyao|suman|mei)-/;
   for (let i = 0; i < 20; i++) {
     const { drawn } = drawStorylet({ ...w, seed: `arc-done-${i}`, present: { ...all } }, PEOPLE, STORYLETS);
     assert.ok(!drawn || !seasonOneArc.test(drawn.storylet.id),
       `第 2 季还抽到了已终结的个人线 ${drawn?.storylet.id}`);
   }
+});
+
+test("个人线名册双向对得上：卡写的落点都在档案里，档案里每个人都真有落点卡", () => {
+  // 单向只测一半会漏：新增一条线忘了登记 ARC_PEOPLE，走完以后跨季档案和季末回顾都念不出她；
+  // 反过来名册里挂着一个没有落点卡的人，档案那一页永远是空的。
+  const ends = new Map<string, number[]>();
+  for (const card of STORYLETS)
+    for (const choice of card.choices)
+      for (const effect of choice.effects) {
+        if (!("quality" in effect) || typeof effect.set !== "number") continue;
+        const landed = /^arc:([^:]+):end$/.exec(effect.quality);
+        if (!landed) continue;
+        const list = ends.get(landed[1]!) ?? [];
+        if (!list.includes(effect.set)) ends.set(landed[1]!, [...list, effect.set]);
+      }
+  for (const [id, list] of ends)
+    assert.ok(ARC_PEOPLE.includes(id), `卡给 ${id} 写了 ${list.length} 个落点，ARC_PEOPLE 里没有她 —— 档案念不出这条线`);
+  for (const id of ARC_PEOPLE) assert.ok(ends.has(id), `档案里挂着 ${id} 的个人线，却没有一张卡能落到点上`);
+});
+
+test("梅女士的十分钟：一路给她时间，一季之内必定走到反转和落点", () => {
+  // 「人物线太乱、每条线不够完整」的验收方式：不数卡片数，直接拿引擎跑十二副牌。
+  // 抽到自己线上的卡就按指定选项走（那颗按不了退到备选），跑完必须看见 arc:mei:end。
+  const route = new Map<string, string[]>([
+    ["arc-mei-ten", ["十分钟里只讲一支"]],
+    ["arc-mei-late", ["再给她十分钟"]],
+    ["arc-mei-form", ["让她自己说完", "把表推回去，不问"]],
+    ["arc-mei-end", ["这一支是给她自己的", "这单做完，不问下一次"]],
+  ]);
+
+  let landed = 0;
+  for (let i = 0; i < 12; i++) {
+    let w = newWorld(`mei-line-${i}`, PEOPLE);
+    while (w.day <= SEASON_DAYS) {
+      for (let slot = 0; slot < 4; slot++) {
+        w = beginSlot({ ...w, slot: slot as 0 | 1 | 2 | 3 }, PEOPLE, festivalsFor(1));
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        const labels = drawn ? route.get(drawn.storylet.id) : undefined;
+        if (!drawn || !labels) continue;
+        const choice = labels
+          .map(label => drawn.storylet.choices.find(c => c.label === label))
+          .find((c): c is Storylet["choices"][number] => !!c && choiceVisible(w, PEOPLE, drawn, c));
+        if (!choice) continue;
+        w = applyChoice(w, PEOPLE, drawn, drawn.storylet.choices.indexOf(choice));
+      }
+      w = endDay(w, PEOPLE);
+    }
+    if ((w.qualities["arc:mei:end"] ?? 0) >= 1) {
+      landed++;
+      assert.ok(w.qualities["secret-known:mei"], `种子 ${i}：走到了落点却没揭开那句「明早要见客户」`);
+    }
+  }
+  assert.equal(landed, 12, "十二副牌跑完整季，有种子一次都没能走到梅女士的终点");
 });
 
 test("故事碎片的槽、占位、落点和关系效果", () => {
