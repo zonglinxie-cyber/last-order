@@ -15,15 +15,14 @@ import { ARC_PEOPLE, threadLandings } from "../src/world/progress.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
 import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestChoice, soldUnitsKey } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
-import { PRODUCTS, type ProductId } from "../src/campaign.ts";
+import { SHELF_IDS } from "../src/world/shelf.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
 const STYLES: Style[] = ["honest", "pushy", "social", "random"];
 const DAYS = 28;
 const ACTIONS_PER_SLOT = 5;
-const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
-const PRICE_DESC = [...PRODUCT_IDS].sort((a, b) => PRODUCTS[b].price - PRODUCTS[a].price);
+const PRODUCT_IDS = SHELF_IDS; // 货架上全部八支，random 风格从这里瞎挑（价格见 shelf.ts 的 SHELF）
 
 const personOf = (people: Person[], id: PersonId) => people.find(p => p.id === id)!;
 

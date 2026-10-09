@@ -34,6 +34,7 @@ export const ACT_WORD: Record<string, string> = {
   // 卖货
   "honest-advice": "给了她实在的建议",
   "wrong-pick": "推荐的东西不太对她的路",
+  "price-miss": "选对了她那支，却没算她自己那点预算",
   "hard-sell": "把不适合的东西硬推给她",
   "sold-anyway": "明知不合适还是卖给了她",
   "returned-goods": "让她跑回来退了货",

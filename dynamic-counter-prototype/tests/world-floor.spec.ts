@@ -344,6 +344,11 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page, envelope());
       await page.getByRole("button", { name: /查看梅女士/ }).click();
       await expect(page.locator(".world-drawer")).toBeVisible();
+      // 货架扩到八支之后这一遍必须把接待面板也量进去：那一排是 4×2 的格子，
+      // 每格里还挂一个价签 <small>，字号和命中区最容易在这里先烂掉。
+      await page.getByRole("button", { name: /接待/ }).click();
+      await expect(page.locator(".world-serve")).toBeVisible();
+      expect(await page.locator(".serve-products button").count()).toBe(8);
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow).toBeLessThanOrEqual(1);

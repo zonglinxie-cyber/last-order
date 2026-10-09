@@ -2,13 +2,13 @@
 // 设计见 docs/人情场设计.md，数据契约见同目录 types.ts。随机数全部来自 rng.ts 的
 // (seed, rngCalls) 推导，所以同一种子、同一串操作结果逐位相同，存档往返也不断。
 //
-// 卖货判断复用 campaign.ts 的 fitScore / fitTier / unitsWanted / PRODUCTS：
-// Person.skin 是 Customer 的结构子集，这里按 Customer 传给那几个纯函数。
-import {
-  fitScore, fitTier, unitsWanted, PRODUCTS,
-  type Customer, type ProductId, type BundleId,
-} from "../campaign.ts";
+// 卖货判断走人情场自己的货架 shelf.ts（八支货、六个价位）：适配公式与阈值仍与 campaign.ts 同口径，
+// 但货不进旧五日版，旧版那些钉死的路线金额不受影响。
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
+import {
+  bestShelf, PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, shelfFitTier, shelfUnits,
+  fitOfPerson, type ShelfId,
+} from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
@@ -63,6 +63,8 @@ export const POACH_OPINION = -3;
 export const SERVE_GOOD_OPINION = 8;
 export const SERVE_MIXED_OPINION = 4;
 export const SERVE_MISS_OPINION = -3;
+/** 对症却超预算：她没怪你选错，怪的是兜里那个数。比推错轻，但这一单的精力照样白花。 */
+export const PRICE_MISS_OPINION = -1;
 export const HARD_SELL_OPINION = -12;
 export const HARD_SELL_COMPLIANCE = -4;
 export const HARD_SELL_STANDING = -1;
@@ -171,7 +173,6 @@ export const ZONE_GUEST_CAPACITY: Record<Zone, number> = {
   counter: 5, cashier: 3, rival: 4, atrium: 5, lounge: 3, entrance: 4, backroom: 3,
 };
 
-const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
 const bondKey = (a: PersonId, b: PersonId) => `${a}>${b}`;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const clamp100 = (v: number) => clamp(v, -100, 100);
@@ -480,13 +481,13 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       const product = bestFit(person);
       const boughtDay = qualityOf(w, `bought:${ap.person}`);
       if (!(boughtDay > 0 && w.day - boughtDay < BUY_INTERVAL_DAYS)
-        && fitTier(fitScore(person.skin as Customer, product)) === "positive") {
-        const amount = PRODUCTS[product].price;
+        && shelfFitTier(fitFor(person, product)) === "positive") {
+        const amount = SHELF[product].price;
         w = { ...w, money: w.money + amount };
         w = setQuality(w, `bought:${ap.person}`, w.day);
         w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
         w = remember(w, ap.person, "came-back-bought", 1);
-        w = say(w, `${person.name}回来又带了一支${PRODUCTS[product].name}，进账 ¥${amount}。`, [ap.person]);
+        w = say(w, `${person.name}回来又带了一支${SHELF[product].name}，进账 ¥${amount}。`, [ap.person]);
       }
     }
     for (const bid of ap.bring ?? []) {
@@ -788,7 +789,7 @@ export const choiceVisible = (world: World, people: Person[], drawn: DrawnStoryl
 
 // —— 玩家动作 ——
 
-export type VerbArgs = { product?: ProductId; units?: number; force?: boolean };
+export type VerbArgs = { product?: ShelfId; units?: number; force?: boolean };
 
 const greetCountToday = (w: World, id: PersonId) =>
   w.memories.filter(m => m.holder === id && m.act === "greeted" && m.day === w.day).length;
@@ -964,13 +965,13 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       if (b?.skin && opinionOf(w, aId) >= HANDOFF_SALE_MIN_OPINION && !qualityOf(w, gate)
         && !(qualityOf(w, `bought:${b.id}`) > 0 && w.day - qualityOf(w, `bought:${b.id}`) < BUY_INTERVAL_DAYS)) {
         const product = bestFit(b);
-        if (fitTier(fitScore(b.skin as Customer, product)) === "positive") {
-          const amount = PRODUCTS[product].price;
+        if (shelfFitTier(fitFor(b, product)) === "positive") {
+          const amount = SHELF[product].price;
           w = { ...w, money: w.money + amount };
           w = setQuality(w, gate, 1);
           w = setQuality(w, `bought:${b.id}`, w.day);
           w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
-          w = say(w, `你请${a.name}照看${b.name}，${ta(a)}替你开出了一支${PRODUCTS[product].name}，进账 ¥${amount}。`, targets);
+          w = say(w, `你请${a.name}照看${b.name}，${ta(a)}替你开出了一支${SHELF[product].name}，进账 ¥${amount}。`, targets);
           return w;
         }
       }
@@ -1014,28 +1015,22 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
 
 // —— 卖货 ——
 
-const asCustomer = (person: Person): Customer => person.skin as Customer;
-export const fitFor = (person: Person, product: ProductId) => person.skin ? fitScore(person.skin as Customer, product) : 0;
-export const bestFit = (person: Person): ProductId =>
-  PRODUCT_IDS.reduce((x, y) => (fitFor(person, y) > fitFor(person, x) ? y : x));
-
-const bundleFor = (units: number): BundleId => units >= 4 ? "bulk" : units === 3 ? "set" : units === 2 ? "pair" : "single";
+export const fitFor = (person: Person, product: ShelfId) => fitOfPerson(person, product);
+export const bestFit = (person: Person): ShelfId => bestShelf(person);
 
 /** 对面那一单开多大：维珞不缺货、不限精力，按她自己的正解开单，件数仍受她的预算和用量上限约束。
  *  漏掉一位客人，账上少的就是这个数 —— 比分要算钱，不算人次。
  *  预算连一支都够不着的那几位，谁来都开不了单（units 为 0），人照样被请走。 */
-export function poachSale(person: Person): { product: ProductId; units: number; amount: number; word: string } {
+export function poachSale(person: Person): { product: ShelfId; units: number; amount: number; word: string } {
   const product = bestFit(person);
   // skin 是可选的（同事/对手没有诉求表）：没有这张表就没人能被说服，对面也开不了单。
-  const customer = person.skin ? asCustomer(person) : null;
-  const units = customer
-    ? unitsWanted(customer, product, bundleFor(customer.maxUnits), fitTier(fitFor(person, product))) : 0;
-  const amount = units * PRODUCTS[product].price;
+  const units = shelfUnits(person, product, shelfFitTier(fitFor(person, product)), person.skin?.maxUnits ?? 0);
+  const amount = units * SHELF[product].price;
   return { product, units, amount,
-    word: units ? `那边开了 ${units} 件${PRODUCTS[product].name}，进账 ¥${amount}` : `那边一支也没卖出去` };
+    word: units ? `那边开了 ${units} 件${SHELF[product].name}，进账 ¥${amount}` : `那边一支也没卖出去` };
 }
 
-export function resolveServe(world: World, people: Person[], personId: PersonId, productId: ProductId, units: number, force = false): World {
+export function resolveServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false): World {
   const person = personOf(people, personId);
   if (!person?.skin || !reachable(world, personId) || world.energy < VERB_ENERGY.serve) return world;
   // 台账或柜位见底，开不了单。
@@ -1043,9 +1038,9 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
   let w: World = { ...world,
     energy: world.energy - VERB_ENERGY.serve,
     touched: [...new Set([...world.touched, personId])] };
-  const customer = asCustomer(person);
-  const tier = fitTier(fitScore(customer, productId));
-  const price = PRODUCTS[productId].price;
+  const score = fitFor(person, productId);
+  const tier = shelfFitTier(score);
+  const price = SHELF[productId].price;
   w = setQuality(w, `served:${personId}`, qualityOf(w, `served:${personId}`) + 1);
 
   // 看法坏到这份上，她连接待都不愿意：精力照花，单开不出来。
@@ -1062,7 +1057,7 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
     return w;
   }
 
-  const wanted = recentlyBought ? 0 : unitsWanted(customer, productId, bundleFor(units), tier);
+  const wanted = recentlyBought ? 0 : shelfUnits(person, productId, tier, units);
   const sold = Math.min(Math.max(1, units), person.skin.maxUnits);
 
   if (force && sold > wanted) {
@@ -1084,9 +1079,9 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
       w = { ...w, appointments: [...w.appointments,
         { day: w.day + Math.min(inDays, REFUND_MAX_DAYS), slot: slots[Math.floor(s * slots.length)],
           person: personId, reason: "refund", amount: price * refundUnits }] };
-      w = say(w, `你硬是把${person.name}的${PRODUCTS[productId].name}开出了 ${sold} 件，进账 ¥${amount}。`, [personId]);
+      w = say(w, `你硬是把${person.name}的${SHELF[productId].name}开出了 ${sold} 件，进账 ¥${amount}。`, [personId]);
     } else {
-      w = say(w, `你硬是把${PRODUCTS[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，${ta(person)}认了。`, [personId]);
+      w = say(w, `你硬是把${SHELF[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，${ta(person)}认了。`, [personId]);
     }
     w = setQuality(w, `bought:${personId}`, w.day);
     w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + sold);
@@ -1094,9 +1089,17 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
   }
 
   if (wanted <= 0) {
+    if (tier !== "negative") {
+      // 对症、可她兜里那点数不上 —— 这是另一件事，不能说成"这解决不了我的事"。
+      // 八支货、六个价位之后这条会真的走到（¥400 的人面前摆着 ¥2,280 的正解）。
+      w = addOpinion(w, personId, PRICE_MISS_OPINION);
+      w = remember(w, personId, "price-miss", -1);
+      w = say(w, `${SHELF[productId].name}是对症的，${person.name}看了看价签没说话：${ta(person)}今天只留了 ¥${person.skin.budget}。`, [personId]);
+      return witnessed(w, people, [personId], "price-miss", -1);
+    }
     w = addOpinion(w, personId, SERVE_MISS_OPINION);
     w = remember(w, personId, "wrong-pick", -1);
-    w = say(w, `你推荐的是${PRODUCTS[productId].name}，${person.name}摇头：这解决不了我的事。`, [personId]);
+    w = say(w, `你推荐的是${SHELF[productId].name}，${person.name}摇头：这解决不了我的事。`, [personId]);
     return witnessed(w, people, [personId], "wrong-pick", -1);
   }
   const amount = price * wanted;
@@ -1104,14 +1107,17 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
   w = setQuality(w, `bought:${personId}`, w.day);
   w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + wanted);
   if (tier === "positive") {
-    w = addOpinion(w, personId, SERVE_GOOD_OPINION);
+    // 八支货里"过线"和"正中"是两件事：过线的那支也成交，但只有把她每一条诉求都接满的那支，
+    // 她才会觉得你懂她 —— 多给的这一笔看法决定她下次肯多说几条（serve-talk.ts 的两条门槛）。
+    const perfect = score >= PERFECT_MATCH;
+    w = addOpinion(w, personId, SERVE_GOOD_OPINION + (perfect ? PERFECT_MATCH_OPINION : 0));
     w = remember(w, personId, "honest-advice", 2);
-    w = say(w, `${person.name}试了${PRODUCTS[productId].name}，带走 ${wanted} 件，进账 ¥${amount}。`, [personId]);
+    w = say(w, `${person.name}试了${SHELF[productId].name}，${perfect ? `${ta(person)}要的每条都被接住了，` : ""}带走 ${wanted} 件，进账 ¥${amount}。`, [personId]);
     return witnessed(w, people, [personId], "honest-advice", 2);
   }
   w = addOpinion(w, personId, SERVE_MIXED_OPINION);
   w = remember(w, personId, "sold-anyway", 1);
-  w = say(w, `${person.name}勉强带走了 ${wanted} 件${PRODUCTS[productId].name}，进账 ¥${amount}。`, [personId]);
+  w = say(w, `${person.name}勉强带走了 ${wanted} 件${SHELF[productId].name}，进账 ¥${amount}。`, [personId]);
   return witnessed(w, people, [personId], "sold-anyway", 1);
 }
 

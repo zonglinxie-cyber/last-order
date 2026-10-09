@@ -3,7 +3,7 @@
 // 念 engine 写进 log 的句子；世界状态走 serializeWorld/parseWorld 落盘。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { MobileScroll } from "../../mobile";
-import { demandBudgetWord, PRODUCTS, type Customer, type ProductId } from "../../campaign.ts";
+import { demandBudgetWord, type Customer } from "../../campaign.ts";
 import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
@@ -19,6 +19,7 @@ import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../typ
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
 import { SECRET_KNOWN_KEY, demandWords, serveTalk, unsaidWord } from "../serve-talk.ts";
+import { SHELF, SHELF_IDS, affordableUnits, type ShelfId } from "../shelf.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -36,7 +37,6 @@ import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
 
 const SEASON_DAYS = 28; // 与 content/festivals.ts 的一季同长
-const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
 // public/assets/game/chibi/ 里按 id 对得上的小人图（WebP 透明底）；对不上的用头像圆牌。
 const CHIBI = new Set(["anjie", "baijie", "caiaiyi", "cenning", "chendao", "chenke", "dongayi", "duan", "fangmin", "gaoyuan", "guyan", "hanlei", "heqing", "huojie", "jiangning", "laokang", "liangxia", "ligui", "lina", "linyi", "luyao", "mei", "miduo", "peilan", "qianjie", "qiaowan", "roman", "ruanxiaoman", "shen", "songjie", "suman", "suxiao", "tangke", "tangtang", "tanwan", "wulaoshi", "xiaoyu", "yenushi", "yinxiaojie", "zhao", "zhaoning", "zhou"]);
 const TWO_TARGET: Verb[] = ["introduce", "mediate", "handoff", "tell"];
@@ -245,7 +245,7 @@ export default function WorldGame() {
   const [selected, setSelected] = useState<PersonId | null>(null);
   const [pick, setPick] = useState<{ verb: Verb; calls: VerbCall[] } | null>(null);
   const [serving, setServing] = useState(false);
-  const [serveProduct, setServeProduct] = useState<ProductId | null>(null);
+  const [serveProduct, setServeProduct] = useState<ShelfId | null>(null);
   const [serveUnits, setServeUnits] = useState(1);
   const [webOpen, setWebOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -714,8 +714,8 @@ export default function WorldGame() {
         {serveSaid?.veto && <p className="serve-veto">{ta(person)}把底线也讲了出来：{serveSaid.veto}</p>}
         {serveSaid?.hold && <p className="serve-hold">{serveSaid.hold}</p>}
         <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
-        <div className="serve-products">{PRODUCT_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><i className={`product-art product-art-${pid}`} /><b>{PRODUCTS[pid].short}</b><small>{yuan(PRODUCTS[pid].price)}</small></button>)}</div>
-        <p className="serve-note">{serveProduct ? PRODUCTS[serveProduct].note : `先挑一支，这里会写它适合什么样的脸，对照${ta(person)}刚才说的`}</p>
+        <div className="serve-products">{SHELF_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><b>{SHELF[pid].short}</b><small>{yuan(SHELF[pid].price)}</small></button>)}</div>
+        <p className="serve-note">{serveProduct ? `${SHELF[serveProduct].note} · 这个价${ta(person)}最多带走 ${affordableUnits(person, serveProduct)} 件` : `先挑一支，这里会写它适合什么样的脸，对照${ta(person)}刚才说的`}</p>
         <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
         <div className="serve-actions">
           <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>
