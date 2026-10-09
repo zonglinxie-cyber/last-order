@@ -320,6 +320,81 @@ test("第 2 季才开的那几条线：连着玩两季，每一条都开得了�
   assert.equal(landed, 6, "六副牌连着跑两季，有种子没把第 2 季那几条线走到落点");
 });
 
+test("第 3 季才开的那两条线：连着玩三季，第 1、2 季一张都抽不到，第 3 季开得张、走得到落点", () => {
+  // 「没玩就结束了」剩下的那一半：16 条线在第 2 季末全部收完，第 3 季起只有过路社交。
+  // 这一条把两条新线钉在第 3 季那张名单上，并且钉住「它们第 3 季才开」——
+  // 门槛写错成 gte 1 的话第 1 季就撞开，玩家会在安姐婚礼还没落定的时候听见「那场婚礼定了别人」。
+  const third = ARC_PEOPLE.filter(id => lineSeason(id) === 3);
+  assert.deepEqual(third, ["songjie", "baijie"],
+    "第 3 季开张的线名单变了 —— 改这条之前先改 docs/人情场设计.md「一季讲几条线」");
+
+  const played = (world: World) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        // 判据同第 2 季那一条：玩家顺着她走，拿第一个看得见的选项，不预设哪条线该被偏爱。
+        const idx = drawn ? drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c)) : -1;
+        if (!drawn || idx < 0) continue;
+        w = applyChoice(w, PEOPLE, drawn, idx);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+
+  let landed = 0;
+  for (let i = 0; i < 6; i++) {
+    let w = played(newWorld(`s3-lines-${i}`, PEOPLE));
+    w = played(nextSeason(w, PEOPLE));
+    for (const id of third)
+      assert.equal(w.qualities[`arc:${id}`] ?? 0, 0, `种子 ${i}：${id} 的线在两季之内就开张了，第 3 季那道门槛没生效`);
+    w = played(nextSeason(w, PEOPLE));
+    assert.equal(w.season, 3, `种子 ${i}：连着玩三季没走到第 3 季`);
+    const none = third.filter(id => (w.qualities[`arc:${id}`] ?? 0) < 1);
+    assert.equal(none.length, 0, `种子 ${i}：第 3 季这 ${none.length} 条线一次都没开张（${none.join(", ")}）`);
+    if (third.every(id => (w.qualities[`arc:${id}:end`] ?? 0) >= 1)) landed++;
+  }
+  assert.equal(landed, 6, "六副牌连着跑三季，有种子没把第 3 季那两条线走到落点");
+});
+
+test("第 3 季那两条线的分支门：只认换季带得下来的东西", () => {
+  // 这两条线的反转全靠前两季：白姐那张读安姐婚礼线的落点，宋姐那张读「名字是从群里借的」那条记忆。
+  // 记忆只有 |valence| = 2 的那一档能过季（nextSeason 里筛的就是这个），所以分支门必须钉在 ±2 上 ——
+  // 挂成 ±1 的话第 3 季永远看不见那张卡，而单季内测又全是绿的。
+  const chair = STORYLETS.find(s => s.id === "arc-bj-chair")!;
+  const label = "定的人是苏蔓那边";
+  for (const end of [0, 1, 2, 3, 4]) {
+    const w: World = { ...newWorld("bj-chair", PEOPLE), qualities: end ? { "arc:anjie:end": end } : {} };
+    const drawn = { storylet: chair, binding: { a: "baijie" } };
+    const shown = chair.choices.filter(c => c.label === label && choiceVisible(w, PEOPLE, drawn, c)).length;
+    assert.equal(shown, end === 2 ? 1 : 0, `安姐落点 ${end} 那一档不该露出「定的人是苏蔓那边」`);
+  }
+  // 四种落点 + 落点没走完，五档里必须恰好有一档走默认那句「跟她无关」以外的分支，或者落到默认那档。
+  for (const end of [1, 2, 3]) {
+    const w: World = { ...newWorld("bj-chair", PEOPLE), qualities: { "arc:anjie:end": end } };
+    const drawn = { storylet: chair, binding: { a: "baijie" } };
+    const branches = chair.choices.filter(c => (c.when?.length ?? 0) > 0 && choiceVisible(w, PEOPLE, drawn, c));
+    assert.equal(branches.length, 1, `安姐落点 ${end}：带条件的分支应当只剩一格`);
+  }
+
+  const book = STORYLETS.find(s => s.id === "arc-sj-book")!;
+  const shotLabel = "那张截图是你自己拍的吧";
+  const withMemory: World = {
+    ...newWorld("sj-book", PEOPLE),
+    qualities: { "arc:songjie": 1 },
+    memories: [{ holder: "songjie", subject: "player", act: "slip-named-group", valence: -2, day: 3 }],
+  };
+  const withoutMemory: World = { ...withMemory, memories: [] };
+  const drawnBook = { storylet: book, binding: { a: "songjie" } };
+  assert.equal(book.choices.filter(c => c.label === shotLabel && choiceVisible(withMemory, PEOPLE, drawnBook, c)).length, 1,
+    "主线那句「名字是从群里借的」过了季还在她记忆里，这一格就该露出来");
+  assert.equal(book.choices.filter(c => c.label === shotLabel && choiceVisible(withoutMemory, PEOPLE, drawnBook, c)).length, 0,
+    "第 1 季没把这句说出去过，反转不能凭空掉下来");
+});
+
 /** 这个人一季预期能站上楼层几个时段（判据照 beginSlot 里访客那一段：日子 = 一周第几天、时段在她的 slots 里、fromDay 之后、按 chance 计权）。 */
 const floorChances = (id: string): number => {
   const v = PEOPLE.find(p => p.id === id)?.visits;

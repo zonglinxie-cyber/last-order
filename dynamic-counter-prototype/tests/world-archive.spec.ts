@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { newWorld } from "../src/world/engine.ts";
-import { PEOPLE } from "../src/world/content/index.ts";
-import { WORLD_PROGRESS_KEY, emptyWorldProgress, observeWorldProgress } from "../src/world/progress.ts";
+import { CLUES, PEOPLE } from "../src/world/content/index.ts";
+import { ARC_PEOPLE, WORLD_PROGRESS_KEY, emptyWorldProgress, observeWorldProgress } from "../src/world/progress.ts";
 import type { World } from "../src/world/types.ts";
 
 // 跨季「档案」走查：从 ?mode=world 开场封面的那颗「档案」进去。
@@ -71,7 +71,8 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("个人线：走到过的落点亮起，没走到的压成？？？", async ({ page }) => {
       await page.getByRole("button", { name: "个人线" }).click();
-      await expect(page.locator(".wa-arc")).toHaveCount(12);
+      // 名单与线索条数一律从内容表推：加线、加线索不该红掉这一屏的走查（名单本身由 world-progress 钉）。
+      await expect(page.locator(".wa-arc")).toHaveCount(ARC_PEOPLE.length);
       const shenArc = page.locator(".wa-arc", { hasText: "沈薇" }).first();
       await expect(shenArc.locator(".wa-arc-row.lit")).not.toHaveCount(0);
       await expect(shenArc.locator(".wa-arc-row:not(.lit)")).not.toHaveCount(0);
@@ -87,7 +88,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("本子：攒到的线索念得出，没攒到的压成？？？，拧过的收法亮起", async ({ page }) => {
       await page.getByRole("button", { name: "本子" }).click();
-      await expect(page.getByText("本子上攒了 2 / 4 条")).toBeVisible();
+      await expect(page.getByText(`本子上攒了 2 / ${CLUES.length} 条`)).toBeVisible();
       const book = page.locator(".wa-arc").first();
       // 那条线抛给玩家的问话，没弄清也照样挂在页上（跨季的钩子）
       await expect(book.getByText("单子上写的是沈薇，退的不是她。那是谁？")).toBeVisible();

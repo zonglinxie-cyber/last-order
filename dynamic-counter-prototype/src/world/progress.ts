@@ -10,9 +10,10 @@ import type { PersonId, Storylet, World } from "./types.ts";
 export const WORLD_PROGRESS_KEY = "last-order-world-progress-v1";
 export const WORLD_PROGRESS_VERSION = 2;
 
-/** 个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~4 个）。
- *  沈薇到梅女士这九条第 1 季就能开始；尹小姐、段小姐、赵宁和唐可、罗曼、方敏、乔晚一起从第 2 季才开。 */
-export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo", "mei", "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan"];
+/** 个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~5 个）。
+ *  沈薇到梅女士这九条第 1 季就能开始；尹小姐、段小姐、赵宁和唐可、罗曼、方敏、乔晚一起从第 2 季才开；
+ *  宋姐、白姐从第 3 季才开（读前两季带下来的名字和那场婚礼）。 */
+export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman", "xiaoyu", "zhou", "zhao", "miduo", "mei", "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie"];
 
 const PERSON_IDS = new Set<PersonId>(PEOPLE.map(p => p.id));
 const ENDING_IDS = new Set<string>(ENDINGS.map(e => e.id));
