@@ -29,8 +29,12 @@ export const START_SAMPLES = 8;
 export const SAMPLES_MAX = 8;
 /** 每晚品牌补小样。 */
 export const SAMPLES_PER_NIGHT = 4;
-/** 同时在场的顾客上限（手机屏幕放不下更多）。同事、对手、商场方不占这个名额。 */
-export const MAX_PRESENT_CUSTOMERS = 5;
+/** 同时在场的顾客上限（手机屏幕放不下更多）。同事、对手、商场方不占这个名额。
+ *  这个数不能超过各区客位的总数（下面的 ZONE_GUEST_CAPACITY 加起来），否则要么有人站不下、
+ *  要么界面上两个人叠在同一个坐标。world-engine.test.ts 钉着这条。
+ *  7 位里柜台只摆得下 5 位，另外两位由下面的权重散去中庭 / 休息区 / 收银 / 入口 —— 这就是"错峰"：
+ *  场上热热闹闹，柜台那一条线还是看得清、点得中。 */
+export const MAX_PRESENT_CUSTOMERS = 7;
 /** 每个时段至少有这么多位客人在场：空场对新玩家是最差的第一眼。 */
 export const MIN_PRESENT_CUSTOMERS = 2;
 /** 开局那个上午先来的两位：和五日版第一天同一道题——两个人，只能先接住一个。 */
@@ -47,8 +51,10 @@ export const WARY_HEARSAY_MULT = 0.5;
 export const NIGHT_GOSSIP_BASE = 0.1;
 export const NIGHT_GOSSIP_TEMPER_BONUS = 0.2;
 
-/** 陆遥抢客：每时段一次，挑在场、没被玩家招呼过、对玩家看法最低的顾客。 */
-export const POACH_CHANCE = 0.5;
+/** 陆遥抢客：每时段一次，挑走到我柜台上、没被玩家招呼过、对玩家看法最低的顾客。 */
+export const POACH_CHANCE = 0.4;
+/** 漏单的口子只在柜台和收银这两个区：在中庭闲逛、在休息区坐着的人不算你错过的生意。 */
+export const POACH_ZONES: Zone[] = ["counter", "cashier"];
 /** 看法高过这条线的顾客请不动。 */
 export const POACH_MAX_OPINION = 40;
 export const POACH_OPINION = -3;
@@ -143,10 +149,27 @@ export const WITNESS_OPINION = 4;
 export const STORY_HEAT_DECAY = 0.7;
 export const STORY_HEAT_MAX = 3;
 
-const STAFF_COUNTER_CHANCE = 0.7;
-const CUSTOMER_ZONE_WEIGHTS: Array<[Zone, number]> = [
-  ["atrium", 0.5], ["lounge", 0.2], ["cashier", 0.15], ["entrance", 0.15],
+/** 同事开柜时在柜台后的概率；其余去员工通道。人还在场，只是换个区站着。
+ *  原来是 0.7 —— 六位同事每位 70% 站柜台，实测柜台上平均 4.20 位同事对 0.00 位客人，
+ *  「柜台人物太多了，顾客太少」说的就是这一格。0.35 配下面的名额与权重，实测柜台上
+ *  1.79 位客人对 1.60 位同事（24 种子 × 28 天，开门那一刻的均值）。 */
+export const STAFF_COUNTER_CHANCE = 0.35;
+/** 柜台后同时站得下的同事数（ui/zones.ts 的 ZONE_STAFF_SPOTS.counter 只有四个点，
+ *  再多是叠着站）。超出的去员工通道，不占柜台。 */
+export const STAFF_COUNTER_MAX = 2;
+/** 客人进来落在哪一区。柜台排第一：来买东西的人是走到柜前站定的，不是在中庭看热闹。
+ *   lounge / cashier / entrance 三档的权重不动 —— 有卡的锚点条件写着 {zone:"lounge"}、
+ *  {zone:"cashier"}（各两处），从它们碗里分走会把这些卡饿掉；分走的是中庭那份。 */
+export const CUSTOMER_ZONE_WEIGHTS: Array<[Zone, number]> = [
+  ["counter", 0.45], ["atrium", 0.1], ["lounge", 0.2], ["cashier", 0.15], ["entrance", 0.1],
 ];
+/** 各区摆得下几位客人 —— 必须等于 ui/zones.ts 里 ZONE_SPOTS 的坐标数，
+ *  一个点站一个人，站满了不再往里派（引擎不 import 界面，所以数值抄在这里，
+ *  对不上由 world-engine.test.ts 报红）。柜台那一格是 5 不是 7：手机最窄一档上
+ *  六个点就要叠在一起，点得着的人数反而变少。 */
+export const ZONE_GUEST_CAPACITY: Record<Zone, number> = {
+  counter: 5, cashier: 3, rival: 4, atrium: 5, lounge: 3, entrance: 4, backroom: 3,
+};
 
 const PRODUCT_IDS: ProductId[] = ["soft", "glow", "repair"];
 const bondKey = (a: PersonId, b: PersonId) => `${a}>${b}`;
@@ -206,6 +229,13 @@ export const setQuality = (w: World, key: string, value: number): World =>
   ({ ...w, qualities: { ...w.qualities, [key]: value } });
 
 export const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
+
+/** 她算不算"回头客"：这一季你招呼过她（served:）、她从你柜上带过货（bought:），
+ *  或者上一季就加过微信（wechat: 是这三条里唯一跨季留着的）。served: 由接待动作记，
+ *  bought: 由成交、赴约回流和托单记，wechat: 由加微信记；换季时前两条清零。
+ *  楼层名牌上「新客 / 回头客」只读这一个判据，界面不许自己再拼一遍。 */
+export const isReturningGuest = (w: World, id: PersonId) =>
+  qualityOf(w, `served:${id}`) > 0 || qualityOf(w, `bought:${id}`) > 0 || qualityOf(w, `wechat:${id}`) > 0;
 
 // —— 线索本 ——
 // 玩家手里"对得上号"的一条事实。引擎只认 id 和记下的那天，文案在内容侧 content/clues.ts。
@@ -405,13 +435,30 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   const placeCustomer = (id: PersonId, zone: Zone) => { present[id] = zone; };
   let customerCount = 0;
 
+  // 客人落在哪一区：按权重抽，但只往还站得下的区派 —— 一个坐标站一个人，
+  // 站满了还往里塞，界面上就是两个人叠在同一个点上，看不出是两个人。
+  const drawGuestZone = (): Zone => {
+    const used = new Map<Zone, number>();
+    for (const [id, zone] of Object.entries(present))
+      if (personOf(people, id)?.role === "customer") used.set(zone, (used.get(zone) ?? 0) + 1);
+    const pool = CUSTOMER_ZONE_WEIGHTS.filter(([zone]) => (used.get(zone) ?? 0) < ZONE_GUEST_CAPACITY[zone]);
+    let r: number; [r, w] = roll(w);
+    const total = pool.reduce((a, [, weight]) => a + weight, 0);
+    let acc = 0;
+    for (const [zone, weight] of pool) { acc += weight; if (r * total < acc) return zone; }
+    return pool[pool.length - 1][0];
+  };
+
   // 常驻：同事在柜台或员工通道，对面维珞的人在 rival 区，商场方在中庭。
+  let staffAtCounter = 0;
   for (const person of people) {
     if (person.role === "rival") { present[person.id] = "rival"; }
     else if (person.role === "mall") { present[person.id] = "atrium"; }
     else if (person.role === "staff") {
       let r: number; [r, w] = roll(w);
-      present[person.id] = r < STAFF_COUNTER_CHANCE ? "counter" : "backroom";
+      // 柜台后只留得下两个人的位置：概率过了还要看名额，多出来的同事去员工通道。
+      if (r < STAFF_COUNTER_CHANCE && staffAtCounter < STAFF_COUNTER_MAX) { present[person.id] = "counter"; staffAtCounter++; }
+      else present[person.id] = "backroom";
     }
   }
 
@@ -475,10 +522,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   candidates.sort((x, y) => x.r - y.r);
   for (const c of candidates) {
     if (customerCount >= MAX_PRESENT_CUSTOMERS) break;
-    let r: number; [r, w] = roll(w);
-    let acc = 0, zone: Zone = "atrium";
-    for (const [z, weight] of CUSTOMER_ZONE_WEIGHTS) { acc += weight; if (r < acc) { zone = z; break; } }
-    placeCustomer(c.id, zone); customerCount++;
+    placeCustomer(c.id, drawGuestZone()); customerCount++;
   }
 
   // 场子不能空：按规律来的人不够 MIN_PRESENT_CUSTOMERS 时，从"这几天本来就可能来"的人里补
@@ -492,10 +536,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     const i = drawWeighted(w.seed, w.rngCalls, pool.map(p => visitChance(p.visits, w.festival)));
     w = { ...w, rngCalls: w.rngCalls + 1 };
     if (i < 0) break;
-    let r: number; [r, w] = roll(w);
-    let acc = 0, zone: Zone = "atrium";
-    for (const [z, weight] of CUSTOMER_ZONE_WEIGHTS) { acc += weight; if (r < acc) { zone = z; break; } }
-    placeCustomer(pool[i].id, zone); customerCount++;
+    placeCustomer(pool[i].id, drawGuestZone()); customerCount++;
   }
 
   w = { ...w, present };
@@ -559,10 +600,13 @@ export function ambient(world: World, people: Person[]): World {
   for (const a of here) for (const b of here) if (a.id !== b.id) pairs.push([a, b]);
   w = gossipRound(w, people, pairs, GOSSIP_BASE, GOSSIP_TEMPER_BONUS, w.memories);
 
-  // 陆遥抢客（时段末结算）：挑一位在场、对玩家看法最低、这个时段玩家没顾上的顾客带去维珞，她当天不再回来。
+  // 陆遥抢客（时段末结算）：挑一位走到我柜台上、这个时段玩家没顾上、对玩家看法最低的顾客带去维珞，她当天不再回来。
+  // 只从柜台和收银两个区里挑：在中庭闲逛、在休息区坐着的人本来就不是来买东西的，
+  // 把她算成"你漏掉的一单"既说不通，也会让场上客人一多比分就必然输（名额是 7 位，精力只够接四五位）。
   const rival = here.find(p => p.role === "rival");
   if (rival) {
-    const marks = here.filter(p => p.role === "customer" && w.present[p.id] !== "rival" && !w.touched.includes(p.id));
+    const marks = here.filter(p => p.role === "customer" && w.present[p.id] !== "rival"
+      && POACH_ZONES.includes(w.present[p.id]) && !w.touched.includes(p.id));
     if (marks.length) {
       const mark = marks.reduce((lo, p) => (opinionOf(w, p.id) < opinionOf(w, lo.id) ? p : lo));
       if (opinionOf(w, mark.id) < POACH_MAX_OPINION) {

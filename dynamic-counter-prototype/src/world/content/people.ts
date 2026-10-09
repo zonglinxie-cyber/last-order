@@ -131,7 +131,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "一厚就卡粉，镜头里全是粉感" },
       budget: 3200, maxUnits: 3,
     },
-    visits: { days: [1, 3, 5, 6, 7], slots: [1, 2], chance: 0.55 },
+    visits: { days: [1, 3, 4, 5, 6, 7], slots: [0, 1, 2], chance: 0.6 },
     secret: { text: "署她名字的那张退货单，不是她退的。", reveal: [{ remembers: "shen", act: "not-my-return" }] },
     voice: {
       greet: "先说好，我不缺粉底。",
@@ -150,7 +150,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "soothe", want: 2, weight: 3 }, { trait: "steady", want: 1, weight: 2 }, { trait: "correct", want: 1, weight: 1 }],
       budget: 1800, maxUnits: 1,
     },
-    visits: { days: [1, 2, 3, 4, 5], slots: [2], chance: 0.35 },
+    visits: { days: [1, 2, 3, 4, 5], slots: [2], chance: 0.55 },
     voice: {
       greet: "我明早要见客户。别给我一整套。",
       pleased: "就这一支。用法你说短一点。",
@@ -169,7 +169,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "steady", below: 2, note: "活跃痘正在冒，闷一下就爆" },
       budget: 1000, maxUnits: 1,
     },
-    visits: { days: [2, 4, 6], slots: [2, 3], chance: 0.4 },
+    visits: { days: [2, 4, 6], slots: [2, 3], chance: 0.55 },
     voice: {
       greet: "我只有一千块。明天面试。",
       pleased: "这一支我付得起，也不会闷。",
@@ -189,7 +189,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       budget: 1800, maxUnits: 1,
       buysFor: "zhaoning",
     },
-    visits: { days: [3, 6], slots: [1, 2], chance: 0.4 },
+    visits: { days: [1, 2, 3, 5, 6], slots: [0, 1], chance: 0.5 },
     secret: { text: "过敏那一行是女儿自己写的，她记错了一格。", reveal: [{ present: "zhaoning" }, { opinion: "zhaoning", gte: 10 }] },
     voice: {
       greet: "你别看我。东西是买给她的。",
@@ -209,7 +209,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "临婚前不能冒刺激风险" },
       budget: 7000, maxUnits: 4,
     },
-    visits: { days: [2, 4, 6, 7], slots: [1, 2], chance: 0.55, fromDay: 2 },
+    visits: { days: [2, 3, 4, 6, 7], slots: [1, 2], chance: 0.6, fromDay: 2 },
     secret: { text: "伴娘进门时她跟苏蔓说过：别让人再上镜。", reveal: [{ remembers: "suman", act: "kept-word" }] },
     voice: {
       greet: "婚礼还有一周。这套不能出错。",
@@ -229,7 +229,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "不能厚到像换了一层皮" },
       budget: 2100, maxUnits: 2,
     },
-    visits: { days: [1, 3, 5], slots: [1, 2], chance: 0.4 },
+    visits: { days: [1, 3, 4, 5], slots: [1, 2], chance: 0.55 },
     voice: {
       greet: "对面说你们持妆会暗沉。",
       pleased: "这个理由我听得见，我自己去试。",
@@ -248,7 +248,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "steady", below: 2, note: "室友比她更容易闷痘" },
       budget: 1100, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [2], chance: 0.45 },
+    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.5 },
     secret: { text: "相册里那张不是自拍，是室友的过敏记录。", reveal: [{ opinion: "duan", gte: 12 }, { not: { remembers: "duan", act: "hard-sell", valence: "bad" } }] },
     voice: {
       greet: "我就是看看。你们别围上来。",
@@ -419,7 +419,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "两颊泛红，镜头里也不该把修护说成见效" },
       budget: 2000, maxUnits: 1,
     },
-    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.45 },
+    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.6 },
     voice: {
       greet: "灯开了。你就说两周能看出来，后面我剪。",
       pleased: "这句我能播。完播的事我自己想。",
@@ -439,7 +439,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "两颊泛红，柔焦叠上去会更干" },
       budget: 1500, maxUnits: 1,
     },
-    visits: { days: [7], slots: [1, 2], chance: 0.4, fromDay: 8 },
+    visits: { days: [7], slots: [1, 2], chance: 0.55, fromDay: 8 },
     voice: {
       greet: "就按沈薇上次那个妆。她说你记得。",
       pleased: "你说了为什么不能一样。我回去有话讲。",
@@ -459,7 +459,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "她要的是上班八小时，不是再上一支厚的" },
       budget: 2200, maxUnits: 2,
     },
-    visits: { days: [6, 7], slots: [1, 2], chance: 0.35, fromDay: 10 },
+    visits: { days: [6, 7], slots: [1, 2], chance: 0.5, fromDay: 10 },
     voice: {
       greet: "先把手机放下。我今天不是来被拍的。",
       pleased: "灯你偏开了。我把八小时说完。",
@@ -479,7 +479,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "台上换人快，她要一支能补的，不要四支一样的" },
       budget: 1200, maxUnits: 1,
     },
-    visits: { days: [3, 6], slots: [0, 1], chance: 0.4 },
+    visits: { days: [2, 3, 4, 5, 6], slots: [0, 1], chance: 0.5 },
     voice: {
       greet: "我不是来囤的。我问色号。",
       pleased: "六个色你分开答了。我记的是这个。",
@@ -499,7 +499,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "香精一碰上就红，清单是她自己写的" },
       budget: 1800, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [1], chance: 0.28 },
+    visits: { days: [6, 7], slots: [1], chance: 0.4 },
     secret: { text: "清单上那一格是她写的，妈妈背的时候串了行。", reveal: [{ present: "zhaoning" }, { opinion: "zhaoning", gte: 12 }] },
     voice: {
       greet: "让她先别替我说。单子在我手机里。",
@@ -519,7 +519,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "correct", want: 2, weight: 3 }, { trait: "wear", want: 2, weight: 2 }, { trait: "natural", want: 1, weight: 1 }],
       budget: 1600, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [1, 2], chance: 0.55 },
+    visits: { days: [3, 4, 5, 6, 7], slots: [1, 2], chance: 0.6 },
     voice: {
       greet: "我们两个一起看。你先听我说。",
       pleased: "我的单你分开开了。她的你没并进来。",
@@ -539,7 +539,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "唇周干，按闺蜜的红开会显纹" },
       budget: 1400, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [2], chance: 0.5 },
+    visits: { days: [3, 4, 5, 6, 7], slots: [2], chance: 0.55 },
     voice: {
       greet: "你让她先说完吧。我说了你也不一定信。",
       pleased: "你问了我的杯沿，没问她的红。",
@@ -559,7 +559,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "steady", below: 2, note: "队里有人不能用香，不能八支开成一样" },
       budget: 900, maxUnits: 1,
     },
-    visits: { days: [7], slots: [0, 1], chance: 0.6 },
+    visits: { days: [3, 6, 7], slots: [0, 1], chance: 0.65 },
     voice: {
       greet: "舞队八个人。你别一个一个问，问不过来。",
       pleased: "你只开了我肯留下来的那两个。",
@@ -579,7 +579,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "外孙女上课，太红的她怕老师说" },
       budget: 1200, maxUnits: 1,
     },
-    visits: { days: [7], slots: [0, 1], chance: 0.45 },
+    visits: { days: [1, 4, 7], slots: [0], chance: 0.55 },
     voice: {
       greet: "太红的不要。她还上学。",
       pleased: "小票上写了可退。我敢拿回去。",
@@ -599,7 +599,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "她要听你离了镜头还说不说同一句" },
       budget: 1800, maxUnits: 1,
     },
-    visits: { days: [7], slots: [0, 1], chance: 0.35, fromDay: 5 },
+    visits: { days: [2, 4, 5, 7], slots: [0], chance: 0.5, fromDay: 5 },
     voice: {
       greet: "你昨天那句，现在再跟我说一遍。我录着。",
       pleased: "两段一样。我停了。",
@@ -619,7 +619,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "两颊干，不要被当成教学" },
       budget: 2000, maxUnits: 1,
     },
-    visits: { days: [3, 7], slots: [0, 1], chance: 0.4 },
+    visits: { days: [2, 3, 6, 7], slots: [0, 1], chance: 0.5 },
     voice: {
       greet: "小姑娘先别过来。我的脸不给练手的碰。",
       pleased: "第一句是你说的。她只递了镜子。",
@@ -638,7 +638,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "steady", want: 2, weight: 3 }, { trait: "natural", want: 1, weight: 2 }],
       budget: 4000, maxUnits: 4,
     },
-    visits: { days: [4, 5, 6], slots: [2, 3], chance: 0.45 },
+    visits: { days: [3, 4, 5, 6], slots: [2, 3], chance: 0.55 },
     voice: {
       greet: "四支都要。不是我用。你别开成一样的。",
       pleased: "四支你按备忘录分开了。",
@@ -658,7 +658,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "steady", below: 2, note: "颊上有痘，试镜两个字会把人推向厚妆" },
       budget: 400, maxUnits: 1,
     },
-    visits: { days: [1, 3, 5], slots: [2, 3], chance: 0.4 },
+    visits: { days: [1, 2, 3, 5], slots: [2, 3], chance: 0.55 },
     voice: {
       greet: "我卡里就四百。试镜要上镜，明天还上课。",
       pleased: "你没让我咬牙上那套。",
@@ -678,7 +678,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "steady", below: 2, note: "三天没睡，持妆是价签教她的" },
       budget: 1100, maxUnits: 1,
     },
-    visits: { days: [2, 4, 6], slots: [3], chance: 0.35 },
+    visits: { days: [2, 3, 4, 6, 7], slots: [3], chance: 0.5 },
     voice: {
       greet: "购物车里都是持妆，因为打折。我三天没怎么睡。",
       pleased: "你没顺着购物车说。",
@@ -697,7 +697,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "natural", want: 1, weight: 1 }],
       budget: 8000, maxUnits: 4,
     },
-    visits: { days: [2, 4, 6], slots: [1, 2], chance: 0.45 },
+    visits: { days: [1, 2, 3, 4, 5, 6], slots: [1, 2], chance: 0.55 },
     secret: { text: "那张署着沈薇的退货，名字是群里借的。", reveal: [{ opinion: "songjie", gte: 15 }] },
     voice: {
       greet: "库存还有几支，日期拍给我。肤质不用问。",
@@ -737,7 +737,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "steady", want: 2, weight: 3 }, { trait: "soothe", want: 1, weight: 2 }, { trait: "natural", want: 1, weight: 1 }],
       budget: 2000, maxUnits: 2,
     },
-    visits: { days: [5, 6, 7], slots: [0, 1], chance: 0.4 },
+    visits: { days: [1, 3, 5, 6, 7], slots: [0, 1], chance: 0.5 },
     voice: {
       greet: "团在中庭等。有一个人不能用香。",
       pleased: "十分钟你说清了。盒子没拆。",
@@ -756,7 +756,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "wear", want: 2, weight: 3 }, { trait: "correct", want: 2, weight: 2 }, { trait: "steady", want: 1, weight: 1 }],
       budget: 2600, maxUnits: 2,
     },
-    visits: { days: [2, 4], slots: [1, 2], chance: 0.35, fromDay: 12 },
+    visits: { days: [2, 3, 4, 6], slots: [1, 2], chance: 0.45, fromDay: 12 },
     voice: {
       greet: "陆遥说她调过来。你是替她看柜的吗？",
       pleased: "今天这单写在谁名下，你先说了。",
@@ -776,7 +776,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "steady", below: 2, note: "明天面试，预算到不了持妆" },
       budget: 1000, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [2, 3], chance: 0.3, fromDay: 14 },
+    visits: { days: [6, 7], slots: [2, 3], chance: 0.45, fromDay: 14 },
     voice: {
       greet: "我就看看。不一定买。你们别围上来。",
       pleased: "你让我把看看说完了。",
@@ -796,7 +796,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "soothe", below: 2, note: "她要的是你说出备案以外的话" },
       budget: 3500, maxUnits: 2,
     },
-    visits: { days: [1, 4], slots: [1, 2], chance: 0.3, fromDay: 5 },
+    visits: { days: [1, 4, 6], slots: [1, 2], chance: 0.45, fromDay: 5 },
     secret: { text: "录音笔在包带里。她买两支的时候，买的是证据。", reveal: [{ remembers: "yinxiaojie", act: "hard-sell", valence: "bad" }] },
     voice: {
       greet: "这瓶修护，斑到底能不能淡。你说实话。",
@@ -817,7 +817,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "女儿要上班涂的，红的是她觉得拿得出手" },
       budget: 1500, maxUnits: 1,
     },
-    visits: { days: [6, 7], slots: [1], chance: 0.4 },
+    visits: { days: [2, 4, 5, 6, 7], slots: [1, 3], chance: 0.5 },
     voice: {
       greet: "我看中这支红的。你别看我手机。",
       pleased: "你等我说出她的原话再开。",
@@ -837,7 +837,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       veto: { trait: "natural", below: 2, note: "他自己出油，整脸持妆会闷" },
       budget: 2400, maxUnits: 2,
     },
-    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.5 },
+    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.6 },
     voice: {
       greet: "她在镜头外面。你问我的话，她听得见。",
       pleased: "两张小票。她的和我的，你分开了。",
@@ -856,7 +856,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       demands: [{ trait: "correct", want: 2, weight: 3 }, { trait: "wear", want: 1, weight: 2 }, { trait: "natural", want: 1, weight: 1 }],
       budget: 1800, maxUnits: 1,
     },
-    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.42 },
+    visits: { days: [5, 6, 7], slots: [2, 3], chance: 0.5 },
     voice: {
       greet: "问他可以。你看我的时候，把单分开。",
       pleased: "我的颜色你没写进他的票。",
@@ -877,7 +877,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       budget: 1500, maxUnits: 1,
       buysFor: "tanwan",
     },
-    visits: { days: [5, 6], slots: [2], chance: 0.4 },
+    visits: { days: [3, 4, 5, 6], slots: [1, 2], chance: 0.5 },
     voice: {
       greet: "她没来。你别问我涂什么色。",
       pleased: "你看了相册，没看我的嘴。",

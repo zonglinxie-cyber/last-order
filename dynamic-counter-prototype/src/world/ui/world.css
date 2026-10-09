@@ -25,6 +25,12 @@
 /* —— 人：脚落在点上，换区用 left/top 过渡走过去 —— */
 .wf-actor { position:absolute; transform:translate(-50%,-97%); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:44px; min-height:44px; margin:0; padding:0; border:0; background:transparent; cursor:pointer; transition:left .9s ease-in-out, top .9s ease-in-out; }
 .wf-tag { margin-bottom:2px; padding:1px 7px; border-radius:999px; background:#120a0a99; color:#ffe8b6; font:600 max(12px,2.2cqh) 'Noto Serif SC',serif; white-space:nowrap; text-shadow:0 1px 3px #000; }
+/* 名牌第二行：新客 / 回头客。为什么单起一行 —— 柜台前那五个点只隔 6%（320 档约 35px），
+   把「·回头客」横着接在名字后面，pill 就顶到邻位那位的 pill 上；换行后宽度还是一个名字之内。
+   字号守在 12px 下限之上，和正文同一规矩。两行让整框高到 88px，站位上沿因此有下限，见 ui/zones.ts。 */
+.wf-kind { display:block; font-size:max(12px,1.8cqh); line-height:1.25; letter-spacing:.5px; }
+.wf-kind.is-new { color:#a8dccb; }
+.wf-kind.is-back { color:#f0c978; }
 .wf-figure { display:flex; flex-direction:column; align-items:center; animation:wf-bob 2.7s ease-in-out infinite; }
 @keyframes wf-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2.5%); } }
 .wf-chibi { height:11cqh; min-height:52px; filter:drop-shadow(0 4px 6px #0008); -webkit-user-drag:none; }

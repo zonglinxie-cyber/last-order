@@ -174,3 +174,10 @@ export const scoreWord = (mine: number, hers: number): string => {
 
 /** 页顶那一格用的短式：只报对面的账，不带比较句。 */
 export const scoreBrief = (hers: number): string => `对面 ${yuan(hers)}`;
+
+/** 楼层名牌底下那一行小字：她是不是你已经接见过的客人。
+ *  判据只有一个出处（engine 的 isReturningGuest），这里只出说法。 */
+export const guestKindWord = (returning: boolean): string => returning ? "回头客" : "新客";
+
+/** 「现场 · N 位客人」后面跟的那半句。一位新客都没有就不念 —— 全是熟人不算一条消息。 */
+export const newGuestWord = (fresh: number): string => fresh ? ` · 新客 ${fresh}` : "";

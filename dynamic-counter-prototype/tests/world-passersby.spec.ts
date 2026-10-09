@@ -99,7 +99,7 @@ test("路人不拦点击：点得到她身后的人，人物卡照常打开", as
   expect(hit.blocked).toBe(0);
 
   // 真按坐标点一次：路人层若吃点击，这张卡就打不开
-  const box = await page.getByRole("button", { name: "查看梅女士" }).boundingBox();
+  const box = await page.getByRole("button", { name: /查看梅女士/ }).boundingBox();
   expect(box).toBeTruthy();
   await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await expect(page.locator(".person-card")).toBeVisible();
@@ -118,7 +118,8 @@ test("开了减少动态效果就不摆路人", async ({ page }) => {
   expect(await page.locator(".wf-passersby").count()).toBe(0);
   expect(await boxes(page)).toHaveLength(0);
   // 在场的人物照常在
-  await expect(page.getByRole("button", { name: "查看梅女士" })).toBeVisible();
+  // 名牌后挂「新客 / 回头客」（words.ts），用例按子串找人。
+  await expect(page.getByRole("button", { name: /查看梅女士/ })).toBeVisible();
 });
 
 test("切到后台：脚步停在原地，也不再补人", async ({ page }) => {

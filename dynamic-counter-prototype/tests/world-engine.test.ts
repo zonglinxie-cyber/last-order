@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
-  evalCond, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
+  evalCond, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
   related, resolveServe, seasonSummary, serializeWorld, verbOptions,
-  warmthOf, VERB_ENERGY, SAVE_KEY, WORLD_SAVE_VERSION,
+  warmthOf, VERB_ENERGY, SAVE_KEY, STAFF_COUNTER_MAX, WORLD_SAVE_VERSION, ZONE_GUEST_CAPACITY,
 } from "../src/world/engine.ts";
-import type { Cond, Effect, Person, Storylet, World } from "../src/world/types.ts";
+import type { Cond, Effect, Person, Storylet, World, Zone } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
 import { PRODUCTS } from "../src/campaign.ts";
-import { PEOPLE as CONTENT_PEOPLE } from "../src/world/content/index.ts";
+import { PEOPLE as CONTENT_PEOPLE, festivalsFor } from "../src/world/content/index.ts";
+import { ZONE_SPOTS } from "../src/world/ui/zones.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 const PEOPLE = FIXTURE_PEOPLE;
@@ -662,6 +663,22 @@ test("陆遥在时段末带走没顾上的人，她当天不再回来", () => {
   assert.fail("60 个种子里没有一次抢客，概率常量可能被改坏了");
 });
 
+test("陆遥只截走到我柜台上却没被招呼的人：在中庭闲逛的不算漏单", () => {
+  // 同一副局面只换她的站位。抢客是概率事件（POACH_CHANCE），所以两边各试 40 个种子：
+  // 柜台上必须截得走，中庭和休息区一次都不该截 —— 场上客人一多就必然输掉比分，是这条口子没关。
+  const poached = (zone: Zone) => {
+    for (let i = 1; i <= 40; i++) {
+      const w = ambient({ ...newWorld(`poach-zone-${i}`, CONTENT_PEOPLE),
+        present: { shen: zone, luyao: "rival" }, opinion: { shen: -10 } }, CONTENT_PEOPLE);
+      if (w.present.shen === "rival") return true;
+    }
+    return false;
+  };
+  assert.ok(poached("counter"), "柜台上的客人一次都没被截走，POACH_ZONES 或概率可能被改坏了");
+  assert.equal(poached("atrium"), false, "中庭闲逛的人不该记成你漏掉的一单");
+  assert.equal(poached("lounge"), false, "休息区坐着的人同理");
+});
+
 test("比分：被截走的那位在那边把单开了，对面这一季多一笔账", () => {
   // 这一条用正式内容里的人：只有她们有诉求表，才谈得上"对面开了多大一单"。
   const shen = CONTENT_PEOPLE.find(p => p.id === "shen")!;
@@ -691,4 +708,95 @@ test("条件 season：只在某一季之后才成立", () => {
   assert.equal(evalCond(w1, PEOPLE, { season: { gte: 2 } }), false);
   assert.equal(evalCond(w2, PEOPLE, { season: { gte: 2 } }), true);
   assert.equal(evalCond(w2, PEOPLE, { season: { lte: 1 } }), false);
+});
+
+// —— 同屏名额与错峰（2026-10-09）——
+// 用户体感：「柜台人物太多了，顾客太少，新客老客没有区分」。三条都是量出来的：
+// 一个客位只站一个人、柜台前客人要多过同事、四个时段都得有人按规律自己来。
+// 改动这些常量之前先重跑 tests/world-sim.ts 的两张表（比分、每天开出几件）。
+
+/** 只跑落位这一件事：一天四时段连着整季，每个时段开头把场面交给 cb。 */
+function eachSlot(seeds: number, cb: (w: World, slot: number) => void) {
+  for (let i = 0; i < seeds; i++) {
+    let w = newWorld(`crowd-${i}`, CONTENT_PEOPLE);
+    const festivals = festivalsFor(1);
+    while (w.day <= 28) {
+      for (let slot = 0; slot < 4; slot++) {
+        w = beginSlot({ ...w, slot: slot as 0 | 1 | 2 | 3 }, CONTENT_PEOPLE, festivals);
+        cb(w, slot);
+      }
+      w = endDay(w, CONTENT_PEOPLE);
+    }
+  }
+}
+
+const roleOfContent = (id: string) => CONTENT_PEOPLE.find(p => p.id === id)?.role;
+
+test("客位对得上：每区容量等于界面摆的坐标数，总容量装得下同屏上限", () => {
+  for (const [zone, n] of Object.entries(ZONE_GUEST_CAPACITY))
+    assert.equal(n, ZONE_SPOTS[zone as Zone].length, `${zone} 区的容量和 ui/zones.ts 的坐标数不是一份 —— 有人会叠在同一个点上`);
+  const total = Object.values(ZONE_GUEST_CAPACITY).reduce((a, b) => a + b, 0);
+  assert.ok(MAX_PRESENT_CUSTOMERS <= total, `同屏上限 ${MAX_PRESENT_CUSTOMERS} 位客人，客位一共只有 ${total} 个`);
+});
+
+test("一个点不站两个人：正式内容跑完整季，每区客人不超容量、柜台后同事不超名额", () => {
+  let slots = 0;
+  eachSlot(6, w => {
+    slots++;
+    const perZone = new Map<Zone, number>();
+    let staffAtCounter = 0;
+    for (const [id, zone] of Object.entries(w.present)) {
+      if (roleOfContent(id) === "customer") perZone.set(zone, (perZone.get(zone) ?? 0) + 1);
+      else if (roleOfContent(id) === "staff" && zone === "counter") staffAtCounter++;
+    }
+    for (const [zone, n] of perZone)
+      assert.ok(n <= ZONE_GUEST_CAPACITY[zone], `第 ${w.day} 天时段 ${w.slot}：${zone} 区站了 ${n} 位客人，容量只有 ${ZONE_GUEST_CAPACITY[zone]}`);
+    assert.ok(staffAtCounter <= STAFF_COUNTER_MAX, `柜台后站了 ${staffAtCounter} 位同事，名额是 ${STAFF_COUNTER_MAX}`);
+  });
+  assert.equal(slots, 6 * 112, "六颗种子各一整季 = 112 个时段");
+});
+
+test("错峰：四个时段都有人按规律自己来，不靠「场子不能空」兜底", () => {
+  const perSlot = [0, 0, 0, 0];
+  for (const p of CONTENT_PEOPLE.filter(x => x.role === "customer")) {
+    const v = p.visits;
+    if (v.festivals?.length) continue; // 只在节日窗口里来的人不算常态
+    const share = v.days === "any" ? 1 : v.days.length / 7;
+    for (const s of v.slots) perSlot[s] += share * v.chance;
+  }
+  // 兜底名额是 2：任何一格按规律来的期望低于 2，那一格就是靠兜底撑着的空场。
+  for (let s = 0; s < 4; s++)
+    assert.ok(perSlot[s] >= 2, `时段 ${s} 按规律来的期望只有 ${perSlot[s].toFixed(2)} 位客人，不到兜底名额 2 —— 这一格没人自己来`);
+});
+
+test("柜台前客人多过同事，全场客人也不再是两三位", () => {
+  let slots = 0, guests = 0, atCounter = 0, staffAtCounter = 0;
+  eachSlot(24, w => {
+    slots++;
+    for (const [id, zone] of Object.entries(w.present)) {
+      if (roleOfContent(id) !== "customer") continue;
+      guests++;
+      if (zone === "counter") atCounter++;
+    }
+    staffAtCounter += Object.entries(w.present).filter(([id, z]) => roleOfContent(id) === "staff" && z === "counter").length;
+  });
+  const g = (n: number) => (n / slots).toFixed(2);
+  assert.ok(atCounter / slots > staffAtCounter / slots,
+    `柜台上 ${g(atCounter)} 位客人对 ${g(staffAtCounter)} 位同事 —— 柜台该是客人排队的那一格`);
+  assert.ok(guests / slots >= 3.5, `在场客人全时段均值 ${g(guests)}，「顾客太少」没解决`);
+});
+
+test("新客与回头客：招呼过、带过货、上一季加过微信都算回头客", () => {
+  let w = beginSlot(newWorld("kind-1", PEOPLE), PEOPLE);
+  const mei = person("mei");
+  assert.equal(isReturningGuest(w, "mei"), false, "没见过面的客人是新客");
+  w = stage(w, ["mei"]);
+  w = resolveServe(w, PEOPLE, "mei", "soft", 1);
+  assert.equal(isReturningGuest(w, "mei"), true, "接待过一次就该认她是回头客（判据是引擎写的 served:）");
+  assert.equal(isReturningGuest({ ...w, qualities: { [`bought:${mei.id}`]: w.day } }, "mei"), true, "她从柜上带过货");
+  assert.equal(isReturningGuest({ ...w, qualities: { "wechat:x": 1 } }, "x"), true, "上一季加过微信，这一季不算新客");
+  // 换季：served:/bought: 清零（回到 1 号那天重新认），wechat: 留着。
+  const next = nextSeason({ ...w, qualities: { "served:mei": 3, "bought:mei": 5, "wechat:zhou": 1 } }, PEOPLE);
+  assert.equal(isReturningGuest(next, "mei"), false, "上一季接过的客人，这一季重新从新客算");
+  assert.equal(isReturningGuest(next, "zhou"), true, "加过微信的人跨季还认得");
 });

@@ -8,7 +8,7 @@ import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  drawStorylet, endDay, newWorld, nextSeason, parseWorld, resolveServe, substitute,
+  drawStorylet, endDay, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, substitute,
   verbOptions, ENERGY_PER_DAY, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
@@ -30,7 +30,7 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { opinionWord, scoreBrief, scoreWord, SLOT_WORD } from "./words.ts";
+import { guestKindWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD } from "./words.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
@@ -258,6 +258,11 @@ export default function WorldGame() {
   const spots = useMemo(() => layOut(world), [world]);
   // 正在拌嘴的人头顶冒火气；点其中一个，打圆场就在动作排里。
   const quarreling = useMemo(() => new Set(quarrelPairs(world).flat()), [world]);
+  // 在场客人和其中还没接过你手的几位 —— 名牌上那一行和「现场」标题读同一份。
+  const [guests, freshGuests] = useMemo(() => {
+    const list = Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer");
+    return [list, list.filter(id => !isReturningGuest(world, id)).length] as const;
+  }, [world]);
   const calls = useMemo(() => (selected ? verbOptions(world, PEOPLE).filter(c => c.targets.includes(selected)) : []),
     [world, selected]);
   const verbs = selected ? availableVerbs(world, PEOPLE, [selected]) : [];
@@ -653,13 +658,16 @@ export default function WorldGame() {
           const spot = spots.get(id);
           if (!spot) return null;
           const isTarget = pickTargets.includes(id);
+          // 客人分新客与回头客：同事、对手、商场方不戴这一行（他们本来就不算客人）。
+          const back = p.role === "customer" && isReturningGuest(world, id);
+          const kind = p.role === "customer" ? guestKindWord(back) : "";
           return <button type="button" key={id} data-pid={id}
             className={`wf-actor${selected === id ? " is-sel" : ""}${isTarget ? " is-target" : ""}`}
             style={{ left: `${spot.x}%`, top: `${spot.y}%`, zIndex: 20 + Math.round(spot.y) } as CSSProperties}
-            aria-label={`${pick ? "选" : "查看"}${p.name}`}
+            aria-label={`${pick ? "选" : "查看"}${p.name}${kind ? ` ${kind}` : ""}`}
             onClick={() => tapPerson(id)}>
             {quarreling.has(id) && <i className="wf-heat" aria-hidden="true" />}
-            <span className="wf-tag">{p.name}</span>
+            <span className="wf-tag">{p.name}{kind && <i className={`wf-kind ${back ? "is-back" : "is-new"}`} aria-hidden="true">{kind}</i>}</span>
             <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
               {CHIBI.has(id)
                 ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.webp`)} alt="" aria-hidden="true" draggable={false} />
@@ -678,7 +686,7 @@ export default function WorldGame() {
     </div>
 
     <section className="world-scene" aria-label="现场">
-      <h2>现场 · {Object.keys(world.present).filter(id => PEOPLE.find(p => p.id === id)?.role === "customer").length} 位客人
+      <h2>现场 · {guests.length} 位客人{newGuestWord(freshGuests)}
         {dueReqs.length > 0 && <button type="button" className="req-chip" aria-label="查看委托进度"
           onClick={() => setReqPanelOpen(true)}>委托 {dueReqs.filter(r => r.state === "done").length}/{dueReqs.length}</button>}
       </h2>

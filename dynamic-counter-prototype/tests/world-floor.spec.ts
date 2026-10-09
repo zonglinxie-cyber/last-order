@@ -4,11 +4,12 @@ import {
 } from "../src/world/engine.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { FESTIVALS, PEOPLE, STORYLETS } from "../src/world/content/index.ts";
-import type { World } from "../src/world/types.ts";
+import type { World, Zone } from "../src/world/types.ts";
 
 // 人情场楼层走查（?mode=world）。
 // 存档是手工拼的 World 落盘：ui.screen="play" 表示这个时段已经开始（在场的人就是写死的那批），
 // ui.pending 是已经抽出来还没选的故事卡 —— 这样每个用例都是确定的，不赌来访概率。
+// 顾客名牌后挂「新客 / 回头客」（words.ts），所以按名字找人一律用子串正则；要钉整条标签的用例除外。
 // 尺寸契约（390×844 与 320×568）：除地图容器外不横向溢出、按钮 ≥44px、正文 ≥12px。
 
 const floorWorld = (over: Partial<World> = {}): World => ({
@@ -70,10 +71,10 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("开局能看到地图上有人，点人能开抽屉并完成一次招呼", async ({ page }) => {
       await enter(page, envelope());
-      await expect(page.getByRole("button", { name: "查看梅女士" })).toBeVisible();
+      await expect(page.getByRole("button", { name: /查看梅女士/ })).toBeVisible();
       expect(await page.locator(".wf-actor").count()).toBeGreaterThanOrEqual(10);
 
-      await page.getByRole("button", { name: "查看梅女士" }).click();
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
       await expect(page.locator(".world-drawer")).toBeVisible();
       await expect(page.locator(".person-card")).toBeVisible();
       await page.getByRole("button", { name: /招呼/ }).click();
@@ -82,7 +83,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("完成一次接待：选货、件数、开给她", async ({ page }) => {
       await enter(page, envelope());
-      await page.getByRole("button", { name: "查看梅女士" }).click();
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接待/ }).click();
       await expect(page.locator(".world-serve")).toBeVisible();
       // 她说出口的需要 + 预算上限要摆出来。看法 20 是"肯说两条"那一档（serve-talk.ts）。
@@ -100,7 +101,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("看法低时她只肯说一句", async ({ page }) => {
       await enter(page, envelope({ opinion: { mei: 3 } }));
-      await page.getByRole("button", { name: "查看梅女士" }).click();
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接待/ }).click();
       await expect(page.locator(".serve-said")).toHaveText("她说过：干燥泛红是我眼下最大的事，别拿厚东西糊我");
       await expect(page.locator(".serve-hold")).toContainText("她像是还有顾虑，没说出来。");
@@ -257,6 +258,78 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(saved.log.some(l => l.text.includes("第 2 季开始"))).toBe(true);
     });
 
+    test("新客与回头客在名牌上分得出来，「现场」那行跟着报新客数", async ({ page }) => {
+      // 三条判据各给一位：周姐靠上一季加的微信（wechat:）、沈薇靠这一季带过货（bought:），
+      // 其余三位这一季还没被招呼过 —— 界面只读 isReturningGuest，不许自己再拼一遍。
+      await enter(page, envelope({ qualities: { "wechat:zhou": 1, "bought:shen": 12 } }));
+      await expect(page.getByRole("button", { name: "查看梅女士 新客" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "查看周姐 回头客" })).toBeVisible();
+      const back = page.locator('.wf-actor[data-pid="zhou"] .wf-kind');
+      await expect(back).toHaveText("回头客");
+      expect(await back.getAttribute("class")).toContain("is-back");
+      expect(await page.locator('.wf-actor[data-pid="mei"] .wf-kind').getAttribute("class")).toContain("is-new");
+      // 同事、对手、商场方不算客人，名牌上没有这一行。
+      expect(await page.locator('.wf-actor[data-pid="roman"] .wf-kind').count()).toBe(0);
+      await expect(page.getByRole("button", { name: "查看罗曼" })).toBeVisible();
+      // 现场那行：5 位客人里 3 位是生面孔。
+      await expect(page.locator(".world-scene h2")).toHaveText("现场 · 5 位客人 · 新客 3");
+
+      // 招呼过一次她就从"新客"翻成"回头客"，计数跟着掉一格。
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      await page.getByRole("button", { name: /接待/ }).click();
+      await page.getByRole("button", { name: /修护/ }).click();
+      await page.getByRole("button", { name: "开给她" }).click();
+      await expect(page.locator('.wf-actor[data-pid="mei"] .wf-kind')).toHaveText("回头客");
+      await expect(page.locator(".world-scene h2")).toHaveText("现场 · 5 位客人 · 新客 2");
+    });
+
+    test("柜台站满五位客人：一个点不站两个人，每位都点得中", async ({ page }) => {
+      // 名额 7 位里柜台只摆得下 5 位（ZONE_GUEST_CAPACITY.counter = ZONE_SPOTS.counter 的点数，
+      // 单测钉着这条），另外两位散在休息区和入口。这里手工摆出这个最挤的样子，
+      // 量的是手机上"看得见也点得着"：相邻两点隔 6%，名牌框 44~50px，中心点各自独占。
+      const counter = ["mei", "zhou", "xiaoyu", "shen", "duan"];
+      const spread: Record<string, Zone> = { zhao: "lounge", baijie: "entrance" };
+      await enter(page, envelope({
+        present: {
+          roman: "cashier", suman: "backroom", tangke: "backroom", fangmin: "backroom",
+          qiaowan: "cashier", peilan: "backroom",
+          luyao: "rival", ligui: "atrium", laokang: "atrium", huojie: "atrium",
+          ...Object.fromEntries(counter.map(id => [id, "counter"])), ...spread,
+        },
+      }));
+      const ids = [...counter, ...Object.keys(spread)];
+      const at = await page.evaluate((list: string[]) => list.map(id => {
+        const el = document.querySelector<HTMLElement>(`.wf-actor[data-pid="${id}"]`);
+        if (!el) return { id, spot: "MISSING", hit: false };
+        const r = el.getBoundingClientRect();
+        const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { id, spot: `${el.style.left},${el.style.top}`, hit: !!t && (t === el || el.contains(t)) };
+      }), ids);
+      expect(at.filter(x => x.spot === "MISSING").map(x => x.id)).toEqual([]);
+      const spots = at.filter(x => counter.includes(x.id)).map(x => x.spot);
+      expect(new Set(spots).size, `站位有重复：${spots.join(" ")}`).toBe(counter.length);
+      expect(at.filter(x => !x.hit).map(x => x.id), `这些人的中心点被邻位盖住了 ${JSON.stringify(at)}`).toEqual([]);
+    });
+
+    test("中庭站满：客人两行名牌、商场方一行名牌都不许被地图上沿切掉", async ({ page }) => {
+      const five = ["mei", "zhou", "xiaoyu", "shen", "duan"];
+      const mall = ["ligui", "laokang", "huojie"];
+      await enter(page, envelope({
+        present: { luyao: "rival",
+          ...Object.fromEntries([...five, ...mall].map(id => [id, "atrium" as Zone])) },
+      }));
+      const rows = await page.evaluate((ids: string[]) => {
+        const map = document.querySelector<HTMLElement>(".world-map-view")!.getBoundingClientRect();
+        return ids.map(id => {
+          const el = document.querySelector<HTMLElement>(`.wf-actor[data-pid="${id}"]`)!;
+          const tag = el.querySelector<HTMLElement>(".wf-tag")!.getBoundingClientRect();
+          return { id, cut: +(map.top - tag.top).toFixed(1), spot: `${el.style.left},${el.style.top}` };
+        });
+      }, [...five, ...mall]);
+      // 地图顶是 overflow:hidden 的刀口：pill 顶边一旦高于它，名字那一行就画不出来。
+      expect(rows.filter(r => r.cut > 0.5), `这些人的名牌被切掉 ${JSON.stringify(rows)} 像素`).toEqual([]);
+    });
+
     test("刷新以后接着玩，天数不变", async ({ page }) => {
       await enter(page, envelope({ day: 5, slot: 2 }));
       await expect(page.locator(".world-bar-info")).toContainText("第 5 天");
@@ -269,7 +342,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("除地图容器外不横向溢出、按钮不小于 44px、正文不小于 12px", async ({ page }) => {
       await enter(page, envelope());
-      await page.getByRole("button", { name: "查看梅女士" }).click();
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
       await expect(page.locator(".world-drawer")).toBeVisible();
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
