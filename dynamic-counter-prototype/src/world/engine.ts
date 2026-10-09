@@ -15,7 +15,7 @@ import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
   Storylet, Verb, Visits, World, WorldRequest, Zone,
 } from "./types.ts";
-import { PLAYER } from "./types.ts";
+import { PLAYER, SEASON_DAYS } from "./types.ts";
 import { ta } from "./pronoun.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
@@ -207,6 +207,24 @@ export const setQuality = (w: World, key: string, value: number): World =>
 
 export const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
 
+// —— 线索本 ——
+// 玩家手里"对得上号"的一条事实。引擎只认 id 和记下的那天，文案在内容侧 content/clues.ts。
+// 一条线什么时候算翻过来，也是内容用 quality「thread:<id>」钉的，引擎不猜。
+
+export const CLUE_PREFIX = "clue:";
+/** 整局走到现在的绝对天：第 1 季第 1 天是 1。线索记的是这个数，换季不改。 */
+export const absDay = (w: World) => (w.season - 1) * SEASON_DAYS + w.day;
+export const hasClue = (w: World, id: string) => qualityOf(w, `${CLUE_PREFIX}${id}`) > 0;
+/** 记一条线索。已经记过就原样留着 —— 第一眼的日期才算数。 */
+export const learnClue = (w: World, id: string): World =>
+  hasClue(w, id) ? w : setQuality(w, `${CLUE_PREFIX}${id}`, absDay(w));
+/** 本子里的线索，按记下的先后排。 */
+export const clueIds = (w: World): string[] =>
+  Object.entries(w.qualities)
+    .filter(([key, v]) => key.startsWith(CLUE_PREFIX) && v > 0)
+    .sort((a, b) => a[1] - b[1])
+    .map(([key]) => key.slice(CLUE_PREFIX.length));
+
 export function newWorld(seed: string, _people: Person[]): World {
   return {
     seed, season: 1, day: 1, slot: 0, money: 0,
@@ -269,6 +287,7 @@ export function evalCond(world: World, people: Person[], cond: Cond, binding: Bi
     const id = at(cond.knowsSecret);
     return !!id && !!qualityOf(world, `secret-known:${id}`);
   }
+  if ("clue" in cond) return hasClue(world, cond.clue);
   if ("temper" in cond) { const id = at(cond.temper); return !!id && hasTemper(personOf(people, id), cond.is); }
   if ("role" in cond) { const id = at(cond.role); return !!id && personOf(people, id)?.role === cond.is; }
   if ("gender" in cond) { const id = at(cond.gender); return !!id && personOf(people, id)?.gender === cond.is; }
@@ -349,6 +368,7 @@ function applyEffect(world: World, people: Person[], effect: Effect, binding: Bi
       world = say(world, `你听说了${person.name}的事：${person.secret.text}`, [id]);
     return setQuality(world, `secret-known:${id}`, 1);
   }
+  if ("clue" in effect) return learnClue(world, effect.clue);
   if ("leave" in effect) {
     const id = at(effect.leave); if (!id || !isPresent(world, id)) return world;
     const present = { ...world.present }; delete present[id];
@@ -611,11 +631,12 @@ function bindCast(w: World, people: Person[], storylet: Storylet): [Binding | nu
   return [search(0) ? binding : null, next];
 }
 
-/** 个人线优先：主角在场时她是带着事来的，这一段比路过的社交局更该被讲。 */
+/** 写了剧情的卡优先：个人线和主线都比路过的社交局更该被讲。 */
 export const ARC_WEIGHT_MULT = 3;
+const SPINE_KINDS: Storylet["kind"][] = ["arc", "mainline"];
 
 const storyWeight = (storylet: Storylet, heat: number): number => {
-  const w = Math.max(0, storylet.weight) * (storylet.kind === "arc" ? ARC_WEIGHT_MULT : 1);
+  const w = Math.max(0, storylet.weight) * (SPINE_KINDS.includes(storylet.kind) ? ARC_WEIGHT_MULT : 1);
   if (storylet.tension === 1) return w * (1 + Math.max(0, -heat)) / (1 + Math.max(0, heat));
   if (storylet.tension === -1) return w * (1 + Math.max(0, heat)) / (1 + Math.max(0, -heat));
   return w;
@@ -1047,10 +1068,13 @@ export function endDay(world: World, people: Person[]): World {
 // —— 换季 ——
 
 /** 跨季留下的 quality：个人线进度与落点（arc:*）、秘密这条线已经发生的事实
- * （知道/答应过/说出去了/被事主对上了 —— secret-* 那一族）、微信（wechat:*）。
+ * （知道/答应过/说出去了/被事主对上了 —— secret-* 那一族）、微信（wechat:*）、
+ * 本子上的线索（clue:*）、已经翻过来的线（thread:*）和主线走到第几幕（mainline:*）。
  * 按天算的（away:/bought:/handoff-sale:/standing:social-day）、按季计的（served:、
- * storyteller:heat）都清零 —— 天数回到 1，那些数再留着会骗过当天的判断。 */
-const CARRIED_QUALITY = ["arc:", "wechat:", "secret-"] as const;
+ * storyteller:heat）都清零 —— 天数回到 1，那些数再留着会骗过当天的判断。
+ * 线索、落点和幕号跨季不清：这一季埋下的那条，下一季才翻得过来，
+ * 而主线不能每开一季就从第一幕重讲一遍。 */
+const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。

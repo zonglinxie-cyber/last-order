@@ -3,11 +3,12 @@
 // localStorage 读写只放在最下面两个浏览器侧包装里；坏数据整份丢弃，不做半份图鉴。
 // 规则口径见 docs/人情场设计.md；读的是 engine 写进 World 的 quality 旗，不改引擎。
 import { ENDINGS } from "./ending.ts";
-import { PEOPLE } from "./content/index.ts";
+import { CLUE_PREFIX } from "./engine.ts";
+import { CLUE_THREADS, PEOPLE, isClueId, isThreadId, threadKey } from "./content/index.ts";
 import type { PersonId, Storylet, World } from "./types.ts";
 
 export const WORLD_PROGRESS_KEY = "last-order-world-progress-v1";
-export const WORLD_PROGRESS_VERSION = 1;
+export const WORLD_PROGRESS_VERSION = 2;
 
 /** 个人线主角。落点 = quality「arc:<id>:end」被 set 到的那一档（各线 1~4 个）。
  *  沈薇到米朵这八条第 1 季就能开始；唐可、罗曼、方敏、乔晚从第 2 季才开。 */
@@ -16,14 +17,14 @@ export const ARC_PEOPLE: PersonId[] = ["shen", "anjie", "luyao", "suman", "xiaoy
 const PERSON_IDS = new Set<PersonId>(PEOPLE.map(p => p.id));
 const ENDING_IDS = new Set<string>(ENDINGS.map(e => e.id));
 
-/** 落点标题：从对应「arc-<id>-end」卡里那个 set 到这一档的选项 label 现取，内容改了标签跟着走。
-    档案（WorldArchive）和季末回顾（recap.ts）都读这一个取法，不各写一份。 */
-export function arcLandings(storylets: Storylet[], id: PersonId): Array<{ landing: number; title: string }> {
+/** 落点标题：从把这一档 quality 钉到某个值的选项 label 现取，内容改了标签跟着走。
+    档案（WorldArchive）和季末回顾（recap.ts）都读这两个取法，不各写一份。 */
+function labelLandings(storylets: Storylet[], quality: string): Array<{ landing: number; title: string }> {
   const out: Array<{ landing: number; title: string }> = [];
   for (const card of storylets) {
     for (const choice of card.choices) {
       for (const effect of choice.effects) {
-        if ("quality" in effect && effect.quality === `arc:${id}:end` && typeof effect.set === "number") {
+        if ("quality" in effect && effect.quality === quality && typeof effect.set === "number") {
           if (!out.some(x => x.landing === effect.set)) out.push({ landing: effect.set, title: choice.label });
         }
       }
@@ -31,6 +32,10 @@ export function arcLandings(storylets: Storylet[], id: PersonId): Array<{ landin
   }
   return out.sort((a, b) => a.landing - b.landing);
 }
+
+export const arcLandings = (storylets: Storylet[], id: PersonId) => labelLandings(storylets, `arc:${id}:end`);
+/** 主线某条线能拧到的几档（0 那一档没有卡会写，所以不出现在这里）。 */
+export const threadLandings = (storylets: Storylet[], id: string) => labelLandings(storylets, threadKey(id));
 
 export type WorldProgress = {
   version: number;
@@ -44,12 +49,16 @@ export type WorldProgress = {
   worstOpinion: Record<PersonId, number>;
   /** 每条个人线走到过的落点序号（同一季只会落一个，多季可累积多个） */
   arcEnds: Record<PersonId, number[]>;
+  /** 线索本：跨所有存档攒到的线索 id（引擎的「clue:<id>」旗） */
+  clues: string[];
+  /** 每条主线走到过的收法序号（落点之间不是高低档，是一季只落一种的几种收法） */
+  threadEnds: Record<string, number[]>;
   /** 拿到的结局 id（seasonEnding 的 id） */
   endings: string[];
 };
 
 export const emptyWorldProgress = (): WorldProgress =>
-  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, endings: [] });
+  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [] });
 
 const clampOpinion = (v: number): number => Math.max(-100, Math.min(100, v));
 
@@ -57,7 +66,8 @@ const clampOpinion = (v: number): number => Math.max(-100, Math.min(100, v));
  * 把一份世界读数并进档案：只增不减。
  * seen 认 present 里的人；secretKnown 认「secret-known:<id>」旗；
  * 看法取这一份 world.opinion 里的每个值去撑大最好 / 压差最差的那一档；
- * arcEnds 认「arc:<id>:end」旗；endingId 是 seasonEnding 的 id（只在收季时传）。
+ * arcEnds 认「arc:<id>:end」旗；clues 认「clue:<id>」旗；threadEnds 认「thread:<id>」旗；
+ * endingId 是 seasonEnding 的 id（只在收季时传）。
  */
 export function observeWorldProgress(progress: WorldProgress, world: World, endingId?: string): WorldProgress {
   const seen = new Set(progress.seen);
@@ -86,6 +96,20 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     ? [...progress.endings, endingId]
     : [...progress.endings];
 
+  const clues = new Set(progress.clues);
+  for (const key of Object.keys(world.qualities)) {
+    if (!key.startsWith(CLUE_PREFIX)) continue;
+    const id = key.slice(CLUE_PREFIX.length);
+    if (isClueId(id) && world.qualities[key] > 0) clues.add(id);
+  }
+
+  const threadEnds: Record<string, number[]> = {};
+  for (const thread of CLUE_THREADS) threadEnds[thread.id] = [...(progress.threadEnds[thread.id] ?? [])];
+  for (const thread of CLUE_THREADS) {
+    const landed = world.qualities[threadKey(thread.id)];
+    if (Number.isInteger(landed) && (landed as number) >= 1 && !threadEnds[thread.id].includes(landed)) threadEnds[thread.id].push(landed as number);
+  }
+
   return {
     version: WORLD_PROGRESS_VERSION,
     seen: [...seen],
@@ -93,6 +117,8 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     bestOpinion,
     worstOpinion,
     arcEnds,
+    clues: [...clues],
+    threadEnds,
     endings,
   };
 }
@@ -112,7 +138,11 @@ const isLandingList = (x: unknown): x is number[] => {
 const isOpinionTable = (x: unknown): x is Record<PersonId, number> =>
   isRecord(x) && Object.entries(x).every(([id, v]) => PERSON_IDS.has(id) && typeof v === "number" && Number.isInteger(v) && v >= -100 && v <= 100);
 
-/** 类型不对整份丢弃（和 parseWorld 同口径）：缺一字段、id 未知、看法越界、结局不认，都返回 null。 */
+/** 线索本：每条都是内容表里认得的 id，不重复。 */
+const isClueList = (x: unknown): x is string[] =>
+  Array.isArray(x) && new Set(x).size === x.length && x.every(id => isStr(id) && isClueId(id));
+
+/** 类型不对整份丢弃（和 parseWorld 同口径）：缺一字段、id 未知、看法越界、线索不认、结局不认，都返回 null。 */
 export function parseWorldProgress(raw: string | null): WorldProgress | null {
   if (raw == null) return null;
   let parsed: unknown;
@@ -123,6 +153,11 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
   if (!isRecord(parsed.arcEnds)) return null;
   for (const [id, list] of Object.entries(parsed.arcEnds)) {
     if (!ARC_PEOPLE.includes(id) || !isLandingList(list)) return null;
+  }
+  if (!isClueList(parsed.clues)) return null;
+  if (!isRecord(parsed.threadEnds)) return null;
+  for (const [id, list] of Object.entries(parsed.threadEnds)) {
+    if (!isThreadId(id) || !isLandingList(list)) return null;
   }
   if (!Array.isArray(parsed.endings) || !parsed.endings.every(isStr) || new Set(parsed.endings).size !== parsed.endings.length) return null;
   if (!parsed.endings.every(id => ENDING_IDS.has(id))) return null;
@@ -140,6 +175,8 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     bestOpinion: { ...best },
     worstOpinion: { ...worst },
     arcEnds: Object.fromEntries(Object.entries(parsed.arcEnds).map(([id, list]) => [id, [...list as number[]]])),
+    clues: [...parsed.clues as string[]],
+    threadEnds: Object.fromEntries(Object.entries(parsed.threadEnds).map(([id, list]) => [id, [...list as number[]]])),
     endings: [...parsed.endings as string[]],
   };
 }

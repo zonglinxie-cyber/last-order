@@ -5,14 +5,14 @@ import { useMemo, useState } from "react";
 import { MobileScroll } from "../../mobile";
 import { ENDINGS, rank } from "../ending.ts";
 import { endingHint } from "../ending-hints.ts";
-import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWorldProgress, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
-import { PEOPLE, STORYLETS } from "../content/index.ts";
+import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWorldProgress, threadLandings, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
+import { CLUES, CLUE_THREADS, PEOPLE, STORYLETS } from "../content/index.ts";
 import type { PersonId } from "../types.ts";
 import { opinionWord } from "./words.ts";
 import "../../archive.css";
 import "./world-archive.css";
 
-type Tab = "people" | "arcs" | "endings";
+type Tab = "people" | "arcs" | "book" | "endings";
 
 const nameOf = (id: PersonId): string => PEOPLE.find(p => p.id === id)?.name ?? id;
 
@@ -41,12 +41,14 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
         <b>档案</b>
         <small>{tab === "people" ? `这层楼上见过 ${metCount} / ${PEOPLE.length} 位`
           : tab === "arcs" ? `几条线落过 ${landedCount} 处`
+          : tab === "book" ? `本子上攒了 ${progress.clues.length} / ${CLUES.length} 条`
           : `散过场 ${achievedCount} / ${ENDINGS.length} 种`}</small>
       </div>
     </header>
     <div className="archive-tabs" role="group" aria-label="档案分页">
       <button type="button" className={tab === "people" ? "active" : ""} onClick={() => setTab("people")}>人物</button>
       <button type="button" className={tab === "arcs" ? "active" : ""} onClick={() => setTab("arcs")}>个人线</button>
+      <button type="button" className={tab === "book" ? "active" : ""} onClick={() => setTab("book")}>本子</button>
       <button type="button" className={tab === "endings" ? "active" : ""} onClick={() => setTab("endings")}>结局</button>
     </div>
 
@@ -89,6 +91,36 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
               <span className="wa-arc-dot" aria-hidden="true" />
               <b>{lit ? l.title : "？？？"}</b>
               {!lit && <small>这一支还没走到过。</small>}
+            </p>;
+          })}</div>
+        </article>;
+      })}</section>}
+
+      {tab === "book" && <section className="wa-arcs">{CLUE_THREADS.map(thread => {
+        const clues = CLUES.filter(c => c.thread === thread.id);
+        const reached = progress.threadEnds[thread.id] ?? [];
+        const landings = threadLandings(STORYLETS, thread.id);
+        const heldCount = clues.filter(c => progress.clues.includes(c.id)).length;
+        return <article className="wa-arc" key={thread.id}>
+          <h3>{thread.name}</h3>
+          <p className="wa-line wa-secret">
+            <small>{heldCount === clues.length ? "弄清了" : "还没弄清"}</small>
+            <span>{thread.question}</span>
+          </p>
+          <div className="wa-arc-rows">{clues.map(c => {
+            const lit = progress.clues.includes(c.id);
+            return <p key={c.id} className={"wa-arc-row" + (lit ? " lit" : "")}>
+              <span className="wa-arc-dot" aria-hidden="true" />
+              <b>{lit ? c.text : "？？？"}</b>
+              {!lit && <small>这一条没攒到过。</small>}
+            </p>;
+          })}</div>
+          <div className="wa-arc-rows">{landings.map(l => {
+            const lit = reached.includes(l.landing);
+            return <p key={l.landing} className={"wa-arc-row" + (lit ? " lit" : "")}>
+              <span className="wa-arc-dot" aria-hidden="true" />
+              <b>{lit ? l.title : "？？？"}</b>
+              {!lit && <small>这一种收法还没落到过。</small>}
             </p>;
           })}</div>
         </article>;

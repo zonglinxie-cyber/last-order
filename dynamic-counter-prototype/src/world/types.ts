@@ -9,6 +9,9 @@ export const PLAYER: PersonId = "player";
 
 export type Role = "customer" | "staff" | "rival" | "mall";
 
+/** 一季多少天。节日表、跨季的线索记时、界面的"第几季第几天"都读这一个数。 */
+export const SEASON_DAYS = 28;
+
 /** 脾气：决定她传不传话、信不信传话、被推销时怎么反应。每人 1~2 个。 */
 export type Temper =
   | "face"     // 爱面子：当众被拆穿记仇更深
@@ -199,6 +202,9 @@ export type Cond =
   | { remembers: Ref; act?: string; valence?: "good" | "bad"; subject?: Ref; heard?: boolean; from?: Ref }
   /** 玩家是否已经知道她的秘密（引擎写 secret-known:<id>，beginSlot 自动揭开和 reveal 效果都算） */
   | { knowsSecret: Ref }
+  /** 你的本子里有这条线索（id 见 content/clues.ts 的 CLUES）。
+      反转靠这个：后面的卡要求你手里先有前面那条，才说得出那句翻过来的话。 */
+  | { clue: string }
   | { temper: Ref; is: Temper }
   | { role: Ref; is: Role }
   | { gender: Ref; is: Gender }
@@ -228,6 +234,9 @@ export type Effect =
   | { move: { person: Ref; zone: Zone } }
   /** 玩家当场知道某人的秘密：写 secret-known:<id>，口径和 beginSlot 自动揭开的那条一致 */
   | { reveal: Ref }
+  /** 把这条线索记进玩家的本子（幂等：记过就不改时间）。文案、归属的那条线、指向谁，
+      都在 content/clues.ts 的 CLUES 表里，引擎只认 id。 */
+  | { clue: string }
   /** 当场离开 */
   | { leave: Ref }
   | { log: string };
@@ -254,8 +263,8 @@ export type Choice = {
 
 export type Storylet = {
   id: string;
-  /** 通用社交局 or 个人线 */
-  kind: "social" | "arc" | "floor";
+  /** 通用社交局 · 个人线 · 楼层 · 主线（贯穿几季的悬念和翻面，见 content/clues.ts） */
+  kind: "social" | "arc" | "floor" | "mainline";
   /** 角色槽，按声明顺序绑定。个人线一般把主角钉成具体 id。 */
   cast: Record<string, CastSlot>;
   /** 整张卡的出现条件（在角色槽绑定之后求值） */

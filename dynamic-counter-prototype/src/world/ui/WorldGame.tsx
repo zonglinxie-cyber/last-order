@@ -550,6 +550,19 @@ export default function WorldGame() {
             : <p className="recap-empty">谁的线都没走到头。</p>}
         </section>
 
+        <section className="recap-block">
+          <h2>本子上的事</h2>
+          {recap.threads.length
+            ? <ul className="recap-arcs">{recap.threads.map(t => <li key={t.id}>
+              <b>{t.name}</b>
+              <span>{t.landing >= 1
+                ? `翻过来了：「${t.title ?? `第 ${t.landing} 档`}」`
+                : `${t.question}本子上攒到 ${t.held.length} 条。`}</span>
+              {t.landing >= 1 ? null : <small>下季还有人认得</small>}
+            </li>)}</ul>
+            : <p className="recap-empty">这一季本子上没添新的一页。</p>}
+        </section>
+
         <section className="recap-block recap-numbers-block">
           <h2>三本账</h2>
           <div className="report-numbers recap-numbers">

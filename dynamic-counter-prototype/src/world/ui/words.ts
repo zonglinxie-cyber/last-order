@@ -120,6 +120,16 @@ export const ACT_WORD: Record<string, string> = {
   "claim-full": "在镜头里把功效说满了",
   "claim-held": "镜头开着，功效没有说满",
   "rival-line": "把对面那句复述给她听了",
+  // 主线：那张退货单（storylets-mainline.ts）
+  "slip-asked-date": "先问了那单是哪天进来的",
+  "slip-asked-tape": "问了她包带里开着什么",
+  "slip-asked-gap": "把领用表那一行问到嘴边",
+  "slip-not-mine": "说清了那张单子不是她退的",
+  "slip-named-group": "把名字是从群里借的说出去了",
+  "slip-name-held": "知道那一行是谁的，没有念出口",
+  "slip-owned-line": "把自己那句原话交了出去",
+  "slip-waited": "等这一页自己归档，没先开口",
+  "slip-punted": "把单子推给了别人的名字",
   // 每日委托（requests.ts）
   "kept-promise": "答应她的事做到了",
   "broke-promise": "答应她的事没做到",

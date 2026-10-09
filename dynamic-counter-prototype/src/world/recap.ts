@@ -8,8 +8,9 @@
 //   现场句子补 —— 退货、拌嘴、牵线、劝和、背后嘀咕、搭把手、小样、开口托事、
 //   说好要来、看走眼，各小类同样不超两条。挑完按天排：时间轴从第 1 天讲到散场。
 //   个人线落点和委托优先用 log 里的原句；原句认不回来（多槽卡的绑定没留下）就合成一句。
-import { opinionOf, personOf, PLAYER_NAME } from "./engine.ts";
-import { ARC_PEOPLE, arcLandings } from "./progress.ts";
+import { clueIds, opinionOf, personOf, PLAYER_NAME } from "./engine.ts";
+import { ARC_PEOPLE, arcLandings, threadLandings } from "./progress.ts";
+import { CLUE_THREADS, MAINLINE_ACT_KEY, cluesOnThread, threadLanding } from "./content/clues.ts";
 import { actWord } from "./ui/words.ts";
 import type { Choice, LogEntry, Person, PersonId, Storylet, World } from "./types.ts";
 import { PLAYER } from "./types.ts";
@@ -57,6 +58,20 @@ export type RecapArc = {
   day?: number;
 };
 
+/** 本子上那条贯穿几季的悬念：这一季拧过来了，还是仍旧挂着。 */
+export type RecapThread = {
+  id: string;
+  name: string;
+  /** 没弄清的时候念这一句 */
+  question: string;
+  /** 本子上这一条线攒到的线索（按学到的先后） */
+  held: string[];
+  /** 0 = 还没弄清 */
+  landing: number;
+  /** 拧到那一档的说法（跟档案同一个取法） */
+  title?: string;
+};
+
 export type RecapStat = { value: number; line: string };
 
 export type SeasonRecap = {
@@ -65,6 +80,8 @@ export type SeasonRecap = {
   remembered: RecapPerson[];
   movers: RecapMover[];
   arcs: RecapArc[];
+  /** 主线本子：只列这一季动过的那几条线 */
+  threads: RecapThread[];
   stats: { money: RecapStat; standing: RecapStat; compliance: RecapStat };
 };
 
@@ -310,9 +327,25 @@ export function seasonRecap(world: World, people: Person[], storylets: Storylet[
   arcs.sort((a, b) => (b.day ?? 0) - (a.day ?? 0) || a.id.localeCompare(b.id));
 
   const statsStart = world.statsAtSeasonStart;
+
+  // 本子：幕一开过、或本子上攒到过东西、或这一季拧过来了，才在这页念它。
+  const heldClues = clueIds(world);
+  const spineOpened = (world.qualities[MAINLINE_ACT_KEY] ?? 0) >= 1;
+  const threads: RecapThread[] = CLUE_THREADS
+    .map(t => {
+      const landing = threadLanding(world.qualities, t.id);
+      return {
+        id: t.id, name: t.name, question: t.question,
+        held: cluesOnThread(heldClues, t.id), landing,
+        title: landing >= 1 ? threadLandings(storylets, t.id).find(l => l.landing === landing)?.title : undefined,
+      };
+    })
+    .filter(t => t.landing >= 1 || t.held.length > 0 || spineOpened)
+    .sort((a, b) => b.landing - a.landing || b.held.length - a.held.length || a.id.localeCompare(b.id));
+
   return {
     highlights: pickHighlights(world, people, storylets),
-    allies, remembered, movers, arcs,
+    allies, remembered, movers, arcs, threads,
     stats: {
       money: { value: world.money, line: moneyWord(world.money) },
       standing: { value: world.standing, line: deltaWord(world.standing, statsStart?.standing) },

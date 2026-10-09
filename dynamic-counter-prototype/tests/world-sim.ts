@@ -6,10 +6,12 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
-  ambient, applyChoice, beginSlot, bestFit, choiceVisible, doVerb, drawStorylet, endDay,
+  ambient, applyChoice, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
   newWorld, nextSeason, seasonSummary, verbOptions, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
+import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
+import { threadLandings } from "../src/world/progress.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
 import { INSTANT_KINDS, resolveRequestChoice } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
@@ -117,7 +119,21 @@ function takeTurns(style: Style, w: World, people: Person[]): World {
 /** 每种风格下每张卡被抽到的次数（跨种子、跨季累计），用来找"写了却永远出不来"的卡。 */
 const fireCount = new Map<Style, Map<string, number>>();
 
-function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[]): World {
+/** 内容燃烧曲线：一个种子从第 1 季到最后一季连着算，天数是跨季累计的绝对天。
+    第一次见到的卡算"新内容"，之后每次抽到已经见过的卡算重复 —— 曲线见底的绝对天
+    就是"没玩就结束了"那个体感的天数。 */
+type RunBurn = { firstDay: Map<string, number>; draws: number; repeats: number; perSeason: Array<{ season: number; draws: number; repeats: number }> };
+const runBurn = new Map<string, RunBurn>();
+const burnOf = (style: Style, seed: string): RunBurn => {
+  const key = `${style}|${seed}`;
+  let b = runBurn.get(key);
+  if (!b) { b = { firstDay: new Map(), draws: 0, repeats: 0, perSeason: [] }; runBurn.set(key, b); }
+  return b;
+};
+
+function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn): World {
+  const seasonTally = { season: seasonNo, draws: 0, repeats: 0 };
+  burn.perSeason.push(seasonTally);
   while (w.day <= DAYS) {
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
@@ -126,6 +142,9 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
+        const absDay = (seasonNo - 1) * DAYS + w.day;
+        if (burn.firstDay.has(drawn.storylet.id)) { burn.repeats++; seasonTally.repeats++; } else burn.firstDay.set(drawn.storylet.id, absDay);
+        burn.draws++; seasonTally.draws++;
         const counts = fireCount.get(style) ?? new Map<string, number>();
         counts.set(drawn.storylet.id, (counts.get(drawn.storylet.id) ?? 0) + 1);
         fireCount.set(style, counts);
@@ -189,6 +208,9 @@ const resultOf = (style: Style, seed: string, w: World): Result => {
   };
 };
 const results: Result[] = [];
+/** 主线本子（每种子一条）：幕号、本子上攒了几条、每条线收到哪种收法（0 = 一季过完还没弄清）。 */
+type Spine = { style: Style; seed: string; act: number; clues: number; ends: Record<string, number> };
+const spines: Spine[] = [];
 /** 自主社交动作的发生次数：每跑完一季记一行（exn: 计数换季自动清零，一行就是一季）。 */
 const exTallies: Array<{ style: Style; tally: Record<string, number> }> = [];
 /** 委托结算：每季一行（状态 -> 次数），再加每模板的明细。 */
@@ -207,13 +229,13 @@ const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
-    let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1));
+    let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1), 1, burnOf(style, seed));
     exTallies.push({ style, tally: exchangeTally(w) });
     reqTallies.push({ style, ...tallyRequests(w) });
     let s = seasonSummary(w, people);
     results.push(resultOf(style, seed, w));
     for (let k = 2; k <= SEASON_COUNT; k++) {
-      w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k));
+      w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed));
       exTallies.push({ style, tally: exchangeTally(w) });
       reqTallies.push({ style, ...tallyRequests(w) });
       const next = seasonSummary(w, people);
@@ -226,6 +248,11 @@ for (const style of STYLES) {
       });
       s = next;
     }
+    // 主线本子读的是最后一季的世界：幕号、线索、每条线的收法都跨季带着走。
+    spines.push({
+      style, seed, act: w.qualities[MAINLINE_ACT_KEY] ?? 0, clues: clueIds(w).length,
+      ends: Object.fromEntries(CLUE_THREADS.map(t => [t.id, threadLanding(w.qualities, t.id)])),
+    });
   }
 }
 
@@ -377,7 +404,62 @@ for (const { season, results: rs2, flips } of later) {
   }
 }
 
-// 卡的覆盖面：每种风格抽到过几张；所有风格合起来都没抽到过的卡单独列出来 —— 写了却出不来，要么条件写死，要么引擎没接上。
+// 内容燃烧曲线：新内容在第几天见底，见底之后每一抽都在重播已经看过的卡。
+// "见底天"= 这个种子最后一个新内容（第一次抽到的卡）出现的绝对天；剩下的日子全是重复。
+console.log(`\n内容燃烧曲线（${SEASON_COUNT} 季 × ${DAYS} 天 = ${SEASON_COUNT * DAYS} 天，跨季连着算）:`);
+console.log("风格      见过的卡数   半池在第几天  八成在第几天  新内容见底  见底后还剩几天  整段重复率  第1季重复率");
+for (const style of STYLES) {
+  const bs = [...runBurn.entries()].filter(([k]) => k.startsWith(`${style}|`)).map(([, b]) => b);
+  /** 这个种子的卡池按出现顺序排好，第 frac 张新内容出现在第几天。 */
+  const dayAt = (b: RunBurn, frac: number) => {
+    const sorted = [...b.firstDay.values()].sort((x, y) => x - y);
+    return sorted[Math.max(0, Math.min(sorted.length - 1, Math.ceil(sorted.length * frac) - 1))] ?? 0;
+  };
+  const pct = (xs: number[]) => `${Math.round(median(xs) * 100)}%`;
+  console.log(`  ${style.padEnd(8)} ${String(median(bs.map(b => b.firstDay.size))).padStart(6)}/${storylets.length}`
+    + `        ${String(median(bs.map(b => dayAt(b, 0.5)))).padStart(6)} 天`
+    + `        ${String(median(bs.map(b => dayAt(b, 0.8)))).padStart(6)} 天`
+    + `      ${String(median(bs.map(b => dayAt(b, 1)))).padStart(4)} 天`
+    + `        ${String(SEASON_COUNT * DAYS - median(bs.map(b => dayAt(b, 1)))).padStart(4)} 天`
+    + `        ${pct(bs.map(b => (b.draws ? b.repeats / b.draws : 0)))}`
+    + `        ${pct(bs.map(b => { const p = b.perSeason.find(x => x.season === 1); return p && p.draws ? p.repeats / p.draws : 0; }))}`);
+}
+
+// 主线本子：反转到底有没有被玩出来。幕号是跨季累计的（换季不清），所以一条种子就是一整段局。
+if (source === "src/world/content") {
+  const maxAct = MAINLINE_ACTS.length;
+  console.log("\n主线本子（幕号与线索跨季带着走）:");
+  console.log("风格      幕号（0 没开局 / 1 摆上桌 / 2 翻过面）    本子上条数   拧过来的线");
+  for (const style of STYLES) {
+    const ss = spines.filter(x => x.style === style);
+    if (!ss.length) continue;
+    const acts = Array.from({ length: maxAct + 1 }, (_, a) => `${a}:${ss.filter(x => x.act === a).length}`).join(" ");
+    const turned = ss.filter(x => Object.values(x.ends).some(v => v >= 1)).length;
+    console.log(`  ${style.padEnd(8)} ${acts.padEnd(30)}  ${String(median(ss.map(x => x.clues))).padStart(2)}/${CLUES.length}`
+      + `      ${String(Math.round(turned / ss.length * 100)).padStart(3)}%`);
+  }
+  for (const thread of CLUE_THREADS) {
+    const titleOf = (landing: number) =>
+      landing === 0 ? "还没弄清" : threadLandings(storylets, thread.id).find(l => l.landing === landing)?.title ?? `第 ${landing} 档`;
+    const landings = new Map<number, number>();
+    for (const x of spines) {
+      const v = x.ends[thread.id] ?? 0;
+      landings.set(v, (landings.get(v) ?? 0) + 1);
+    }
+    console.log(`  ${thread.name}：`);
+    for (const landing of [...landings.keys()].sort((a, b) => a - b)) {
+      console.log(`    ${String(landing).padStart(2)} ${titleOf(landing)} ${landings.get(landing)}/${spines.length}`);
+    }
+  }
+  // 主线各张卡有多少个种子真的碰到过：出场率低的卡就是门槛写死了，不是玩家不想看。
+  console.log("  主线卡的出场率（几个种子里见过这张卡）:");
+  for (const card of storylets.filter(s => s.kind === "mainline")) {
+    const hits = [...runBurn.values()].filter(b => b.firstDay.has(card.id)).length;
+    console.log(`    ${card.id.padEnd(22)} ${String(hits).padStart(3)}/${runBurn.size}  中位第 ${String(median([...runBurn.values()].filter(b => b.firstDay.has(card.id)).map(b => b.firstDay.get(card.id)!))).padStart(2)} 天`);
+  }
+}
+
+// 卡的覆盖面：每种风格抽到过几张；所有风格合起来都没抽到过的卡单独列出来 —— 写了却永远出不来，要么条件写死，要么引擎没接上。
 console.log("\n故事碎片覆盖（抽到过的张数 / 总张数）:");
 for (const style of STYLES) console.log(`  ${style.padEnd(8)} ${fireCount.get(style)?.size ?? 0}/${storylets.length}`);
 const everFired = new Set(STYLES.flatMap(style => [...(fireCount.get(style)?.keys() ?? [])]));
