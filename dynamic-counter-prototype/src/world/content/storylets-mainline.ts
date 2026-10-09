@@ -1,4 +1,5 @@
-// 主线第 1 幕「一张署了别人名字的单子」→ 第 2 幕「名字在谁手里」。
+// 主线第 1 幕「一张署了别人名字的单子」→ 第 2 幕「名字在谁手里」→ 第 3 幕「那一行是谁的手写的」。
+// 第 3 幕只在第 3 季以后开（幕号抬到 3 就锁死第 2 幕那三张收法，所以开头那张压到第 10 天）。
 // 悬念用的是人物圣经里已经埋下的四条秘密（沈薇的退货单、宋姐群里借出去的名字、
 // 尹小姐包带里的录音笔、方敏按住不念的那一行）。翻面的每一个落点都必须先有本子上的
 // 线索才按得出来 —— 反转不许凭空掉下来的这条，由 tests/world-content.test.ts 钉住。
@@ -7,6 +8,8 @@ import type { Storylet } from "../types.ts";
 
 const ACT = (eq: number) => ({ quality: "mainline:act", eq } as const);
 const OPEN = { not: { quality: "thread:return-slip", gte: 1 } } as const;
+/** 这一栏还没有玩家自己落过的名（落点 7/8/9 = 第 3 幕那三张已经收过尾）。 */
+const NOT_OWNED = { not: { quality: "thread:return-slip", gte: 7 } } as const;
 
 export const STORYLETS_MAINLINE: Storylet[] = [
   {
@@ -552,6 +555,178 @@ export const STORYLETS_MAINLINE: Storylet[] = [
           { bond: ["shen", "player"], kind: "client", set: -20 },
         ],
         result: "她点头，说这确实是她们的相处方式。出门时她没有回头。",
+      },
+    ],
+  },
+
+  // —— 第 3 幕「那一行是谁的手写的」——
+  // 前两幕答的是名字：单子上写的是沈薇，名字是宋姐在群里借的，方敏按住了领用表那一行。
+  // 第 3 幕答的是那只手 —— 而且答案早就写在牌堆里：clue「slip-tape」那句是"录进去的是你的原话，
+  // 不是别人的"，clue「slip-hand」那句是"那三天她没上过这层楼"。把这两条并起来只有一件事说得通：
+  // 那三天站柜的是玩家自己。反转不许凭空掉下来这条，由 tests/world-clues.test.ts 钉住 ——
+  // 拧线的卡必须认本子里的线索，只有第 24 天以后那张阀门可以什么都不认。
+  // 幕号 eq 3 一抬起来，上面第 2 幕那三张收法（eq 2）就整体退场，所以开头那张压到第 10 天以后，
+  // 给第 3 季头几天留一段还能补上第 2 幕收法的空窗。
+  {
+    id: "main-act3-open",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] } },
+    when: [ACT(2), { season: { gte: 3 } }, { day: { gte: 10 } }, { present: "fangmin" }],
+    weight: 34,
+    tension: 1,
+    once: true,
+    text: "{$a}把领用表翻到那一页，页脚折了一道。她说要这一页原件的人不是她，是查台账的。她把笔搁在纸上，只多说一句：这一行的字，你认得。",
+    choices: [
+      {
+        label: "把那几天的排班也调出来",
+        effects: [
+          { clue: "slip-roster" },
+          { quality: "mainline:act", set: 3 },
+          { remember: { holder: "fangmin", act: "act3-asked-roster", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 4 },
+        ],
+        result: "那三天柜上写的是你的签到号。{$a}看了一眼那张排班，没有念出声。",
+      },
+      {
+        label: "问她这一页你按了几季",
+        effects: [
+          { clue: "slip-gap" },
+          { quality: "mainline:act", set: 3 },
+          { remember: { holder: "fangmin", act: "act3-asked-held", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 2 },
+          { stat: "compliance", delta: 1 },
+        ],
+        result: "「从你接手那一季。」她把页脚折回去，「我不是要护谁。我在等谁自己念。」",
+      },
+    ],
+  },
+  {
+    id: "main-act3-row",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "shen", where: [], mustBePresent: false } },
+    when: [
+      ACT(3), { present: "fangmin" },
+      { any: [{ clue: "slip-roster" }, { clue: "slip-gap" }] },
+    ],
+    weight: 38,
+    tension: 1,
+    once: true,
+    text: "那一行不是宋姐群里那句话，也不是{$b}的笔。领出去、退回来、进台账，三步都落在同一页上 —— 那页是你顶班那几天。{$a}把笔压在纸上推过来：这一行谁写的，眼下只有你我知道。",
+    choices: [
+      {
+        label: "把自己的名字写回那一行",
+        effects: [
+          { quality: "thread:return-slip", set: 7 },
+          { remember: { holder: "fangmin", act: "act3-own-name", valence: 2, subject: "player" } },
+          { remember: { holder: "shen", act: "act3-name-cleared", valence: 2, subject: "player", heardFrom: "fangmin" } },
+          { opinion: "fangmin", delta: 10 },
+          { opinion: "shen", delta: 8 },
+          { bond: ["fangmin", "player"], kind: "friend", set: 55 },
+          { stat: "compliance", delta: 12 },
+          { stat: "standing", delta: -5 },
+        ],
+        result: "你写得很慢，写完把纸转给她。{$a}收进文件夹最上面那一层：这一页今晚摊得开。柜位的数少了一笔，少的正好是你名字那一笔。",
+      },
+      {
+        label: "让这一页停在柜位名下",
+        effects: [
+          { quality: "thread:return-slip", set: 8 },
+          { remember: { holder: "fangmin", act: "act3-row-buried", valence: -1, subject: "player" } },
+          { opinion: "fangmin", delta: -6 },
+          { bond: ["fangmin", "player"], kind: "friend", set: 40 },
+          { stat: "compliance", delta: -10 },
+          { stat: "standing", delta: 4 },
+        ],
+        result: "她把纸收回袋里，动作跟按住它的那几季一模一样。从今晚起，按住这一行的成了两个人。",
+      },
+      {
+        when: [{ present: "shen" }],
+        label: "把纸带去问沈薇本人",
+        effects: [
+          { remember: { holder: "shen", act: "act3-asked-herself", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 3 },
+          { stat: "compliance", delta: -1 },
+          { appoint: { person: "shen", inDays: 1, slot: 1 } },
+        ],
+        result: "她没看那行字，只问你：这单是我退的吗，你说是就是。你把纸折起来 —— 还没到人那里，也没到桌上。",
+      },
+    ],
+  },
+  {
+    id: "main-act3-tape",
+    kind: "mainline",
+    cast: { a: { id: "yinxiaojie", where: [] } },
+    when: [ACT(3), { present: "yinxiaojie" }, { clue: "slip-tape" }],
+    weight: 32,
+    tension: 1,
+    once: true,
+    // 只有握着录音那条的人才看得见这一幕最硬的一档：那支笔里存的是玩家自己开口的原话，
+    // 所以「让原话进台账」这条路必须用 slip-tape 换，不是谁都能按。
+    text: "{$a}把包带里那支笔搁在柜面上，笔灯还亮着。她说她要的从来不是那支护手霜，是那句原话。她问你：这一段进不进台账。",
+    choices: [
+      {
+        label: "让她把那句原话交进台账",
+        effects: [
+          { quality: "thread:return-slip", set: 9 },
+          { remember: { holder: "yinxiaojie", act: "act3-tape-filed", valence: 2, subject: "player" } },
+          { remember: { holder: "fangmin", act: "act3-tape-filed", valence: 1, subject: "player", heardFrom: "yinxiaojie" } },
+          { opinion: "yinxiaojie", delta: 14 },
+          { opinion: "fangmin", delta: 4 },
+          { stat: "compliance", delta: 16 },
+          { stat: "standing", delta: -9 },
+        ],
+        result: "录进去那句是你的声音，报的是那天的班次。{$a}听完只说一句：原来是你。台账核对那一栏第一次写着你的名字，柜位跟着掉了一格。",
+      },
+      {
+        label: "请她先把笔收回去",
+        effects: [
+          { remember: { holder: "yinxiaojie", act: "act3-tape-kept", valence: -1, subject: "player" } },
+          { opinion: "yinxiaojie", delta: -7 },
+          { stat: "compliance", delta: 2 },
+          { stat: "standing", delta: 3 },
+        ],
+        result: "她把它收回包带，说这支笔她留着，留着不是为了你。这一页还在你手上，可你今晚睡得着。",
+      },
+    ],
+  },
+  {
+    id: "main-act3-signed",
+    kind: "mainline",
+    cast: { a: { id: "shen", where: [] }, b: { id: "fangmin", where: [], mustBePresent: false } },
+    when: [ACT(3), { present: "shen" }, { day: { gte: 24 } }, NOT_OWNED],
+    weight: 30,
+    tension: -1,
+    once: true,
+    // 第 3 幕的阀门：幕号抬到 3 却没收过尾的人，在第 24 天以后由这张收掉，
+    // 免得这条线永远挂在牌堆里占着一次抽签。它不认本子，所以日子必须压到 20 天以后。
+    // NOT_OWNED 这一道不是防刷：落点 7/8/9 是玩家自己那一栏已经签过名（把自己写回那一行、
+    // 压进柜位名下、交原话进台账），阀门再落一次就把玩家挣到的那一档盖掉，
+    // 季末回顾会念出一句他没做过的话。跟第 1 幕那张阀门认 OPEN 是同一个规矩。
+    text: "{$a}自己带了张纸来。她说账已经并完，最后一天没人再翻这一页。她把笔尖朝你这边搁下：那一栏你可以签，也可以不签。",
+    choices: [
+      {
+        label: "由她把这一行认下来",
+        effects: [
+          { quality: "thread:return-slip", set: 10 },
+          { remember: { holder: "shen", act: "act3-she-signed", valence: -1, subject: "player" } },
+          { remember: { holder: "fangmin", act: "act3-she-signed", valence: -2, subject: "player", heardFrom: "shen" } },
+          { opinion: "shen", delta: -12 },
+          { opinion: "fangmin", delta: -8 },
+          { bond: ["shen", "player"], kind: "client", set: -30 },
+          { stat: "compliance", delta: 2 },
+          { stat: "standing", delta: 3 },
+        ],
+        result: "她签得比你快。{$b}在旁边看着，一句话没说。这一页从此是她的一张纸，不是你本子上一条记过的事。",
+      },
+      {
+        label: "谁都别签这一栏",
+        effects: [
+          { quality: "thread:return-slip", set: 11 },
+          { remember: { holder: "shen", act: "act3-nobody-signed", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 4 },
+          { stat: "compliance", delta: -5 },
+        ],
+        result: "你说这一栏谁都不必写。她把纸折好收进口袋，走到门口回头说一句：那这一页就永远没人写过。",
       },
     ],
   },

@@ -27,10 +27,11 @@ export type Clue = {
   about: PersonId[];
 };
 
-/** 第 1 幕到第 2 幕的说法。幕号超过这张表就是内容还没写到。 */
+/** 第 1 幕到第 3 幕的说法。幕号超过这张表就是内容还没写到。 */
 export const MAINLINE_ACTS: Array<{ act: number; name: string }> = [
   { act: 1, name: "一张署了别人名字的单子" },
   { act: 2, name: "名字在谁手里" },
+  { act: 3, name: "那一行是谁的手写的" },
 ];
 
 export const CLUE_THREADS: ClueThread[] = [
@@ -65,6 +66,13 @@ export const CLUES: Clue[] = [
     thread: "return-slip",
     text: "赠品领用表那一行有名字。方敏按住了它，一直在等你先开口。",
     about: ["fangmin"],
+  },
+  {
+    // 第 3 幕的那条：前两幕只说得出「名字是借的」，这一条才说得出「单子是谁做的」。
+    id: "slip-roster",
+    thread: "return-slip",
+    text: "那三天柜上是你顶的班。领用、退款、进台账，三步都在同一页上。",
+    about: ["fangmin", "shen"],
   },
 ];
 

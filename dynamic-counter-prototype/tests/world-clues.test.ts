@@ -209,6 +209,77 @@ test("可达性：本子上只有「日期 + 那一行」时走台账那条路�
   assert.equal(applied.qualities[MAINLINE_ACT_KEY], 2);
 });
 
+test("可达性：第 3 幕只在第 3 季以后开，且没有本子就拧不动那一行", () => {
+  // 第 3 幕把这条线从"名字是谁的"推到"那一行是谁的手写的"，代价是它一抬幕号，
+  // 第 2 幕那三张收法（ACT(2)）就整体退场 —— 所以开头那张压到第 3 季第 10 天，
+  // 让连着玩的人在前 9 天还能补上没见过的收法。这几条门槛都在这张单子里钉住。
+  const open = STORYLETS.find(c => c.id === "main-act3-open")!;
+  const row = STORYLETS.find(c => c.id === "main-act3-row")!;
+  const tape = STORYLETS.find(c => c.id === "main-act3-tape")!;
+  const signed = STORYLETS.find(c => c.id === "main-act3-signed")!;
+  const legal = (w: World, card: (typeof STORYLETS)[number]) => card.when.every(c => evalCond(w, PEOPLE, c));
+  const atDesk = (patch: Partial<World>): World => {
+    let w = at({ season: 3, day: 12, present: { fangmin: "cashier", shen: "counter", yinxiaojie: "counter" }, ...patch });
+    w = setQuality(w, MAINLINE_ACT_KEY, 2);
+    w = setQuality(w, threadKey("return-slip"), 1);
+    return w;
+  };
+  const withClues = (clues: string[], patch: Partial<World> = {}) => {
+    let w = atDesk(patch);
+    for (const id of clues) w = setQuality(w, `clue:${id}`, 9);
+    return w;
+  };
+
+  // 开头那张：季与日子都要到，幕号还得停在 2。
+  assert.equal(legal(atDesk({ season: 2 }), open), false, "第 2 季不该开第 3 幕");
+  assert.equal(legal(atDesk({ day: 9 }), open), false, "第 3 季前 9 天留给第 2 幕的收法");
+  assert.equal(legal(atDesk({}), open), true);
+  assert.equal(legal({ ...atDesk({}), ...{ present: {} } }, open), false, "她不在楼层上，这一页翻不动");
+
+  // 幕号抬到 3：第 2 幕那三张收法整体退场，第 3 幕的两张靠本子。
+  const act3 = (clues: string[], patch: Partial<World> = {}) => {
+    let w = withClues(clues, patch);
+    w = setQuality(w, MAINLINE_ACT_KEY, 3);
+    return w;
+  };
+  const act2Only = STORYLETS.filter(s => s.kind === "mainline" && s.id !== "main-act3-open"
+    && flatten(s.when).some(x => "quality" in x && x.quality === MAINLINE_ACT_KEY && x.eq === 2));
+  assert.ok(act2Only.length >= 3, `第 2 幕的收法卡不足三张，这条「抬幕号就整体退场」没东西可管：${act2Only.map(c => c.id)}`);
+  assert.equal(legal(withClues(["slip-hand", "slip-borrowed"]), STORYLETS.find(c => c.id === "main-slip-after-own")!), true,
+    "幕号还停在 2：第 2 幕那张收法开得了，退场是抬到 3 以后的事");
+  for (const c of act2Only) {
+    assert.equal(legal(act3(["slip-gap"]), c), false, `${c.id} 认的是第 2 幕，幕号抬到 3 以后就该退出牌堆`);
+  }
+  assert.equal(legal(act3([]), row), false, "本子上既没有那一行也没有排班，说不出「三步都在同一页」");
+  assert.equal(legal(act3(["slip-roster"]), row), true);
+  assert.equal(legal(act3(["slip-gap"]), row), true, "走过台账那一面的也该进得来");
+  assert.equal(legal(act3(["slip-gap"]), tape), false, "录音那条没握着，交不出那句原话");
+  assert.equal(legal(act3(["slip-tape"]), tape), true);
+
+  // 阀门：什么都不认，但日子必须压到第 24 天以后（第 3 幕不许把这条线永远挂在牌堆里）。
+  assert.equal(legal(act3([], { day: 20 }), signed), false, "第 20 天还该等玩家自己收");
+  assert.equal(legal(act3([], { day: 24 }), signed), true);
+  // 阀门不许盖掉玩家自己挣到的那一档。落点 7/8/9 是第 3 幕那三张收过的尾（自己的名字写回那一行、
+  // 压进柜位名下、原话交进台账），再落一次就把回顾念成玩家没做过的那句话。
+  const owned = (landing: number) => setQuality(act3(["slip-roster", "slip-tape"], { day: 24 }), threadKey("return-slip"), landing);
+  for (const landing of [7, 8, 9]) {
+    assert.equal(legal(owned(landing), signed), false, `落点 ${landing} 已经是他自己收的尾，第 24 天那张不能再把它改成「由她把这一行认下来」`);
+  }
+  assert.equal(legal(owned(6), signed), true, "停在第 2 幕那六档的（整季没遇见方敏、或把纸带去问了本人），阀门还收得了");
+
+  // 落点要写进档案：三条路各自拧到不同的那一档，且不回退幕号。
+  const landed = (card: (typeof STORYLETS)[number], i: number) =>
+    applyChoice(act3(["slip-roster", "slip-tape"]), PEOPLE, { storylet: card, binding: { a: card.cast.a.id!, b: "shen" } }, i);
+  assert.equal(landed(row, 0).qualities[threadKey("return-slip")], 7);
+  assert.equal(landed(row, 1).qualities[threadKey("return-slip")], 8);
+  assert.equal(landed(tape, 0).qualities[threadKey("return-slip")], 9);
+  assert.equal(landed(signed, 0).qualities[threadKey("return-slip")], 10);
+  for (const w of [landed(row, 0), landed(tape, 0), landed(signed, 0)]) {
+    assert.equal(w.qualities[MAINLINE_ACT_KEY], 3, "收了尾也不该把幕号退回去");
+    assert.ok(w.qualities[threadKey("return-slip")]! >= 7, "第 3 幕的落点要比第 2 幕那六档高，图鉴才分得开");
+  }
+});
+
 test("内容：同一个落点在图鉴上只能有一个说法", () => {
   // 图鉴与季末回顾都按「落点号 → 先出现的那张卡的 label」念（progress.ts 的 threadLandings）。
   // 再加一条翻面路时若把同一档写成另一句话，回顾会念出玩家没走过的那句 —— 这条把它钉住。

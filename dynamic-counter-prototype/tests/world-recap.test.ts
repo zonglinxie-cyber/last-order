@@ -259,4 +259,10 @@ test("本子：攒到的线索按学到的先后排，拧过来的那一档认�
   assert.deepEqual(t.held, ["slip-hand", "slip-borrowed"]);
   assert.equal(t.landing, 1);
   assert.equal(t.title, "把日期、笔迹和你自己那句一起交出去");
+  // 幕号停在 2 = 这一幕还没到底。玩家翻过面就会以为这条线结了，回顾页得留一句钩子，
+  // 否则第 3 幕那种压到第 3 季的内容没有人会去玩到（钩子认的是 MAINLINE_ACTS 的长度，不写死数字）。
+  assert.equal(t.carriesOn, true, "第 2 幕翻过面不等于这条线讲完，回顾页要留「下一季还有人认」");
+  assert.equal(
+    seasonRecap(recapWorld({ qualities: { "mainline:act": 3, "thread:return-slip": 7 } }), FIXTURE_PEOPLE, storylets).threads[0].carriesOn,
+    false, "幕号走到内容写到的最后一幕：这一页合上了，不许再挂下一季的钩子");
 });

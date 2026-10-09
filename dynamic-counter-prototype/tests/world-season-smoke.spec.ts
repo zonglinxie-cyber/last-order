@@ -679,6 +679,18 @@ const LONG_LANDING: World = {
   opinion: { suman: 60, shen: 45, mei: -40 },
   qualities: { "arc:shen:start": 2, "arc:mei:end": 1 },
 };
+/** 主线本子停在第 2 幕且已经翻过面：第 3 幕压在下一季，回顾页得留一句钩子。 */
+const ACT2_LANDED: World = {
+  ...newWorld("season-act2", PEOPLE),
+  day: SEASON_DAYS + 1, slot: 3,
+  qualities: { "mainline:act": 2, "thread:return-slip": 1, "clue:slip-hand": 9 },
+};
+/** 幕号走到内容写到的最后一幕（第 3 幕，落点 7 = 把自己的名字写回那一行）：不许再承诺"下一季还有人认"。 */
+const ACT3_LANDED: World = {
+  ...newWorld("season-act3", PEOPLE),
+  day: SEASON_DAYS + 1, slot: 3,
+  qualities: { "mainline:act": 3, "thread:return-slip": 7, "clue:slip-roster": 9 },
+};
 
 test.describe("季末回顾页", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
@@ -715,6 +727,23 @@ test.describe("季末回顾页", () => {
     for (const id of ["suman", "shen", "luyao", "anjie"]) {
       expect(body, `季末回顾页念出了人名拼音 ${id}`).not.toMatch(new RegExp(`\\b${id}\\b`));
     }
+  });
+
+  test("本子翻过面了，但不许看着像讲完：第 2 幕那一档留一句钩子", async ({ page }) => {
+    // 第 3 幕压在下一季（内容里幕号还没走到头）。玩家翻过面就以为这条线结了，
+    // 「没玩就结束了」有一半是这一句没念出来 —— 钩子由 recap.ts 的 carriesOn 算，UI 只念。
+    await openSeasonScreen(page, ACT2_LANDED);
+    const book = page.locator(".recap-block", { hasText: "本子上的事" });
+    await expect(book).toContainText("翻过来了");
+    await expect(book).toContainText("把日期、笔迹");   // 落点 1 的那一句，不许念成别的档
+    await expect(book).toContainText("这一页没合上");
+  });
+
+  test("幕号走到内容写到的最后一幕：钩子要收回去，不许年年都喊下一季", async ({ page }) => {
+    await openSeasonScreen(page, ACT3_LANDED);
+    const book = page.locator(".recap-block", { hasText: "本子上的事" });
+    await expect(book).toContainText("翻过来了");
+    await expect(book).not.toContainText("这一页没合上");
   });
 
   for (const [width, height] of [[390, 844], [320, 568]] as const) {

@@ -10,7 +10,7 @@
 //   个人线落点和委托优先用 log 里的原句；原句认不回来（多槽卡的绑定没留下）就合成一句。
 import { clueIds, opinionOf, personOf, PLAYER_NAME } from "./engine.ts";
 import { ARC_PEOPLE, arcLandings, threadLandings } from "./progress.ts";
-import { CLUE_THREADS, MAINLINE_ACT_KEY, cluesOnThread, threadLanding } from "./content/clues.ts";
+import { CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, cluesOnThread, threadLanding } from "./content/clues.ts";
 import { actWord } from "./ui/words.ts";
 import type { Choice, LogEntry, Person, PersonId, Storylet, World } from "./types.ts";
 import { PLAYER } from "./types.ts";
@@ -68,6 +68,8 @@ export type RecapThread = {
   held: string[];
   /** 0 = 还没弄清 */
   landing: number;
+  /** 拧过来之后这一幕还没到底（幕号没走到最后那一幕）：回顾页要留一句"下一季还有人认这一页" */
+  carriesOn: boolean;
   /** 拧到那一档的说法（跟档案同一个取法） */
   title?: string;
 };
@@ -330,12 +332,15 @@ export function seasonRecap(world: World, people: Person[], storylets: Storylet[
 
   // 本子：幕一开过、或本子上攒到过东西、或这一季拧过来了，才在这页念它。
   const heldClues = clueIds(world);
-  const spineOpened = (world.qualities[MAINLINE_ACT_KEY] ?? 0) >= 1;
+  const act = world.qualities[MAINLINE_ACT_KEY] ?? 0;
+  const spineOpened = act >= 1;
+  // 这一幕还没走到内容写到的最后一幕：认这一页的人下一季还在楼上。
+  const carriesOn = act < MAINLINE_ACTS.length;
   const threads: RecapThread[] = CLUE_THREADS
     .map(t => {
       const landing = threadLanding(world.qualities, t.id);
       return {
-        id: t.id, name: t.name, question: t.question,
+        id: t.id, name: t.name, question: t.question, carriesOn,
         held: cluesOnThread(heldClues, t.id), landing,
         title: landing >= 1 ? threadLandings(storylets, t.id).find(l => l.landing === landing)?.title : undefined,
       };

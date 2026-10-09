@@ -563,7 +563,9 @@ export default function WorldGame() {
               <span>{t.landing >= 1
                 ? `翻过来了：「${t.title ?? `第 ${t.landing} 档`}」`
                 : `${t.question}本子上攒到 ${t.held.length} 条。`}</span>
-              {t.landing >= 1 ? null : <small>下季还有人认得</small>}
+              {t.landing >= 1
+                ? t.carriesOn ? <small>这一页没合上，下一季还有人认它</small> : null
+                : <small>下季还有人认得</small>}
             </li>)}</ul>
             : <p className="recap-empty">这一季本子上没添新的一页。</p>}
         </section>
