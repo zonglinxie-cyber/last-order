@@ -161,7 +161,7 @@ test("一季 28 天里有 520、618、七夕", () => {
   }
 });
 
-test("节日按季取：第 1 季照旧，第 2 季双 11 / 双 12 / 年终盘点，第 3 季起循环", () => {
+test("节日按季取：四季各一套，第 5 季起循环", () => {
   assert.deepEqual(festivalsFor(1), FESTIVALS, "第 1 季就是 FESTIVALS");
   const two = festivalsFor(2).map(f => f.id);
   for (const need of ["double11", "double12", "yearend"]) assert.ok(two.includes(need), need);
@@ -169,8 +169,18 @@ test("节日按季取：第 1 季照旧，第 2 季双 11 / 双 12 / 年终盘�
   for (const festival of festivalsFor(2)) {
     assert.ok(festival.fromDay >= 1 && festival.toDay <= SEASON_DAYS && festival.fromDay <= festival.toDay, festival.id);
   }
-  assert.deepEqual(festivalsFor(3), festivalsFor(1), "第 3 季循环回第 1 季");
-  assert.deepEqual(festivalsFor(4), festivalsFor(2), "第 4 季循环回第 2 季");
+  const three = festivalsFor(3).map(f => f.id);
+  for (const need of ["valentine", "womens", "spring"]) assert.ok(three.includes(need), need);
+  const four = festivalsFor(4).map(f => f.id);
+  for (const need of ["school", "midautumn", "national"]) assert.ok(four.includes(need), need);
+  for (const festival of [...festivalsFor(3), ...festivalsFor(4)]) {
+    assert.ok(festival.fromDay >= 1 && festival.toDay <= SEASON_DAYS && festival.fromDay <= festival.toDay, festival.id);
+  }
+  const year = [1, 2, 3, 4].flatMap(n => festivalsFor(n).map(f => f.id));
+  assert.equal(new Set(year).size, year.length, "一年里的节日 id 不重复");
+  assert.deepEqual(festivalsFor(5), festivalsFor(1), "第 5 季循环回第 1 季");
+  assert.deepEqual(festivalsFor(6), festivalsFor(2), "第 6 季循环回第 2 季");
+  assert.deepEqual(festivalsFor(7), festivalsFor(3), "第 7 季循环回第 3 季");
 });
 
 test("个人线走到终点的，换季以后那条线的卡不再抽得到", () => {
@@ -202,7 +212,7 @@ test("故事碎片的槽、占位、落点和关系效果", () => {
   const arcCards = new Map<string, number>();
   const arcEnds = new Map<string, Set<number>>();
 
-  const festivalIds = new Set([...festivalsFor(1), ...festivalsFor(2)].map(item => item.id));
+  const festivalIds = new Set([1, 2, 3, 4].flatMap(n => festivalsFor(n).map(item => item.id)));
   for (const story of STORYLETS) {
     count[story.kind] += 1;
     tension[story.tension] += 1;

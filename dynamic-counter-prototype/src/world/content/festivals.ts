@@ -1,5 +1,7 @@
-// 一季 28 天，节日按季取：第 1 季 520 / 618 / 七夕，第 2 季双 11 / 双 12 / 年终盘点，
-// 第 3 季起循环这两套。三个窗口在各季的位置一样：开季那个周末、中段、最后三天。
+// 一季 28 天，节日按季取，凑成商场柜台的一年：
+// 第 1 季 520 / 618 / 七夕，第 2 季双 11 / 双 12 / 年终盘点，
+// 第 3 季情人节 / 三八节 / 换季，第 4 季开学季 / 中秋 / 国庆。
+// 第 5 季起循环这四套。三个窗口在各季的位置一样：开季那个周末、中段、最后三天。
 // 契约里没有季长，28 是每季内容的约定。窗口里的节日卡内容由编剧逐季补。
 import type { Festival } from "../types.ts";
 
@@ -15,9 +17,21 @@ const SEASON_TWO: Festival[] = [
   { id: "yearend", name: "年终盘点", fromDay: 26, toDay: 28 },
 ];
 
-const SEASONS: Festival[][] = [SEASON_ONE, SEASON_TWO];
+const SEASON_THREE: Festival[] = [
+  { id: "valentine", name: "情人节", fromDay: 6, toDay: 8 },
+  { id: "womens", name: "三八节", fromDay: 15, toDay: 19 },
+  { id: "spring", name: "换季", fromDay: 26, toDay: 28 },
+];
 
-/** 这一季的节日表。第 1 季照旧，第 2 季双 11 / 双 12 / 年终盘点，第 3 季起循环。 */
+const SEASON_FOUR: Festival[] = [
+  { id: "school", name: "开学季", fromDay: 6, toDay: 8 },
+  { id: "midautumn", name: "中秋", fromDay: 15, toDay: 19 },
+  { id: "national", name: "国庆", fromDay: 26, toDay: 28 },
+];
+
+const SEASONS: Festival[][] = [SEASON_ONE, SEASON_TWO, SEASON_THREE, SEASON_FOUR];
+
+/** 这一季的节日表。四季各一套，第 5 季起循环。 */
 export const festivalsFor = (season: number): Festival[] =>
   SEASONS[(season - 1) % SEASONS.length] ?? SEASON_ONE;
 
