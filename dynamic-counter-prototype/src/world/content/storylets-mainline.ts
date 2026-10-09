@@ -1,7 +1,9 @@
-// 主线第 1 幕「一张署了别人名字的单子」→ 第 2 幕「名字在谁手里」→ 第 3 幕「那一行是谁的手写的」。
+// 主线第 1 幕「一张署了别人名字的单子」→ 第 2 幕「名字在谁手里」→ 第 3 幕「那一行是谁的手写的」
+// → 第 4 幕「谁在写单子」。
 // 第 3 幕只在第 3 季以后开（幕号抬到 3 就锁死第 2 幕那三张收法，所以开头那张压到第 10 天）；
 // 第 2 季那一段由 main-a2-* 三张接着演 —— 它们不抬幕号，只把第 3 幕要用的线索提前摆上本子；
-// 第 4 季那一段由 main-a4-page 一张收：第 3 幕说完「那一行是谁的手写的」，它问「是谁每季都要那一页」。
+// 第 4 季那一段先由 main-a4-page 一张收：第 3 幕说完「那一行是谁的手写的」，它问「是谁每季都要那一页」；
+// 再由第 4 幕那三张（main-a4-who / -desk / -valve）答这一句：那一栏不挑人，只挑当时顶班的那个号 —— 也就是玩家自己。
 // 悬念用的是人物圣经里已经埋下的四条秘密（沈薇的退货单、宋姐群里借出去的名字、
 // 尹小姐包带里的录音笔、方敏按住不念的那一行）。翻面的每一个落点都必须先有本子上的
 // 线索才按得出来 —— 反转不许凭空掉下来的这条，由 tests/world-content.test.ts 钉住。
@@ -909,11 +911,179 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       },
     ],
   },
+
+  // —— 第 4 幕：谁在写单子 ——
+  // 前三幕答的是「这单是谁退的」「名字在谁手里」「那一行是谁的手写的」，问的都是这一层楼里的人。
+  // 第 4 幕把问题挪到桌子外面：那一栏每季都得长出一个名字，而它不挑人，只挑当时顶班的那个号。
+  // 于是"你就是流程"这一笔不是新悬念，是玩家自己四季里签过的字 —— 收法只能引用本子上已有的东西。
+  // 落点 12~15 是挣来的（main-a4-desk），16/17 是阀门（main-a4-valve，第 24 天以后兜底，别再盖掉玩家那一档）。
+  {
+    id: "main-a4-who",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "peilan", where: [], mustBePresent: false } },
+    when: [
+      ACT(3), { quality: "thread:return-slip", gte: 7 },
+      { season: { gte: 4 } }, { day: { gte: 6 } }, { present: "fangmin" },
+    ],
+    weight: 34,
+    tension: 1,
+    once: true,
+    text: "{$a}把这一季的领用表摊到第四页，那一栏空着。她说抄件每季都要这一页，可要它的人从不进这层楼，而空着的这一栏每一季都会自己长出一个名字。{$b}没有翻表，只说一句：今年没人顶班 —— 你接手之后，长出来的是你的号。",
+    choices: [
+      {
+        label: "问这一栏空着是给谁",
+        effects: [
+          { clue: "slip-desk" },
+          { quality: "mainline:act", set: 4 },
+          { remember: { holder: "fangmin", act: "row-asked-whose", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 3 },
+          { stat: "compliance", delta: 1 },
+        ],
+        result: "{$a}把表转过来对着你。栏边写的是顶班那个号，不是签字那个人 —— 四季里每一季都有一个号不是你的名字，今年这一个是你。",
+      },
+      {
+        label: "说这一栏今年由你柜上写",
+        effects: [
+          { clue: "slip-desk" },
+          { quality: "mainline:act", set: 4 },
+          { remember: { holder: "peilan", act: "row-table-yours", valence: 2, subject: "player" } },
+          { opinion: "fangmin", delta: 6 },
+          { stat: "standing", delta: -3 },
+        ],
+        result: "{$a}把笔搁在栏边，没有递给你。{$b}说这一句她每季听见一次，听见四季了 —— 不同的是这一季说话的人站在栏边。",
+      },
+      {
+        // 最硬那一格要本子上的排班，或裴岚那条线已经走到她承认「谁要的我每年都签一次」那一档：
+        // 这一格报出的是三个不在楼上了的人，没有这两条来源就凭不了。
+        when: [{ any: [{ clue: "slip-roster" }, { quality: "arc:peilan", gte: 2 }] }],
+        label: "把前三季那一栏的号念出来",
+        effects: [
+          { clue: "slip-desk" },
+          { quality: "mainline:act", set: 4 },
+          { remember: { holder: "fangmin", act: "row-old-numbers", valence: 2, subject: "player" } },
+          { opinion: "peilan", delta: 5 },
+          { stat: "compliance", delta: 5 },
+          { stat: "standing", delta: -4 },
+        ],
+        result: "{$b}报了三个号，都不是你的名字。{$a}说那三个人今年都不在这层楼上了 —— 这一栏不挑人，它只挑当时顶班的那个号。",
+      },
+    ],
+  },
+  {
+    id: "main-a4-desk",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "peilan", where: [], mustBePresent: false } },
+    when: [
+      ACT(4), { present: "fangmin" },
+      { not: { quality: "thread:return-slip", gte: 12 } },
+      { any: [{ clue: "slip-desk" }, { clue: "slip-roster" }] },
+    ],
+    weight: 40,
+    tension: 1,
+    once: true,
+    text: "第四页那一栏今年还没人写。{$a}把笔压在抄件上：这一栏她可以照旧按住，也可以由你签。她说这两种她四季都见过，只有一种没见过 —— 有人把自己的名字写在别人退的那一单上。{$b}把名单扣在桌上，没有说话。",
+    choices: [
+      {
+        label: "把自己的名字写进那一栏",
+        effects: [
+          { quality: "thread:return-slip", set: 12 },
+          { remember: { holder: "fangmin", act: "row-signed-self", valence: 2, subject: "player" } },
+          { remember: { holder: "peilan", act: "row-signed-self", valence: 2, subject: "player", heardFrom: "fangmin" } },
+          { opinion: "fangmin", delta: 12 },
+          { opinion: "peilan", delta: 6 },
+          { bond: ["fangmin", "player"], kind: "friend", set: 62 },
+          { stat: "compliance", delta: 14 },
+          { stat: "standing", delta: -9 },
+        ],
+        result: "你写得很慢，写完把纸转给她。{$a}把抄件收进文件夹最上面那一层，说这一页今年不用她按了。柜位的数跟着少一笔 —— 少的正是你名字那一笔。",
+      },
+      {
+        label: "这一栏交给下一任顶班的人",
+        effects: [
+          { quality: "thread:return-slip", set: 13 },
+          { remember: { holder: "fangmin", act: "row-handed-next", valence: -2, subject: "player" } },
+          { opinion: "fangmin", delta: -5 },
+          { stat: "compliance", delta: -3 },
+          { stat: "standing", delta: 4 },
+        ],
+        result: "{$a}说好，把那一页放回柜面，页脚还是折的那一道。{$b}在门口补一句：这句话她每季听一次，听四季了，只有说的人换过。",
+      },
+      {
+        // 把这一行挪到区域总表上，前提是裴岚本人这一季在楼上，而且她的线已经走到她承认那一页那一段。
+        when: [{ present: "peilan" }, { quality: "arc:peilan", gte: 2 }],
+        label: "让裴岚把这一行写进区域总表",
+        effects: [
+          { quality: "thread:return-slip", set: 14 },
+          { remember: { holder: "peilan", act: "row-in-total", valence: 2, subject: "player" } },
+          { opinion: "peilan", delta: 9 },
+          { opinion: "fangmin", delta: 3 },
+          { stat: "compliance", delta: 8 },
+          { stat: "standing", delta: 2 },
+        ],
+        result: "{$b}把笔拿过去，写的是她自己的工号。她说这一行上了总表就不再是柜上按不按住的事 —— 它变成一张要追的表，追的人是她。",
+      },
+      {
+        label: "把那一页从表上摘下来",
+        effects: [
+          { quality: "thread:return-slip", set: 15 },
+          { remember: { holder: "fangmin", act: "row-page-pulled", valence: -2, subject: "player" } },
+          { opinion: "fangmin", delta: -8 },
+          { opinion: "peilan", delta: -4 },
+          { stat: "compliance", delta: -12 },
+          { stat: "standing", delta: 6 },
+        ],
+        result: "你起开订书针，第四页少了一栏。{$a}看着那个缺口说她四季抄的都是这一页，从今晚起她不知道要抄第几页 —— 缺的那一页会有人来要。",
+      },
+    ],
+  },
+  {
+    id: "main-a4-valve",
+    kind: "mainline",
+    cast: { a: { id: "shen", where: [] }, b: { id: "fangmin", where: [], mustBePresent: false } },
+    when: [
+      ACT(4), { present: "shen" }, { day: { gte: 24 } },
+      { not: { quality: "thread:return-slip", gte: 12 } },
+    ],
+    weight: 30,
+    tension: -1,
+    once: true,
+    // 第 4 幕的阀门：幕号抬到 4 却一栏没写的人，散场前由这张收掉，主线不许永远挂在牌堆里。
+    // 落点 16/17 都 ≥ 12，所以它落过一次之后自己就关掉了，不会跟 main-a4-desk 抢同一档。
+    // 认 day gte 24 是同第 3 幕那张的规矩：它不认本子，早演就等于替玩家做决定。
+    text: "{$a}自己带了一张空白领用表来。她说第四页那一栏散场之前总得有人写，也可以留给下一季 —— 留给下一季的意思是，明年这时候又有一个人在这里顶班。她把笔尖朝你这边搁下。",
+    choices: [
+      {
+        label: "由她把这一栏填掉",
+        effects: [
+          { quality: "thread:return-slip", set: 16 },
+          { remember: { holder: "shen", act: "row-she-filled", valence: -1, subject: "player" } },
+          { remember: { holder: "fangmin", act: "row-she-filled", valence: -2, subject: "player", heardFrom: "shen" } },
+          { opinion: "shen", delta: -10 },
+          { opinion: "fangmin", delta: -6 },
+          { bond: ["shen", "player"], kind: "client", set: -28 },
+          { stat: "compliance", delta: 3 },
+          { stat: "standing", delta: 2 },
+        ],
+        result: "她填得很快，写的是一个她不认识的号。{$b}收走抄件时只说一句：这一页从此是别人的一栏，不是你本子上的事。",
+      },
+      {
+        label: "这一栏谁也不写",
+        effects: [
+          { quality: "thread:return-slip", set: 17 },
+          { remember: { holder: "shen", act: "row-nobody", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 4 },
+          { stat: "compliance", delta: -6 },
+        ],
+        result: "你说这一栏不必有人写。她把纸折好收进口袋，走到门口回头说一句：那明年这时候它还是空的，空的这一栏不会自己填。",
+      },
+    ],
+  },
 ];
 
 // 这些卡的门槛在过季之后照样成立（幕号、落点、本子里的线索都带着走），所以每张的每一个分支
 // 都自动补一个「已经演过」的记号，并把记号写回门槛 —— 漏掉一格就会有一季原样重演一遍。
-// 其余的主线卡靠带着走的 quality 自己关掉：第 1 幕那几张被 OPEN 挡住，第 3 幕的阀门被 NOT_OWNED 挡住。
+// 其余的主线卡靠带着走的 quality 自己关掉：第 1 幕那几张被 OPEN 挡住，第 3 幕的阀门与第 4 幕那两张被落点挡住，
+// main-a4-who 抬完幕号就被 ACT(3) 自己挡住。
 // 判据在 tests/world-content.test.ts「主线整段只演一次，而且第 2 季还有新的一幕可演」。
 for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-after-quiet",
   "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror", "main-a4-page"]) {

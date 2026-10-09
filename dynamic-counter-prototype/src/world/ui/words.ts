@@ -227,6 +227,16 @@ export const ACT_WORD: Record<string, string> = {
   "act4-signed-copy": "在这一季的抄件上签了名",
   "act4-quarter-known": "问出那一页每季是谁要的",
   "act4-copy-burned": "把那一页的抄件烧了",
+  // 主线第 4 幕：谁在写单子（storylets-mainline.ts 的 main-a4-*）
+  "row-asked-whose": "问过那一栏空着是给谁",
+  "row-table-yours": "说过这一栏今年由柜上写",
+  "row-old-numbers": "把前三季那一栏的号念了出来",
+  "row-signed-self": "把自己的名字写进那一栏",
+  "row-handed-next": "那一栏交给下一任顶班的人",
+  "row-in-total": "看这一行被写进区域总表",
+  "row-page-pulled": "把那一页从表上摘了下来",
+  "row-she-filled": "散场前由她把那一栏填掉",
+  "row-nobody": "那一栏谁也没写",
   // 第 4 季个人线：裴岚（storylets-arcs6.ts）
   "quarter-row-asked": "问她那一行为什么每季都抄一遍",
   "quarter-words-kept": "把今天的原话照她的规矩留下",

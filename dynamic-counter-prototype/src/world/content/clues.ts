@@ -27,12 +27,16 @@ export type Clue = {
   about: PersonId[];
 };
 
-/** 第 1 幕到第 3 幕的说法。幕号超过这张表就是内容还没写到。 */
+/** 第 1 幕到第 4 幕的说法。幕号超过这张表就是内容还没写到。 */
 export const MAINLINE_ACTS: Array<{ act: number; name: string }> = [
   { act: 1, name: "一张署了别人名字的单子" },
   { act: 2, name: "名字在谁手里" },
   { act: 3, name: "那一行是谁的手写的" },
+  { act: 4, name: "谁在写单子" },
 ];
+
+/** 贯穿四季的那条线只有一个 id，结局要认它，所以在这里钉死一份。 */
+export const MAINLINE_THREAD = "return-slip";
 
 export const CLUE_THREADS: ClueThread[] = [
   {
@@ -73,6 +77,13 @@ export const CLUES: Clue[] = [
     thread: "return-slip",
     text: "那三天柜上是你顶的班。领用、退款、进台账，三步都在同一页上。",
     about: ["fangmin", "shen"],
+  },
+  {
+    // 第 4 幕的那条：第 3 幕答出「是谁的手写的」，这一条才答得出「这一栏为什么每季都得有人」。
+    id: "slip-desk",
+    thread: "return-slip",
+    text: "第四页那一栏每季空着，等一个当时顶班的号。要它的不是楼上，是这张表自己。",
+    about: ["fangmin", "peilan"],
   },
 ];
 

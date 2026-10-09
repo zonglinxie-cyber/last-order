@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { newWorld } from "../src/world/engine.ts";
 import { CLUES, PEOPLE } from "../src/world/content/index.ts";
 import { ARC_PEOPLE, WORLD_PROGRESS_KEY, emptyWorldProgress, observeWorldProgress } from "../src/world/progress.ts";
+import { ENDINGS } from "../src/world/ending.ts";
 import type { World } from "../src/world/types.ts";
 
 // 跨季「档案」走查：从 ?mode=world 开场封面的那颗「档案」进去。
@@ -103,13 +104,15 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
 
     test("结局：按 rank 排好，拿到的认标题、没拿到的只给不剧透提示", async ({ page }) => {
+      // 这一屏不钉判词条数：写死 13 的那一版在第 4 幕那四句加进来当天红了两遍（两个视口各一次），
+      // 而第 13 句以后还会加。一律从 ENDINGS 推，同页顶那句「1 / N 种」。
       await page.getByRole("button", { name: "结局" }).click();
-      await expect(page.locator(".ending-row")).toHaveCount(13);
+      await expect(page.locator(".ending-row")).toHaveCount(ENDINGS.length);
       await expect(page.locator(".ending-row.achieved")).toHaveCount(1);
       await expect(page.locator(".ending-row.achieved b")).toHaveText("镜子前空了");
-      await expect(page.locator(".ending-row.locked")).toHaveCount(12);
+      await expect(page.locator(".ending-row.locked")).toHaveCount(ENDINGS.length - 1);
       await expect(page.locator(".ending-row.locked b").first()).toHaveText("？？？");
-      await expect(page.getByText("散过场 1 / 13 种")).toBeVisible();
+      await expect(page.getByText(`散过场 1 / ${ENDINGS.length} 种`)).toBeVisible();
     });
 
     test("正文 ≥12px、页签与返回 ≥44px、不横向溢出", async ({ page }) => {

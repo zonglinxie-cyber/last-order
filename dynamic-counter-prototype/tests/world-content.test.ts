@@ -4,9 +4,9 @@ import { test } from "node:test";
 import { CUSTOMERS } from "../src/campaign.ts";
 import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
-import { STORYLETS } from "../src/world/content/index.ts";
+import { MAINLINE_ACTS, STORYLETS } from "../src/world/content/index.ts";
 import { ARC_PEOPLE } from "../src/world/progress.ts";
-import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, newWorld, nextSeason } from "../src/world/engine.ts";
+import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, evalCond, newWorld, nextSeason } from "../src/world/engine.ts";
 import { PLAYER, type Cond, type Effect, type Ref, type Storylet, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
@@ -719,4 +719,99 @@ test("第 4 季那两条线的分支门：只认换季带得下来的东西", ()
     assert.equal(Math.abs((effect as { remember: { valence: number } }).remember.valence), 2,
       `${cardId} 的分支门认 ${act}，可写它的那张卡挂在 ${writer.id} 的 valence 不是 ±2 —— 过不了季，第 4 季那一格永远按不出来`);
   }
+});
+
+test("第 4 幕「谁在写单子」：连玩四季开得了张、走得到落点，而且不抢第 3 幕那句", () => {
+  // 上一轮把第 4 季从「只有过场」抬到 9 张故事卡，代价那条写着：四季跑完幕号还是 3，
+  // main-a4-page 只是重读第 3 幕那句话。这一条把「故事有结尾」钉成三个可执行的判据：
+  // 幕号走到内容写到的最后一幕、那条退货单落到第 4 幕那一族落点（≥12）、第 4 幕那三张各不超过一次。
+  // 走法跟第 4 季那两条线一样是「取第一个看得见的选项」，所以这一条测的是最直的那条路能不能走通。
+  const A4 = ["main-a4-who", "main-a4-desk", "main-a4-valve"];
+  const playSeason = (world: World, mainline: string[]) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        if (drawn && drawn.storylet.kind === "mainline") mainline.push(drawn.storylet.id);
+        const idx = drawn ? drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c)) : -1;
+        if (!drawn || idx < 0) continue;
+        w = applyChoice(w, PEOPLE, drawn, idx);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+
+  for (let i = 0; i < 6; i++) {
+    const mainline: string[] = [];
+    let w = newWorld(`act4-${i}`, PEOPLE);
+    for (let s = 1; s < 4; s++) { w = playSeason(w, mainline); w = nextSeason(w, PEOPLE); }
+    w = playSeason(w, mainline);
+    assert.equal(w.season, 4, `种子 ${i}：没走到第 4 季`);
+
+    assert.ok(mainline.includes("main-a4-who"),
+      `种子 ${i}：第 4 幕没开局（第 4 季那几张主线卡：${mainline.slice(-4).join(", ") || "无"}，幕号停在 ${w.qualities["mainline:act"] ?? 0}）`);
+    assert.equal(w.qualities["mainline:act"] ?? 0, MAINLINE_ACTS.length,
+      `种子 ${i}：幕号停在 ${w.qualities["mainline:act"] ?? 0}，内容已经写到第 ${MAINLINE_ACTS.length} 幕 —— 四季跑完故事还没讲完`);
+    const landing = w.qualities["thread:return-slip"] ?? 0;
+    assert.ok(landing >= 12,
+      `种子 ${i}：第 4 幕开了局却没落到第 4 幕那一族落点（thread:return-slip = ${landing}，收法卡 main-a4-desk ${mainline.includes("main-a4-desk") ? "演过" : "没演过"}）`);
+    for (const id of A4) {
+      const n = mainline.filter(x => x === id).length;
+      assert.ok(n <= 1, `种子 ${i}：${id} 在四季里演了 ${n} 次 —— 同一句主线的话不许跨季原样重演`);
+    }
+  }
+});
+
+test("第 4 幕那三张的门槛：不收第 3 幕的尾开不了局，签过名以后也不回来抢同一档", () => {
+  // 上一条是「最直的那条路走得到」，这一条是静态的门：把牌堆里第 4 幕那三张的条件逐副探一遍。
+  // 之所以要分开测 —— 玩到第 4 幕的人一定先收过第 3 幕的尾，跑整季测不出「门被拆掉」这种写法；
+  // 门拆了以后第 1 季就能念出「长出来的是你的号」，而那句要的是玩家已经答过「那一行是谁的手写的」。
+  const card = (id: string) => STORYLETS.find(s => s.id === id)!;
+  const legal = (w: World, c: Storylet) => c.when.every(x => evalCond(w, PEOPLE, x));
+  const at = (patch: Partial<World>): World => ({
+    ...newWorld("a4-gate", PEOPLE), season: 4, day: 24,
+    present: { fangmin: "cashier", shen: "counter", peilan: "counter" }, ...patch,
+  });
+
+  const who = card("main-a4-who");
+  const actThree = { "mainline:act": 3 };
+  assert.equal(legal(at({ qualities: { ...actThree, "thread:return-slip": 7 } }), who), true,
+    "第 3 幕收了尾（落点 7），第 4 季第 6 天以后方敏在楼上 —— 这一幕就该开得了局");
+  assert.equal(legal(at({ qualities: actThree }), who), false,
+    "那条退货单还没在第 3 幕翻面，第 4 幕不能凭空开场 —— 玩家会听到一句他还没挣到的话");
+  assert.equal(legal(at({ qualities: { "mainline:act": 4, "thread:return-slip": 7 } }), who), false,
+    "幕号抬到 4 之后这张该被它自己的 ACT(3) 关掉，不然同一句问话每季重演");
+  assert.equal(legal({ ...at({ qualities: { ...actThree, "thread:return-slip": 7 } }), present: {} }, who), false,
+    "方敏不在楼上，那一页摊不开");
+  assert.equal(legal(at({ season: 3, qualities: { ...actThree, "thread:return-slip": 7 } }), who), false,
+    "第 3 季不许把四季收束的那一幕提前演完");
+
+  // 两张收法卡：落到 12 以后（含阀门那两档）自己关门，不再跟已经签过名的人抢同一档。
+  for (const id of ["main-a4-desk", "main-a4-valve"]) {
+    const c = card(id);
+    const open = { "mainline:act": 4, "clue:slip-desk": 1 };
+    assert.equal(legal(at({ qualities: open }), c), true, `${id}：幕号到 4、本子上有第四页那条 —— 收法该按得出来`);
+    for (const landing of [12, 13, 14, 15, 16, 17]) {
+      assert.equal(legal(at({ qualities: { ...open, "thread:return-slip": landing } }), c), false,
+        `${id}：这一栏已经落在 ${landing}，再抽到一次就是把同一句收法演第二遍`);
+    }
+  }
+  assert.equal(legal(at({ qualities: { "mainline:act": 4 } }), card("main-a4-desk")), false,
+    "本子上既没有第四页那条、也没有领用表那条，第 4 幕的收法不许凭空掉下来");
+
+  // 落点 14 那一格挂的是裴岚：她这一季得在楼上，而且她的线要走到承认那一页那一段。
+  const desk = card("main-a4-desk");
+  const drawnDesk = { storylet: desk, binding: { a: "fangmin" as const, b: "peilan" as const } };
+  const labelTotal = "让裴岚把这一行写进区域总表";
+  const visible = (qualities: Record<string, number>, present?: World["present"]) => {
+    const w = at({ qualities: { "mainline:act": 4, "clue:slip-desk": 1, ...qualities }, ...(present ? { present } : {}) });
+    return desk.choices.filter(c => c.label === labelTotal && choiceVisible(w, PEOPLE, drawnDesk, c)).length;
+  };
+  assert.equal(visible({ "arc:peilan": 2 }), 1, "裴岚的线走到那一格、人也在楼上 —— 这一行该写得上总表");
+  assert.equal(visible({ "arc:peilan": 1 }), 0, "她的线还没走到那一段，总表那一格不该露出来");
+  assert.equal(visible({ "arc:peilan": 2 }, { fangmin: "cashier", shen: "counter" }), 0,
+    "裴岚这一季不在楼上，就不能把这一行交给她 —— 那个落点要她本人接");
 });

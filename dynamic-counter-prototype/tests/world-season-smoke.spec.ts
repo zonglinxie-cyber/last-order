@@ -11,7 +11,7 @@ import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import type { World } from "../src/world/types.ts";
 import { COACH_KEY } from "../src/world/ui/coach.ts";
 import { WORLD_PROGRESS_KEY } from "../src/world/progress.ts";
-import { PEOPLE } from "../src/world/content/index.ts";
+import { MAINLINE_ACTS, PEOPLE } from "../src/world/content/index.ts";
 import { ENDINGS, seasonEnding } from "../src/world/ending.ts";
 
 const AUDIT_DIR = "../audit/world-smoke";
@@ -679,17 +679,26 @@ const LONG_LANDING: World = {
   opinion: { suman: 60, shen: 45, mei: -40 },
   qualities: { "arc:shen:start": 2, "arc:mei:end": 1 },
 };
-/** 主线本子停在第 2 幕且已经翻过面：第 3 幕压在下一季，回顾页得留一句钩子。 */
+/** 主线本子停在第 2 幕且已经翻过面：后面还有两幕没演，回顾页得留一句钩子。 */
 const ACT2_LANDED: World = {
   ...newWorld("season-act2", PEOPLE),
   day: SEASON_DAYS + 1, slot: 3,
   qualities: { "mainline:act": 2, "thread:return-slip": 1, "clue:slip-hand": 9 },
 };
-/** 幕号走到内容写到的最后一幕（第 3 幕，落点 7 = 把自己的名字写回那一行）：不许再承诺"下一季还有人认"。 */
+/** 倒数第二幕（第 4 幕写进来之前，这一档曾经就是"最后一幕"）：钩子必须还在，否则加一幕就悄悄少一句承诺。 */
 const ACT3_LANDED: World = {
   ...newWorld("season-act3", PEOPLE),
   day: SEASON_DAYS + 1, slot: 3,
   qualities: { "mainline:act": 3, "thread:return-slip": 7, "clue:slip-roster": 9 },
+};
+/**
+ * 幕号走到内容写到的最后一幕（由 MAINLINE_ACTS.length 推，落点 12 = 把自己的名字写进第四页那一栏）：
+ * 不许再承诺"下一季还有人认"。写死数字的那一版在第 4 幕加进来当天就红了 —— 红的是夹具，不是判据。
+ */
+const LAST_ACT_LANDED: World = {
+  ...newWorld("season-last-act", PEOPLE),
+  day: SEASON_DAYS + 1, slot: 3,
+  qualities: { "mainline:act": MAINLINE_ACTS.length, "thread:return-slip": 12, "clue:slip-desk": 9 },
 };
 
 test.describe("季末回顾页", () => {
@@ -730,7 +739,7 @@ test.describe("季末回顾页", () => {
   });
 
   test("本子翻过面了，但不许看着像讲完：第 2 幕那一档留一句钩子", async ({ page }) => {
-    // 第 3 幕压在下一季（内容里幕号还没走到头）。玩家翻过面就以为这条线结了，
+    // 后面还有两幕没演（内容里幕号还没走到头）。玩家翻过面就以为这条线结了，
     // 「没玩就结束了」有一半是这一句没念出来 —— 钩子由 recap.ts 的 carriesOn 算，UI 只念。
     await openSeasonScreen(page, ACT2_LANDED);
     const book = page.locator(".recap-block", { hasText: "本子上的事" });
@@ -739,11 +748,24 @@ test.describe("季末回顾页", () => {
     await expect(book).toContainText("这一页没合上");
   });
 
-  test("幕号走到内容写到的最后一幕：钩子要收回去，不许年年都喊下一季", async ({ page }) => {
+  test("倒数第二幕翻过面：钩子不许跟着幕号一起被写死掉", async ({ page }) => {
+    // 第 4 幕加进来以前，这一档就是"最后一幕"，回顾页在这副牌上念的是「合上了」。
+    // 现在它必须重新变成没合上 —— 认的是 MAINLINE_ACTS 的长度，不是某个数字。
     await openSeasonScreen(page, ACT3_LANDED);
     const book = page.locator(".recap-block", { hasText: "本子上的事" });
     await expect(book).toContainText("翻过来了");
+    await expect(book).toContainText("这一页没合上");
+  });
+
+  test("幕号走到内容写到的最后一幕：钩子要收回去，不许年年都喊下一季", async ({ page }) => {
+    await openSeasonScreen(page, LAST_ACT_LANDED);
+    const book = page.locator(".recap-block", { hasText: "本子上的事" });
+    await expect(book).toContainText("翻过来了");
     await expect(book).not.toContainText("这一页没合上");
+    // 这一句同时是"第 4 幕的内容在界面上真的念得出来"唯一的一条浏览器断言：
+    // 落点 12 的收法名字由 recap.ts 从故事卡的 label 现推，冒烟停在第 2 季，摸不到第 4 幕那张卡，
+    // 但至少散场页这一屏要把玩家自己签的那一句摆出来（规则层的落点句见 world-recap 单测）。
+    await expect(book).toContainText("把自己的名字写进那一栏");
   });
 
   for (const [width, height] of [[390, 844], [320, 568]] as const) {

@@ -5,6 +5,7 @@ import {
   START_COMPLIANCE, START_STANDING,
 } from "../src/world/engine.ts";
 import { pickHighlights, seasonRecap, RECAP_HIGHLIGHT_MAX } from "../src/world/recap.ts";
+import { MAINLINE_ACTS } from "../src/world/content/clues.ts";
 import type { PersonId, Storylet, World, WorldRequest } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
 import { FIXTURE_PEOPLE } from "./fixtures/world-fixture.ts";
@@ -262,7 +263,14 @@ test("本子：攒到的线索按学到的先后排，拧过来的那一档认�
   // 幕号停在 2 = 这一幕还没到底。玩家翻过面就会以为这条线结了，回顾页得留一句钩子，
   // 否则第 3 幕那种压到第 3 季的内容没有人会去玩到（钩子认的是 MAINLINE_ACTS 的长度，不写死数字）。
   assert.equal(t.carriesOn, true, "第 2 幕翻过面不等于这条线讲完，回顾页要留「下一季还有人认」");
+  // 第 3 幕收了尾也不算讲完：第 4 幕那句「谁在写单子」还在后面。这一条在加第 4 幕之前是红的
+  // （那时 act 3 就是最后一幕），报的就是这件事。
   assert.equal(
     seasonRecap(recapWorld({ qualities: { "mainline:act": 3, "thread:return-slip": 7 } }), FIXTURE_PEOPLE, storylets).threads[0].carriesOn,
+    true, "幕号 3 只到第 3 幕，第 4 幕没演 —— 这一页还没合上");
+  // 走到内容写到的最后一幕才收钩子：认的是 MAINLINE_ACTS 的长度，不写死第几幕，
+  // 所以再加一幕时这条断言会跟着挪，而不会像上一版那样钉死在 3 上、把「还有下文」念成「已经讲完」。
+  assert.equal(
+    seasonRecap(recapWorld({ qualities: { "mainline:act": MAINLINE_ACTS.length, "thread:return-slip": 12 } }), FIXTURE_PEOPLE, storylets).threads[0].carriesOn,
     false, "幕号走到内容写到的最后一幕：这一页合上了，不许再挂下一季的钩子");
 });

@@ -29,6 +29,24 @@ test("结局至少 8 个，rank 两两不同，排出来是全序", () => {
 
 test("每个结局都能构造出来，更好的条件优先", () => {
   const cases: Array<[string, World]> = [
+    // 主线第 4 幕那四句：落点代号见 storylets-mainline.ts（12 写自己 / 13 交给下一任 /
+    // 14 进区域总表 / 15 摘下来 / 16 她填的 / 17 谁也不写）。
+    ["page-carried", at({
+      compliance: 50, standing: 40, money: 12000,
+      qualities: { "mainline:act": 4, "thread:return-slip": 12, "arc:peilan:end": 1 },
+    })],
+    ["row-is-yours", at({
+      compliance: 55, standing: 50, money: 12000,
+      qualities: { "mainline:act": 4, "thread:return-slip": 12 },
+    })],
+    ["row-in-total", at({
+      compliance: 45, standing: 40, money: 12000,
+      qualities: { "mainline:act": 4, "thread:return-slip": 14 },
+    })],
+    ["row-still-open", at({
+      compliance: 30, standing: 36, money: 12000,
+      qualities: { "mainline:act": 4, "thread:return-slip": 17 },
+    })],
     ["both-kept", at({
       compliance: 50, standing: 60, money: 20000,
       qualities: { "arc:shen:end": 1, "arc:anjie:end": 1 },
@@ -130,4 +148,36 @@ test("每个结局都能构造出来，更好的条件优先", () => {
   });
   assert.equal(seasonEnding(pushedButNamed, PEOPLE).id, "ledger-empty");
   assert.ok(rank("ledger-empty") > rank("both-kept"));
+});
+
+test("四季的故事讲完那一句盖过旧十三句，而没走到第 4 幕的一律不受影响", () => {
+  // 同一副牌同时符合两句：认目录里在前的那句。这条钉的是「主线收束」确实比单项人际成绩更靠前，
+  // 以及新增那四句的门槛带 act >= 4 —— 门槛漏写，前两季的牌就会被「那一栏还是空的」念一句它没做过的话。
+  const signedAndKept = at({
+    compliance: 60, standing: 60, money: 20000,
+    qualities: { "mainline:act": 4, "thread:return-slip": 12, "arc:shen:end": 1, "arc:anjie:end": 1 },
+    opinion: { shen: 20, anjie: 20 },
+  });
+  assert.equal(seasonEnding(signedAndKept, PEOPLE).id, "row-is-yours");
+  assert.ok(rank("row-is-yours") < rank("both-kept"));
+
+  // 同一副牌只把幕号从 4 压回 3（第 3 幕收了尾那一档）：就该落回旧十三句。
+  // 认的是那四句门槛里的 act >= 4 —— 门槛漏写，一句「那一栏今年还是空的」就能念到没跑完四季的人头上。
+  const sameButActThree = { ...signedAndKept, qualities: { ...signedAndKept.qualities, "mainline:act": 3 } };
+  assert.equal(seasonEnding(sameButActThree, PEOPLE).id, "both-kept", "幕号压回 3 就不该走主线那四句");
+
+  // 落点 12~17 只有 13/15/16/17 属于「那一栏还是空的」那一族；12 走前两句，14 走第三句。
+  for (const landing of [13, 15, 16, 17]) {
+    const opened = at({
+      compliance: 40, standing: 40, money: 12000,
+      qualities: { "mainline:act": 4, "thread:return-slip": landing },
+    });
+    assert.equal(seasonEnding(opened, PEOPLE).id, "row-still-open", `落点 ${landing} 该念「那一栏今年还是空的」`);
+  }
+  // 台账见底的四季不认这一句：故事讲完不等于这一季没塌。
+  const openedButEmpty = at({
+    compliance: 5, standing: 10, money: 20000,
+    qualities: { "mainline:act": 4, "thread:return-slip": 15 },
+  });
+  assert.equal(seasonEnding(openedButEmpty, PEOPLE).id, "ledger-empty");
 });
