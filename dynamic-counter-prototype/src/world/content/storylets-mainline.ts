@@ -201,11 +201,12 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         label: "问这一行跟那张单子是不是同一件事",
         effects: [
           { clue: "slip-gap" },
+          { clue: "slip-hand" },
           { remember: { holder: "fangmin", act: "slip-asked-gap", valence: 1, subject: "player" } },
           { opinion: "fangmin", delta: 4 },
           { stat: "compliance", delta: 2 },
         ],
-        result: "她说：你自己看日期。名字她还是不念，但表没有收回去。",
+        result: "她把两张纸并排放在柜台上，没有念名字，也没有把日期挡住。你把这两个日子一起抄进本子。",
       },
       {
         label: "说缺口那事你认",
@@ -241,8 +242,9 @@ export const STORYLETS_MAINLINE: Storylet[] = [
     tension: 1,
     once: true,
     // 翻面：第 1 季挂在柜位名下那笔退款，不是顾客反悔。
-    // 是有人拿你说过满的那句话，在群里换了一次人情，名字借的是她的。
-    text: "本子上那几条对到了一起：退货那晚的话不是这面镜子里说的，是从{$b}那句「两周能看出来」里长出去的；名字从群里借，货在群里转。{$a}站在镜子前，第一次没有把手机递给你。",
+    // 正文只说本子上两条线索加起来那件事（日期差三天 + 名字在楼层外过了一遍手）：
+    // 「群里借的名字」只有握着 slip-borrowed 的人才说得出，所以它挪到那颗选项的 when 上。
+    text: "本子上那几条对到了一起：单子的日期差着三天，而这个名字在这层楼外面过了一遍手，落的是沈薇。{$a}站在镜子前，第一次没有把手机递给你。",
     choices: [
       {
         label: "把日期、笔迹和你自己那句一起交出去",
@@ -262,6 +264,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         result: "{$b}收下那几页，把你的原话排在最前面。柜位的数少了一笔，名字第一次写在「说清的人」那一栏。宋姐两天后会上楼来。",
       },
       {
+        when: [{ clue: "slip-borrowed" }],
         label: "只说名字是从群里借的",
         effects: [
           { quality: "thread:return-slip", set: 2 },
@@ -322,6 +325,82 @@ export const STORYLETS_MAINLINE: Storylet[] = [
     ],
   },
   {
+    id: "main-slip-turn-desk",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] } },
+    when: [
+      ACT(1), OPEN, { present: "fangmin" }, { day: { gte: 18 } },
+      { clue: "slip-hand" }, { clue: "slip-gap" },
+      // 第三条路：本子上只有「日期」和「那一行」时也能翻面，而且不必等沈薇在场。
+      // 沈薇一季只在 9.6% 的时段出现，逼着翻面卡也认她，实测三成种子只能落到收档阀门。
+      // 日子压到第 18 天：这条是兜底那条，压太早会把「群里那条」「录音那条」的空窗抢掉
+      // （第 12 天实测本子中位数从 3 条掉到 2 条，翻面提前=剩下的卡全被幕号关掉）。
+      // 握着群里那条或录音那条的人走 main-slip-turn，那一句才说得出「名字是借的」。
+      { not: { clue: "slip-borrowed" } }, { not: { clue: "slip-tape" } },
+    ],
+    weight: 34,
+    tension: 1,
+    once: true,
+    text: "{$a}把赠品领用表摊在柜台上，缺口那一行的日期跟那张退货单并排摆着。她没有再问第二遍，只是把笔放在两行中间。",
+    choices: [
+      {
+        label: "把日期、笔迹和你自己那句一起交出去",
+        effects: [
+          { quality: "thread:return-slip", set: 1 },
+          { quality: "mainline:act", set: 2 },
+          { remember: { holder: "fangmin", act: "slip-owned-line", valence: 2, subject: "player" } },
+          { remember: { holder: "shen", act: "slip-owned-line", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 12 },
+          { opinion: "shen", delta: 5 },
+          { stat: "compliance", delta: 10 },
+          { stat: "standing", delta: -2 },
+          { appoint: { person: "tangke", inDays: 2, slot: 2 } },
+        ],
+        result: "{$a}把那一行誊成一份说明，署名是你。柜位的账一分没变，变的是这一行从此有名字。唐可两天后会被叫上楼对货。",
+      },
+      {
+        label: "等档案自己走到台面上，今天不开口",
+        effects: [
+          { quality: "thread:return-slip", set: 3 },
+          { quality: "mainline:act", set: 2 },
+          { remember: { holder: "fangmin", act: "slip-name-held", valence: -1, subject: "player" } },
+          { opinion: "fangmin", delta: -8 },
+          { stat: "compliance", delta: -6 },
+        ],
+        result: "她把表收回袋子里。这一行你看见了，她以为你没看见 —— 今晚这一层少了一个肯替你签名的人。",
+      },
+      {
+        when: [{ not: { knowsSecret: "shen" } }],
+        label: "这单就是沈薇退的",
+        effects: [
+          { quality: "thread:return-slip", set: 4 },
+          { quality: "mainline:act", set: 2 },
+          { remember: { holder: "fangmin", act: "slip-punted", valence: -2, subject: "player" } },
+          { opinion: "fangmin", delta: -14 },
+          { opinion: "shen", delta: -18 },
+          { stat: "compliance", delta: -15 },
+          { stat: "standing", delta: -8 },
+        ],
+        result: "并排放着的就是她自己的日期。{$a}把表收回去，什么都没说，这一份沉默比写进档案还难办。",
+      },
+      {
+        when: [{ knowsSecret: "shen" }],
+        label: "这单就是沈薇退的",
+        effects: [
+          { quality: "thread:return-slip", set: 4 },
+          { quality: "mainline:act", set: 2 },
+          { remember: { holder: "fangmin", act: "slip-punted", valence: -2, subject: "player" } },
+          { remember: { holder: "shen", act: "slip-punted", valence: -2, subject: "player" } },
+          { opinion: "fangmin", delta: -16 },
+          { opinion: "shen", delta: -22 },
+          { stat: "compliance", delta: -15 },
+          { stat: "standing", delta: -8 },
+        ],
+        result: "你先问过那一栏是谁写的，现在你指着她的名字说了一遍。{$a}把两张纸分开收好，说以后这一行她自己核。",
+      },
+    ],
+  },
+  {
     id: "main-slip-filed",
     kind: "mainline",
     cast: { a: { id: "shen", where: [] } },
@@ -331,6 +410,8 @@ export const STORYLETS_MAINLINE: Storylet[] = [
     once: true,
     // 幕一不能卡死：一季快过完还没攒够线索，这条线就以「你没开口」收掉，
     // 本子上的那几条留在档案里，下一季还有人对得上号。
+    // 但这一档必须是有代价的一档，不是白拿的兜底：她以后不把话带到你这面镜子前（client 关系掉到底），
+    // 而这句话会传到方敏那一侧 —— 两处都是引擎里读得到的活状态，不是只扣一次性的分数。
     text: "{$a}进门没有看镜子。她说那张单子昨天并进了柜位的账，从今天起没人再问，也不用你答。",
     choices: [
       {
@@ -339,14 +420,16 @@ export const STORYLETS_MAINLINE: Storylet[] = [
           { quality: "thread:return-slip", set: 5 },
           { quality: "mainline:act", set: 2 },
           { remember: { holder: "shen", act: "slip-waited", valence: -1, subject: "player" } },
+          { remember: { holder: "fangmin", act: "slip-waited", valence: -1, subject: "player", heardFrom: "shen" } },
+          { bond: ["shen", "player"], kind: "client", set: -25 },
           { opinion: "shen", delta: -4 },
         ],
-        result: "她点头，走得比来时快。本子上那几条还在，只是今晚没有一句被说出来。",
+        result: "她点头，走得比来时快。本子上那几条还在，只是今晚没有一句被说出来。往后她有别的去处。",
       },
       {
         label: "问她能不能再等一天",
         effects: [
-          { quality: "thread:return-slip", set: 5 },
+          { quality: "thread:return-slip", set: 6 },
           { quality: "mainline:act", set: 2 },
           { stat: "standing", delta: -2 },
           { remember: { holder: "fangmin", act: "slip-waited", valence: -1, subject: "player" } },

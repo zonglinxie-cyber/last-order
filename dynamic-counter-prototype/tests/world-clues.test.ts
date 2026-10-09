@@ -176,6 +176,57 @@ test("可达性：没攒够线索翻不了面，攒齐了当天就翻得动", ()
   assert.equal(drawStorylet({ ...after, day: 20 }, PEOPLE, [turn]).drawn, null, "已经翻过的线不该再翻一次");
 });
 
+test("可达性：本子上只有「日期 + 那一行」时走台账那条路翻面，且沈薇不在场也翻得动", () => {
+  const group = STORYLETS.find(c => c.id === "main-slip-turn");
+  const desk = STORYLETS.find(c => c.id === "main-slip-turn-desk");
+  assert.ok(group && desk, "两条翻面卡都在牌堆里");
+  const legal = (w: World, card: (typeof STORYLETS)[number]) => card.when.every(c => evalCond(w, PEOPLE, c));
+  const withClues = (clues: string[], day = 20, present: Record<string, "counter" | "cashier"> = { shen: "counter", fangmin: "cashier" }) => {
+    let w = at({ season: 1, day, present });
+    w = setQuality(w, MAINLINE_ACT_KEY, 1);
+    for (const id of clues) w = setQuality(w, `clue:${id}`, 5);
+    return w;
+  };
+
+  // 沈薇一季只在约一成的时段露面：台账那条不许把她当成必要条件，否则攒够了也走不到跟前。
+  assert.equal(legal(withClues(["slip-hand", "slip-gap"], 20, { fangmin: "cashier" }), desk), true, "日期加那一行就该翻得动，她来不来都一样");
+  assert.equal(legal(withClues(["slip-hand", "slip-gap"]), group), false, "没握着群里或录音那条，说不出「名字是借的」");
+  assert.equal(legal(withClues(["slip-gap"]), desk), false, "只有领用表那一行，日期还没对不上");
+  // 台账那条是兜底：日子压到第 18 天，给客人那两条留出空窗。
+  // 实测第 12 天就放它会把本子中位数从 3 条压到 2 条，还会让「群里那条」的种子从 52/80 掉到 38/80。
+  assert.equal(legal(withClues(["slip-hand", "slip-gap"], 14), desk), false, "第 14 天还该等客人那两条");
+
+  // 两条路互斥：握着群里那条的人走客人那一面，不会被台账版抢掉。
+  const both = withClues(["slip-hand", "slip-gap", "slip-borrowed"]);
+  assert.equal(legal(both, group), true);
+  assert.equal(legal(both, desk), false, "本子上有群里那条，就不该读成「只有台账一条线」");
+  const taped = withClues(["slip-hand", "slip-gap", "slip-tape"]);
+  assert.equal(legal(taped, group) && !legal(taped, desk), true);
+  assert.equal(legal({ ...withClues(["slip-hand", "slip-gap"]), day: 11 }, desk), false, "日子没到第 18 天也不给翻");
+
+  const applied = applyChoice(withClues(["slip-hand", "slip-gap"]), PEOPLE, { storylet: desk, binding: { a: "fangmin" } }, 0);
+  assert.equal(applied.qualities[threadKey("return-slip")], 1);
+  assert.equal(applied.qualities[MAINLINE_ACT_KEY], 2);
+});
+
+test("内容：同一个落点在图鉴上只能有一个说法", () => {
+  // 图鉴与季末回顾都按「落点号 → 先出现的那张卡的 label」念（progress.ts 的 threadLandings）。
+  // 再加一条翻面路时若把同一档写成另一句话，回顾会念出玩家没走过的那句 —— 这条把它钉住。
+  const titles = new Map<string, Set<string>>();
+  for (const card of STORYLETS) {
+    for (const choice of card.choices) {
+      for (const e of choice.effects) {
+        if (!("quality" in e) || !e.quality.startsWith("thread:") || typeof e.set !== "number") continue;
+        const key = `${e.quality.slice("thread:".length)}#${e.set}`;
+        titles.set(key, new Set([...(titles.get(key) ?? new Set()), choice.label]));
+      }
+    }
+  }
+  for (const [key, labels] of titles) {
+    assert.equal(labels.size, 1, `落点 ${key} 有几张卡各说一套：${[...labels].join(" / ")}`);
+  }
+});
+
 test("档案：本子和收法只增不减，坏档整份丢弃", () => {
   let w = at({ qualities: { "clue:slip-hand": 6, "clue:ghost": 3, [threadKey("return-slip")]: 2, "clue:slip-tape": 0 } });
   const first = observeWorldProgress(emptyWorldProgress(), w);
