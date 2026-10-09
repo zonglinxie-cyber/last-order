@@ -5,7 +5,7 @@ import {
   evalCond, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
   related, resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, STAFF_COUNTER_MAX, WORLD_SAVE_VERSION, ZONE_GUEST_CAPACITY,
-  ARC_CHAPTERS_PER_DAY,
+  ARC_CHAPTERS_PER_DAY, ENERGY_PER_DAY, ENERGY_PER_SLOT, energyCeiling,
 } from "../src/world/engine.ts";
 import type { Cond, Effect, Person, Storylet, World, Zone } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
@@ -17,9 +17,10 @@ import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 const PEOPLE = FIXTURE_PEOPLE;
 const person = (id: string) => PEOPLE.find(p => p.id === id)!;
 
-/** 手动摆一个场面：不经过 beginSlot，直接指定谁在场。 */
+/** 手动摆一个场面：不经过 beginSlot，直接指定谁在场。绕过开局那一步就得自己把劲给上 ——
+    这些用例测的是动作本身，不是「一天四个时段各发一格」那条节奏规则（它另有用例钉着）。 */
 const stage = (w: World, ids: string[], zone = "atrium"): World =>
-  ({ ...w, present: Object.fromEntries(ids.map(id => [id, zone])) });
+  ({ ...w, present: Object.fromEntries(ids.map(id => [id, zone])), energy: ENERGY_PER_DAY });
 
 const setOpinion = (w: World, id: string, v: number): World =>
   ({ ...w, opinion: { ...w.opinion, [id]: v } });
@@ -393,7 +394,7 @@ test("保密与传话：传出去的秘密会流回事主耳朵里", () => {
   assert.ok(w.memories.some(m => m.holder === "qiu" && m.act === "betrayed" && m.valence === -2));
 });
 
-test("精力是硬门槛：不够 20 点接不了客", () => {
+test("精力是硬门槛：差一点不够一单接待（VERB_ENERGY.serve）就接不了客", () => {
   let w = stage(newWorld("t2", PEOPLE), ["mei"], "counter");
   w = { ...w, energy: VERB_ENERGY.serve - 1 };
   assert.ok(!availableVerbs(w, PEOPLE, ["mei"]).includes("serve"));
@@ -480,7 +481,7 @@ test("换季：看法往 0 收一半，关系网原样带走，只留大事", ()
   assert.equal(n.money, 0, "钱清零");
   assert.equal(n.rivalMoney, 0, "对面那本账一起清零：比分是季内的");
   assert.equal(n.rivalWins, 0);
-  assert.equal(n.energy, 100);
+  assert.equal(n.energy, 0, "过夜不回满：一天的劲改成每个时段发一格（beginSlot）");
   assert.equal(n.samples, 8);
   assert.equal(n.standing, 65, "柜位往起点收一半：80 → 65");
   assert.equal(n.compliance, 43, "台账往起点收一半：30 → 43");
@@ -528,15 +529,39 @@ test("一季盘点：盟友、仇人、个人线落点", () => {
   assert.equal(s.money, 5000);
 });
 
-test("endDay：精力重置、天数推进、加了微信的人会约回来", () => {
+test("endDay：精力清零、天数推进、加了微信的人会约回来", () => {
   let w = newWorld("t2", PEOPLE);
   w = { ...w, energy: 3, samples: 0, qualities: { "wechat:mei": 1 } };
   w = endDay(w, PEOPLE);
   assert.equal(w.day, 2);
-  assert.equal(w.energy, 100);
+  assert.equal(w.energy, 0, "过夜不回满，第一格由明早的 beginSlot 发");
   assert.equal(w.samples, 4);
   // 夜里传话沿关系网走一遍，世界仍在推进（rngCalls 前进）。
   assert.ok(w.rngCalls > 0);
+});
+
+// 节奏那一刀的规则：一天的 100 点不再一早全给，而是四个时段各发一格。
+// 钉的是「每个时段都做得起一单接待，而且做完还剩得下一笔人情」—— 旧版每季 25% 的时段只能读不能做，
+// 量出来 100% 是缺劲、0% 是没人（见「每季的节奏」那张表）；而一格只够接待时，柜位那一天一次的人情
+// 又被挤掉（老实人每季帮同事 25 次 → 1 次，柜位中位 85 → 62，见「柜位这一路谁在加、谁在扣」）。
+test("精力按格子发：一进时段就有 20，够开一单再帮一个人，一晚不回满", () => {
+  let w = newWorld("energy-cells", PEOPLE);
+  assert.equal(w.energy, 0, "开局手里是零，第一格由 beginSlot 发");
+  assert.ok(ENERGY_PER_SLOT >= VERB_ENERGY.serve + VERB_ENERGY.help,
+    `一格要买得下"开一单 + 一笔人情"（${VERB_ENERGY.serve}+${VERB_ENERGY.help}），否则柜位的人情进项又断了`);
+  for (const s of [0, 1, 2, 3] as const) {
+    w = beginSlot({ ...w, slot: s }, PEOPLE);
+    assert.equal(w.energy, energyCeiling(s), `第 ${s + 1} 格发完手里该有 ${energyCeiling(s)}`);
+    assert.ok(w.energy >= VERB_ENERGY.serve, "这一格至少开得起一单接待 —— 这一刻不是只能读剧情");
+  }
+  assert.equal(energyCeiling(3), ENERGY_PER_SLOT * 4, "一天四格 = 80");
+  assert.equal(energyCeiling(3), 80, "比旧版一早给满的 100 少 20：这 20 是付给节奏的价钱，改这一格就要重看回归表");
+  assert.equal(ENERGY_PER_DAY, 100, "封顶那条日常走不到，只是重复进同一时段的保险");
+
+  w = beginSlot({ ...newWorld("energy-carry", PEOPLE), slot: 1 as Slot, energy: 24 }, PEOPLE);
+  assert.equal(w.energy, 24 + ENERGY_PER_SLOT, "没花完的攒到下一格");
+  w = beginSlot({ ...newWorld("energy-cap", PEOPLE), slot: 2 as Slot, energy: ENERGY_PER_DAY }, PEOPLE);
+  assert.equal(w.energy, ENERGY_PER_DAY, "已经满了就不再发：一天最多还是 100");
 });
 
 test("角色槽：同一个人不会同时填进两个槽", () => {

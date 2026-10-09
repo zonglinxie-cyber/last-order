@@ -23,6 +23,10 @@ import { ta } from "./pronoun.ts";
 export const PLAYER_NAME = "许愿";
 
 export const ENERGY_PER_DAY = 100;
+/** 精力按格子发：一早不再一次给满，每个时段开头补一格，未花完的攒着（封顶 ENERGY_PER_DAY）。
+    四格一共 80，比旧版一早那 100 少 20 —— 少的这一截是付给节奏的价钱：旧版每季 25% 的时段
+    空有劲没处花（末两档只剩 20 / 1 点），按格发之后那些时段重新做得有事。 */
+export const ENERGY_PER_SLOT = 20;
 export const START_STANDING = 50;
 export const START_COMPLIANCE = 55;
 export const START_SAMPLES = 8;
@@ -72,9 +76,12 @@ export const REFUND_OPINION = -8;
 export const REFUND_MIN_DAYS = 2;
 export const REFUND_MAX_DAYS = 3;
 
-/** 各动作花的精力。 */
+/** 各动作花的精力。
+ *  接待从 20 降到 12 是为了跟一格 20 点对上：开一单（12）之后手上还剩 8，正好是"帮一次同事"（8）
+ *  或"打一个圆场"的零头。按格发精力之后一格只够一件事，柜位那一天一次的人情（socialStanding）
+ *  就被接待整格吃掉 —— 量出来老实人每季帮同事从 25 次掉到 1 次，柜位中位 85 → 62（见设计文档"柜位这一路谁在加"）。 */
 export const VERB_ENERGY: Record<Verb, number> = {
-  greet: 3, sample: 6, serve: 20, introduce: 10, mediate: 12,
+  greet: 3, sample: 6, serve: 12, introduce: 10, mediate: 12,
   handoff: 6, help: 8, wechat: 4, keep: 2, tell: 4,
 };
 
@@ -260,7 +267,7 @@ export function newWorld(seed: string, _people: Person[]): World {
   return {
     seed, season: 1, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing: START_STANDING, compliance: START_COMPLIANCE,
-    energy: ENERGY_PER_DAY, samples: START_SAMPLES,
+    energy: 0, samples: START_SAMPLES,
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
     present: {}, touched: [], rngCalls: 0, appointments: [], requests: [], fired: {}, log: [],
     opinionAtSeasonStart: {},
@@ -422,9 +429,13 @@ export const festivalOn = (day: number, festivals: Festival[]): string | undefin
 const visitChance = (v: Visits, festival: string | undefined): number =>
   festival !== undefined && v.festivalBoost !== undefined ? clamp(v.chance * v.festivalBoost, 0, 1) : v.chance;
 
+/** 这一刻的精力上限：一天四个格子按发到手算，一个都没花就该有这个数。界面判"今天动过手没有"问它，别自己写死 ENERGY_PER_DAY。 */
+export const energyCeiling = (slot: Slot): number =>
+  Math.min(ENERGY_PER_DAY, ENERGY_PER_SLOT * (slot + 1));
+
 /** 开一个时段。festivals 给了就按当天日期设置 World.festival —— Visits.festivals 与 {festival} 条件都读它。 */
 export function beginSlot(world: World, people: Person[], festivals?: Festival[]): World {
-  let w: World = { ...world, present: {}, touched: [] };
+  let w: World = { ...world, present: {}, touched: [], energy: Math.min(ENERGY_PER_DAY, world.energy + ENERGY_PER_SLOT) };
   if (festivals) w = { ...w, festival: festivalOn(w.day, festivals) };
   const dayOfWeek = ((w.day - 1) % 7) + 1;
   const present: Record<PersonId, Zone> = {};
@@ -1187,7 +1198,8 @@ export function endDay(world: World, people: Person[]): World {
   }
 
   w = { ...w,
-    energy: ENERGY_PER_DAY,
+    // 过夜不回满：一天的劲改成四个时段各发一格（见 beginSlot），这里只把昨天没花完的清掉。
+    energy: 0,
     samples: Math.min(SAMPLES_MAX, w.samples + SAMPLES_PER_NIGHT),
     day: w.day + 1, slot: 0, present: {}, touched: [] };
   return say(w, `—— 第 ${w.day} 天 ——`);
@@ -1226,7 +1238,7 @@ export function nextSeason(world: World, people: Person[]): World {
   return {
     seed: world.seed, season, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing, compliance,
-    energy: ENERGY_PER_DAY, samples: START_SAMPLES,
+    energy: 0, samples: START_SAMPLES,
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
     qualities, present: {}, touched: [], rngCalls: world.rngCalls,

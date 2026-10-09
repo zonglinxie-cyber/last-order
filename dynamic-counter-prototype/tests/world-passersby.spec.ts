@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
+import { energyCeiling, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { Slot, World } from "../src/world/types.ts";
 import {
@@ -13,7 +13,7 @@ import {
 
 const pbWorld = (slot: Slot, over: Partial<World> = {}): World => ({
   ...newWorld("passersby-seed", PEOPLE),
-  day: 2, slot, money: 4_600, energy: 100,
+  day: 2, slot, money: 4_600, energy: energyCeiling(slot),
   present: { roman: "counter", suman: "counter", mei: "counter", zhou: "cashier", xiaoyu: "entrance", shen: "lounge" },
   ...over,
 });

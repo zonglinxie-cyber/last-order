@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
-  ambient, beginSlot, drawStorylet, newWorld, SAVE_KEY, WORLD_SAVE_VERSION,
+  ambient, beginSlot, drawStorylet, energyCeiling, newWorld, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { FESTIVALS, PEOPLE, STORYLETS } from "../src/world/content/index.ts";
@@ -12,9 +12,11 @@ import type { World, Zone } from "../src/world/types.ts";
 // 顾客名牌后挂「新客 / 回头客」（words.ts），所以按名字找人一律用子串正则；要钉整条标签的用例除外。
 // 尺寸契约（390×844 与 320×568）：除地图容器外不横向溢出、按钮 ≥44px、正文 ≥12px。
 
+// 精力写 energyCeiling(slot)：按格发之后这一档手里最多就这么多，再多就是玩不出来的状态
+// （界面用 energy < energyCeiling 判"这一档动过手没有"，喂一个够不着的数会把那条判语演歪）。
 const floorWorld = (over: Partial<World> = {}): World => ({
   ...newWorld("floor-seed", PEOPLE),
-  day: 2, slot: 1, money: 4_600, energy: 100,
+  day: 2, slot: 1, money: 4_600, energy: energyCeiling(over.slot ?? 1),
   opinion: { mei: 20 },
   present: {
     roman: "counter", suman: "counter", fangmin: "counter",
@@ -405,8 +407,8 @@ test.describe("新手引导 390×844", () => {
   });
 
   test("引导气泡不遮住「下一时段」按钮", async ({ page }) => {
-    // 花过精力的档：「就点右上角的下一时段」那句就指着这颗按钮，气泡得落在旁边。
-    await enter(page, envelope({ energy: 80 }), false);
+    // 花过精力的档：这一档已经开过一单，手里剩的比上限少 —— 「就点右上角的下一时段」那句就指着这颗按钮。
+    await enter(page, envelope({ energy: energyCeiling(1) - VERB_ENERGY.serve }), false);
     const coach = page.locator(".world-coach");
     await expect(coach).toBeVisible();
     await expect(coach).toContainText("下一时段");

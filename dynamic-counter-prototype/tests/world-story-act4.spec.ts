@@ -5,7 +5,7 @@
 // 卡片自己的 when 由 tests/world-content.test.ts 的静态探针钉；这里只钉界面会不会把
 // 带条件的格子按 choiceVisible 关好，以及那句话最后落在哪一屏。
 import { expect, test, type Page } from "@playwright/test";
-import { absDay, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
+import { absDay, energyCeiling, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import type { World } from "../src/world/types.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
@@ -13,7 +13,7 @@ import { PEOPLE } from "../src/world/content/index.ts";
 /** 第 4 季、第 4 幕的开局条件已经摆好：幕号 3、那条退货单在第 3 幕翻过面、方敏和裴岚都在楼上。 */
 const act3World = (over: Partial<World> = {}): World => ({
   ...newWorld("act4-ui", PEOPLE),
-  season: 4, day: 6, slot: 1, energy: 100,
+  season: 4, day: 6, slot: 1, energy: energyCeiling(over.slot ?? 1),
   present: { fangmin: "cashier", peilan: "counter", shen: "counter", suman: "counter", mei: "counter" },
   qualities: { "mainline:act": 3, "thread:return-slip": 7, "clue:slip-hand": 1, "clue:slip-tape": 1 },
   ...over,

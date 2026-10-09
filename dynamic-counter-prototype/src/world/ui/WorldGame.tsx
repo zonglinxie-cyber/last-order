@@ -9,7 +9,7 @@ import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
   drawStorylet, endDay, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, substitute,
-  verbOptions, ENERGY_PER_DAY, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  verbOptions, energyCeiling, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { seasonRecap } from "../recap.ts";
@@ -752,6 +752,6 @@ export default function WorldGame() {
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
-    {!reqCardOpen && !reqPanelOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < ENERGY_PER_DAY }} />}
+    {!reqCardOpen && !reqPanelOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
   </div>;
 }

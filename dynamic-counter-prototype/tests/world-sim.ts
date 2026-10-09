@@ -49,8 +49,13 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
         const p = personOf(people, serve.targets[0]);
         return [{ call: serve, args: { product: bestFit(p), units: p.skin!.maxUnits } }, w];
       }
-      for (const verb of ["keep", "mediate", "greet", "wechat", "sample", "help"] as const) {
-        const c = first(verb, untouched);
+      // 柜位的一天一次人情（engine 的 standing:social-day 门）只有 help/mediate/introduce 会给，
+      // keep/greet/wechat/sample 都不给。按格发精力之后一格只够一单接待，把这些排在前面就等于
+      // 一笔人情永远轮不到 —— 会算的人这一刻做的是"没有客可开单时，先把那 +1/+2 拿到手"。
+      for (const verb of ["mediate", "help", "introduce", "keep", "greet", "wechat", "sample"] as const) {
+        // 挑不到劲够得着的那一个就跳过：doVerb 对不够劲的动作原样返回，takeTurns 会当成"没做成"直接收手，
+        // 一格 20 点会被这种空转整格浪费掉。
+        const c = first(verb, x => untouched(x) && w.energy >= VERB_ENERGY[verb]);
         if (c) return [{ call: c }, w];
       }
       return [null, w];
@@ -96,9 +101,12 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
 /** 当场可答的委托（唐可借小样）各风格怎么选：老实做人和经营关系的都借，硬推的舍不得。 */
 function answerRequests(style: Style, w: World, people: Person[]): World {
   for (const req of w.requests.filter(r => r.state === "open" && INSTANT_KINDS.includes(r.kind))) {
-    if (style === "pushy") w = resolveRequestChoice(w, people, req.id, false);
-    else if (style === "random") { let x: number; [x, w] = simDraw(w); w = resolveRequestChoice(w, people, req.id, x < 0.5); }
-    else w = resolveRequestChoice(w, people, req.id, w.samples >= (req.n ?? 1));
+    const b = w;
+    let yes = w.samples >= (req.n ?? 1);
+    if (style === "pushy") yes = false;
+    else if (style === "random") { let x: number; [x, w] = simDraw(w); yes = x < 0.5; }
+    w = resolveRequestChoice(w, people, req.id, yes);
+    bumpStand(style, "当场委托", b, w);
   }
   return w;
 }
@@ -111,8 +119,10 @@ function takeTurns(style: Style, w: World, people: Person[]): [World, number] {
     [action, w] = pickAction(style, w, people);
     if (!action) break;
     const before = w;
+    verbTally.set(`${style}|${action.call.verb}`, (verbTally.get(`${style}|${action.call.verb}`) ?? 0) + 1);
     w = doVerb(w, people, action.call.verb, action.call.targets, action.args ?? {});
-    if (w === before) break; // 动作没生效（精力不够之类）就收手
+    bumpStand(style, `动作 ${action.call.verb}`, before, w);
+    if (w === before) { verbFail.set(`${style}|${action.call.verb}`, (verbFail.get(`${style}|${action.call.verb}`) ?? 0) + 1); break; } // 动作没生效（精力不够之类）就收手
     acted++;
   }
   return [w, acted];
@@ -143,9 +153,32 @@ type SeasonBurn = {
   /** 节奏（第 23 轮加的仪表，纯读）：一季 112 个时段里，有多少个时段玩家手上真的有事做。
    *  「没玩就结束了」的反面不是卡不够多，是**点下一时段的次数**太多。 */
   slots: number; noStory: number; readOnly: number; acted: number; starved: number[];
+  /** 做不动分两种，修法是两码事：缺劲（energy 连最便宜那一下都不够）和没人（场上一个都点不到）。 */
+  noEnergy: number; noGuest: number;
 };
 type RunBurn = { firstDay: Map<string, number>; draws: number; repeats: number; perSeason: SeasonBurn[] };
 const runBurn = new Map<string, RunBurn>();
+/** 四个时段各自「开门那一刻」的在场可点人数与精力（四种风格混在一起池化，与节奏表同口径）。 */
+const slotHands: number[][] = [[], [], [], []];
+const slotEnergy: number[][] = [[], [], [], []];
+/** 柜位是被哪几笔攒起来 / 又是被哪几笔扣掉的。每处会动 standing 的转移只做一次前后差值 ——
+ *  纯读：不抽随机数，其余表与加这段之前逐行一致。
+ *  为什么要量：精力改成按格发之后老实人的柜位中位从 85 掉到 60，成交却从 28 单涨到 38 单，
+ *  说明掉的那 25 点不是少卖了几单，是另一笔进项断了。 */
+const standTally = new Map<string, Map<string, [number, number]>>();
+/** 每种风格挑过几次哪个动作、其中几次没做成（doVerb 原样返回）。用来回答"人情为什么一次都没轮上"。 */
+const verbTally = new Map<string, number>();
+const verbFail = new Map<string, number>();
+let standSeason = 1;
+function bumpStand(style: Style, where: string, before: World, after: World): void {
+  const d = after.standing - before.standing;
+  if (!d) return;
+  const key = `${style}|第 ${standSeason} 季`;
+  const m = standTally.get(key) ?? new Map<string, [number, number]>();
+  const cur = m.get(where) ?? [0, 0];
+  m.set(where, [cur[0] + 1, cur[1] + d]);
+  standTally.set(key, m);
+}
 const burnOf = (style: Style, seed: string): RunBurn => {
   const key = `${style}|${seed}`;
   let b = runBurn.get(key);
@@ -155,8 +188,9 @@ const burnOf = (style: Style, seed: string): RunBurn => {
 
 function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn): World {
   const seasonTally: SeasonBurn = { season: seasonNo, draws: 0, repeats: 0, story: 0, arcFirst: new Set(), mainFirst: new Set(),
-    slots: 0, noStory: 0, readOnly: 0, acted: 0, starved: [] };
+    slots: 0, noStory: 0, readOnly: 0, acted: 0, starved: [], noEnergy: 0, noGuest: 0 };
   burn.perSeason.push(seasonTally);
+  standSeason = seasonNo;
   while (w.day <= DAYS) {
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
@@ -164,7 +198,10 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
       w = answerRequests(style, w, people); // 开门提的当场类委托，先答了再抽卡做动作
       // 节奏仪表（纯读）：进场这一刻手上有没有牌 —— 场上还点得到人、精力还够做最便宜的那件事。
       const hands = Object.values(w.present).filter(z => z !== "rival").length;
-      const canAct = w.energy >= VERB_ENERGY.greet && hands > 0;
+      const lowEnergy = w.energy < VERB_ENERGY.greet;
+      const canAct = !lowEnergy && hands > 0;
+      slotHands[s].push(hands);
+      slotEnergy[s].push(w.energy);
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
@@ -193,19 +230,29 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
           endExposure.set(endLine, ex);
         }
         let k: number; [k, w] = simIndex(w, Math.max(1, visibleIdx.length));
+        const b4 = w;
         w = applyChoice(w, people, drawn, visibleIdx[k] ?? 0);
+        bumpStand(style, "剧情选项", b4, w);
       }
       let acted = 0;
       [w, acted] = takeTurns(style, w, people);
       seasonTally.slots++;
       seasonTally.acted += acted;
       if (!drawn) seasonTally.noStory++;
-      if (!canAct) seasonTally.starved.push(s);
+      if (!canAct) {
+        seasonTally.starved.push(s);
+        if (lowEnergy) seasonTally.noEnergy++;
+        if (hands === 0) seasonTally.noGuest++;
+      }
       // 「只能读不能做」：这一段剧情给了你，可这一刻连一句最便宜的招呼都接不住 —— 纯看客的时段。
       if (drawn && !canAct) seasonTally.readOnly++;
+      const ba = w;
       w = ambient(w, people); // 时段末：传话、陆遥带走没顾上的人（与界面同一个顺序）
+      bumpStand(style, "时段末传话", ba, w);
     }
+    const bd = w;
     w = endDay(w, people);
+    bumpStand(style, "打烊(名额与委托)", bd, w);
   }
   return w;
 }
@@ -562,20 +609,45 @@ for (let season = 1; season <= SEASON_COUNT; season++) {
 // 有多少个时段玩家只能干点「下一时段」是另一回事。这一张表量后者。
 const SLOT_WORDS = ["上午", "午后", "傍晚", "晚高峰"];
 console.log(`\n每季的节奏（各列取 ${runBurn.size} 副牌的中位；"做不动" = 进这个时段时精力连最便宜的招呼（${VERB_ENERGY.greet} 点）都不够、或场上点不到人）:`);
-console.log("季   时段数   抽到卡   做不动   只能读不能做   每时段做成几件  每天做成几件   做不动的时段落在哪一档");
+console.log("季   时段数   抽到卡   做不动  其中缺劲  其中没人   只能读不能做   每时段做成几件  每天做成几件   做不动的时段落在哪一档");
 for (let season = 1; season <= SEASON_COUNT; season++) {
   const rows = [...runBurn.values()].map(b => b.perSeason.find(p => p.season === season)).filter((p): p is SeasonBurn => !!p);
   if (!rows.length) continue;
   const med = (f: (p: SeasonBurn) => number) => median(rows.map(f));
+  const avg = (f: (p: SeasonBurn) => number) => rows.reduce((a, p) => a + f(p), 0) / Math.max(1, rows.length);
   const slots = Math.max(1, med(p => p.slots));
   const starvedAll = rows.flatMap(p => p.starved);
   const hist = SLOT_WORDS.map((_, s) => `${SLOT_WORDS[s]} ${Math.round((starvedAll.filter(x => x === s).length / Math.max(1, starvedAll.length)) * 100)}%`).join(" · ");
   console.log(` ${String(season).padStart(2)}  ${String(slots).padStart(6)}  ` +
     `${String(Math.round((med(p => p.draws) / slots) * 100)).padStart(5)}%  ` +
     `${String(Math.round((starvedAll.length / rows.length / slots) * 100)).padStart(5)}%  ` +
+    `${String(Math.round((avg(p => p.noEnergy) / slots) * 100)).padStart(7)}%  ` +
+    `${String(Math.round((avg(p => p.noGuest) / slots) * 100)).padStart(7)}%  ` +
     `${String(Math.round((med(p => p.readOnly) / slots) * 100)).padStart(7)}%  ` +
     `${(med(p => p.acted) / slots).toFixed(2).padStart(9)} 件  ` +
     `${(med(p => p.acted) / DAYS).toFixed(2).padStart(9)} 件   ${starvedAll.length ? hist : "整季都有劲"}`);
+}
+console.log("（缺劲与没人按均值算，一个时段可以两条都占，所以两列加起来会略高于「做不动」。）");
+console.log("\n四个时段开门那一刻（同样池化）：场上点得到几位 / 还剩多少劲");
+console.log("档       上午    午后    傍晚   晚高峰");
+console.log(`点得到   ${slotHands.map(h => String(median(h)).padStart(6)).join(" ")} 位`);
+console.log(`剩精力   ${slotEnergy.map(e => String(Math.round(median(e))).padStart(6)).join(" ")} 点`);
+
+// 柜位的进项与扣项：一处一笔一笔地数，别靠猜。（nextSeason 那一笔"跨季折半"发生在季与季之间，
+// 不在这张表里 —— 它是写死的规则：新季从 (旧柜位 − 50) 的一半起步。）
+console.log("\n柜位这一路谁在加、谁在扣（40 个种子合计：笔数 / 累计点数）:");
+for (const [key, m] of [...standTally].sort()) {
+  const [style, season] = key.split("|");
+  const rows = [...m.entries()].sort((a, b) => b[1][1] - a[1][1]);
+  console.log(`  ${season} ${style.padEnd(7)} ${rows.map(([where, [n, sum]]) => `${where} ${n} 次/${sum >= 0 ? "+" : ""}${sum}`).join(" · ")}`);
+}
+console.log("\n各风格挑过几次哪个动作（四季合计；括号 = 挑了却没做成、整格收手）:");
+for (const st of STYLES) {
+  const rows = [...verbTally].filter(([k]) => k.startsWith(`${st}|`)).sort((a, b) => b[1] - a[1]);
+  console.log(`  ${st.padEnd(7)} ${rows.map(([k, n]) => {
+    const f = verbFail.get(k) ?? 0;
+    return `${k.split("|")[1]} ${n}${f ? `(${f} 空)` : ""}`;
+  }).join(" · ")}`);
 }
 
 console.log(`\n内容燃烧曲线（${SEASON_COUNT} 季 × ${DAYS} 天 = ${SEASON_COUNT * DAYS} 天，跨季连着算）:`);

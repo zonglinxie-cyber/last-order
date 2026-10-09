@@ -324,8 +324,8 @@ export const guestKindWord = (returning: boolean): string => returning ? "回头
 export const newGuestWord = (fresh: number): string => fresh ? ` · 新客 ${fresh}` : "";
 
 /** 动作条空着时那一句 —— 只说真正的原因，不许「或者」把两条推给玩家自己猜。
- *  一天的精力只在打烊那一下回满（endDay），所以"没劲"这件事的出路只有一条：翻时段熬到明早。 */
+ *  精力一个时段发一格（beginSlot 的 ENERGY_PER_SLOT），所以"没劲"的出路是翻时段，不是熬到明早。 */
 export const verbsEmptyWord = (person: Person, outOfEnergy: boolean, atRival: boolean): string =>
   atRival ? `${ta(person)}被请去了对面，这个时段够不着。`
-    : outOfEnergy ? "你今儿的劲用完了，点「下一时段」熬到明早。"
+    : outOfEnergy ? "这一时段你手上的劲用完了，点「下一时段」补一格。"
     : `这会儿对${ta(person)}做不了什么。`;

@@ -45,9 +45,11 @@ test("新客与回头客的说法，和「现场」那半句只在 words.ts 写�
 test("动作条空着那三句：只说一个原因，不许「或者」", () => {
   const mei = PEOPLE.find(p => p.id === "mei")!;
   assert.equal(verbsEmptyWord(mei, false, true), "她被请去了对面，这个时段够不着。");
-  // 没劲那句必须自己给出路：一天的精力只在打烊那一下回满，能做的只有翻时段。
+  // 没劲那句必须自己给出路：精力一个时段发一格（beginSlot），出路是翻时段，不是熬到明早。
   const tired = verbsEmptyWord(mei, true, false);
   assert.ok(tired.includes("劲用完了") && tired.includes("下一时段"), tired);
+  assert.ok(tired.includes("补一格"), `出路要说准是"下一时段补一格"：${tired}`);
+  assert.equal(tired.includes("明早"), false, "过夜不再回满，别把玩家支到明早去");
   assert.equal(verbsEmptyWord(mei, false, false), "这会儿对她做不了什么。");
   for (const line of [verbsEmptyWord(mei, true, false), verbsEmptyWord(mei, false, false)])
     assert.ok(!line.includes("或者"), `这句把两条原因一起推给玩家：${line}`);

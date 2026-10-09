@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  ambient, availableVerbs, doVerb, newWorld, opinionOf, serializeWorld, warmthOf,
+  ambient, availableVerbs, doVerb, newWorld, opinionOf, serializeWorld, warmthOf, ENERGY_PER_DAY,
 } from "../src/world/engine.ts";
 import {
   CHAT_WARMTH, EXCHANGE_ACTS, MAX_EXCHANGES_PER_SLOT, ONE_UP_OPINION, PULL_FOLLOW_OPINION,
@@ -18,7 +18,7 @@ const person = (id: string) => PEOPLE.find(p => p.id === id)!;
 
 /** 手动摆一个场面：不经过 beginSlot，直接指定谁在场。 */
 const stage = (w: World, ids: string[], zone = "atrium"): World =>
-  ({ ...w, present: Object.fromEntries(ids.map(id => [id, zone])) });
+  ({ ...w, present: Object.fromEntries(ids.map(id => [id, zone])), energy: ENERGY_PER_DAY });
 const setOpinion = (w: World, id: string, v: number): World =>
   ({ ...w, opinion: { ...w.opinion, [id]: v } });
 const exKey = (act: string, a: string, b: string) => `ex:${act}:${[a, b].sort().join(":")}`;

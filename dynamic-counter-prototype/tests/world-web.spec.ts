@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
+import { energyCeiling, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { World } from "../src/world/types.ts";
@@ -17,7 +17,7 @@ const envelope = (): string => {
   const base = newWorld("web-seed", PEOPLE);
   const world: World = {
     ...base,
-    day: 3, slot: 1, money: 12_400, energy: 60,
+    day: 3, slot: 1, money: 12_400, energy: energyCeiling(1),
     opinion: { ...KNOWN },
     bonds: { "shen>luyao": -78, "tangke>suman": 52, "mei>zhou": 26 },
     memories: [
