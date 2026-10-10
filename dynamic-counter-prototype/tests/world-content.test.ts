@@ -224,8 +224,8 @@ test("走完的线下一季还有她自己的卡可抽（回访卡）", () => {
     assert.ok(card, `${rawId} 从第 ${from} 季起没有回访卡`);
     assert.equal(card.kind, "arc", `回访卡 ${card.id} 不是 arc，拿不到剧情卡那一份权重`);
     assert.ok(!card.once, `回访卡 ${card.id} 写了 once —— 演完一次就又断了`);
-    assert.ok((card.cooldown ?? 0) >= SEASON_DAYS - 1,
-      `回访卡 ${card.id} 冷却 ${card.cooldown} 天：一季 28 天，她一季能回来两回以上`);
+    assert.ok((card.cooldown ?? 0) >= SEASON_DAYS,
+      `回访卡 ${card.id} 冷却 ${card.cooldown} 天：一季 28 天，第 1 天演过、第 28 天正好差 27 天又放行 —— 她要整季封顶才挡得住`);
     assert.ok(card.when.some(c => "quality" in c && c.quality === `arc:${rawId}:end` && c.gte === 1),
       `回访卡 ${card.id} 没有认「arc:${rawId}:end ≥ 1」这道门 —— 线还没走完就能抽到她的回访`);
     assert.ok(card.when.some(c => "season" in c && c.season.gte === from),
@@ -247,6 +247,113 @@ test("走完的线下一季还有她自己的卡可抽（回访卡）", () => {
     "回访卡名单变了：加了要在 ECHO_FROM_SEASON 记一季，也要在设计文档那张表上补一笔");
   assert.deepEqual([...Object.keys(ECHO_FROM_SEASON), ...NO_ECHO_YET].sort(), [...ARC_PEOPLE].sort(),
     "个人线名册对不上：新加一条线得先说清它有没有回访卡");
+});
+
+test("回访卡整季封顶：第 1 天演过她，第 28 天不许再演第二次；换季以后照旧回得来", () => {
+  // 上一版把冷却写成 27，理由是"一季 28 天等于每季一次"—— 差一天：判据是 `day - fired < cooldown`，
+  // 第 1 天与第 28 天正好差 27，不小于 27，于是放行。40 副 × 4 季量到 80 回"同一张回访卡一季演两次"
+  // （占回访卡出现的 6.3%），文档那句"一季最多演一次"是错的。这一条把边界钉死在真数字上。
+  const allPresent = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
+  const at = (day: number, firedDay: number | null): World => ({
+    ...newWorld("echo-cooldown", PEOPLE),
+    season: 2, day, present: { ...allPresent },
+    qualities: { "arc:shen": 3, "arc:shen:end": 1 },
+    fired: firedDay === null ? {} : { "echo-shen": firedDay },
+  });
+  const inDeck = (w: World) => storyDeck(w, PEOPLE, STORYLETS, 0).eligible.some(e => e.storylet.id === "echo-shen");
+  assert.ok(inDeck(at(1, null)), "第 1 天她本来就该在牌堆里 —— 下面那句要拿它当对照");
+  assert.ok(!inDeck(at(28, 1)),
+    "第 1 天演过、第 28 天（差 27 天）她又在牌堆里：冷却没到整季，同一张回访卡一季能演两回");
+  // 另一半也要钉：封顶是"整季一次"，不是"整局一次"。冷却不许跨季记账。
+  // （换季把 present 清空，所以人得重新摆回楼层上 —— 绑不出槽就跟这张卡没关系了。）
+  assert.ok(inDeck({ ...nextSeason(at(28, 1), PEOPLE), present: { ...allPresent } }),
+    "换季以后她回不来了 —— 回访卡的冷却跨了季，引力井变成一次性卡");
+});
+
+test("「名字是借的」不再只有一个写入方：走完的线回第二趟时替主线作证", () => {
+  // 量到的洞：六条线索里只有 slip-borrowed 拿不全 —— 40 副 naive 走法 22/40，其余五条都 40/40，
+  // 而主线那边有五张卡的 when 读着它（main-slip-shen / -yin / -fang / -turn / -turn-desk）。
+  // 这一条是整条退货单的反转枢纽（名字是借的 ⇒ 单子不是沈薇退的），漏掉等于 45% 的人玩到的故事少一节。
+  const writes = (c: { effects: Effect[] }) => c.effects.some(e => "clue" in e && e.clue === "slip-borrowed");
+  const writers = STORYLETS.filter(s => s.choices.some(writes));
+  // 静态有三张写它（main-slip-song / main-a2-audit / main-a2-mirror），但后两张各是那张卡的第二格，
+  // 而下面那条走法永远取第一格 —— 实测 40 副里真写过这条的只有 song 一张。所以这一句量的是"够不够四条路"，
+  // 不是"之前有没有路"；补没补上，认的是下面那条经验判据。
+  assert.ok(writers.length >= 4,
+    `只有 ${writers.length} 张卡写这条线索（${writers.map(w => w.id).join("、")}）—— 一张卡漏掉就是几成人玩不到那个反转`);
+  // [卡 id, 那条线的人, 最早第几季能回第二趟]
+  const second: Array<[string, PersonId, number]> = [["echo2-shen", "shen", 2], ["echo2-xiaoyu", "xiaoyu", 2], ["echo2-zhou", "zhou", 3]];
+  for (const [id, person, from] of second) {
+    const card = STORYLETS.find(s => s.id === id);
+    assert.ok(card, `${id} 不在了 —— 主线那条替代路径断了一条`);
+    const gated = card.choices.filter(writes);
+    assert.equal(gated.length, 1, `${id} 写这条线索的格子该只有一格`);
+    assert.ok(gated[0].when?.some(c => "not" in c && "clue" in c.not && c.not.clue === "slip-borrowed"),
+      `${id} 那一格没带「本子上还没有这一条」这道门 —— 已经知道的人要再看一遍同样的话`);
+    assert.ok(card.choices.some(c => !c.when?.length), `${id} 没有保底那一格：门都对不上时桌上是空的`);
+    assert.ok(!card.once, `${id} 写了 once —— 第二回回访变成一次性卡`);
+    assert.ok((card.cooldown ?? 0) >= SEASON_DAYS, `${id} 冷却不到整季`);
+    assert.ok(card.when.some(c => "quality" in c && c.quality === `arc:${person}:end` && c.gte === 1),
+      `${id} 没认「arc:${person}:end ≥ 1」这道门 —— 线还没走完就能回第二趟`);
+    assert.ok(card.when.some(c => "season" in c && c.season.gte === from),
+      `${id} 的开季门不是第 ${from} 季 —— 走完那一季当场就回头演，玩家来不及把她当上一季的人`);
+  }
+
+  // 静态那四条只证明"卡上有这一格"，不证明"抽得到、点得下去、点完本子上多一行"。
+  // 下面这一副牌是照本子的真实形状拼的：宋姐那张已经演过（fired 挡着，本子上却没有这条线索 ——
+  // 那正是 22/40 里剩下的 18 副），这回访卡必须自己把这一行写进本子。
+  const everywhere = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
+  for (const [id, person, from] of second) {
+    const card = STORYLETS.find(s => s.id === id)!;
+    const base = newWorld(id, PEOPLE);
+    const w: World = {
+      ...base,
+      season: from, day: 9, present: { ...everywhere },
+      qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: 1 },
+      opinion: { ...base.opinion, [person]: 20 },
+      fired: { "main-slip-song": 3 },
+    };
+    const hit = storyDeck(w, PEOPLE, STORYLETS, 0).eligible.find(e => e.storylet.id === id);
+    assert.ok(hit, `${id} 在「宋姐那张演过、本子上还没有这一条」的牌里抽不到 —— 这条路根本没接上主线`);
+    const idx = card.choices.findIndex(c => writes(c) && choiceVisible(w, PEOPLE, hit, c));
+    assert.ok(idx >= 0, `${id} 那一格在看法够高、本子上没有这条时该露出来`);
+    assert.ok(applyChoice(w, PEOPLE, hit, idx).qualities["clue:slip-borrowed"],
+      `${id} 点下去本子上没多这一行 —— 替代路径是假的`);
+  }
+  assert.deepEqual(STORYLETS.filter(s => s.id.startsWith("echo2")).map(s => s.id).sort(),
+    second.map(([id]) => id).sort(),
+    "第二回回访卡的名单变了：补一张要在上面那两条判据里点名，也要在界面演出里演一遍");
+});
+
+test("连玩十二副四季：那条「名字是借的」不再大面积漏（经验判据）", () => {
+  // 走法照抄上面第 4 幕那条：每格只 greet、卡取第一个看得见的选项。补三张第二回之前同一走法是 22/40，
+  // 六副里期望只中三副 —— 这条要的就是它能红。
+  const playSeason = (world: World) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        const idx = drawn ? drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c)) : -1;
+        if (!drawn || idx < 0) continue;
+        w = applyChoice(w, PEOPLE, drawn, idx);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+  let landed = 0;
+  for (let i = 0; i < 12; i++) {
+    let w = newWorld(`borrowed-${i}`, PEOPLE);
+    for (let s = 1; s < 4; s++) { w = playSeason(w); w = nextSeason(w, PEOPLE); }
+    w = playSeason(w);
+    if (w.qualities["clue:slip-borrowed"]) landed++;
+  }
+  // 阈值为什么敢压到 10/12：补上三张第二回以后同一走法是 40/40（拿满），摘掉是 22/40。
+  // 六副那一版红不起来（55% 的基率下 ≥5/6 有 16% 的概率蒙过），实测把三张摘掉它照样绿 —— 那种判据是假判据。
+  assert.ok(landed >= 10,
+    `十二副牌只有 ${landed} 副拿到「群里那句的名字是借的」—— 回访卡那条替代路径没接上（补之前是 22/40）`);
 });
 
 test("个人线名册双向对得上：卡写的落点都在档案里，档案里每个人都真有落点卡", () => {

@@ -4,8 +4,10 @@
 // 会不会按同一套判据把不该露的格子关掉 —— 门露错了，玩家读到的就是"她不管我怎么收都一样"。
 // 存档是手工拼的：ui.pending 是已经抽出来还没选的那张卡（照 tests/world-story-act4.spec.ts 的办法），
 // 所以每一步都不赌来访概率。卡片自己的 when（含"第 2 季才开"那道门）由单测钉，这里不重验。
+// 第 26 轮在这同一个文件里加了两条「第二回」（echo2-shen）：它验的不是落点档，是**本子上有没有那条
+// 线索** —— 已知的人不该再看一遍同样的话，而不知道的人点下去本子要多一行。这一格关不关是界面上才看得出来的。
 import { expect, test, type Page } from "@playwright/test";
-import { energyCeiling, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
+import { absDay, energyCeiling, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import type { PersonId, World } from "../src/world/types.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
@@ -54,6 +56,7 @@ const savedWorld = async (page: Page): Promise<World> =>
 const choices = (page: Page) => page.locator(".world-story .story-choices button");
 const SHEN = { id: "echo-shen", binding: { a: "shen", b: "suman" } };
 const ANJIE = { id: "echo-anjie", binding: { a: "anjie" } };
+const SHEN2 = { id: "echo2-shen", binding: { a: "shen" } };
 
 for (const [width, height] of [[390, 844], [320, 568]] as const) {
   test.describe(`回访卡演出 ${width}×${height}`, () => {
@@ -103,6 +106,28 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       const w = await savedWorld(page);
       expect(w.opinion.anjie, "10 + 6").toBe(16);
       expect(w.qualities["arc:anjie:end"], "落点该还是 1").toBe(1);
+    });
+
+    test("第二回：本子上还没有那条线索时，她那一格在，点下去本子多一行", async ({ page }) => {
+      const seeded = echoWorld();
+      await enter(page, seeded, SHEN2);
+      const text = page.locator(".world-story .story-text");
+      await expect(text).toContainText("名字是她的，话不是她说的");
+      await expect(text).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(3);
+      await page.getByRole("button", { name: "问那句是谁先发的" }).click();
+      await expect(page.locator(".world-feed")).toContainText("名字是群里借的，货在群里转了一圈");
+      const w = await savedWorld(page);
+      // 线索记的是"哪一天攒到的"那个绝对天（第 2 季第 12 天 = 28 + 12），不是 1 —— 跟第 4 幕那条同一口径。
+      expect(w.qualities["clue:slip-borrowed"], "回访卡该把这条线索写进本子").toBe(absDay(seeded));
+      expect(w.opinion.shen, "20 + 4").toBe(24);
+    });
+
+    test("本子上已经有这一条，那一格就该关着（不许把同一句话再念一遍）", async ({ page }) => {
+      await enter(page, echoWorld({ qualities: { "arc:shen:end": 1, "clue:slip-borrowed": 5 } }), SHEN2);
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: /问那句是谁先发的/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /先问她这一季还带不带人来/ })).toBeVisible();
     });
 
     test("回访卡在本档不横向溢出，每格按得着、正文读得清", async ({ page }) => {

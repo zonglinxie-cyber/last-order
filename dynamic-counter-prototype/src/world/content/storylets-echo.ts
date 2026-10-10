@@ -5,11 +5,24 @@
 // 这一批不改那条判据，也不补新线：每张卡认的是「她这一季已经走完了」，把她当年怎么收的（`arc:<人>:end`
 // 落到第几档）当成她这次回来的理由 —— 玩家上一季的选法决定她这一季长什么样，这是"人物线走得完"之后
 // 剩下的那一半：走完了还得能回头。
-// 口径：一张卡一季最多演一次（`cooldown: 27`，`fired` 换季清空；一季 28 天，27 天冷却等于每季一次）。
+// 口径：一张卡一季最多演一次（`cooldown: 28`，`fired` 换季清空；一季 28 天，冷却要**大于**首尾那对
+// 天数差 —— 上一版写 27，于是第 1 天演过、第 28 天还能再演一次（28 − 1 = 27，不小于 27 就放行）。
+// 同一副内容把冷却改回 27 再数一遍：1,266 次回访里有 73 回是"同一张卡一季演两次"（5.8%）；
+// 补到 28 以后 1,264 回全部只演一次，并由确定性用例钉住）。
 // 都不给钱（`stat: money`）—— 本轮的回归要跟上一轮的钱数逐行比，经济一条线不许动。
 // 本轮写 12 张，覆盖第 1 季那九条 + 第 2 季的三条（尹小姐、段小姐、赵宁）。还差 8 条：
 // 唐可、罗曼、方敏、乔晚（第 2 季开）、宋姐、白姐（第 3 季开）落点都在本季末以前，本来回得来，本轮未写；
 // 裴岚、梁夏（第 4 季开）的落点在第四季末，四季之内没有下一季可回 —— 它们要等「四季以后去哪」那一刀。
+//
+// 第 26 轮在下面追加三张「第二回」：它们不补密度，补的是**主线的一条事实**。量到的洞是六条线索里
+// 只有 `slip-borrowed`（「群里那句『沈薇退的』，名字是宋姐借出去的，货还在群里转」）拿不全 ——
+// 40 副牌 naive 走法 22/40，其余五条里四条 40/40、`slip-tape` 39/40（同一把尺子的对照读数，摘掉这三张重跑一遍量的），
+// 而主线有五张卡的 `when` 读着它（`main-slip-shen` /
+// `-yin` / `-fang` / `-turn` / `-turn-desk`）。原因很直白：真能把它写进本子的是 `main-slip-song` 那一张，
+// 而那张要宋姐本人站在楼上、又 `once`（另有两张主线卡的第二格也写它，naive 走法永远取不到第一格以后）。这一条是整条退货单的反转枢纽
+// （名字是借的 ⇒ 单子不是沈薇退的），漏掉它等于 45% 的人玩到的故事少一节。于是让走完的线替主线作证：
+// 沈薇、小雨、周姐各自回第二趟，把她在群里看见的那一笔带回来 —— 门是**看法**（第一张回访卡认的是落点档，
+// 第二张认的是她这一季跟你熟不熟），而写线索那一格只在**本子上还没有这条**时才露出来。
 import type { Storylet } from "../types.ts";
 
 type Slot = Storylet["cast"][string];
@@ -41,7 +54,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: shen, b: brought },
     when: [{ season: { gte: 2 } }, { quality: "arc:shen:end", gte: 1 }],
-    weight: 28, tension: 0, cooldown: 27,
+    weight: 28, tension: 0, cooldown: 28,
     text: "{$a}这一季第一次一个人站在镜子前，身后没有跟着要同一句话的人。她说那一栏她还空着，今天来是想问一句：还在不在。",
     choices: [
       {
@@ -73,7 +86,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: anjie },
     when: [{ season: { gte: 2 } }, { quality: "arc:anjie:end", gte: 1 }],
-    weight: 28, tension: -1, cooldown: 27,
+    weight: 28, tension: -1, cooldown: 28,
     text: "{$a}坐下来先把镯子摘了。她说那场婚礼过去整整一年，今天没有名单、没有伴娘，只问她自己的脸要不要紧。",
     choices: [
       {
@@ -102,7 +115,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: luyao, b: brought },
     when: [{ season: { gte: 2 } }, { quality: "arc:luyao:end", gte: 1 }],
-    weight: 30, tension: 1, cooldown: 27,
+    weight: 30, tension: 1, cooldown: 28,
     text: "{$a}隔着通道叫你一声，说的不是抢人的话。她手边那位{$b}她报不上需求，让你接过去讲清楚，她这一柜今天不接这一单。",
     choices: [
       {
@@ -140,7 +153,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: suman },
     when: [{ season: { gte: 2 } }, { quality: "arc:suman:end", gte: 1 }],
-    weight: 26, tension: -1, cooldown: 27,
+    weight: 26, tension: -1, cooldown: 28,
     text: "{$a}在收银那头抬了下巴，说有位老客在楼下站了十分钟，她没报自己名字，只说找这一柜。",
     choices: [
       {
@@ -169,7 +182,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: xiaoyu },
     when: [{ season: { gte: 2 } }, { quality: "arc:xiaoyu:end", gte: 1 }],
-    weight: 28, tension: 0, cooldown: 27,
+    weight: 28, tension: 0, cooldown: 28,
     text: "{$a}把钱一张一张放在柜面上，数到第三张才停。她说这次不是宿舍凑的了，她自己那份，脸上那颗痘还在。",
     choices: [
       {
@@ -204,7 +217,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: zhou },
     when: [{ season: { gte: 2 } }, { quality: "arc:zhou:end", gte: 1 }],
-    weight: 28, tension: 0, cooldown: 27,
+    weight: 28, tension: 0, cooldown: 28,
     text: "{$a}把手机屏幕朝下扣在柜面。她说今天没人催，同事那一栏她不填，只想把自己这一行说清楚。",
     choices: [
       {
@@ -239,7 +252,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: zhao },
     when: [{ season: { gte: 2 } }, { quality: "arc:zhao:end", gte: 1 }],
-    weight: 28, tension: 0, cooldown: 27,
+    weight: 28, tension: 0, cooldown: 28,
     text: "{$a}进门把手机屏幕朝上放在柜面，说这一行她自己写的，不是抄谁的。她说这一句先说好：今天买的是她自己的脸。",
     choices: [
       {
@@ -274,7 +287,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: miduo },
     when: [{ season: { gte: 2 } }, { quality: "arc:miduo:end", gte: 1 }],
-    weight: 28, tension: 1, cooldown: 27,
+    weight: 28, tension: 1, cooldown: 28,
     text: "{$a}把灯架照旧支在镜边，说这一季她只剪两周，剪之前先把话说明白：那句你说过什么，她今天打算自己念一遍。",
     choices: [
       {
@@ -309,7 +322,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: mei },
     when: [{ season: { gte: 2 } }, { quality: "arc:mei:end", gte: 1 }],
-    weight: 30, tension: -1, cooldown: 27,
+    weight: 30, tension: -1, cooldown: 28,
     text: "{$a}今天进来先看了三次表，第四次没看。她说那一支已经用完了，这一柜她排了两周，不为见客户。",
     choices: [
       {
@@ -344,7 +357,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: yinxiaojie, b: brought },
     when: [{ season: { gte: 3 } }, { quality: "arc:yinxiaojie:end", gte: 1 }],
-    weight: 28, tension: 0, cooldown: 27,
+    weight: 28, tension: 0, cooldown: 28,
     text: "{$a}进门先看价签，不看人。她说这一季带个人来，那人问的那句跟她去年问的一模一样，她答不上来，所以带来给你答。",
     choices: [
       {
@@ -382,7 +395,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: duan },
     when: [{ season: { gte: 3 } }, { quality: "arc:duan:end", gte: 1 }],
-    weight: 28, tension: 0, cooldown: 27,
+    weight: 28, tension: 0, cooldown: 28,
     text: "{$a}站在柜前，说的第一句不是闷痘，是她自己的名字。她说这一季她是来买东西的，不是来问东西的。",
     choices: [
       {
@@ -417,7 +430,7 @@ export const STORYLETS_ECHO: Storylet[] = [
     kind: "arc",
     cast: { a: zhaoning },
     when: [{ season: { gte: 3 } }, { quality: "arc:zhaoning:end", gte: 1 }],
-    weight: 28, tension: 1, cooldown: 27,
+    weight: 28, tension: 1, cooldown: 28,
     text: "{$a}一个人来，屏幕亮着，那一行是她自己的字迹。她说她妈妈这一季没来，这一单她想按自己那一行走，问这一柜认不认。",
     choices: [
       {
@@ -442,6 +455,93 @@ export const STORYLETS_ECHO: Storylet[] = [
         label: "先问她这一次买给自己什么",
         effects: [{ opinion: "$a", delta: 2 }, { bond: ["zhaoning", "player"], delta: 2 }],
         result: "{$a}想了很久才答，答案短，说完自己先笑了。",
+      },
+    ],
+  },
+
+  // —— 第二回：走完的线替主线作证（第 26 轮）——
+  // 三张卡写的是同一条事实：`slip-borrowed`。不是冗余，是给一条只有一个写入方的反转枢纽补三条替代路径；
+  // 每一张的露出条件都带 `not: clue`，本子上已经有了这一条的人不会再看一遍同样的话。
+  {
+    id: "echo2-shen",
+    kind: "arc",
+    cast: { a: shen },
+    when: [{ season: { gte: 2 } }, { quality: "arc:shen:end", gte: 1 }],
+    weight: 24, tension: 1, cooldown: 28,
+    text: "{$a}这一季又来了一回，站的位置比上回靠里。她说她在群里看见了那条截图，名字是她的，话不是她说的。",
+    choices: [
+      {
+        label: "问那句是谁先发的",
+        when: [{ not: { clue: "slip-borrowed" } }, { opinion: "shen", gte: 10 }],
+        effects: [{ clue: "slip-borrowed" }, { opinion: "$a", delta: 4 }, { stat: "standing", delta: 1 }],
+        result: "{$a}说发的人她认得，名字是群里借的，货在群里转了一圈才转到她跟前。这一句她讲给你，没讲给别人。",
+      },
+      {
+        label: "让她别去群里对那句话",
+        when: [{ quality: "arc:shen:end", eq: 1 }],
+        effects: [{ opinion: "$a", delta: 3 }, { bond: ["shen", "player"], delta: 4 }],
+        result: "{$a}说她没打算对，就对过一次，输的是她。这回她把手机留在兜里。",
+      },
+      {
+        label: "先问她这一季还带不带人来",
+        effects: [{ opinion: "$a", delta: 2 }],
+        result: "{$a}说带，但这一季她要先把自己那一栏填了，再领别人。",
+      },
+    ],
+  },
+
+  {
+    id: "echo2-xiaoyu",
+    kind: "arc",
+    cast: { a: xiaoyu },
+    when: [{ season: { gte: 2 } }, { quality: "arc:xiaoyu:end", gte: 1 }],
+    weight: 24, tension: 0, cooldown: 28,
+    text: "{$a}把手机举到你跟前，屏幕停在群里那条置顶。她说这一季她学会了一件事：先看清名字是谁打上去的，再决定跟不跟。",
+    choices: [
+      {
+        label: "让她把那条的来处念完",
+        when: [{ not: { clue: "slip-borrowed" } }, { opinion: "xiaoyu", gte: 8 }],
+        effects: [{ clue: "slip-borrowed" }, { opinion: "$a", delta: 4 }],
+        result: "{$a}翻到最早那一层，说名字不是沈薇自己写上去的，是群里借的，货到现在还在群里转。她举着手机等你记。",
+      },
+      {
+        label: "问她这一季还跟不跟那句",
+        when: [{ quality: "arc:xiaoyu:end", eq: 1 }],
+        effects: [{ opinion: "$a", delta: 3 }, { bond: ["xiaoyu", "player"], delta: 3 }],
+        result: "{$a}说不了，说完把屏幕擦了一下，说这一季她把钱花在自己脸上。",
+      },
+      {
+        label: "先给她开这一单",
+        effects: [{ opinion: "$a", delta: 2 }],
+        result: "{$a}把手机收回去，说单照开，那一栏她自己填。",
+      },
+    ],
+  },
+
+  {
+    id: "echo2-zhou",
+    kind: "arc",
+    cast: { a: zhou },
+    when: [{ season: { gte: 3 } }, { quality: "arc:zhou:end", gte: 1 }],
+    weight: 24, tension: 1, cooldown: 28,
+    text: "{$a}这一季坐下来，第一句不问价。她说同一句话她在对面也听见了一遍，两个柜讲的不是同一个版本。",
+    choices: [
+      {
+        label: "问她在对面那句是谁先说的",
+        when: [{ not: { clue: "slip-borrowed" } }, { opinion: "zhou", gte: 6 }],
+        effects: [{ clue: "slip-borrowed" }, { opinion: "$a", delta: 4 }, { stat: "standing", delta: 1 }],
+        result: "{$a}说对面那句也是从群里来的，名字是借的，货在群里转。她比了一整季，比出来的是这一句。",
+      },
+      {
+        label: "请她把两个版本并排说完",
+        when: [{ quality: "arc:zhou:end", eq: 1 }],
+        effects: [{ opinion: "$a", delta: 3 }, { bond: ["zhou", "player"], delta: 3 }],
+        result: "{$a}一条一条并着说，说完说自己那一份不要了，只要这一柜把日子记对。",
+      },
+      {
+        label: "先把手上那位做完",
+        effects: [{ opinion: "$a", delta: 2 }],
+        result: "{$a}说行，她等着，说完把自己那一行在手机上又看了一遍。",
       },
     ],
   },
