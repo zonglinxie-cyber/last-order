@@ -274,8 +274,20 @@ test("回访卡整季封顶：第 1 天演过她，第 28 天不许再演第二�
  *  LIFE_STEP1 = 第 5 季那一步（把 life:<id> 从 0 写到 1，同时记下怎么落的 life:<id>:how），
  *  LIFE_STEP2 = 第 6 季那一步（认 life:<id> = 1，写到 2）。
  *  名单写死在这里：补人要在名单上选边，别让"这一批补了 11 张"被读成"20 条线都补了"。 */
-const LIFE_STEP1: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo"];
+const LIFE_STEP1: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo",
+  "zhao", "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie", "peilan", "liangxia"];
 const LIFE_STEP2: PersonId[] = ["shen", "anjie", "mei"];
+/** 这颗门认不认「她收在第 L 档」这一件事 —— 只判 arc:<id>:end 那一条，其余门留给运行时那遍。 */
+const endAdmits = (cond: Cond, id: PersonId, L: number): boolean => {
+  if ("any" in cond) return cond.any.some(c => endAdmits(c, id, L));
+  if ("not" in cond) return !endAdmits(cond.not, id, L);
+  if ("quality" in cond && cond.quality === `arc:${id}:end`) {
+    if ("eq" in cond) return cond.eq === L;
+    if ("gte" in cond) return L >= cond.gte!;
+    if ("lte" in cond) return L <= cond.lte!;
+  }
+  return false;
+};
 const ALL_PRESENT = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
 /** 摆一个"她的线走到哪一档、今年第几天"的场面（第 5/6 季那两类门都要用）。 */
 const lifeWorld = (seed: string, season: number, qualities: Record<string, number>): World =>
@@ -314,6 +326,10 @@ test("走完的线第 5 季有她自己的一步：门、每档落点接得住�
       assert.ok(hit, `${rawId} 落到第 ${landing} 档以后，第 5 季她的「人生一步」不在牌堆里`);
       const shown = card.choices.filter(c => choiceVisible(w, PEOPLE, { storylet: card, binding: hit!.binding }, c));
       assert.ok(shown.length > 0, `${card.id} 在落点第 ${landing} 档上一格都点不出来`);
+      // 上面那句咬不住"分档"：没写 when 的兜底选项在任何一档都点得动。
+      // 这一句要的是她收在哪一档，桌上就得有一句是为这一档写的 —— 不然 4 档与 6 档在她身上是同一句话。
+      assert.ok(card.choices.some(c => (c.when ?? []).some(x => endAdmits(x, rawId, landing))),
+        `${card.id} 落到第 ${landing} 档时没有一颗选项是为这一档写的 —— 她这几年的样子跟她怎么收场没关系了`);
     }
     // 反面两刀：线没走完不许演；这一步演过了不许再演第二次。
     assert.ok(!deckOf(lifeWorld(`life-${rawId}-open`, 5, { [`arc:${rawId}`]: 2 }), card.id),
@@ -418,9 +434,10 @@ test("往牌堆加一张晚季才开的卡，前四季抽到的卡逐位不动",
 });
 
 test("连玩六副六季：第 5 季和第 6 季真演到「人生一步」（经验判据）", () => {
-  // 这一条就是任务 26 的验收判据：上一轮量到第 5、6 季各抽到 15 次故事卡、新演 0 张。
-  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。12 副实测每副都是第 5 季 8 张全演、
-  // 第 6 季 3 张全演、第 5 季一张「下一步」都不演；跑 6 副是为了把整条规则测试的时间压住，阈值留出余量。
+  // 这一条就是任务 26 的验收判据：第 29 轮之前量到第 5、6 季各抽到 15 次故事卡、新演 0 张。
+  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。第 30 轮补齐 20 位以后实测
+  // 6 副各是第 5 季 19~20 张一步（共 20 张）、第 6 季 3 张下一步（共 3 张），第 5 季一张「下一步」都不演；
+  // 跑 6 副是为了把整条规则测试的时间压住，阈值留出余量。
   let state = 1;
   const rand = () => { state = (state * 1103515245 + 12345) & 0x7fffffff; return state / 0x7fffffff; };
   const playSeason = (world: World, fired: string[]) => {
@@ -453,7 +470,7 @@ test("连玩六副六季：第 5 季和第 6 季真演到「人生一步」（�
     const step2Early = five.filter(id => /^life2-/.test(id)).length;
     const step2 = six.filter(id => /^life2-/.test(id)).length;
     assert.equal(step2Early, 0, `副 ${i}：第 5 季就演到了「下一步」（${step2Early} 张）—— 梯子提前塌了一格`);
-    assert.ok(step1 >= 6, `副 ${i}：第 5 季只演到 ${step1} 张「人生一步」（8 张里）—— 第 5 季还是没新剧情`);
+    assert.ok(step1 >= 16, `副 ${i}：第 5 季只演到 ${step1} 张「人生一步」（20 张里）—— 补齐名单以后第 5 季还是没新剧情`);
     assert.ok(step2 >= 2, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（3 张里）—— 去年的那一步没接到今年`);
   }
 });

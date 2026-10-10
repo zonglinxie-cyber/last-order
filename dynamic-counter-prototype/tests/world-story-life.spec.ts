@@ -33,6 +33,15 @@ const SHEN1 = { id: "life-shen", binding: { a: "shen" } };
 const SHEN2 = { id: "life2-shen", binding: { a: "shen" } };
 const ANJIE1 = { id: "life-anjie", binding: { a: "anjie" } };
 
+/** 第 30 轮那批的通用夹具：她这条线收在第 landing 档，这几年那一步还没走过。 */
+const lifeFixture = (person: string, cardId: string, landing: number, opinion: number): World => ({
+  ...newWorld(`life30-${cardId}`, PEOPLE),
+  season: 5, day: 6, slot: 1, energy: energyCeiling(1),
+  present: { [person]: "counter" } as World["present"],
+  opinion: { [person]: opinion } as World["opinion"],
+  qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: landing },
+});
+
 const enter = async (page: Page, world: World, drawn: { id: string; binding: Record<string, string> }) => {
   await page.addInitScript(
     ([k, v]) => window.localStorage.setItem(k, v),
@@ -49,11 +58,11 @@ const enter = async (page: Page, world: World, drawn: { id: string; binding: Rec
   await page.getByRole("button", { name: /继续/ }).click();
 };
 
-const savedWorld = async (page: Page): Promise<{ qualities: Record<string, number> }> =>
+const savedWorld = async (page: Page): Promise<{ qualities: Record<string, number>; money: number }> =>
   page.evaluate(key => {
     const raw = window.localStorage.getItem(key);
     if (!raw) throw new Error("存档没落盘");
-    return (JSON.parse(raw) as { world: { qualities: Record<string, number> } }).world;
+    return (JSON.parse(raw) as { world: { qualities: Record<string, number>; money: number } }).world;
   }, SAVE_KEY);
 
 const choices = (page: Page) => page.locator(".world-story .story-choices button");
@@ -142,6 +151,52 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       const q = await savedWorld(page);
       expect(q.qualities["life:anjie"]).toBe(1);
       expect(q.qualities["life:anjie:how"]).toBe(1);
+    });
+
+    // ===== 第 30 轮补齐的那十二位：界面上演到的是"这一档有它自己的一句话"，不是纸上的守卫 =====
+    test(`安姐收在最后那一档：为这一档新写的那一格开着，落法记成「这一格不留了」`, async ({ page }) => {
+      await enter(page, lifeFixture("anjie", "life-anjie30", 4, 0), ANJIE1);
+      await expect(storyText(page)).toContainText("安姐进门先把手里那张单子摊在柜面");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "照她自己的脸开这一支" })).toHaveCount(0);
+      await page.getByRole("button", { name: /那张单子她谁的也不交/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("安姐说这一单她不交给谁");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:anjie"]).toBe(1);
+      expect(q.qualities["life:anjie:how"], "谁的也不交 = 这一格她不留了").toBe(3);
+    });
+
+    test(`梁夏那条六档的线：落在最后一档，桌上摆的是为她这一档写的那一句`, async ({ page }) => {
+      await enter(page, lifeFixture("liangxia", "life-liangxia30", 6, 0), { id: "life-liangxia", binding: { a: "liangxia" } });
+      await expect(storyText(page)).toContainText("梁夏这次没让人拍她");
+      await expect(storyText(page)).toContainText("今天她想写自己的");
+      await expect(storyText(page)).not.toContainText("{$");
+      // 1/2/3 档那三颗该关着：四档以上才轮到「柜上不上别人的主页」。
+      await expect(page.getByRole("button", { name: "行字写在柜位那一栏" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /那一页旧图先跟安姐说清/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "柜上不上别人的主页" }).click();
+      await expect(page.locator(".world-feed")).toContainText("梁夏说这一柜不上她主页");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:liangxia"]).toBe(1);
+      expect(q.qualities["life:liangxia:how"]).toBe(2);
+    });
+
+    test(`方敏那条是同事的线：她那一句把你挡在抄送外面，钱一分不动`, async ({ page }) => {
+      const w = lifeFixture("fangmin", "life-fangmin30", 3, 0);
+      await enter(page, w, { id: "life-fangmin", binding: { a: "fangmin" } });
+      await expect(storyText(page)).toContainText("方敏抱来的不是那本厚的档案");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "原话还在，认的还是你那一句" })).toHaveCount(0);
+      await page.getByRole("button", { name: /你不在抄送里/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("方敏说这不是给你看的");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:fangmin"]).toBe(1);
+      expect(q.qualities["life:fangmin:how"], "被挡在抄送外 = 这一格她不留了").toBe(3);
+      // 「都不给钱」这条口径在界面上的那一份：这一步走完，柜上的钱不许多一分也不少一分。
+      expect(q.money, "人生一步一颗钱都不该动").toBe(w.money);
     });
   });
 }
