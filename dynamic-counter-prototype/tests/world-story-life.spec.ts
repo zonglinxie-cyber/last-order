@@ -344,5 +344,18 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       expect(q.qualities["life:zhao"]).toBe(3);
       expect(q.qualities["life:zhao:how"]).toBe(2);
     });
+
+    test(`处淡了又去年只剩生意：那句「问她还来不来」在界面上点得到（改门之前它永远不出现）`, async ({ page }) => {
+      await enter(page, life2Fixture("shen", "life2-shen34", 2, -8), SHEN2);
+      await expect(storyText(page)).toContainText("沈薇把去年那只空瓶放在柜面上");
+      await expect(choices(page)).toHaveCount(3);
+      await expect(page.getByRole("button", { name: "问她还来不来" })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: /把她写进自己的名单/ })).toHaveCount(0);
+      await page.getByRole("button", { name: "问她还来不来" }).click();
+      await expect(page.locator(".world-feed")).toContainText("沈薇说来，说自己来不为那一栏");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:shen"]).toBe(2);
+      expect(q.qualities["life:shen:how"], "这一颗写的是「只剩生意」那一档").toBe(2);
+    });
   });
 }

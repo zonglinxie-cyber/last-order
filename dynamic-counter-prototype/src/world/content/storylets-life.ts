@@ -499,7 +499,7 @@ export const STORYLETS_LIFE: Storylet[] = [
       },
       {
         label: "问她还来不来",
-        when: [how("shen", 3)],
+        when: [how("shen", 2), cold("shen", -4)],
         effects: [
           { opinion: "$a", delta: 2 }, { bond: ["shen", "player"], delta: 3 },
           { quality: "life:shen", set: 2 }, { quality: "life:shen:how", set: 2 },
@@ -537,7 +537,7 @@ export const STORYLETS_LIFE: Storylet[] = [
       },
       {
         label: "按同行那套跟她谈",
-        when: [how("anjie", 2)],
+        when: [how("anjie", 3), cold("anjie", -5)],
         effects: [
           { opinion: "$a", delta: -4 }, { quality: "life:anjie", set: 2 }, { quality: "life:anjie:how", set: 3 },
         ],

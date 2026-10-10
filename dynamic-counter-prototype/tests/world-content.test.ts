@@ -458,6 +458,40 @@ test("第 7 季那一格：前两年的账在这里结，格子不许缺也不�
   }
 });
 
+test("梯子没有死格子：每一颗挂在去年读数上的选项，去年真写得出那个数", () => {
+  // 第 30 轮那句「死格子」守卫只咬 life3- 那十张；这一条对所有梯卡开一遍，且不看名单 ——
+  // 它第一次跑就抓到第 29 轮那批的两颗：life2-shen 挂 how=3、life2-anjie 挂 how=2，
+  // 而上一年那张分别只写得出 [1,2] 和 [1,3]，那两句话玩家永远读不到。
+  const writesHow = (id: PersonId, cardId: string): number[] | null => {
+    const c = STORYLETS.find(s => s.id === cardId);
+    if (!c) return null;
+    return [...new Set(c.choices
+      .flatMap(x => x.effects.filter(e => "quality" in e && e.quality === `life:${id}:how`))
+      .map(e => ("set" in e ? e.set : undefined)).filter((n): n is number => typeof n === "number"))].sort();
+  };
+  const gatesHow = (id: PersonId, cardId: string): number[] => {
+    const c = STORYLETS.find(s => s.id === cardId)!;
+    return [...new Set(c.choices.flatMap(x => (x.when ?? [])
+      .filter(w => "quality" in w && w.quality === `life:${id}:how` && typeof w.eq === "number")
+      .map(w => w.eq as number)))].sort();
+  };
+  const cards = STORYLETS.filter(s => /^life(2|3)-/.test(s.id)).sort((a, b) => a.id.localeCompare(b.id));
+  assert.ok(cards.length >= 30, `梯卡只剩 ${cards.length} 张：这条守卫是照整摞卡开的，卡少一批它就该红`);
+  for (const card of cards) {
+    const rawId = card.id.replace(/^life(2|3)-/, "") as PersonId;
+    const upId = `${card.id.match(/^life(2|3)-/)![1] === "2" ? "life-" : "life2-"}${rawId}`;
+    const prod = writesHow(rawId, upId);
+    assert.ok(prod, `${card.id} 的上游 ${upId} 不存在 —— 梯子的这一段没接上`);
+    const gated = gatesHow(rawId, card.id);
+    const dead = gated.filter(v => !prod!.includes(v));
+    assert.equal(dead.length, 0,
+      `${card.id} 有 ${dead.length} 颗挂在去年写不出的读数上：how=${dead.join("/")} —— 这一档的话玩家永远读不到`);
+    const missing = prod!.filter(v => !gated.includes(v));
+    assert.equal(missing.length, 0,
+      `${card.id} 少了一档：去年写得出 how=${missing.join("/")}，今年没有一颗选项是为这一档写的`);
+  }
+});
+
 test("往牌堆加一张晚季才开的卡，前四季抽到的卡逐位不动", () => {
   // 量到的机制：bindCast 每扫一张卡就按槽数推进 rngCalls，而卡级 when 是在绑定走完以后才判的，
   // 所以"这一季根本开不了"的卡照样消耗随机流。上一轮加 11 张第 5 季才开的卡，四季那两条经验判据里
