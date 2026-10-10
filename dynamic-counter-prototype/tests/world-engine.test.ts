@@ -516,6 +516,7 @@ test("换季：看法往 0 收一半，关系网原样带走，只留大事", ()
       "arc:mei": 2, "arc:mei:end": 1, "arc:luyao:clash": 2,
       "secret-known:qiu": 1, "secret-kept:qiu": 1, "secret-out:zhao": 1,
       "wechat:mei": 1, "away:mei": 28, "bought:mei": 27, "served:mei": 3,
+      "life:shen": 2, "life:shen:how": 1,
       "storyteller:heat": 1.5, "standing:social-day": 28, "handoff-sale:suman:12": 1,
     },
     appointments: [{ day: 30, slot: 1, person: "mei", reason: "visit" }],
@@ -551,7 +552,9 @@ test("换季：看法往 0 收一半，关系网原样带走，只留大事", ()
   assert.equal(n.memories.find(m => m.holder === "shen")?.heardFrom, "he", "听谁说的也留下");
 
   for (const keep of ["arc:mei", "arc:mei:end", "arc:luyao:clash",
-    "secret-known:qiu", "secret-kept:qiu", "secret-out:zhao", "wechat:mei"])
+    "secret-known:qiu", "secret-kept:qiu", "secret-out:zhao", "wechat:mei",
+    // 「人生一步」那两步跨季走：步数一清，第 6 季那一步就再也接不上她第 5 季怎么落的。
+    "life:shen", "life:shen:how"])
     assert.equal(n.qualities[keep], w.qualities[keep], `${keep} 带过去`);
   for (const drop of ["away:mei", "bought:mei", "served:mei",
     "storyteller:heat", "standing:social-day", "handoff-sale:suman:12"])

@@ -679,6 +679,18 @@ export type DrawnStorylet = { storylet: Storylet; binding: Record<string, Person
 // 角色槽按声明顺序回溯绑定：同一个人不进两个槽；前面的槽换人能让后面的槽成立时就换，
 // 整张卡的 when 也算进搜索里。每个槽从一个由种子定下的起点轮着试，所以同种子结果逐位相同，
 // 而且每张卡只消耗"槽数"次随机，不随回溯的步数增长。
+/** 这条条件要不要等槽里站了人才谈得上：出现任何 $槽名 / $self 引用，或者按槽名单挑人（{slot: ...}），
+ *  都要等 bindCast 把人填出来。判定写得保守 —— 值里有个以 $ 开头的串就当它要看槽，宁可少挡不可错挡。 */
+function condNeedsBinding(cond: Cond): boolean {
+  if ("any" in cond) return cond.any.some(condNeedsBinding);
+  if ("not" in cond) return condNeedsBinding(cond.not);
+  if ("slot" in cond) return true;
+  return Object.values(cond).some(v =>
+    typeof v === "string" ? v.startsWith("$")
+      : Array.isArray(v) ? v.some(x => typeof x === "string" && x.startsWith("$"))
+      : false);
+}
+
 function bindCast(w: World, people: Person[], storylet: Storylet): [Binding | null, World] {
   const slots = Object.entries(storylet.cast);
   const base = w.rngCalls;
@@ -775,8 +787,8 @@ const storyWeight = (storylet: Storylet, heat: number, world: World): number => 
 /** 这一刻桌上有哪些卡可讲、各自多重；返回值连同"逐张探绑定"走完之后的 rngCalls 位置。
  *  drawStorylet 两样都要（抽那一下的索引必须接着 cursor 走，否则整副牌换个顺序）；
  *  读数表只取 eligible 并把 cursor 丢掉，所以它对外是纯读：不消耗随机流。
- *  绑定的搜索会推进 cursor.rngCalls（每张卡按槽数计），跳过的那张（once / 冷却）不算 ——
- *  这两条判据原本就写在 drawStorylet 的循环里，一起搬过来才不会改抽样。 */
+ *  绑定的搜索会推进 cursor.rngCalls（每张卡按槽数计），跳过的那张（once / 冷却 / 开季门没过）不算 ——
+ *  这几条判据原本就写在 drawStorylet 的循环里，一起搬过来才不会改抽样。 */
 export function storyDeck(
   world: World, people: Person[], storylets: Storylet[], heat: number,
 ): { eligible: Array<{ storylet: Storylet; binding: Binding; weight: number }>; cursor: World } {
@@ -785,6 +797,13 @@ export function storyDeck(
   for (const storylet of storylets) {
     if (storylet.once && storylet.id in w.fired) continue;
     if (storylet.cooldown && storylet.id in w.fired && w.day - w.fired[storylet.id] < storylet.cooldown) continue;
+    // 卡级 when 里不看槽的那几道门（第几季、本子有没有这条、她落到第几档）先判掉。
+    // bindCast 每扫一张卡都按槽数推进 rngCalls，而 when 是在绑定走完以后才判的（见 bindCast 末尾），
+    // 所以不先挡的话：往牌堆里加一张第 5 季才开的卡，前四季每一格的抽样流都会被它挪一位，
+    // 四季那批经验判据跟着抖 —— 量到的实测是 12 副里 slip-tape 从 10 副掉到 9 副。
+    // 不看槽的条件跟绑定无关，先判后判同一副牌里结论一样；绑定里那遍照旧全判，语义不动。
+    const gates = storylet.when.filter(c => !condNeedsBinding(c));
+    if (!gates.every(c => evalCond(w, people, c))) continue;
     let binding: Binding | null;
     [binding, w] = bindCast(w, people, storylet);
     if (!binding) continue;
@@ -1242,8 +1261,10 @@ export function endDay(world: World, people: Person[]): World {
  * storyteller:heat）都清零 —— 天数回到 1，那些数再留着会骗过当天的判断。
  * 线索、落点和幕号跨季不清：这一季埋下的那条，下一季才翻得过来，
  * 而主线不能每开一季就从第一幕重讲一遍。落地那一季的记号（thread:<id>:landed）也一起带走：
- * 它说的是这句话在哪一季说完的，换季不该把它换成新的季号。 */
-const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:"] as const;
+ * 它说的是这句话在哪一季说完的，换季不该把它换成新的季号。
+ * 「人生一步」那一批同样靠跨季：life:<id> 是她走到第几步、life:<id>:how 是上一步怎么落的，
+ * 今年的那一步要认去年的那一步，清零就等于每年把她重置成刚认识的人。 */
+const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。

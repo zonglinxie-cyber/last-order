@@ -270,6 +270,194 @@ test("回访卡整季封顶：第 1 天演过她，第 28 天不许再演第二�
     "换季以后她回不来了 —— 回访卡的冷却跨了季，引力井变成一次性卡");
 });
 
+/** 「人生一步」（storylets-life.ts）名册：走完的线里那个人，自己的日子往前挪了一格。
+ *  LIFE_STEP1 = 第 5 季那一步（把 life:<id> 从 0 写到 1，同时记下怎么落的 life:<id>:how），
+ *  LIFE_STEP2 = 第 6 季那一步（认 life:<id> = 1，写到 2）。
+ *  名单写死在这里：补人要在名单上选边，别让"这一批补了 11 张"被读成"20 条线都补了"。 */
+const LIFE_STEP1: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo"];
+const LIFE_STEP2: PersonId[] = ["shen", "anjie", "mei"];
+const ALL_PRESENT = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
+/** 摆一个"她的线走到哪一档、今年第几天"的场面（第 5/6 季那两类门都要用）。 */
+const lifeWorld = (seed: string, season: number, qualities: Record<string, number>): World =>
+  ({ ...newWorld(seed, PEOPLE), season, day: 5, present: { ...ALL_PRESENT }, qualities });
+const deckOf = (w: World, id: string) => storyDeck(w, PEOPLE, STORYLETS, 0).eligible.find(e => e.storylet.id === id);
+
+test("走完的线第 5 季有她自己的一步：门、每档落点接得住、不给钱、演过就不重演", () => {
+  for (const rawId of LIFE_STEP1) {
+    const card = STORYLETS.find(s => s.id === `life-${rawId}`);
+    assert.ok(card, `${rawId} 第 5 季没有「人生一步」卡`);
+    assert.equal(card.kind, "arc", `${card.id} 不是 arc，拿不到剧情卡那一份权重`);
+    assert.ok(!card.once, `${card.id} 写了 once —— 这一步演完她今年就再也没有下文`);
+    assert.ok((card.cooldown ?? 0) >= SEASON_DAYS,
+      `${card.id} 冷却 ${card.cooldown} 天：判据是 day - fired < cooldown，第 1 天演过、第 28 天正好差 27 天又放行`);
+    assert.ok(card.when.some(c => "season" in c && c.season.gte === 5), `${card.id} 没开在第 5 季`);
+    assert.ok(card.when.some(c => "quality" in c && c.quality === `arc:${rawId}:end` && c.gte === 1),
+      `${card.id} 没有「她那条线已经走完」这道门 —— 线没走完就演她这几年，会演出一个还没发生的人生`);
+    assert.ok(card.when.some(c => "quality" in c && c.quality === `life:${rawId}` && c.lte === 0),
+      `${card.id} 没有「这一步还没走过」这道门 —— 同一步每年重演一遍，她这几年就在原地打转`);
+    for (const choice of card.choices) {
+      for (const effect of choice.effects)
+        assert.ok(!("stat" in effect && effect.stat === "money"),
+          `${card.id}「${choice.label}」给了钱：这一批只管她在往前走，不管柜上多赚一笔`);
+      // 每一步都得留下"怎么落的"，否则第 6 季那一步的几种说法里有几种永远接不上。
+      const step = choice.effects.find(e => "quality" in e && e.quality === `life:${rawId}`);
+      assert.ok(step && "set" in step && step.set === 1, `${card.id}「${choice.label}」没把 life:${rawId} 写成 1 —— 点了这一步等于没走`);
+      const landed = choice.effects.find(e => "quality" in e && e.quality === `life:${rawId}:how`);
+      assert.ok(landed && "set" in landed && [1, 2, 3].includes(landed.set ?? 0),
+        `${card.id}「${choice.label}」没记下这一步怎么落的（life:${rawId}:how 要 1/2/3）`);
+    }
+    // 她当年收在哪一档，第 5 季这一步就该演得到，且至少点得动一格。
+    const landings = arcLandings(STORYLETS, rawId);
+    for (const { landing } of landings) {
+      const w = lifeWorld(`life-${rawId}`, 5, { [`arc:${rawId}`]: 3, [`arc:${rawId}:end`]: landing });
+      const hit = deckOf(w, card.id);
+      assert.ok(hit, `${rawId} 落到第 ${landing} 档以后，第 5 季她的「人生一步」不在牌堆里`);
+      const shown = card.choices.filter(c => choiceVisible(w, PEOPLE, { storylet: card, binding: hit!.binding }, c));
+      assert.ok(shown.length > 0, `${card.id} 在落点第 ${landing} 档上一格都点不出来`);
+    }
+    // 反面两刀：线没走完不许演；这一步演过了不许再演第二次。
+    assert.ok(!deckOf(lifeWorld(`life-${rawId}-open`, 5, { [`arc:${rawId}`]: 2 }), card.id),
+      `${rawId} 的线还没走完（arc:${rawId}=2、没有落点），第 5 季她的这一步就在牌堆里`);
+    assert.ok(!deckOf(lifeWorld(`life-${rawId}-done`, 5,
+      { [`arc:${rawId}:end`]: landings[0]?.landing ?? 1, [`life:${rawId}`]: 1 }), card.id),
+      `${rawId} 这一步去年已经走过，第 6 季她那张第 5 季的卡还在牌堆里`);
+  }
+  assert.deepEqual(STORYLETS.filter(s => /^life-/.test(s.id)).map(s => s.id).sort(),
+    LIFE_STEP1.map(id => `life-${id}`).sort(), "「人生一步」名单变了：补人要在这两张名单上选边");
+  assert.deepEqual(STORYLETS.filter(s => /^life2-/.test(s.id)).map(s => s.id).sort(),
+    LIFE_STEP2.map(id => `life2-${id}`).sort(), "「下一步」名单变了：第 6 季那一步要给谁，要写进名单");
+  assert.ok(LIFE_STEP2.every(id => LIFE_STEP1.includes(id)),
+    "下一步给了一条还没走过第 5 季那一步的线 —— 梯子中间断了一格");
+});
+
+test("那一步的下一步：第 6 季按「上一步怎么落的」分叉，每一档都说得出话", () => {
+  for (const rawId of LIFE_STEP2) {
+    const step1 = STORYLETS.find(s => s.id === `life-${rawId}`)!;
+    const card = STORYLETS.find(s => s.id === `life2-${rawId}`);
+    assert.ok(card, `${rawId} 第 6 季没有「下一步」卡`);
+    assert.ok(!card.once, `${card.id} 写了 once`);
+    assert.ok((card.cooldown ?? 0) >= SEASON_DAYS, `${card.id} 冷却没到整季`);
+    assert.ok(card.when.some(c => "season" in c && c.season.gte === 6), `${card.id} 没开在第 6 季`);
+    assert.ok(card.when.some(c => "quality" in c && c.quality === `life:${rawId}` && c.eq === 1),
+      `${card.id} 没有「去年那一步刚走完」这道门`);
+    // how 能取到哪几档不靠猜：从第 5 季那一步真写得出的那些值里取。
+    const hows = [...new Set(step1.choices
+      .flatMap(c => c.effects.filter(e => "quality" in e && e.quality === `life:${rawId}:how`))
+      .map(e => ("set" in e ? e.set : undefined)).filter((n): n is number => typeof n === "number"))].sort();
+    assert.ok(hows.length >= 2, `${rawId} 的第 5 季那一步只有一种落法（${hows.join("/")}）—— 下一步没得可分叉`);
+    for (const howValue of hows) {
+      const w = lifeWorld(`life2-${rawId}-${howValue}`, 6,
+        { [`arc:${rawId}:end`]: 1, [`life:${rawId}`]: 1, [`life:${rawId}:how`]: howValue });
+      const hit = deckOf(w, card.id);
+      assert.ok(hit, `${rawId} 去年按第 ${howValue} 种落法走完那一步，今年她的下一步不在牌堆里`);
+      const shown = card.choices.filter(c => choiceVisible(w, PEOPLE, { storylet: card, binding: hit!.binding }, c));
+      assert.ok(shown.length > 0, `${card.id} 在 how=${howValue} 那一档上一格都点不出来`);
+      // 兜底那颗（没有 when）在任何一档都点得动，所以上面那句咬不住分叉：
+      // 每一档必须有一句挂在同一个 how 读数上的话，否则去年怎么落的影响不出今年的一行字。
+      assert.ok(shown.some(c => (c.when ?? []).some(x =>
+        "quality" in x && x.quality === `life:${rawId}:how` && x.eq === howValue)),
+        `${card.id} 在 how=${howValue} 那一档只由那颗没有门的兜底选项接住 —— 分叉白分了，这一档没有她自己的一句话`);
+    }
+    // 反面：去年那一步没演（life:<id> 缺席）不许跳到今年；今年演过了（=2）不许再演。
+    const end0 = arcLandings(STORYLETS, rawId)[0]!.landing;
+    assert.ok(!deckOf(lifeWorld(`life2-${rawId}-skip`, 6, { [`arc:${rawId}:end`]: end0 }), card.id),
+      `${rawId} 去年那一步根本没演，今年「下一步」就在牌堆里 —— 梯子被跳过去一格`);
+    assert.ok(!deckOf(lifeWorld(`life2-${rawId}-stepped`, 6,
+      { [`arc:${rawId}:end`]: end0, [`life:${rawId}`]: 2, [`life:${rawId}:how`]: 1 }), card.id),
+      `${rawId} 今年这一步已经走过，这张卡还在牌堆里`);
+  }
+});
+
+test("往牌堆加一张晚季才开的卡，前四季抽到的卡逐位不动", () => {
+  // 量到的机制：bindCast 每扫一张卡就按槽数推进 rngCalls，而卡级 when 是在绑定走完以后才判的，
+  // 所以"这一季根本开不了"的卡照样消耗随机流。上一轮加 11 张第 5 季才开的卡，四季那两条经验判据里
+  // slip-tape 从 10/12 掉到 9/12 —— 内容没挡住内容，是抽样流被挪了位。
+  // 现在改成：不看槽的那几道门先判，判不过就连随机流一起不碰。这一条钉的是这个不变量。
+  const late: Storylet = {
+    id: "late-gate-probe", kind: "arc", cast: { a: { id: "shen", where: [] } },
+    when: [{ season: { gte: 5 } }, { quality: "arc:shen:end", gte: 1 }],
+    weight: 90, tension: 0, cooldown: 28,
+    text: "{$a}站在镜前，一句话没说。",
+    choices: [
+      { label: "问一句", effects: [{ opinion: "$a", delta: 1 }], result: "{$a}点头。" },
+      { label: "先不问", effects: [{ opinion: "$a", delta: -1 }], result: "{$a}自己坐了很久。" },
+    ],
+  };
+  const play = (pool: Storylet[]) => {
+    let w = newWorld("late-gate", PEOPLE);
+    const seq: string[] = [];
+    for (let s = 1; s <= 4; s++) {
+      while (w.day <= SEASON_DAYS) {
+        for (const slot of [0, 1, 2, 3] as const) {
+          w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+          const { drawn } = drawStorylet(w, PEOPLE, pool);
+          if (!drawn) continue;
+          seq.push(`${drawn.storylet.id}@${w.season}.${w.day}.${slot}`);
+          const idx = drawn.storylet.choices.findIndex(c => choiceVisible(w, PEOPLE, drawn, c));
+          if (idx >= 0) w = applyChoice(w, PEOPLE, drawn, idx);
+        }
+        w = endDay(w, PEOPLE);
+      }
+      if (s < 4) w = nextSeason(w, PEOPLE);
+    }
+    return { seq, rngCalls: w.rngCalls };
+  };
+  const base = play(STORYLETS);
+  // 放在牌堆最前面：旧写法下这一张的槽会把后面每一张的抽样起点往后挪一格。
+  const withLate = play([late, ...STORYLETS]);
+  assert.deepEqual(withLate.seq, base.seq,
+    `牌堆多了一张第 5 季才开的卡，前四季抽到的卡就变了（第 ${withLate.seq.findIndex((x, i) => x !== base.seq[i]) + 1} 格起不一样）`);
+  assert.equal(withLate.rngCalls, base.rngCalls, "牌堆多了一张开不了的卡，随机流却多走了几步");
+  // 另一半必须钉住：这张卡在第 5 季真的要进牌堆、也要真消耗一次绑定随机 ——
+  // 否则上面那两句绿得毫无意义（把门写错、这张卡永远开不了，也是"逐位不动"）。
+  const open = lifeWorld("late-gate-5", 5, { "arc:shen": 3, "arc:shen:end": 1 });
+  assert.ok(storyDeck(open, PEOPLE, [late, ...STORYLETS], 0).eligible.some(e => e.storylet.id === late.id),
+    "这张卡第 5 季根本进不了牌堆 —— 前面那句「逐位不动」是因为它一整年都不合法，不是因为门先判掉了");
+  assert.equal(storyDeck(open, PEOPLE, [late], 0).cursor.rngCalls - open.rngCalls, 1,
+    "它进牌堆时按槽数消耗随机流（1 个槽 = 1 步），不然整副牌的顺序就不只是'多了一张卡'而是被重排了");
+});
+
+test("连玩六副六季：第 5 季和第 6 季真演到「人生一步」（经验判据）", () => {
+  // 这一条就是任务 26 的验收判据：上一轮量到第 5、6 季各抽到 15 次故事卡、新演 0 张。
+  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。12 副实测每副都是第 5 季 8 张全演、
+  // 第 6 季 3 张全演、第 5 季一张「下一步」都不演；跑 6 副是为了把整条规则测试的时间压住，阈值留出余量。
+  let state = 1;
+  const rand = () => { state = (state * 1103515245 + 12345) & 0x7fffffff; return state / 0x7fffffff; };
+  const playSeason = (world: World, fired: string[]) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        if (!drawn) continue;
+        const vis = drawn.storylet.choices.map((c, i) => i).filter(i => choiceVisible(w, PEOPLE, drawn, drawn.storylet.choices[i]));
+        if (!vis.length) continue;
+        w = applyChoice(w, PEOPLE, drawn, vis[Math.floor(rand() * vis.length)] ?? vis[0]!);
+        if (!fired.includes(drawn.storylet.id)) fired.push(drawn.storylet.id);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+  for (let i = 0; i < 6; i++) {
+    state = 7 + i * 104729;
+    let w = newWorld(`tape-${i}`, PEOPLE);
+    for (let s = 1; s < 5; s++) { w = playSeason(w, []); w = nextSeason(w, PEOPLE); }
+    const five: string[] = [];
+    w = playSeason(w, five);
+    w = nextSeason(w, PEOPLE);
+    const six: string[] = [];
+    w = playSeason(w, six);
+    const step1 = five.filter(id => /^life-/.test(id)).length;
+    const step2Early = five.filter(id => /^life2-/.test(id)).length;
+    const step2 = six.filter(id => /^life2-/.test(id)).length;
+    assert.equal(step2Early, 0, `副 ${i}：第 5 季就演到了「下一步」（${step2Early} 张）—— 梯子提前塌了一格`);
+    assert.ok(step1 >= 6, `副 ${i}：第 5 季只演到 ${step1} 张「人生一步」（8 张里）—— 第 5 季还是没新剧情`);
+    assert.ok(step2 >= 2, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（3 张里）—— 去年的那一步没接到今年`);
+  }
+});
+
 test("「名字是借的」不再只有一个写入方：走完的线回第二趟时替主线作证", () => {
   // 量到的洞：六条线索里只有 slip-borrowed 拿不全 —— 40 副 naive 走法 22/40，其余五条都 40/40，
   // 而主线那边有五张卡的 when 读着它（main-slip-shen / -yin / -fang / -turn / -turn-desk）。
