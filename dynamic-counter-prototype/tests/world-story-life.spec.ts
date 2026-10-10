@@ -357,5 +357,48 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       expect(q.qualities["life:shen"]).toBe(2);
       expect(q.qualities["life:shen:how"], "这一颗写的是「只剩生意」那一档").toBe(2);
     });
+
+    // ===== 第 35 轮那十位：第三格铺满以后，另外几条线的账也到期了 =====
+    test(`段小姐带着两个拿她那一页复印件的人来：第三年那一格开着`, async ({ page }) => {
+      await enter(page, life3Fixture("duan", "life3-duan35", 2, 0), { id: "life3-duan", binding: { a: "duan" } });
+      await expect(storyText(page)).toContainText("段小姐今天带了两个人来");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(page.getByRole("button", { name: /三张一起对/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: /先问她自己那一栏今年改了什么/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("段小姐说她那一行划掉过两回");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:duan"], "第三年这一步走到 3").toBe(3);
+      expect(q.qualities["life:duan:how"]).toBe(1);
+    });
+
+    test(`唐可那一格是楼上给的：第三年那一句开着，钱一分不动`, async ({ page }) => {
+      const w = life3Fixture("tangke", "life3-tangke35", 3, 0);
+      await enter(page, w, { id: "life3-tangke", binding: { a: "tangke" } });
+      await expect(storyText(page)).toContainText("唐可把排班表反过来推给你");
+      await expect(page.getByRole("button", { name: /把那两个孩子也带到这一柜/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /别当这一柜给的/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("唐可说这句她爱听");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:tangke"]).toBe(3);
+      expect(q.qualities["life:tangke:how"]).toBe(3);
+      expect(q.money, "第 7 季那一步也不给钱").toBe(w.money);
+    });
+
+    test(`宋姐今年替妈妈问一句：去年是自己人的那条路，第三年开着`, async ({ page }) => {
+      await enter(page, life3Fixture("songjie", "life3-songjie35", 1, 10), { id: "life3-songjie", binding: { a: "songjie" } });
+      await expect(storyText(page)).toContainText("宋姐今天把手机留在包里");
+      await expect(page.getByRole("button", { name: /按她自己的份开/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /这一柜不替她妈开单/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /两张单子一起对/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("宋姐说她妈那一行");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:songjie"]).toBe(3);
+      expect(q.qualities["life:songjie:how"]).toBe(1);
+    });
   });
 }

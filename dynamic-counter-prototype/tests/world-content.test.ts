@@ -399,8 +399,9 @@ test("那一步的下一步：第 6 季按「上一步怎么落的」分叉，�
   }
 });
 
-// 第 7 季那一格（life:<id> 走到 3）第 33 轮先给这十位：第 1 季那九条 + 梁夏。
-const LIFE_STEP3: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo", "zhao", "liangxia"];
+// 第 7 季那一格（life:<id> 走到 3）：第 33 轮先给十位，第 35 轮铺满二十位 —— 三份名单现在等长。
+const LIFE_STEP3: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo", "zhao", "liangxia",
+  "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie", "peilan"];
 
 test("第 7 季那一格：前两年的账在这里结，格子不许缺也不许够不着", () => {
   assert.deepEqual(STORYLETS.filter(s => /^life3-/.test(s.id)).map(s => s.id).sort(),
@@ -476,7 +477,7 @@ test("梯子没有死格子：每一颗挂在去年读数上的选项，去年�
       .map(w => w.eq as number)))].sort();
   };
   const cards = STORYLETS.filter(s => /^life(2|3)-/.test(s.id)).sort((a, b) => a.id.localeCompare(b.id));
-  assert.ok(cards.length >= 30, `梯卡只剩 ${cards.length} 张：这条守卫是照整摞卡开的，卡少一批它就该红`);
+  assert.ok(cards.length >= 40, `梯卡只剩 ${cards.length} 张：这条守卫是照整摞卡开的，卡少一批它就该红`);
   for (const card of cards) {
     const rawId = card.id.replace(/^life(2|3)-/, "") as PersonId;
     const upId = `${card.id.match(/^life(2|3)-/)![1] === "2" ? "life-" : "life2-"}${rawId}`;
@@ -543,8 +544,8 @@ test("往牌堆加一张晚季才开的卡，前四季抽到的卡逐位不动",
 
 test("连玩六副八季：第 5、6、7 季真演到那三步（经验判据）", () => {
   // 这一条就是任务 26 的验收判据：第 29 轮之前量到第 5、6 季各抽到 15 次故事卡、新演 0 张。
-  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。第 33 轮加上第三格以后实测
-  // 6 副各是第 5 季 19~20 张一步（共 20 张）、第 6 季 19~20 张二步（共 20 张）、第 7 季 9~10 张三步（共 10 张），
+  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。第 35 轮三格都铺满以后实测
+  // 6 副各是第 5 季 19~20 张一步、第 6 季 19~20 张二步、第 7 季 19~20 张三步（各 20 张），
   // 且第 5 季一张「二步」都不演、第 6 季一张「三步」都不演（梯子不跳格那一半由静态守卫钉，这一半要真走一遍）；
   // 跑 6 副是为了把整条规则测试的时间压住，阈值留出余量。
   let state = 1;
@@ -587,9 +588,9 @@ test("连玩六副八季：第 5、6、7 季真演到那三步（经验判据）
     assert.equal(step3Early, 0, `副 ${i}：第 6 季就演到了第三年那一张（${step3Early} 张）—— 两年的账没走完就结算`);
     assert.ok(step1 >= 16, `副 ${i}：第 5 季只演到 ${step1} 张「人生一步」（20 张里）—— 补齐名单以后第 5 季还是没新剧情`);
     assert.ok(step2 >= 17, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（20 张里）—— 去年的那一步没接到今年`);
-    // 阈值按实测：6 副各是第 7 季 9~10 张（共 10 张）。第 8 季仍只有 0~1 张 —— 梯子到第三格就停，
-    // 那是下一刀的读数，不在这里钉成要求。
-    assert.ok(step3 >= 8, `副 ${i}：第 7 季只演到 ${step3} 张第三年那一张（10 张里）—— 前两年的账在这一季结不掉`);
+    // 阈值按实测：第 35 轮铺满二十位以后，6 副各是第 7 季 19~20 张（共 20 张）。第 8、9 季仍只有 0~1 张 ——
+    // 梯子到第三格就停，那是下一刀的读数，不在这里钉成要求。
+    assert.ok(step3 >= 17, `副 ${i}：第 7 季只演到 ${step3} 张第三年那一张（20 张里）—— 前两年的账在这一季结不掉`);
   }
 });
 
