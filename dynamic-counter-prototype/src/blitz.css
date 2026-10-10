@@ -5,7 +5,7 @@
 .blitz-intro, .blitz-settle {
   position:absolute; inset:0; overflow:auto;
   display:flex; flex-direction:column; gap:12px;
-  padding:calc(18px + 54px + env(safe-area-inset-top)) 16px calc(24px + var(--mobile-safe-area-height, 0px));
+  padding:calc(18px + var(--fake-bar-height, 54px) + env(safe-area-inset-top)) 16px calc(24px + var(--mobile-safe-area-height, 0px));
   background:#161012; color:#efe3d0; font-family:'Noto Serif SC', serif;
 }
 .blitz-intro h1, .blitz-settle h1 { margin:0; font-size:22px; font-weight:700; color:#f6e7c8; }

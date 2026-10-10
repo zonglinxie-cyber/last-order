@@ -20,7 +20,12 @@
   src: url('@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-700-normal.woff2') format('woff2');
 }
 :root { --gold:#f0c978; --ink:#18100e; --cream:#fff4df; --wine:#4a222c; --purple:#6d51a3; }
-.app-screen { --top-inset:calc(54px + env(safe-area-inset-top)); background:#17100f; color:white; font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif; }
+/* 桌面预览那条假设备状态栏高 54px，每个界面的第一行都要让开它。全屏那一档（判据在
+   src/mobile/chrome.ts，落在 <html data-phone-chrome>）不画它，就只让开真实刘海，
+   剩下的空隙留给内容 —— 以前真机上是 54px 假条叠在真的时钟下面，两头都占。 */
+:root { --fake-bar-height:54px; }
+html[data-phone-chrome="real"] { --fake-bar-height:8px; }
+.app-screen { --top-inset:calc(var(--fake-bar-height) + env(safe-area-inset-top)); background:#17100f; color:white; font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif; }
 .device-screen:has(.app-screen) .keyboard-dock { display:none; }
 .phone-device .device-screen { overflow:hidden; overscroll-behavior:none; }
 .intro-scroll,.stage-scroll,.consultation-scroll,.result-scroll { overflow:hidden!important; }

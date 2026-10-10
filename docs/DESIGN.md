@@ -1685,6 +1685,26 @@ P38/P39 各记过一次没做的那条：第 2 晚三条格子给唐可的人情
 **证据**：`p52-mobile-typed-shen.png` / `p52-sandbox-typed-shen.png`。
 
 
+## P53：真手机上那条 54px 假状态栏被画了两遍 —— 全屏与画框改成一个 JS 判据（2026-10-10）
+
+**要解的那件事**（任务 22 ③）：外框那一套（模拟状态栏、底部横条、bezel、设备切换器）本来是桌面预览用的，但 `MobileRuntime` 是无条件渲染的——真手机浏览器和装到桌面的 PWA 里它照画；同时各屏的 `--top-inset` 又各自写死 `calc(54px + env(safe-area-inset-top))`。于是真机上付了两遍：系统状态栏底下先被一条假状态栏占掉，内容再让开 54px 空白，底部还挂一条没人能滑的横条。仓库里那条 `@media (hover: none) and (pointer: coarse), (display-mode: standalone)` 只藏了 bezel 和切换器，`.status-bar` 仍留在 DOM 里。
+
+**落点**（判据只有一处：`src/mobile/chrome.ts`）：
+- `phoneChromeFrom({standalone, coarse, forced})` 算出 `"real" | "frame"`，`usePhoneChrome()` 把它写到 `<html data-phone-chrome>`。样式表从媒体查询改成这个属性选择器（`styles.css` 那一整块），`--fake-bar-height` 在 real 档从 54px 降到 8px，`--top-inset` 仍由它推。
+- React 侧走 `FakeChromeLayer`：real 档**不渲染**那三件，不是 `display:none`——a11y 树里不留空节点，bezel 那张图也不再发请求。
+- `Device.tsx` 只在 real 档把预设安全区换成 `measureSafeArea()` 的实测值（探针读 `env(safe-area-inset-*)`，resize 重新量），frame 档原样返回 `preset` 不造新对象。这样 `--device-safe-area-bottom` 自动跟着变真实值，`PhoneFrame` 那边不用加 `!important`。
+
+**为什么不用媒体查询**：CDP 的 `Emulation.setEmulatedMedia` 在这套 Chromium 上模拟不了 `display-mode`（先前 spike 实测），纯媒体查询那条支路等于没法验收。改成 JS 单点后，`navigator.standalone` 和 `?chrome=app|frame` 给了"装到桌面"那一支两个能测的入口，`?chrome=` 同时是桌面预览手动回退的开关。
+
+**钉法**：`tests/mobile-chrome.test.ts`（三条信号 + `?chrome=` 的 `"1"`/`""` 落回默认 + 三条扫源码的守卫：样式表里不许再有 `pointer: coarse`/`display-mode`、`--fake-bar-height` 的 real 档覆盖必须在、预设与实测两条来源不许混用）；`tests/world-fullscreen.spec.ts` 三档（390×844 触屏、900×700 + `navigator.standalone` 替身、1100×1100 桌面预览）。
+
+**反证**：三处控制分别打回——去掉 `FakeChromeLayer` 的 real 支路 / 往 `styles.css` 追加一条媒体查询 / `device` 退回 `preset`，结果 unit `3 pass / 2 fail`、spec `2 passed / 4 failed`，而桌面预览那两档在两处控制下都仍绿（新断言不是恒红）。恢复后 5/5、6/6。
+
+**跑过的**：`test:rules` 323/323（+5）；`build` 过（PWA 126 个预缓存）；四个受保护文件重锁后 `check:runtime` 28 文件通过；先前那四支 shell-sensitive spec 仍 5 passed；两张截图 `/tmp/f3-real-390.png`、`/tmp/f3-frame-1100.png`。
+
+**覆盖边界（如实记）**：① headless 里 `env(safe-area-inset-*)` 一律量到 `0`，所以测的是"只让开一条 8px、不再叠 54px"这个差分，不是真刘海的具体高度；② 真机和已安装的 PWA 各一次真人验证仍没做过，这一轮的"真手机"是 `isMobile` + `pointer:coarse` 的替身；③ 其余模式（duel/blitz/run/match）的顶栏只改了变量引用，没有逐屏量过新的 first-row 高度。
+
+
 ## 记待办（本轮只量不做）
 
 ~~- **私下拿货那句指认错的格子，UI 侧没有第二道闸**（P39 反证 F3 量到）：两种旗子的句子互换，规则层红（每格各配了只属于它的关键词），手机版 `7 passed` / 沙盘 `34 passed` 全绿 —— 因为两个 UI 各只 seed 了一种旗子。补法是往两个 UI 各加一屏"另一种旗子"的对照，不专门开一轮，下一轮碰这条屏顺手补。~~ → **P42 结掉**：两个 UI 各跑三种旗子（各 `1 passed → 3 passed`），反证 F2（编辑器干净互换两句）现在两屏同时红，规则层也红。

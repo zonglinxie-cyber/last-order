@@ -10,13 +10,27 @@ export function MobileRuntime({ children }: PropsWithChildren) {
       <PhoneFrame>
         <KeyboardProvider>
           <KeyboardPreview />
-          <StatusBar />
-          <MobileAppViewport>{children}</MobileAppViewport>
-          <HomeIndicator />
+          <FakeChromeLayer>
+            <MobileAppViewport>{children}</MobileAppViewport>
+          </FakeChromeLayer>
           <KeyboardDock />
         </KeyboardProvider>
       </PhoneFrame>
     </MobileDeviceProvider>
+  );
+}
+
+/** 假状态栏和假底部横条只属于桌面预览：真手机上和装到桌面的 PWA 里，它们是两个谁也不需要的空带，
+    还正好盖在真的时钟和 home 条上面。全屏那一档不渲染它们。 */
+function FakeChromeLayer({ children }: PropsWithChildren) {
+  const { chrome } = useMobileDevice();
+  if (chrome === "real") return <>{children}</>;
+  return (
+    <>
+      <StatusBar />
+      {children}
+      <HomeIndicator />
+    </>
   );
 }
 

@@ -1,6 +1,7 @@
-import { createContext, type PropsWithChildren, useContext, useMemo, useState } from "react";
+import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronDownIcon } from "@radix-ui/react-icons";
+import { measureSafeArea, type PhoneChrome, type SafeArea, usePhoneChrome } from "./chrome";
 import { mobileAssets } from "./assets";
 import { iphoneGeometry, pixelGeometry, type MobileDeviceGeometry } from "./geometry";
 
@@ -46,15 +47,35 @@ type MobileDeviceContextValue = {
   device: MobileDevicePreset;
   deviceId: MobileDeviceId;
   setDeviceId: (deviceId: MobileDeviceId) => void;
+  /** frame = 桌面预览，画设备壳和假状态栏；real = 真机或装到桌面的 PWA，全屏不画。 */
+  chrome: PhoneChrome;
 };
 
 const MobileDeviceContext = createContext<MobileDeviceContextValue | null>(null);
 
 export function MobileDeviceProvider({ children }: PropsWithChildren) {
   const [deviceId, setDeviceId] = useState<MobileDeviceId>("iphone");
+  const chrome = usePhoneChrome();
+  const [safeArea, setSafeArea] = useState<SafeArea>(measureSafeArea);
+
+  // 全屏那一档的安全区是实测出来的刘海/home 条高度：转屏会换一头（iOS 横屏上面归零、左右各出一条），
+  // 所以尺寸一变就要重量。带框那一档用预设数字，量了也不算。
+  useEffect(() => {
+    if (chrome === "frame") return;
+    const remeasure = () => setSafeArea(measureSafeArea());
+    window.addEventListener("resize", remeasure);
+    return () => window.removeEventListener("resize", remeasure);
+  }, [chrome]);
+
+  const preset = mobileDevices[deviceId];
+  // 全屏那一档把预设安全区换成实测值；带框那一档原样，别造新对象免得每次渲染都惊动整棵子树。
+  const device = useMemo(
+    () => chrome === "real" ? { ...preset, geometry: { ...preset.geometry, safeArea } } : preset,
+    [preset, chrome, safeArea.top, safeArea.bottom],
+  );
   const value = useMemo(
-    () => ({ device: mobileDevices[deviceId], deviceId, setDeviceId }),
-    [deviceId],
+    () => ({ device, deviceId, setDeviceId, chrome }),
+    [device, deviceId, chrome],
   );
 
   return <MobileDeviceContext.Provider value={value}>{children}</MobileDeviceContext.Provider>;

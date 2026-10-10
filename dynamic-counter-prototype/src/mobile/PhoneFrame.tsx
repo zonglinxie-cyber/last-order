@@ -62,17 +62,19 @@ function useDeviceScale(deviceWidth: number, deviceHeight: number) {
 }
 
 export function PhoneFrame({ children }: PropsWithChildren) {
-  const { device } = useMobileDevice();
+  const { device, chrome } = useMobileDevice();
   const { geometry } = device;
   const scale = useDeviceScale(geometry.device.width, geometry.device.height);
   const screenRef = useRef<HTMLDivElement | null>(null);
   const contextValue = useMemo(() => ({ screenRef }), []);
   const mobileCursor = useMobileCursor();
+  // 全屏那一档不画壳也不放摄像头黑点：屏幕就是整个窗口，外框素材连请求都不必发。
+  const framed = chrome === "frame";
 
   return (
     <ScreenPortalContext.Provider value={contextValue}>
-      <div className="phone-stage">
-        <DevicePicker />
+      <div className="phone-stage" data-phone-chrome={chrome}>
+        {framed && <DevicePicker />}
         <div
           className="phone-scale-box"
           style={{
@@ -92,14 +94,16 @@ export function PhoneFrame({ children }: PropsWithChildren) {
               transform: `scale(${scale})`,
             }}
           >
-            <img
-              className="phone-bezel"
-              src={device.bezel}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              style={{ zIndex: device.bezelLayer === "above-screen" ? 2 : 1 }}
-            />
+            {framed && (
+              <img
+                className="phone-bezel"
+                src={device.bezel}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                style={{ zIndex: device.bezelLayer === "above-screen" ? 2 : 1 }}
+              />
+            )}
             <div
               ref={screenRef}
               className="device-screen"
@@ -121,7 +125,7 @@ export function PhoneFrame({ children }: PropsWithChildren) {
               }
             >
               {children}
-              {device.camera ? (
+              {framed && device.camera ? (
                 <span
                   className="device-camera"
                   data-testid="device-camera"

@@ -2,7 +2,7 @@
    设备状态条叠在内容上面（与 prototype.css 同一约定）：每个屏的第一行都让开 --top-inset。
    脸上热区由 JS 按 853×1844 图片坐标换算成容器像素，这里的 .duel-cue 只管外观。 */
 
-.duel-page, .duel-screen { --top-inset:calc(54px + env(safe-area-inset-top)); }
+.duel-page, .duel-screen { --top-inset:calc(var(--fake-bar-height, 54px) + env(safe-area-inset-top)); }
 
 .duel-page { position:absolute; inset:0; display:flex; flex-direction:column; background:#161012; }
 /* MobileScroll 默认 absolute inset:0：带固定脚的屏要把它退回普通 flex 子项，否则它盖住脚部。 */

@@ -20,14 +20,19 @@ body,
   margin: 0;
 }
 
-@media (hover: none) and (pointer: coarse), (display-mode: standalone) {
-  body { overflow: hidden; background: #17100f; }
-  .phone-stage { display: block; padding: 0; }
-  .device-menu-bar,.phone-bezel,.device-camera { display: none!important; }
-  .phone-scale-box,.phone-device,.device-screen { position: absolute!important; inset: 0!important; width: 100%!important; height: 100%!important; transform: none!important; border-radius: 0!important; }
-  .device-screen { box-shadow: none; }
-  .mobile-app-viewport { top: 0; bottom: 0; }
-}
+/* 全屏那一档：判据在 src/mobile/chrome.ts 一处算，结果写在 <html data-phone-chrome> 上。
+   CSS 只认这个属性，不再自己写一遍 media query —— 两边各判一套，版式和实际画出来的外框就会打架。
+   外框尺寸由内联样式给，这里用 !important 收回整屏。 */
+html[data-phone-chrome="real"] body { overflow: hidden; background: #17100f; }
+html[data-phone-chrome="real"] .phone-stage { display: block; padding: 0; height: 100dvh; }
+html[data-phone-chrome="real"] .device-menu-bar,
+html[data-phone-chrome="real"] .phone-bezel,
+html[data-phone-chrome="real"] .device-camera { display: none!important; }
+html[data-phone-chrome="real"] .phone-scale-box,
+html[data-phone-chrome="real"] .phone-device,
+html[data-phone-chrome="real"] .device-screen { position: absolute!important; inset: 0!important; width: 100%!important; height: 100%!important; transform: none!important; border-radius: 0!important; }
+html[data-phone-chrome="real"] .device-screen { box-shadow: none; }
+html[data-phone-chrome="real"] .mobile-app-viewport { top: 0; bottom: 0; }
 
 .mobile-carousel {
   position: relative;
