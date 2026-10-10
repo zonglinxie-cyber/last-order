@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
-  newWorld, nextSeason, seasonSummary, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
+  newWorld, nextSeason, qualityOf, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
@@ -169,6 +169,34 @@ const standTally = new Map<string, Map<string, [number, number]>>();
 /** 每种风格挑过几次哪个动作、其中几次没做成（doVerb 原样返回）。用来回答"人情为什么一次都没轮上"。 */
 const verbTally = new Map<string, number>();
 const verbFail = new Map<string, number>();
+/** 桌上有几张戏可讲（第 25 轮加的仪表，纯读）：每天上午那一格，把说书人那一摞牌按"讲得成哪一类"数一遍。
+ *  为什么要量：每季故事卡 47 / 31 / 11 / 11 次，后两季基本只剩过场 —— 得先分清是**没有卡可讲**还是
+ *  **有卡但抽不到**，这两条的修法是两码事（前者补内容，后者动权重）。走完的线在这里自证：
+ *  「已落地那条线还剩的卡」那一列如果是 0，就是"走完就断、池子净缩水"。
+ *  storyDeck 内部会推进 rngCalls（绑定搜索按槽数计），这里只取 eligible、把 cursor 丢掉，所以不消耗随机流。 */
+const deckCensus = new Map<number, number[][]>();
+const CENSUS_COLS = ["可抽总张数", "过场", "主线", "个人线未开头", "个人线进行中", "走完的线还剩的卡", "走完的线数"];
+const censusRow = (w: World, people: Person[], storylets: Storylet[]): number[] => {
+  const landed = new Set<PersonId>();
+  const running = new Set<PersonId>();
+  for (const id of ARC_PEOPLE) {
+    if ((w.qualities[`arc:${id}:end`] ?? 0) >= 1) landed.add(id);
+    else if ((w.qualities[`arc:${id}`] ?? 0) >= 1) running.add(id);
+  }
+  // 0 可抽总数 1 过场 2 主线 3 个人线未开头 4 进行中 5 走完的线还剩的卡 6 走完的线数
+  const row = [0, 0, 0, 0, 0, 0, landed.size];
+  for (const { storylet } of storyDeck(w, people, storylets, qualityOf(w, "storyteller:heat")).eligible) {
+    row[0]++;
+    const ids = Object.values(storylet.cast).map(s => s.id).filter((x): x is PersonId => x !== undefined);
+    if (storylet.kind === "mainline") row[2]++;
+    else if (storylet.kind === "arc") {
+      if (ids.some(id => landed.has(id))) row[5]++;
+      else if (ids.some(id => running.has(id))) row[4]++;
+      else row[3]++;
+    } else row[1]++;
+  }
+  return row;
+};
 let standSeason = 1;
 function bumpStand(style: Style, where: string, before: World, after: World): void {
   const d = after.standing - before.standing;
@@ -202,6 +230,13 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
       const canAct = !lowEnergy && hands > 0;
       slotHands[s].push(hands);
       slotEnergy[s].push(w.energy);
+      // 只在每天上午那一格数（每季 28 个读数 / 每副牌）：storyDeck 要把 271 张卡逐张探绑定，
+      // 四个时段全数等于把说书人的活儿再干一遍，整跑从几分钟变成十几分钟。上午那一格足够代表这一季的池子形状。
+      if (s === 0) {
+        const bucket = deckCensus.get(seasonNo) ?? [];
+        bucket.push(censusRow(w, people, storylets));
+        deckCensus.set(seasonNo, bucket);
+      }
       const { world: w2, drawn } = drawStorylet(w, people, storylets);
       w = w2;
       if (drawn) {
@@ -632,6 +667,23 @@ console.log("\n四个时段开门那一刻（同样池化）：场上点得到�
 console.log("档       上午    午后    傍晚   晚高峰");
 console.log(`点得到   ${slotHands.map(h => String(median(h)).padStart(6)).join(" ")} 位`);
 console.log(`剩精力   ${slotEnergy.map(e => String(Math.round(median(e))).padStart(6)).join(" ")} 点`);
+
+// 桌上有几张戏可讲：每季每一格读一次，取**均值**（保留一位小数）。
+// 为什么不是中位数：arc 卡要她本人在楼层上才绑得出槽，来客是错峰的，中位数会被一片 0 拿走
+// —— 实测第 1 季"个人线未开头"那一列中位是 0，可同一副牌第 1 季讲了 47 次故事卡，两个数讲的是两件事。
+// 只有「走完的线数」是中位的阶梯量（一季只涨不跌），那一列留中位。
+// 读法：先看「走完的线还剩的卡」—— 如果是 0，后两季故事变薄就是"线走完就断"，不是权重偏心；
+// 再看「个人线未开头 / 进行中」还够不够，那是补内容之前要知道的底。
+console.log(`\n每季桌上有几张戏可讲（每天上午那一格数一次，各列取 ${[...deckCensus.values()].flat().length} 个读数的均值；"可抽" = 那一刻说书人那一摞里合法的张数）:`);
+console.log(`季   ${CENSUS_COLS.map((c, i) => (i === 6 ? `${c}(中位)` : c).padStart(9)).join(" ")}`);
+for (let season = 1; season <= SEASON_COUNT; season++) {
+  const rows = deckCensus.get(season);
+  if (!rows?.length) continue;
+  const cell = (i: number) => (i === 6
+    ? String(Math.round(median(rows.map(r => r[i]))))
+    : (rows.reduce((a, r) => a + r[i], 0) / rows.length).toFixed(1));
+  console.log(` ${String(season).padStart(2)}  ${CENSUS_COLS.map((_, i) => cell(i).padStart(9)).join(" ")}`);
+}
 
 // 柜位的进项与扣项：一处一笔一笔地数，别靠猜。（nextSeason 那一笔"跨季折半"发生在季与季之间，
 // 不在这张表里 —— 它是写死的规则：新季从 (旧柜位 − 50) 的一半起步。）

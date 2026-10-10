@@ -5,9 +5,9 @@ import { CUSTOMERS } from "../src/campaign.ts";
 import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { MAINLINE_ACTS, STORYLETS } from "../src/world/content/index.ts";
-import { ARC_PEOPLE } from "../src/world/progress.ts";
-import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, evalCond, newWorld, nextSeason } from "../src/world/engine.ts";
-import { PLAYER, type Cond, type Effect, type Ref, type Storylet, type Temper, type World, type Zone } from "../src/world/types.ts";
+import { ARC_PEOPLE, arcLandings } from "../src/world/progress.ts";
+import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, evalCond, newWorld, nextSeason, storyDeck } from "../src/world/engine.ts";
+import { PLAYER, type Cond, type Effect, type PersonId, type Ref, type Storylet, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
 const TEMPERS: Temper[] = ["face", "wary", "warm", "gossip", "thrifty", "hasty", "loyal", "proud", "shy"];
@@ -205,6 +205,48 @@ test("个人线走到终点的，换季以后那条线的卡不再抽得到", ()
     assert.ok(!drawn || !seasonOneArc.test(drawn.storylet.id),
       `第 2 季还抽到了已终结的个人线 ${drawn?.storylet.id}`);
   }
+});
+
+/** 回访卡（引力井）：走完的线原地留下的可重复卡。id 一律是 echo-<人>，值 = 她最晚第几季能落完点、回访从哪一季开。
+ *  上面那条测的是"线走完了，原来的卡不再抽得到"，这一张测的是它的另一半：走完以后她这一季还得有戏。 */
+const ECHO_FROM_SEASON = {
+  shen: 2, anjie: 2, luyao: 2, suman: 2, xiaoyu: 2, zhou: 2, zhao: 2, miduo: 2, mei: 2,
+  yinxiaojie: 3, duan: 3, zhaoning: 3,
+} as const;
+/** 还没有回访卡的八条：第 2 季那四条同事线（唐可 / 罗曼 / 方敏 / 乔晚）和第 3、4 季那四条（宋姐 / 白姐 / 裴岚 / 梁夏）。
+ *  名单写死在这里，是为了让"补了 12 条"不被读成"20 条都补了"，也让新加的第二十一条线必须先选边。 */
+const NO_ECHO_YET: PersonId[] = ["tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie", "peilan", "liangxia"];
+
+test("走完的线下一季还有她自己的卡可抽（回访卡）", () => {
+  const allPresent = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
+  for (const [rawId, from] of Object.entries(ECHO_FROM_SEASON) as Array<[PersonId, number]>) {
+    const card = STORYLETS.find(s => s.id === `echo-${rawId}`);
+    assert.ok(card, `${rawId} 从第 ${from} 季起没有回访卡`);
+    assert.equal(card.kind, "arc", `回访卡 ${card.id} 不是 arc，拿不到剧情卡那一份权重`);
+    assert.ok(!card.once, `回访卡 ${card.id} 写了 once —— 演完一次就又断了`);
+    assert.ok((card.cooldown ?? 0) >= SEASON_DAYS - 1,
+      `回访卡 ${card.id} 冷却 ${card.cooldown} 天：一季 28 天，她一季能回来两回以上`);
+    assert.ok(card.when.some(c => "quality" in c && c.quality === `arc:${rawId}:end` && c.gte === 1),
+      `回访卡 ${card.id} 没有认「arc:${rawId}:end ≥ 1」这道门 —— 线还没走完就能抽到她的回访`);
+    assert.ok(card.when.some(c => "season" in c && c.season.gte === from),
+      `回访卡 ${card.id} 的开季门不是第 ${from} 季`);
+    // 她当年怎么收的，这一季就怎么回来：每一档落点都要接得住，不许有落点走到"没格子可点"。
+    for (const { landing } of arcLandings(STORYLETS, rawId)) {
+      const w: World = {
+        ...newWorld(`echo-${rawId}`, PEOPLE), season: from, day: 5, present: { ...allPresent },
+        qualities: { [`arc:${rawId}`]: 3, [`arc:${rawId}:end`]: landing },
+      };
+      const hit = storyDeck(w, PEOPLE, STORYLETS, 0).eligible.find(e => e.storylet.id === card.id);
+      assert.ok(hit, `${rawId} 落到第 ${landing} 档以后，第 ${from} 季她的回访卡不在牌堆里`);
+      const shown = card.choices.filter(c => choiceVisible(w, PEOPLE, { storylet: card, binding: hit.binding }, c));
+      assert.ok(shown.length > 0, `${rawId} 的回访卡在落点第 ${landing} 档上一格都点不出来`);
+    }
+  }
+  assert.deepEqual(STORYLETS.filter(s => s.id.startsWith("echo-")).map(s => s.id).sort(),
+    Object.keys(ECHO_FROM_SEASON).map(id => `echo-${id}`).sort(),
+    "回访卡名单变了：加了要在 ECHO_FROM_SEASON 记一季，也要在设计文档那张表上补一笔");
+  assert.deepEqual([...Object.keys(ECHO_FROM_SEASON), ...NO_ECHO_YET].sort(), [...ARC_PEOPLE].sort(),
+    "个人线名册对不上：新加一条线得先说清它有没有回访卡");
 });
 
 test("个人线名册双向对得上：卡写的落点都在档案里，档案里每个人都真有落点卡", () => {

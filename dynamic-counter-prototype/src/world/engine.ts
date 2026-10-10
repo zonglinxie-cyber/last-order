@@ -758,11 +758,16 @@ const storyWeight = (storylet: Storylet, heat: number, world: World): number => 
   return w;
 };
 
-export function drawStorylet(world: World, people: Person[], storylets: Storylet[]): { world: World; drawn: DrawnStorylet | null } {
-  // 热度先衰减，再用它调权。
-  let w = setQuality(world, "storyteller:heat", qualityOf(world, "storyteller:heat") * STORY_HEAT_DECAY);
-  const heat = qualityOf(w, "storyteller:heat");
+/** 这一刻桌上有哪些卡可讲、各自多重；返回值连同"逐张探绑定"走完之后的 rngCalls 位置。
+ *  drawStorylet 两样都要（抽那一下的索引必须接着 cursor 走，否则整副牌换个顺序）；
+ *  读数表只取 eligible 并把 cursor 丢掉，所以它对外是纯读：不消耗随机流。
+ *  绑定的搜索会推进 cursor.rngCalls（每张卡按槽数计），跳过的那张（once / 冷却）不算 ——
+ *  这两条判据原本就写在 drawStorylet 的循环里，一起搬过来才不会改抽样。 */
+export function storyDeck(
+  world: World, people: Person[], storylets: Storylet[], heat: number,
+): { eligible: Array<{ storylet: Storylet; binding: Binding; weight: number }>; cursor: World } {
   const eligible: Array<{ storylet: Storylet; binding: Binding; weight: number }> = [];
+  let w = world;
   for (const storylet of storylets) {
     if (storylet.once && storylet.id in w.fired) continue;
     if (storylet.cooldown && storylet.id in w.fired && w.day - w.fired[storylet.id] < storylet.cooldown) continue;
@@ -771,6 +776,15 @@ export function drawStorylet(world: World, people: Person[], storylets: Storylet
     if (!binding) continue;
     eligible.push({ storylet, binding, weight: storyWeight(storylet, heat, w) });
   }
+  return { eligible, cursor: w };
+}
+
+export function drawStorylet(world: World, people: Person[], storylets: Storylet[]): { world: World; drawn: DrawnStorylet | null } {
+  // 热度先衰减，再用它调权。
+  const cooled = setQuality(world, "storyteller:heat", qualityOf(world, "storyteller:heat") * STORY_HEAT_DECAY);
+  const deck = storyDeck(cooled, people, storylets, qualityOf(cooled, "storyteller:heat"));
+  const eligible = deck.eligible;
+  let w = deck.cursor;
   // 有人如约站到柜前 —— 这一柜先从这些里挑（一天最多 ARC_CHAPTERS_PER_DAY 章，见 pickDue）。
   const toldToday = storylets.reduce((n, s) => n + (s.kind === "arc" && w.fired[s.id] === w.day ? 1 : 0), 0);
   const due = toldToday >= ARC_CHAPTERS_PER_DAY ? [] as typeof eligible : pickDue(eligible, w, toldToday);
