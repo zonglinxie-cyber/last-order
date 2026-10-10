@@ -276,7 +276,8 @@ test("回访卡整季封顶：第 1 天演过她，第 28 天不许再演第二�
  *  名单写死在这里：补人要在名单上选边，别让"这一批补了 11 张"被读成"20 条线都补了"。 */
 const LIFE_STEP1: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo",
   "zhao", "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie", "peilan", "liangxia"];
-const LIFE_STEP2: PersonId[] = ["shen", "anjie", "mei"];
+const LIFE_STEP2: PersonId[] = ["shen", "anjie", "mei",
+  "xiaoyu", "zhou", "suman", "luyao", "miduo", "zhao", "tangke", "fangmin", "liangxia"];
 /** 这颗门认不认「她收在第 L 档」这一件事 —— 只判 arc:<id>:end 那一条，其余门留给运行时那遍。 */
 const endAdmits = (cond: Cond, id: PersonId, L: number): boolean => {
   if ("any" in cond) return cond.any.some(c => endAdmits(c, id, L));
@@ -356,6 +357,18 @@ test("那一步的下一步：第 6 季按「上一步怎么落的」分叉，�
     assert.ok(card.when.some(c => "season" in c && c.season.gte === 6), `${card.id} 没开在第 6 季`);
     assert.ok(card.when.some(c => "quality" in c && c.quality === `life:${rawId}` && c.eq === 1),
       `${card.id} 没有「去年那一步刚走完」这道门`);
+    // 每一颗都得把梯子往前推一格并记下今年怎么落的 —— 否则点完这张卡，第 7 季那种「下一步」永远开不了。
+    for (const choice of card.choices) {
+      for (const effect of choice.effects)
+        assert.ok(!("stat" in effect && effect.stat === "money"),
+          `${card.id}「${choice.label}」给了钱：这一批只管她在往前走，不管柜上多赚一笔`);
+      const step = choice.effects.find(e => "quality" in e && e.quality === `life:${rawId}`);
+      assert.ok(step && "set" in step && step.set === 2,
+        `${card.id}「${choice.label}」没把 life:${rawId} 写成 2 —— 今年这一步点完还停在去年那一格`);
+      const landed = choice.effects.find(e => "quality" in e && e.quality === `life:${rawId}:how`);
+      assert.ok(landed && "set" in landed && [1, 2, 3].includes(landed.set ?? 0),
+        `${card.id}「${choice.label}」没记下今年怎么落的（life:${rawId}:how 要 1/2/3）`);
+    }
     // how 能取到哪几档不靠猜：从第 5 季那一步真写得出的那些值里取。
     const hows = [...new Set(step1.choices
       .flatMap(c => c.effects.filter(e => "quality" in e && e.quality === `life:${rawId}:how`))
@@ -471,7 +484,7 @@ test("连玩六副六季：第 5 季和第 6 季真演到「人生一步」（�
     const step2 = six.filter(id => /^life2-/.test(id)).length;
     assert.equal(step2Early, 0, `副 ${i}：第 5 季就演到了「下一步」（${step2Early} 张）—— 梯子提前塌了一格`);
     assert.ok(step1 >= 16, `副 ${i}：第 5 季只演到 ${step1} 张「人生一步」（20 张里）—— 补齐名单以后第 5 季还是没新剧情`);
-    assert.ok(step2 >= 2, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（3 张里）—— 去年的那一步没接到今年`);
+    assert.ok(step2 >= 10, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（12 张里）—— 去年的那一步没接到今年`);
   }
 });
 

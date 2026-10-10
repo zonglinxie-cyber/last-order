@@ -42,6 +42,15 @@ const lifeFixture = (person: string, cardId: string, landing: number, opinion: n
   qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: landing },
 });
 
+/** 第 31 轮那批：去年那一步已经走过（life:=1），今年这一格按去年的落法分叉。 */
+const life2Fixture = (person: string, cardId: string, how: number, opinion: number): World => ({
+  ...newWorld(`life31-${cardId}`, PEOPLE),
+  season: 6, day: 6, slot: 1, energy: energyCeiling(1),
+  present: { [person]: "counter" } as World["present"],
+  opinion: { [person]: opinion } as World["opinion"],
+  qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: 1, [`life:${person}`]: 1, [`life:${person}:how`]: how },
+});
+
 const enter = async (page: Page, world: World, drawn: { id: string; binding: Record<string, string> }) => {
   await page.addInitScript(
     ([k, v]) => window.localStorage.setItem(k, v),
@@ -197,6 +206,50 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       expect(q.qualities["life:fangmin:how"], "被挡在抄送外 = 这一格她不留了").toBe(3);
       // 「都不给钱」这条口径在界面上的那一份：这一步走完，柜上的钱不许多一分也不少一分。
       expect(q.money, "人生一步一颗钱都不该动").toBe(w.money);
+    });
+
+    // ===== 第 31 轮那九张第 6 季的卡：去年怎么落的，今年说的是哪一句 =====
+    test(`苏蔓去年落到「这一格不留了」：今年那一柜的事那一格开着，另两档的格子关着`, async ({ page }) => {
+      await enter(page, life2Fixture("suman", "life2-suman31", 3, 0), { id: "life2-suman", binding: { a: "suman" } });
+      await expect(storyText(page)).toContainText("苏蔓提着一只小袋子");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(page.getByRole("button", { name: "还把她当这一柜的人，账照旧给她看" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "按客人那一档给她排" })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /那一柜的事别在她面前提/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("苏蔓说她去年就把话说明白了");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:suman"], "今年这一步走到 2").toBe(2);
+      expect(q.qualities["life:suman:how"]).toBe(3);
+    });
+
+    test(`陆遥去年是「自己人」：收人那一格开着，且这一步不给她一分钱`, async ({ page }) => {
+      const w = life2Fixture("luyao", "life2-luyao31", 1, 12);
+      await enter(page, w, { id: "life2-luyao", binding: { a: "luyao" } });
+      await expect(storyText(page)).toContainText("陆遥这回过了通道走过来");
+      await expect(page.getByRole("button", { name: /她自己会找到地方/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "收，把她那一格并进来" }).click();
+      await expect(page.locator(".world-feed")).toContainText("陆遥说她不要特殊那一格");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:luyao"]).toBe(2);
+      expect(q.qualities["life:luyao:how"]).toBe(1);
+      expect(q.money, "第 6 季那一步也不给钱").toBe(w.money);
+    });
+
+    test(`唐可去年只剩生意：今年那一格开着，落法照旧记成「只剩生意」`, async ({ page }) => {
+      await enter(page, life2Fixture("tangke", "life2-tangke31", 2, 0), { id: "life2-tangke", binding: { a: "tangke" } });
+      await expect(storyText(page)).toContainText("唐可拿的是一张新排班表");
+      await expect(page.getByRole("button", { name: /把她那两个孩子也带到这一柜/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /那一格本来就不是她的/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: "只跟她本人对，不带那两位" }).click();
+      await expect(page.locator(".world-feed")).toContainText("唐可说行，那她自己这一支她自己掏");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:tangke"]).toBe(2);
+      expect(q.qualities["life:tangke:how"]).toBe(2);
     });
   });
 }
