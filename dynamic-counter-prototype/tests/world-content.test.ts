@@ -6,7 +6,7 @@ import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { MAINLINE_ACTS, STORYLETS } from "../src/world/content/index.ts";
 import { ARC_PEOPLE, arcLandings } from "../src/world/progress.ts";
-import { applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, evalCond, newWorld, nextSeason, storyDeck } from "../src/world/engine.ts";
+import { absDay, applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, evalCond, newWorld, nextSeason, storyDeck } from "../src/world/engine.ts";
 import { PLAYER, type Cond, type Effect, type PersonId, type Ref, type Storylet, type Temper, type World, type Zone } from "../src/world/types.ts";
 
 const SEASON_DAYS = 28;
@@ -323,6 +323,99 @@ test("「名字是借的」不再只有一个写入方：走完的线回第二�
   assert.deepEqual(STORYLETS.filter(s => s.id.startsWith("echo2")).map(s => s.id).sort(),
     second.map(([id]) => id).sort(),
     "第二回回访卡的名单变了：补一张要在上面那两条判据里点名，也要在界面演出里演一遍");
+});
+
+test("「录进去的是你的原话」由她那条线补上：个人线卡往主线本子里落一行", () => {
+  // 量到的洞（第 27 轮）：这条线索原来只有两张主线卡写得进，而每张都是"三格里的一格"。
+  // 拿模拟器那个政策（格在可见格之间均匀随机）数 24 副 × 4 季只落到 10 副 —— 抽到那张卡不等于点到那一格。
+  // 更要紧的是 `main-act3-tape` 整张卡认这条线索：漏掉的人连第 3 幕那一幕都看不见。
+  const writesTape = (c: { effects: Effect[] }) => c.effects.some(e => "clue" in e && e.clue === "slip-tape");
+  const writers = STORYLETS.filter(s => s.choices.some(writesTape));
+  const ids = writers.map(s => s.id);
+  assert.ok(ids.includes("arc-yin-tape") && ids.includes("echo-yinxiaojie"),
+    `写「录进去的是你的原话」的是 ${ids.join("、")} —— 她那条线本来就在讲那支笔，这一行该由她补进本子`);
+  assert.ok(writers.length >= 4,
+    `只有 ${writers.length} 张卡写这条线索（${ids.join("、")}）—— 每张只有一格写它时，漏一格就是几成人少一幕`);
+  // 本轮不动经济：这几格要是开始给钱，第 26 轮那张钱数表就再也比不了了。
+  for (const id of ["arc-yin-tape", "echo-yinxiaojie", "arc-pl-who"]) {
+    const card = STORYLETS.find(s => s.id === id)!;
+    for (const c of card.choices.filter(c => writesTape(c) || c.effects.some(e => "clue" in e && e.clue === "slip-roster")))
+      assert.ok(!c.effects.some(e => "stat" in e && e.stat === "money"),
+        `${id} 落线索那一格开始给钱了 —— 补本子的这一刀从此混进经济账`);
+  }
+
+  const everywhere = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
+  const base = newWorld("arc-yin-tape", PEOPLE);
+  const w: World = { ...base, season: 2, day: 9, present: { ...everywhere }, qualities: { "arc:yinxiaojie": 2 } };
+  const card = STORYLETS.find(s => s.id === "arc-yin-tape")!;
+  const hit = storyDeck(w, PEOPLE, STORYLETS, 0).eligible.find(e => e.storylet.id === "arc-yin-tape");
+  assert.ok(hit, "她那条线讲录音那一张在「线走到第二档、本子上还没有这条」的牌里抽不到 —— 替代路径没接上");
+  const idx = card.choices.findIndex(c => writesTape(c) && choiceVisible(w, PEOPLE, hit!, c));
+  assert.ok(idx >= 0, "她那两格讲笔的该露出来（这一格不带线索门，本子上有没有都得讲）");
+  assert.equal(applyChoice(w, PEOPLE, hit!, idx).qualities["clue:slip-tape"], absDay(w),
+    "点下去本子上没多这一行 —— 个人线补主线是假的");
+  // 本子上已经有这一条：`learnClue` 认过就不改写，日子不许被后面那张卡挪到更晚。
+  const known: World = { ...w, qualities: { "arc:yinxiaojie": 2, "clue:slip-tape": 12 } };
+  const again = applyChoice(known, PEOPLE, hit!, idx);
+  assert.equal(again.qualities["clue:slip-tape"], 12, "同一条线索被第二张卡改写了日子 —— 本子上的先后乱了");
+});
+
+test("裴岚那句「记在一个当时顶班的人手上」得真的落进本子", () => {
+  // 第 27 轮：这一格的台词就是那条事实，可它原来只动关系与台账，本子上什么也不多一行
+  // （`slip-roster` 拿模拟器那个政策数 24 副只落 18 副）。台词写了、本子没记，是内容写歪。
+  const card = STORYLETS.find(s => s.id === "arc-pl-who");
+  assert.ok(card, "arc-pl-who 不在了");
+  const idx = card.choices.findIndex(c => c.label === "方敏那一行到底记在谁名下");
+  assert.ok(idx >= 0, "arc-pl-who 那一格改了说法，判据要点名它");
+  assert.ok(card.choices[idx]!.effects.some(e => "clue" in e && e.clue === "slip-roster"),
+    "她说出了「当时顶班的人」却没把这一条写进本子 —— 台词写了、本子没记");
+  const everywhere = Object.fromEntries(PEOPLE.map(p => [p.id, "atrium" as Zone])) as Record<PersonId, Zone>;
+  const base = newWorld("arc-pl-who", PEOPLE);
+  const w: World = {
+    ...base, season: 4, day: 9, present: { ...everywhere },
+    qualities: { "arc:peilan": 1, "thread:return-slip": 7 },
+  };
+  const hit = storyDeck(w, PEOPLE, STORYLETS, 0).eligible.find(e => e.storylet.id === "arc-pl-who");
+  assert.ok(hit, "裴岚那条线在「单子已经翻过来、她刚开头」的牌里抽不到");
+  assert.ok(choiceVisible(w, PEOPLE, hit!, card.choices[idx]!),
+    "那一格在退货单已经翻过来时该露出来");
+  assert.ok(applyChoice(w, PEOPLE, hit!, idx).qualities["clue:slip-roster"],
+    "点下去本子上没多这一行");
+});
+
+test("连玩十二副四季：那条录音不再大面积漏（经验判据 · 格随机取）", () => {
+  // 这一条的走法跟上面那条「名字是借的」不一样：动作只 greet，但**格在可见格之间均匀随机** ——
+  // 模拟器四个风格用的就是这个政策（风格只挑动作，不挑格子）。naive 那种恒取第一格量不到这一层：
+  // 补之前同一批牌 naive 是 39/40，随机取格只有 10/24。
+  let state = 1;
+  const rand = () => { state = (state * 1103515245 + 12345) & 0x7fffffff; return state / 0x7fffffff; };
+  const playSeason = (world: World) => {
+    let w = world;
+    while (w.day <= SEASON_DAYS) {
+      for (const slot of [0, 1, 2, 3] as const) {
+        w = beginSlot({ ...w, slot }, PEOPLE, festivalsFor(w.season));
+        for (const p of PEOPLE) if (w.present[p.id] === "counter") w = doVerb(w, PEOPLE, "greet", [p.id]);
+        const { drawn } = drawStorylet(w, PEOPLE, STORYLETS);
+        if (!drawn) continue;
+        const vis = drawn.storylet.choices.map((c, i) => i).filter(i => choiceVisible(w, PEOPLE, drawn, drawn.storylet.choices[i]));
+        if (!vis.length) continue;
+        w = applyChoice(w, PEOPLE, drawn, vis[Math.floor(rand() * vis.length)] ?? vis[0]!);
+      }
+      w = endDay(w, PEOPLE);
+    }
+    return w;
+  };
+  let landed = 0;
+  for (let i = 0; i < 12; i++) {
+    state = 7 + i * 104729;
+    let w = newWorld(`tape-${i}`, PEOPLE);
+    for (let s = 1; s < 4; s++) { w = playSeason(w); w = nextSeason(w, PEOPLE); }
+    w = playSeason(w);
+    if (w.qualities["clue:slip-tape"]) landed++;
+  }
+  // 阈值敢压到 10/12：补这一刀之前同一走法 24 副只落 10 副（42%），十二副里期望五副。
+  assert.ok(landed >= 10,
+    `十二副牌只有 ${landed} 副拿到「录进去的是你的原话」—— 她那条线没接上本子（补之前 24 副只落 10 副）`);
 });
 
 test("连玩十二副四季：那条「名字是借的」不再大面积漏（经验判据）", () => {

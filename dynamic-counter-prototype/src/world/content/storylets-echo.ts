@@ -372,8 +372,11 @@ export const STORYLETS_ECHO: Storylet[] = [
       {
         label: "让她自己那句拿回去讲",
         when: [{ any: [{ quality: "arc:yinxiaojie:end", eq: 2 }, { quality: "arc:yinxiaojie:end", eq: 3 }] }],
-        effects: [{ opinion: "$a", delta: 3 }, { bond: ["yinxiaojie", "player"], delta: 3 }],
-        result: "{$a}把那支笔搁在柜面上，说这一句她抄给你，下一柜不用你替她讲。",
+        effects: [
+          { clue: "slip-tape" },
+          { opinion: "$a", delta: 3 }, { bond: ["yinxiaojie", "player"], delta: 3 },
+        ],
+        result: "{$a}把那支笔搁在柜面上，说这一句她抄给你，下一柜不用你替她讲。笔没关，里头转着的是你那天开口那句，不是别人学的那句。",
       },
       {
         label: "只接她带来的那位",

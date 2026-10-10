@@ -95,11 +95,12 @@ export const STORYLETS_ARCS6: Storylet[] = [
         when: [{ any: [{ quality: "thread:return-slip", gte: 7 }, { knowsSecret: "fangmin" }] }],
         effects: [
           { quality: "arc:peilan", set: 2 },
+          { clue: "slip-roster" },
           { opinion: "$a", delta: 5 }, { opinion: "fangmin", delta: -3 },
           { stat: "compliance", delta: -4 },
           { remember: { holder: "$a", act: "quarter-row-named", valence: 2, subject: "player" } },
         ],
-        result: "「记在一个当时顶班的人手上。」{$a}把这句话说得很慢。她知道是谁的手写的，这一季她才说这是她要的那一页。",
+        result: "「记在一个当时顶班的人手上。」{$a}把这句话说得很慢。她知道是谁的手写的，这一季她才说这是她要的那一页。那一页上领用、退款、进台账三笔，落的是同一个顶班的号。",
       },
       {
         label: "这一页柜上不管区域的事",

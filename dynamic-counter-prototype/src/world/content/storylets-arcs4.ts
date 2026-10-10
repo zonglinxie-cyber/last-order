@@ -119,6 +119,11 @@ export const STORYLETS_ARCS4: Storylet[] = [
     ],
   },
   {
+    // 这两格往本子上落一条主线的线索（`slip-tape`）。不是顺手加的：那条事实原来只有两张主线卡写得进，
+    // 而每张都是"三格里的一格"，实测（格在可见格间均匀随机）24 副只落到 10 副 —— 抽到那张卡不等于点到那一格。
+    // 她这条线本来就在讲那支笔（本卡把笔摊在柜面上，三格里前两格就是听她说里头录的是什么），
+    // 所以由她把这条补进本子，比再往牌堆里塞一张新卡便宜：牌堆不动，抽卡顺序不动。
+    // `learnClue` 认过就不改写（engine.ts:257），已经知道的人不会被再念一遍。
     id: "arc-yin-tape",
     kind: "arc",
     cast: { a: yin },
@@ -133,24 +138,26 @@ export const STORYLETS_ARCS4: Storylet[] = [
         label: "问那两支后来去了哪",
         effects: [
           { quality: "arc:yinxiaojie", set: 3 },
+          { clue: "slip-tape" },
           { reveal: "yinxiaojie" },
           { appoint: { person: "yinxiaojie", inDays: 2, slot: 1 } },
           { opinion: "$a", delta: 4 },
           { remember: { holder: "$a", act: "asked-where", valence: 1, subject: "player" } },
         ],
-        result: "一支用完了，一支没开封。{$a}说没开封的那支她要退，退的正是当初听来的那句。",
+        result: "一支用完了，一支没开封。{$a}说没开封的那支她要退，退的正是当初听来的那句。用完那一支她按了回放给你听：录进去的是你开口那句，不是别人转的。",
       },
       {
         label: "把能退的那句话教给她",
         effects: [
           { quality: "arc:yinxiaojie", set: 3 },
+          { clue: "slip-tape" },
           { reveal: "yinxiaojie" },
           { appoint: { person: "yinxiaojie", inDays: 2, slot: 1 } },
           { opinion: "$a", delta: 8 },
           { bond: ["yinxiaojie", "player"], kind: "client", set: 30 },
           { remember: { holder: "$a", act: "taught-return", valence: 2, subject: "player" } },
         ],
-        result: "退要有原话，原话要有日子。{$a}把这一句记进笔的那一头，说这一句她不拿去给别人。",
+        result: "退要有原话，原话要有日子。{$a}把这一句记进笔的那一头，说这一句她不拿去给别人。那一头转起来的时候她没挡：里头是你的原话，一个字不是她替你添的。",
       },
       {
         label: "这一单照卖，不管她那支笔",
