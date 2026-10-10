@@ -42,13 +42,20 @@ const lifeFixture = (person: string, cardId: string, landing: number, opinion: n
   qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: landing },
 });
 
-/** 第 31 轮那批：去年那一步已经走过（life:=1），今年这一格按去年的落法分叉。 */
-const life2Fixture = (person: string, cardId: string, how: number, opinion: number): World => ({
-  ...newWorld(`life31-${cardId}`, PEOPLE),
-  season: 6, day: 6, slot: 1, energy: energyCeiling(1),
+/** 第 31、32 轮那批：去年那一步已经走过（life:=1），今年这一格按去年的落法分叉。 */
+const life2Fixture = (person: string, cardId: string, how: number, opinion: number): World =>
+  ladderFixture(person, cardId, 6, 1, how, opinion);
+
+/** 第 33 轮那格：前两年的账到期（life:=2），第三年读的是去年那一档。 */
+const life3Fixture = (person: string, cardId: string, how: number, opinion: number): World =>
+  ladderFixture(person, cardId, 7, 2, how, opinion);
+
+const ladderFixture = (person: string, cardId: string, season: number, step: number, how: number, opinion: number): World => ({
+  ...newWorld(`life-${cardId}`, PEOPLE),
+  season, day: 6, slot: 1, energy: energyCeiling(1),
   present: { [person]: "counter" } as World["present"],
   opinion: { [person]: opinion } as World["opinion"],
-  qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: 1, [`life:${person}`]: 1, [`life:${person}:how`]: how },
+  qualities: { [`arc:${person}`]: 3, [`arc:${person}:end`]: 1, [`life:${person}`]: step, [`life:${person}:how`]: how },
 });
 
 const enter = async (page: Page, world: World, drawn: { id: string; binding: Record<string, string> }) => {
@@ -293,6 +300,49 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       expect(q.qualities["life:peilan"]).toBe(2);
       expect(q.qualities["life:peilan:how"]).toBe(3);
       expect(q.money, "第 6 季剩下那八位也不给钱").toBe(w.money);
+    });
+
+    // ===== 第 33 轮：第 7 季那一格 —— 前两年的账在这里结 =====
+    test(`沈薇第一年是散客、第二年是自己人：第三年「把那一行交给那孩子」开着`, async ({ page }) => {
+      await enter(page, life3Fixture("shen", "life3-shen33", 1, 10), { id: "life3-shen", binding: { a: "shen" } });
+      await expect(storyText(page)).toContainText("沈薇这次身后跟着一个不肯开口的年轻人");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(page.getByRole("button", { name: /只跟那孩子谈/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /那一栏的事今天不谈/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /把那一行交给那孩子/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("沈薇说这句她等了两年");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:shen"], "第三年这一步走到 3").toBe(3);
+      expect(q.qualities["life:shen:how"]).toBe(1);
+    });
+
+    test(`苏蔓前两年把那一格让掉了：第三年那一格开着，钱一分不动`, async ({ page }) => {
+      const w = life3Fixture("suman", "life3-suman33", 3, 0);
+      await enter(page, w, { id: "life3-suman", binding: { a: "suman" } });
+      await expect(storyText(page)).toContainText("苏蔓上楼直接到镜前");
+      await expect(page.getByRole("button", { name: /把她那一格的名字还留着/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: /这一柜不再有她那一格/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("苏蔓说这话去年她也听见了");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:suman"]).toBe(3);
+      expect(q.qualities["life:suman:how"]).toBe(3);
+      expect(q.money, "第三年那一步也不给钱").toBe(w.money);
+    });
+
+    test(`赵女士去年只剩生意：第三年「各填各的」开着，落到 how=2`, async ({ page }) => {
+      await enter(page, life3Fixture("zhao", "life3-zhao33", 2, 0), { id: "life3-zhao", binding: { a: "zhao" } });
+      await expect(storyText(page)).toContainText("赵女士这回是被女儿带来的");
+      await expect(page.getByRole("button", { name: /让她自己写完/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /两张单各填各的/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("赵女士说这样最好");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:zhao"]).toBe(3);
+      expect(q.qualities["life:zhao:how"]).toBe(2);
     });
   });
 }
