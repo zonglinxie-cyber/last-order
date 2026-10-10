@@ -258,6 +258,8 @@
 .world-intro-eyebrow { margin:0 0 4px; color:#c7a993; font-size:12px; letter-spacing:.14em; }
 .world-intro-card h1 { margin:0 0 8px; color:#ffe8b6; font:700 30px 'Noto Serif SC',serif; letter-spacing:.1em; }
 .world-intro-copy { margin:0 0 14px; color:#eee0d5; font-size:13px; line-height:1.7; }
+/* 读不出来的旧档必须自己出声说清楚。字号停在 12px 那一档下限，不再往下缩。 */
+.world-intro-stale { margin:-6px 0 14px; padding:8px 10px; border-left:2px solid #f0cf9166; color:#f3d9a8; font-size:12px; line-height:1.6; }
 
 /* —— 人情网整屏 —— */
 .world-web { position:absolute; inset:0; z-index:90; display:flex; flex-direction:column; background:#120b0b; }

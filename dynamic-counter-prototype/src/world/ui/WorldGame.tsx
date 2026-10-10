@@ -82,6 +82,11 @@ const restore = (): { world: World; ui: UiState } | null => {
   } catch { return null; }
 };
 
+/** 键上有档、但这一版读不出来：存档格式换过，或者系统在写一半的时候把这一页收了。 */
+const unreadableSave = (): boolean => {
+  try { const raw = window.localStorage.getItem(SAVE_KEY); return !!raw && !parseWorld(raw); } catch { return false; }
+};
+
 // —— 每个时段开头：落位 → 说书人抽一张。在场的人自己互动（传话、陆遥抢客）放在时段末，
 //     先让玩家动手：你这个时段没顾上的人，陆遥才带得走。
 const runPipeline = (w: World): { world: World; drawn: DrawnStorylet | null } => {
@@ -239,6 +244,7 @@ function CoachLayer({ view, world }: { view: CoachView; world: World }) {
 
 export default function WorldGame() {
   const boot = useMemo(restore, []);
+  const stale = useMemo(unreadableSave, []);
   const [world, setWorld] = useState<World>(() => boot?.world ?? newWorld("empty", PEOPLE));
   const [phase, setPhase] = useState<"intro" | "play" | "report" | "season">("intro");
   const [pending, setPending] = useState<DrawnStorylet | null>(null);
@@ -504,6 +510,7 @@ export default function WorldGame() {
         <p className="world-intro-eyebrow">AURORA · 绮光</p>
         <h1>人情场</h1>
         <p className="world-intro-copy">商场一层是一整张人情网。你在柜上怎么待一个人，会顺着这张网传出去。没有关卡，一季 28 天，看看最后谁还会回来。</p>
+        {stale && <p className="world-intro-stale">柜上留过一份记录，这一版读不出来了：存档格式换过，或是上一次存到一半被打断。开新一季，旧的那一份就接不回来了。</p>}
         <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
           {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
         </button>
