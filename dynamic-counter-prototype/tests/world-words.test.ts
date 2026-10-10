@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { STORYLETS } from "../src/world/content/index.ts";
+import { newWorld } from "../src/world/engine.ts";
+import type { World } from "../src/world/types.ts";
+import { byPriority, momentAnchor, momentSound, worldMoments } from "../src/world/ui/cues.ts";
 import {
-  ACT_WORD, guestKindWord, newGuestWord, scoreBrief, scoreWord, verbsEmptyWord,
+  ACT_WORD, guestKindWord, momentWord, newGuestWord, scoreBrief, scoreWord, verbsEmptyWord,
 } from "../src/world/ui/words.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 
@@ -57,4 +60,78 @@ test("动作条空着那三句：只说一个原因，不许「或者」", () =>
   const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
   assert.equal(ui.includes("或者精力不够了"), false);
   assert.ok(ui.includes("verbsEmptyWord"));
+});
+
+// —— 三刻的判据（任务 22 ①）：成交、回头客、你超过对面（以及反过来那一下）。
+// 判据写成纯函数是重点：早晨老客自己回柜那一笔（beginSlot 的赴约回流）不经过任何按钮，
+// 上一版把它整个漏掉了，所以这里只认"两个盘之间变了什么"。
+const w = (money: number, rivalMoney: number, qualities: Record<string, number> = {}): World =>
+  ({ ...newWorld("cue-test", PEOPLE), money, rivalMoney, qualities });
+
+test("进账那一笔：第一次带货算成交，回来过的人算回头客", () => {
+  assert.deepEqual(worldMoments(w(0, 0), w(1680, 0, { "bought:mei": 1 })), [{ kind: "sale", who: "mei" }]);
+  assert.deepEqual(worldMoments(w(0, 0, { "bought:mei": 3 }), w(1680, 0, { "bought:mei": 6 })),
+    [{ kind: "regular", who: "mei" }], "上一单带过货的再进账是回头客，不是新客成交");
+  // 加过微信也算"回来过"——私域那条线兑现的就是这一笔
+  assert.equal(worldMoments(w(0, 0, { "wechat:mei": 2 }), w(980, 0, { "bought:mei": 7 }))[0]?.kind, "regular");
+  // 只被招呼过（served:）不算回头：那是第一次正经接她
+  assert.equal(worldMoments(w(0, 0, { "served:mei": 4 }), w(980, 0, { "bought:mei": 7 }))[0]?.kind, "sale");
+});
+
+test("退货与扣款没有收银声：钱变少、钱没变都不算一刻", () => {
+  assert.deepEqual(worldMoments(w(1680, 1600), w(0, 1600)).filter(m => m.kind !== "trail"), []);
+  assert.deepEqual(worldMoments(w(1680, 0), w(1680, 0)), []);
+});
+
+test("认不出是谁的那一笔只说「成交」，不报错一个名字", () => {
+  // 同一天第二单：引擎把 bought: 写成同一个日期，差值看不出来是谁
+  assert.deepEqual(worldMoments(w(0, 0, { "bought:mei": 1 }), w(960, 0, { "bought:mei": 1 })),
+    [{ kind: "sale", who: null }]);
+});
+
+test("比分只认翻面那一下：0:0 你先开张是成交，从落后翻上来才是超过", () => {
+  assert.deepEqual(worldMoments(w(0, 0), w(1680, 0, { "bought:mei": 1 })), [{ kind: "sale", who: "mei" }],
+    "开季第一单的头衔该是「成交 · 她」，不是「超过对面了」");
+  assert.deepEqual(worldMoments(w(3000, 4000), w(4680, 4000)),
+    [{ kind: "sale", who: null }, { kind: "lead", who: null }]);
+  assert.deepEqual(worldMoments(w(4680, 4000), w(6360, 4000)), [{ kind: "sale", who: null }],
+    "本来就领先，再多开一单只报成交，不重复报超过");
+  assert.deepEqual(worldMoments(w(500, 300), w(0, 300)), [{ kind: "trail", who: null }]);
+  assert.deepEqual(worldMoments(w(0, 0), w(0, 300)), [{ kind: "trail", who: null }],
+    "对面先开张那一拍必须报警，哪怕当时还打平");
+  assert.deepEqual(worldMoments(w(0, 300), w(0, 600)), [], "已经落后了，对面再多开一单不重复报");
+});
+
+test("同一拍里两件事：只响优先级那一个声音，动画各留各的落点", () => {
+  const both = worldMoments(w(3000, 4000), w(4680, 4000));
+  assert.equal(byPriority(both)[0]!.kind, "lead");
+  assert.equal(momentSound.lead, "lead", "反超要有自己的声音，不能再借成交那记收银");
+  assert.deepEqual(both.flatMap(m => momentAnchor[m.kind]).sort(), ["money", "score"]);
+  assert.deepEqual(both.map(m => momentSound[m.kind]).sort(), ["lead", "register"]);
+  // 回头客那笔是两件事一起：钱到了，而且回来的是她 —— 两处都要亮
+  assert.deepEqual(momentAnchor.regular, ["money", "person"]);
+});
+
+test("硬推那一单：看法跌得再狠，成交那一笔照样算一刻", () => {
+  // 上一版是一条 if 链（跌了先响 down，否则才响 register），于是硬推那一单没有收银声。
+  const pushed = worldMoments(w(0, 0), { ...w(400, 0, { "bought:mei": 1 }), opinion: { mei: -12 } });
+  assert.deepEqual(pushed, [{ kind: "sale", who: "mei" }]);
+  const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
+  assert.equal(ui.includes('sfx("register")'), false, "音效由 cues.ts 的表出，界面不许自己点");
+  assert.equal(ui.includes("cueOutcome"), false, "旧的『一声要么上要么下』那条链已经拆掉");
+  assert.ok(ui.includes("momentSound") && ui.includes("worldMoments"));
+});
+
+test("三刻的文案只贴标签：不许多报一个数字或 ¥", () => {
+  assert.equal(momentWord("sale", "梅女士"), "成交 · 梅女士");
+  assert.equal(momentWord("regular", "梅女士"), "回头客 · 梅女士");
+  assert.equal(momentWord("lead"), "超过对面了");
+  assert.equal(momentWord("trail"), "被对面超过");
+  for (const kind of ["sale", "regular", "lead", "trail"] as const) {
+    const word = momentWord(kind, "梅女士");
+    assert.ok(!/[\d¥]/.test(word), `${kind} 这句在重复报数：${word}`);
+  }
+  const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
+  assert.ok(ui.includes("momentWord"), "牌要念 words.ts 那一句");
+  assert.equal(ui.includes("成交 ·"), false, "标签在 words.ts 一处写，界面不许再拼一份");
 });

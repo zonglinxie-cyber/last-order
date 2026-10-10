@@ -1,6 +1,7 @@
 // 人情网界面的中文说法唯一出处：act 代号、脾气、关系类型、看法与冷暖的成句。
 // 界面不许自己拼这些句子；引擎新增 act 代号时只在这里补一行。
 import { ta } from "../pronoun.ts";
+import type { MomentKind } from "./cues.ts";
 import type { BondKind, Person, Slot, Temper } from "../types.ts";
 
 export { PLAYER_NAME } from "../engine.ts";
@@ -322,6 +323,15 @@ export const guestKindWord = (returning: boolean): string => returning ? "回头
 
 /** 「现场 · N 位客人」后面跟的那半句。一位新客都没有就不念 —— 全是熟人不算一条消息。 */
 export const newGuestWord = (fresh: number): string => fresh ? ` · 新客 ${fresh}` : "";
+
+/** 时刻那一枚小牌上的字。判据在 cues.ts 的 worldMoments，这里只出说法。
+ *  它不复述流水里那句「带走 2 件，进账 ¥1,960」—— 牌上只给判断，数字留给流水与页顶那一格，
+ *  免得同一件事在一屏里念两遍（也不做成飘出来的数字）。 */
+export const momentWord = (kind: MomentKind, name?: string): string => {
+  if (kind === "sale") return name ? `成交 · ${name}` : "成交";
+  if (kind === "regular") return name ? `回头客 · ${name}` : "回头客";
+  return kind === "lead" ? "超过对面了" : "被对面超过";
+};
 
 /** 动作条空着时那一句 —— 只说真正的原因，不许「或者」把两条推给玩家自己猜。
  *  精力一个时段发一格（beginSlot 的 ENERGY_PER_SLOT），所以"没劲"的出路是翻时段，不是熬到明早。 */

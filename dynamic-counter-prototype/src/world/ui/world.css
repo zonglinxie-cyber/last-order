@@ -68,6 +68,36 @@
 /* —— 一句话结果 —— */
 .world-toast { position:absolute; z-index:70; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); width:max-content; max-width:88%; margin:0; transform:translateX(-50%); padding:10px 14px; border:1px solid #f0cf9144; border-radius:12px; background:#2a1713f2; color:#ffe8b6; font-size:12px; line-height:1.5; text-align:center; box-shadow:0 8px 24px #000a; }
 
+/* —— 三刻的牌：成交 / 回头客 / 比分翻面。同一时刻只念优先级最高的那一句（cues.ts 的 RANK）。
+   放在楼层顶边那条空带上，不跟 .world-toast（底部、念引擎原话）抢位置，也不报第二次数。
+   z-index 85：早晨那一笔回头客是点「下一时段」来的，那一刻说书人的新卡已经压在上面（.world-story 是 80），
+   牌要走在卡前面 —— 这一声本来就不该等玩家把卡读完才听见。 —— */
+.world-moment { position:absolute; z-index:85; top:10px; left:50%; transform:translateX(-50%); margin:0; padding:7px 14px; border-radius:999px; border:1px solid #f0cf9166; background:#2a1713f0; color:#ffe8b6; font:700 13px 'Noto Serif SC',serif; letter-spacing:.06em; white-space:nowrap; text-shadow:0 1px 3px #000; box-shadow:0 6px 20px #0009; pointer-events:none; animation:world-moment 1.9s ease forwards; }
+.world-moment.wm-regular { border-color:#f0c978; background:#3a2419f2; }
+.world-moment.wm-lead { border-color:#a8dccbb0; color:#d9f4ea; }
+.world-moment.wm-trail { border-color:#e88a7ab0; color:#f6cfc4; }
+@keyframes world-moment {
+  /* 进场从下往上抬到原位，退场才往上退：全程不越过 top:10px 那条边，免得压到页顶那排按钮（390×844 量过）。 */
+  0% { opacity:0; transform:translate(-50%,8px) scale(.92); }
+  14% { opacity:1; transform:translate(-50%,0) scale(1.04); }
+  26% { transform:translate(-50%,0) scale(1); }
+  78% { opacity:1; }
+  100% { opacity:0; transform:translate(-50%,-8px); }
+}
+/* 动画的三个落点与 momentAnchor 一一对应：钱那一格、比分那一格、她自己那块名牌。 */
+.world-money.is-hit { animation:wm-money 1.9s ease; }
+@keyframes wm-money { 0%,100% { color:#d5b994; transform:none; } 12% { color:#fff2cf; transform:scale(1.22); } 40% { color:#f0c978; transform:scale(1); } }
+.world-score.is-lead,.world-score.is-trail { animation:wm-score 1.9s ease; }
+.world-score.is-lead { color:#a8dccb; }
+.world-score.is-trail { color:#e8a99a; }
+@keyframes wm-score { 0%,100% { transform:none; } 12% { transform:scale(1.18); } 40% { transform:scale(1); } }
+.wf-actor.is-back-in .wf-tag { animation:wm-tag 1.9s ease; }
+@keyframes wm-tag { 0%,100% { box-shadow:none; } 15% { box-shadow:0 0 0 3px #f0c978cc; } 60% { box-shadow:0 0 0 3px #f0c97855; } }
+@media (prefers-reduced-motion: reduce) {
+  .world-moment { animation:none; }
+  .world-money.is-hit,.world-score.is-lead,.world-score.is-trail,.wf-actor.is-back-in .wf-tag { animation:none; }
+}
+
 /* —— 底部抽屉：上面人物卡，下面一行动作 —— */
 .world-drawer { position:absolute; z-index:50; left:0; right:0; bottom:0; height:64%; display:flex; flex-direction:column; overflow:hidden; }
 /* min-height 是量出来的：名字那一行 + 她对你的看法 + 冷暖那半句。不设下限的话，

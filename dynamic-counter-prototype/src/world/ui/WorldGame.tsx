@@ -31,7 +31,8 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { guestKindWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
+import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
+import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
@@ -132,9 +133,12 @@ function buildReport(before: World, after: World, base: DayBase): DayReport {
   return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0 };
 }
 
-// —— 音效：五个时刻。看法动到这个数才算"明显"，招呼那点 +3 不响 ——
+// —— 音效：看法动到这个数才算"明显"，招呼那点 +3 不响 ——
+// 成交 / 回头客 / 比分那三个时刻不在这里判（见 ui/cues.ts）：那些是"一次状态变化"的事，
+// 由下面那个 watch world 的 effect 统一出声，所以早晨老客自己回柜那一笔也听得到。
+// 这里只补看法那一动，并且晚一拍 —— 同一格里钱和脸一起变时两段音不叠成一团。
 const OPINION_CUE = 5;
-const cueOutcome = (before: World, after: World) => {
+const cueOpinion = (before: World, after: World, at: number) => {
   let up = 0, down = 0;
   const ids = new Set([...Object.keys(before.opinion), ...Object.keys(after.opinion)]);
   for (const id of ids) {
@@ -142,10 +146,8 @@ const cueOutcome = (before: World, after: World) => {
     if (d > up) up = d;
     if (d < down) down = d;
   }
-  // 看法明显变坏最该被听见（硬推当场也入账，但先让她翻脸的声音出来），然后才轮到进账。
-  if (down <= -OPINION_CUE) sfx("down");
-  else if (after.money > before.money) sfx("register");
-  else if (up >= OPINION_CUE) sfx("up");
+  if (down <= -OPINION_CUE) sfx("down", at);
+  else if (up >= OPINION_CUE) sfx("up", at);
 };
 
 // —— 苏蔓的新手引导：一句一个固定层气泡，指着它在说的那个东西 ——
@@ -312,6 +314,36 @@ export default function WorldGame() {
     const timer = window.setTimeout(() => setResult(null), 3800);
     return () => window.clearTimeout(timer);
   }, [result]);
+  // —— 一次状态变化就是"发生了一件事"：成交、回头客、比分反超都从这里出声音、亮一处动画、念一句牌。
+  // 挂在这里而不是各动作函数里，是因为早晨老客自己回柜那一笔（beginSlot 里的赴约回流）不经过任何按钮。
+  const [moments, setMoments] = useState<Moment[]>([]);
+  const prevWorld = useRef<World | null>(null);
+  useEffect(() => {
+    const before = prevWorld.current;
+    prevWorld.current = world;
+    // 开局 / 继续 / 换季那几次不算发生了一件事：玩家还没动手，不能替他响一声。
+    if (!before || before === world) return;
+    const found = worldMoments(before, world);
+    if (found.length) sfx(momentSound[byPriority(found)[0]!.kind]);
+    // 看法那一动晚一拍：同一格里钱和脸一起变（硬推那一单）时两段音不叠成一团。
+    cueOpinion(before, world, found.length ? 0.28 : 0);
+    if (found.length) setMoments(found);
+  }, [world]);
+  useEffect(() => {
+    if (!moments.length) return;
+    const timer = window.setTimeout(() => setMoments([]), 1900);
+    return () => window.clearTimeout(timer);
+  }, [moments]);
+  const lit = useMemo(() => {
+    const out = { money: false, score: null as null | "is-lead" | "is-trail", person: null as PersonId | null };
+    for (const m of byPriority(moments)) for (const at of momentAnchor[m.kind]) {
+      if (at === "money") out.money = true;
+      else if (at === "score") out.score ??= m.kind === "lead" ? "is-lead" : "is-trail";
+      else if (m.who && !out.person) out.person = m.who;
+    }
+    return out;
+  }, [moments]);
+  const topMoment = moments.length ? byPriority(moments)[0]! : null;
   // 人走了（被请去对面、故事卡里离开）就把抽屉收掉；够不着的留着卡给人看。
   useEffect(() => {
     if (selected && !(selected in world.present)) { setSelected(null); setServing(false); setPick(null); }
@@ -323,6 +355,7 @@ export default function WorldGame() {
     const base: DayBase = { day: fresh.day, money: fresh.money, opinion: { ...fresh.opinion } };
     setDayBase(base);
     const { world: w, drawn } = runPipeline(fresh);
+    prevWorld.current = w;
     setWorld(w); setPending(drawn); setReport(null);
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
     if (drawn) sfx("card");
@@ -332,6 +365,7 @@ export default function WorldGame() {
     const saved = restore();
     if (!saved) { startNew(); return; }
     const { world: w, ui } = saved;
+    prevWorld.current = w;
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
     setReqSeenDay(ui.reqSeen ?? 0);
     setWorld(w);
@@ -348,8 +382,8 @@ export default function WorldGame() {
   const nextTurn = () => {
     setSelected(null); setPick(null); setServing(false); setResult(null);
     const settled = ambient(world, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
+    // 客人被对面请走是这一档唯一要在这里补的一声：它不改钱也不改比分，世界那一侧的时刻判据认不出它。
     if (coachPoached(settled, PEOPLE) && !coachPoached(world, PEOPLE)) sfx("down");
-    else cueOutcome(world, settled);
     sfx("bell");
     if (world.slot === 3) {
       const w = endDay(settled, PEOPLE);
@@ -376,6 +410,7 @@ export default function WorldGame() {
     const next = nextSeason(world, PEOPLE);
     setDayBase({ day: next.day, money: next.money, opinion: { ...next.opinion } });
     const { world: w, drawn } = runPipeline(next);
+    prevWorld.current = w;
     setWorld(w); setPending(drawn); setReport(null);
     if (drawn) sfx("card");
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
@@ -386,7 +421,6 @@ export default function WorldGame() {
   const apply = (call: VerbCall) => {
     const next = doVerb(world, PEOPLE, call.verb, call.targets);
     if (next === world) return;
-    cueOutcome(world, next);
     setWorld(next); setPick(null);
     setResult(next.log.at(-1)?.text ?? null);
   };
@@ -403,7 +437,6 @@ export default function WorldGame() {
     if (!selected || !serveProduct) return;
     const next = resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force);
     if (next === world) return;
-    cueOutcome(world, next);
     setWorld(next); setServing(false);
     setResult(next.log.at(-1)?.text ?? null);
   };
@@ -411,14 +444,12 @@ export default function WorldGame() {
     if (!pending) return;
     const next = applyChoice(world, PEOPLE, pending, index);
     if (next === world) return;
-    cueOutcome(world, next);
     setWorld(next); setPending(null);
   };
   // 委托卡上当场能答的（唐可借小样）：应下/回绝都算一句话的事。
   const answerRequest = (reqId: string, accept: boolean) => {
     const next = resolveRequestChoice(world, PEOPLE, reqId, accept);
     if (next === world) return;
-    cueOutcome(world, next);
     setWorld(next);
   };
 
@@ -638,7 +669,7 @@ export default function WorldGame() {
     <header className="world-bar">
       <div className="world-bar-info">
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
-        <span>{yuan(world.money)}</span><span className="world-score">{scoreBrief(world.rivalMoney)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
+        <span className={lit.money ? "world-money is-hit" : "world-money"}>{yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
       </div>
       <button className="world-mute" type="button" aria-label={muted ? "开声音" : "静音"} aria-pressed={muted}
         onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "🔇" : "🔊"}</button>
@@ -664,7 +695,7 @@ export default function WorldGame() {
           const back = p.role === "customer" && isReturningGuest(world, id);
           const kind = p.role === "customer" ? guestKindWord(back) : "";
           return <button type="button" key={id} data-pid={id}
-            className={`wf-actor${selected === id ? " is-sel" : ""}${isTarget ? " is-target" : ""}`}
+            className={`wf-actor${selected === id ? " is-sel" : ""}${isTarget ? " is-target" : ""}${lit.person === id ? " is-back-in" : ""}`}
             style={{ left: `${spot.x}%`, top: `${spot.y}%`, zIndex: 20 + Math.round(spot.y) } as CSSProperties}
             aria-label={`${pick ? "选" : "查看"}${p.name}${kind ? ` ${kind}` : ""}`}
             onClick={() => tapPerson(id)}>
@@ -685,6 +716,9 @@ export default function WorldGame() {
             style={{ left: `${anchor.x}%`, top: `${anchor.y}%`, animationDelay: `${bi * 0.7}s` }}>{shorten(x.entry.text)}</span>;
         })}
       </div>
+      {/* 这一层的三刻：成交 / 回头客 / 比分翻面。只贴一个标签，钱数与件数归引擎那行流水，这里不重复报数。 */}
+      {topMoment && <p className={`world-moment wm-${topMoment.kind}`} role="status" aria-live="polite"
+        >{momentWord(topMoment.kind, topMoment.who ? nameOf(topMoment.who) : undefined)}</p>}
     </div>
 
     <section className="world-scene" aria-label="现场">
