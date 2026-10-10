@@ -276,8 +276,10 @@ test("回访卡整季封顶：第 1 天演过她，第 28 天不许再演第二�
  *  名单写死在这里：补人要在名单上选边，别让"这一批补了 11 张"被读成"20 条线都补了"。 */
 const LIFE_STEP1: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo",
   "zhao", "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie", "peilan", "liangxia"];
-const LIFE_STEP2: PersonId[] = ["shen", "anjie", "mei",
-  "xiaoyu", "zhou", "suman", "luyao", "miduo", "zhao", "tangke", "fangmin", "liangxia"];
+// 第 32 轮起两份名单等长（20 位两格梯子都有）。这里写第二份显式名单、不写 [...LIFE_STEP1]，
+// 是为了补人的时候必须在名单上选边；两边不等长时后面那句「梯子中间断了一格」会红。
+const LIFE_STEP2: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo",
+  "zhao", "yinxiaojie", "duan", "zhaoning", "tangke", "roman", "fangmin", "qiaowan", "songjie", "baijie", "peilan", "liangxia"];
 /** 这颗门认不认「她收在第 L 档」这一件事 —— 只判 arc:<id>:end 那一条，其余门留给运行时那遍。 */
 const endAdmits = (cond: Cond, id: PersonId, L: number): boolean => {
   if ("any" in cond) return cond.any.some(c => endAdmits(c, id, L));
@@ -448,8 +450,8 @@ test("往牌堆加一张晚季才开的卡，前四季抽到的卡逐位不动",
 
 test("连玩六副六季：第 5 季和第 6 季真演到「人生一步」（经验判据）", () => {
   // 这一条就是任务 26 的验收判据：第 29 轮之前量到第 5、6 季各抽到 15 次故事卡、新演 0 张。
-  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。第 30 轮补齐 20 位以后实测
-  // 6 副各是第 5 季 19~20 张一步（共 20 张）、第 6 季 3 张下一步（共 3 张），第 5 季一张「下一步」都不演；
+  // 走法照抄 slip-tape 那条（每格只 greet、可见格之间均匀随机取）。第 32 轮铺满两格以后实测
+  // 6 副各是第 5 季 19~20 张一步（共 20 张）、第 6 季 19~20 张下一步（共 20 张），第 5 季一张「下一步」都不演；
   // 跑 6 副是为了把整条规则测试的时间压住，阈值留出余量。
   let state = 1;
   const rand = () => { state = (state * 1103515245 + 12345) & 0x7fffffff; return state / 0x7fffffff; };
@@ -484,7 +486,7 @@ test("连玩六副六季：第 5 季和第 6 季真演到「人生一步」（�
     const step2 = six.filter(id => /^life2-/.test(id)).length;
     assert.equal(step2Early, 0, `副 ${i}：第 5 季就演到了「下一步」（${step2Early} 张）—— 梯子提前塌了一格`);
     assert.ok(step1 >= 16, `副 ${i}：第 5 季只演到 ${step1} 张「人生一步」（20 张里）—— 补齐名单以后第 5 季还是没新剧情`);
-    assert.ok(step2 >= 10, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（12 张里）—— 去年的那一步没接到今年`);
+    assert.ok(step2 >= 17, `副 ${i}：第 6 季只演到 ${step2} 张「下一步」（20 张里）—— 去年的那一步没接到今年`);
   }
 });
 

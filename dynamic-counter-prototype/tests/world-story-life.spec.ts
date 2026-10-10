@@ -248,8 +248,51 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       await page.getByRole("button", { name: "只跟她本人对，不带那两位" }).click();
       await expect(page.locator(".world-feed")).toContainText("唐可说行，那她自己这一支她自己掏");
       const q = await savedWorld(page);
-      expect(q.qualities["life:tangke"]).toBe(2);
+      expect(q.qualities["life:tangke"], "今年这一步走到 2").toBe(2);
       expect(q.qualities["life:tangke:how"]).toBe(2);
+    });
+
+    // ===== 第 32 轮那八位：梯子的两格在两处界面上都接得上 =====
+    test(`宋姐去年把柜上那一笔退了：今年「不替群里开单」那一格开着，另两档关着`, async ({ page }) => {
+      await enter(page, life2Fixture("songjie", "life2-songjie32", 3, 0), { id: "life2-songjie", binding: { a: "songjie" } });
+      await expect(storyText(page)).toContainText("宋姐把手机放在柜面上，屏幕朝上");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(page.getByRole("button", { name: "按她自己要的那一句开" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "群里的账她自己算" })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /不替群里开单/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("宋姐说她已经不替群里带了");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:songjie"]).toBe(2);
+      expect(q.qualities["life:songjie:how"]).toBe(3);
+    });
+
+    test(`赵宁去年是自己人：今年「让孩子自己问」那一格开着，落法照旧记成自己人`, async ({ page }) => {
+      await enter(page, life2Fixture("zhaoning", "life2-zhaoning32", 1, 10), { id: "life2-zhaoning", binding: { a: "zhaoning" } });
+      await expect(storyText(page)).toContainText("赵宁这次不是一个人");
+      await expect(page.getByRole("button", { name: "这一柜今天不接待两个人" })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: /让那孩子自己问/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("赵宁说她去年也是这样被人等着问完的");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:zhaoning"]).toBe(2);
+      expect(q.qualities["life:zhaoning:how"]).toBe(1);
+    });
+
+    test(`裴岚去年不替这面柜写下一季：那一格开着，这一步同样一分钱不给`, async ({ page }) => {
+      const w = life2Fixture("peilan", "life2-peilan32", 3, 0);
+      await enter(page, w, { id: "life2-peilan", binding: { a: "peilan" } });
+      await expect(storyText(page)).toContainText("裴岚上楼走的是正门");
+      await expect(page.getByRole("button", { name: /谁站柜谁签她那一页/ })).toHaveCount(0);
+      await expect(choices(page)).toHaveCount(2);
+      await page.getByRole("button", { name: /那一页留给她自己/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("裴岚说这一句去年她也听过一遍");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:peilan"]).toBe(2);
+      expect(q.qualities["life:peilan:how"]).toBe(3);
+      expect(q.money, "第 6 季剩下那八位也不给钱").toBe(w.money);
     });
   });
 }
