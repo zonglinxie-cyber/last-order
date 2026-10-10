@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
-  evalCond, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
+  evalCond, hasOpenedSale, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
   related, resolveServe, seasonSummary, serializeWorld, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, STAFF_COUNTER_MAX, WORLD_SAVE_VERSION, ZONE_GUEST_CAPACITY,
   ARC_CHAPTERS_PER_DAY, ENERGY_PER_DAY, ENERGY_PER_SLOT, energyCeiling,
@@ -288,6 +288,20 @@ test("卖货：判断对了入账记 honest-advice，推错的不强卖", () => 
   w = resolveServe(w, PEOPLE, "mei", "soft", 1);
   w = resolveServe(w, PEOPLE, "mei", "soft", 1);
   assert.equal(w.money, PRODUCTS.soft.price, "冷却期内不再开单");
+});
+
+test("第一单认 bought: 那一枚章：没开过单才算第一单，推错没成交不算开过", () => {
+  let w = stage(newWorld("t2", PEOPLE), ["mei"], "counter");
+  assert.equal(hasOpenedSale(w), false, "开局一个章都没有，才算第一单");
+  // 判断错了没买成 —— 钱没到账，她也不算你开过单，教学那句得继续留着
+  w = resolveServe(w, PEOPLE, "mei", "glow", 1);
+  assert.equal(w.money, 0);
+  assert.equal(hasOpenedSale(w), false, "她摇头那一单不该把教学收掉");
+  w = resolveServe(w, PEOPLE, "mei", "soft", 1);
+  assert.ok(w.money > 0);
+  assert.equal(hasOpenedSale(w), true, "成交那一刻要盖上 bought: 的章");
+  // 换季把账清零：下一季的第一单重新提一次口径（界面读的就是这个）
+  assert.equal(hasOpenedSale(nextSeason(w, PEOPLE)), false);
 });
 
 test("硬推：当场入账，但预约了两天后来退货", () => {

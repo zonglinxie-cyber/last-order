@@ -245,6 +245,11 @@ export const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
 export const isReturningGuest = (w: World, id: PersonId) =>
   qualityOf(w, `served:${id}`) > 0 || qualityOf(w, `bought:${id}`) > 0 || qualityOf(w, `wechat:${id}`) > 0;
 
+/** 这一季开过单没有：bought:<谁> 是成交那一刻盖的当天章（换季清零），一个都没有就是第一单。
+ *  新手那句教挑货的话只在这一单说（界面读它，别自己数钱）。 */
+export const hasOpenedSale = (w: World) =>
+  Object.entries(w.qualities).some(([key, value]) => key.startsWith("bought:") && value > 0);
+
 // —— 线索本 ——
 // 玩家手里"对得上号"的一条事实。引擎只认 id 和记下的那天，文案在内容侧 content/clues.ts。
 // 一条线什么时候算翻过来，也是内容用 quality「thread:<id>」钉的，引擎不猜。

@@ -333,6 +333,13 @@ export const momentWord = (kind: MomentKind, name?: string): string => {
   return kind === "lead" ? "超过对面了" : "被对面超过";
 };
 
+/** 挑货那一格还没点货时的占位句。第一单要把「对不上就开不出去」讲完 —— 这三句都是引擎真做得出来的事：
+ *  对不上的货 resolveServe 让她摇头不入账，硬推当天到账、过两天由 refund 预约退回来。
+ *  开过单之后只留一句口径，别每单都念一遍课文。 */
+export const servePickWord = (she: "她" | "他", firstSale: boolean): string => firstSale
+  ? `第一单：把上面${she}说过那句里的关键词，跟每支货底下那行小字对上 —— 对不上${she}摇头，钱到不了账。「硬推」是明知对不上还开：钱当天到手，过两天${she}退回来。`
+  : `先读上面${she}说过的那句，再对着每支货底下那行小字挑 —— 对症的常常不止一支，价签会替你砍件数`;
+
 /** 动作条空着时那一句 —— 只说真正的原因，不许「或者」把两条推给玩家自己猜。
  *  精力一个时段发一格（beginSlot 的 ENERGY_PER_SLOT），所以"没劲"的出路是翻时段，不是熬到明早。 */
 export const verbsEmptyWord = (person: Person, outOfEnergy: boolean, atRival: boolean): string =>

@@ -110,5 +110,36 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(text).toContain("劲用完了");
       expect(text).toContain("下一时段");
     });
+
+    // 任务 22 ②：第一单教挑货 —— 讲在 serve-note 那句占位话里，不开新的面板、不加进度条。
+    test("第一单的占位句把挑货讲完，且没把关单那颗挤出屏幕", async ({ page }) => {
+      await enter(page);
+      await page.getByRole("button", { name: /查看梅女士/ }).first().click();
+      await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+      const note = page.locator(".serve-note");
+      await expect(note).toContainText("第一单");
+      await expect(note).toContainText("小字");
+      await expect(note).toContainText("摇头");
+      await expect(note).toContainText("硬推");
+      await expect(note).toContainText("退回来");
+      // 课文再长也不许把关单那颗顶出可视区（这一屏的高度是量出来的，不是猜的）
+      const box = await page.locator(".serve-commit").boundingBox();
+      expect(box, "第一单那句把关单按钮顶没了").toBeTruthy();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(await inView(page) + 1);
+      const hit = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.className ?? "",
+        [Math.round(box!.x + box!.width / 2), Math.round(box!.y + box!.height / 2)]);
+      expect(hit).toBe("serve-commit");
+    });
+
+    test("开过单之后那句收回短版：课文不每单念一遍", async ({ page }) => {
+      await enter(page, { money: 1680, qualities: { "bought:zhou": 1 } });
+      await page.getByRole("button", { name: /查看梅女士/ }).first().click();
+      await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+      const note = page.locator(".serve-note");
+      await expect(note).toContainText("不止一支");
+      expect(await note.textContent()).not.toContain("第一单");
+      expect(await note.textContent()).not.toContain("摇头");
+    });
   });
 }

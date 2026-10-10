@@ -8,7 +8,7 @@ import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  drawStorylet, endDay, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, substitute,
+  drawStorylet, endDay, hasOpenedSale, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, substitute,
   verbOptions, energyCeiling, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
@@ -31,7 +31,7 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
+import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, servePickWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
 import { commitWorldProgress } from "../progress.ts";
@@ -749,7 +749,7 @@ export default function WorldGame() {
         {serveSaid?.hold && <p className="serve-hold">{serveSaid.hold}</p>}
         <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
         <div className="serve-products">{SHELF_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><b>{SHELF[pid].short}</b><small>{yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>)}</div>
-        <p className="serve-note">{serveProduct ? `${SHELF[serveProduct].note} · 这个价${ta(person)}最多带走 ${affordableUnits(person, serveProduct)} 件` : `先读上面${ta(person)}说过的那句，再对着每支货底下那行小字挑 —— 对症的常常不止一支，价签会替你砍件数`}</p>
+        <p className="serve-note">{serveProduct ? `${SHELF[serveProduct].note} · 这个价${ta(person)}最多带走 ${affordableUnits(person, serveProduct)} 件` : servePickWord(ta(person), !hasOpenedSale(world))}</p>
         <div className="serve-foot">
           <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
           <div className="serve-actions">

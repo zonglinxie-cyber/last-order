@@ -6,7 +6,7 @@ import { newWorld } from "../src/world/engine.ts";
 import type { World } from "../src/world/types.ts";
 import { byPriority, momentAnchor, momentSound, worldMoments } from "../src/world/ui/cues.ts";
 import {
-  ACT_WORD, guestKindWord, momentWord, newGuestWord, scoreBrief, scoreWord, verbsEmptyWord,
+  ACT_WORD, guestKindWord, momentWord, newGuestWord, scoreBrief, scoreWord, servePickWord, verbsEmptyWord,
 } from "../src/world/ui/words.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 
@@ -134,4 +134,24 @@ test("三刻的文案只贴标签：不许多报一个数字或 ¥", () => {
   const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
   assert.ok(ui.includes("momentWord"), "牌要念 words.ts 那一句");
   assert.equal(ui.includes("成交 ·"), false, "标签在 words.ts 一处写，界面不许再拼一份");
+});
+
+// —— 第一单教挑货（任务 22 ②）：占位句要讲完"对不上就开不出去"，之后每一单只留一句口径。
+test("挑货那句占位话：第一单把三件事讲完，开过单之后不重复念课文", () => {
+  const first = servePickWord("她", true);
+  assert.ok(first.startsWith("第一单"), "第一单要自己报家门：" + first);
+  // 三件事都得上桌：去哪儿对（她说过那句 × 每支货底下的小字）、对不上会怎样、硬推是什么
+  assert.ok(first.includes("关键词") && first.includes("小字"), first);
+  assert.ok(first.includes("摇头") && first.includes("钱到不了账"), "要说准对不上的下场：" + first);
+  assert.ok(first.includes("硬推") && first.includes("退回来"), "硬推那句是真的：当天到账、过两天退货：" + first);
+  const later = servePickWord("她", false);
+  assert.ok(!later.includes("硬推") && !later.includes("摇头"), "第二单起不再念课文：" + later);
+  assert.ok(later.includes("小字") && later.includes("不止一支"), later);
+  assert.notEqual(first, later, "两档说法必须不同，否则等于没教");
+  // 代词跟着人走：男顾客那句不能写死"她"
+  assert.ok(servePickWord("他", true).includes("他摇头") && !servePickWord("他", true).includes("她"));
+  // 这句只在 words.ts 写一次，界面读函数
+  const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
+  assert.ok(ui.includes("servePickWord"));
+  assert.equal(ui.includes("再对着每支货底下那行小字挑"), false, "占位句不许在 JSX 里再拼一份");
 });
