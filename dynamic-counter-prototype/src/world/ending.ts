@@ -2,7 +2,7 @@
 // 按目录顺序取第一张对得上的：越靠前越好。rank 就是这个顺序，数字越小越好，两两不同 ——
 // 好坏由下标推出来，不写在每张上：手写 rank 在插一张卡时必然漏改后面每一位，而漏改是静默的。
 import { seasonSummary, type SeasonSummary } from "./engine.ts";
-import { MAINLINE_ACT_KEY, MAINLINE_THREAD, threadLanding } from "./content/clues.ts";
+import { MAINLINE_ACT_KEY, MAINLINE_THREAD, threadLandedSeason, threadLanding } from "./content/clues.ts";
 import type { Person, PersonId, World } from "./types.ts";
 
 export type SeasonEnding = { id: string; title: string; body: string };
@@ -10,37 +10,39 @@ export type SeasonEnding = { id: string; title: string; body: string };
 const endOf = (s: SeasonSummary, id: PersonId) => s.arcs[id]?.end ?? 0;
 const has = (ids: PersonId[], id: PersonId) => ids.includes(id);
 
-/** 主线走到第几幕、那条退货单落到哪一档。只有最前面那四句读它们，其余各句读不到。 */
-type Mainline = { act: number; landing: number };
+/** 主线走到第几幕、那条退货单落到哪一档、以及这一季是不是它落地的那一季。
+ *  只有最前面那四句读它们，其余各句读不到。 */
+type Mainline = { act: number; landing: number; landedThisSeason: boolean };
 
 type Gate = (s: SeasonSummary & Mainline) => boolean;
 
 const CATALOG: Array<SeasonEnding & { when: Gate }> = [
-  // —— 主线第 4 幕那四句：门槛一律带 act >= 4，所以没跑完四季的人在下面那十三句里落，
-  //    跑完的人才在这四句里落。落点代号见 storylets-mainline.ts 第 4 幕那三张（12~17）。
+  // —— 主线第 4 幕那四句：门槛一律带 act >= 4 且 landedThisSeason，所以没跑完四季的人在下面那十三句里落，
+  //    跑完的也只在那张退货单落地的那一季落一次 —— 往后的季这一句已经说完，回到下面那十三句。
+  //    落点代号见 storylets-mainline.ts 第 4 幕那三张（12~17）。
   {
     id: "page-carried",
     title: "这一页有人认",
     body: "第四页那一栏写的是你自己的号，裴岚把那一页留在柜上、只收走其余三张。四季里每季都要长出来的那个名字，今年有人认，不用再按住第五季。",
-    when: s => s.act >= 4 && s.landing === 12 && endOf(s, "peilan") === 1 && s.compliance >= 45,
+    when: s => s.act >= 4 && s.landedThisSeason && s.landing === 12 && endOf(s, "peilan") === 1 && s.compliance >= 45,
   },
   {
     id: "row-is-yours",
     title: "那一栏写的是你",
     body: "你把名字写在别人退的那一单上。台账核对那一栏第一次不用别人替你签 —— 柜位跟着少一笔，少的这一笔你自己念得出来。",
-    when: s => s.act >= 4 && s.landing === 12 && s.compliance >= 50 && s.standing >= 45,
+    when: s => s.act >= 4 && s.landedThisSeason && s.landing === 12 && s.compliance >= 50 && s.standing >= 45,
   },
   {
     id: "row-in-total",
     title: "这一行走进总表",
     body: "那一行不再是柜上按不按住的事。裴岚写上去的是她自己的工号，从此它是一张要追的表，追的人每季都上楼。",
-    when: s => s.act >= 4 && s.landing === 14 && s.compliance >= 40,
+    when: s => s.act >= 4 && s.landedThisSeason && s.landing === 14 && s.compliance >= 40,
   },
   {
     id: "row-still-open",
     title: "那一栏今年还是空的",
     body: "四季的故事说完了，那一栏却没写你的名字 —— 交给下一任、把那一页摘下来、散场前由别人填掉，都是这一句。明年这时候它照样空着。",
-    when: s => s.act >= 4
+    when: s => s.act >= 4 && s.landedThisSeason
       && (s.landing === 13 || s.landing === 15 || s.landing === 16 || s.landing === 17)
       && s.compliance >= 25 && s.standing >= 30,
   },
@@ -148,10 +150,15 @@ export function rank(id: string): number {
 }
 
 export function seasonEnding(world: World, people: Person[]): SeasonEnding {
+  // 主线那一句只在落点变动的那一季说（记号由 setQuality 在写落点那一刻钉上）。
+  // 这一季之后它已经说完，判词让给人物层那十三句 —— 不挡的话，四季跑完以后
+  // 每季都原样重念同一句，人物层整季露不出来（第 27 轮 8 副牌 × 6 季量到的那一处）。
+  // 落点有值却没有记号 = 这份盘是加记号之前存的档：宁可不念，也不猜它落在哪一季。
   const s: SeasonSummary & Mainline = {
     ...seasonSummary(world, people),
     act: world.qualities[MAINLINE_ACT_KEY] ?? 0,
     landing: threadLanding(world.qualities, MAINLINE_THREAD),
+    landedThisSeason: threadLandedSeason(world.qualities, MAINLINE_THREAD) === world.season,
   };
   const hit = CATALOG.find(e => e.when(s)) ?? CATALOG[CATALOG.length - 1];
   return { id: hit.id, title: hit.title, body: hit.body };

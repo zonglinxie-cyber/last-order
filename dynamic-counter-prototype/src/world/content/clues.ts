@@ -5,7 +5,7 @@
 // 一条线什么时候算翻过来，由内容用 quality「thread:<id>」钉：0 是没弄清，≥1 是落点。
 // 幕号用 quality「mainline:act」：开局卡把它抬到 1，翻面卡抬到 2，下一幕的卡只在 2 才合法。
 // 这样主线不会一次烧完：上一幕没走完，下一幕的卡根本不出现在牌堆里。
-import type { PersonId } from "../types.ts";
+import { THREAD_LANDED_SUFFIX, type PersonId } from "../types.ts";
 
 export const MAINLINE_ACT_KEY = "mainline:act";
 export const threadKey = (id: string) => `thread:${id}`;
@@ -94,6 +94,10 @@ export const clueOf = (id: string): Clue | undefined => CLUES.find(c => c.id ===
 export const threadOf = (id: string): ClueThread | undefined => CLUE_THREADS.find(t => t.id === id);
 /** 这条线的落点：0 = 还没弄清。 */
 export const threadLanding = (qualities: Record<string, number>, id: string): number => qualities[threadKey(id)] ?? 0;
+/** 这条线什么时候落的地：写落点那一刻由引擎钉上的季号（engine.ts 的 setQuality）。
+ *  0 = 没有记号 —— 或者是加记号之前存的档，或者是这条线还没落过地。 */
+export const threadLandedSeason = (qualities: Record<string, number>, id: string): number =>
+  qualities[`${threadKey(id)}${THREAD_LANDED_SUFFIX}`] ?? 0;
 /** 本子上有没有这一条（给界面和体检用，规则判定走引擎 hasClue）。 */
 export const isClueId = (id: string) => CLUE_IDS.has(id);
 export const isThreadId = (id: string) => THREAD_IDS.has(id);

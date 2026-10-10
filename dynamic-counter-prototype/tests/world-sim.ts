@@ -477,6 +477,25 @@ for (const style of STYLES) {
   console.log(`  ${style.padEnd(8)} ${line}`);
 }
 
+/** 主线那四句的 id：认的是它们的门槛读 s.act。改哪一句要同步这里（表只数命中，不参与判定）。 */
+const MAINLINE_ENDINGS = new Set(["page-carried", "row-is-yours", "row-in-total", "row-still-open"]);
+// 结局层逐季：同一句判词在哪几季被念到。主线那四句只该在退货单落地的那一季念一次，
+// 往后的季还念它，人物层那十三句就被盖住（第 27 轮 8 副牌 × 6 季量到：第 5、6 季三个人物结局 0/32）。
+// 纯读结果，不碰世界也不碰抽数。
+console.log("\n结局层逐季命中（每格 = 四风格 × 这些副牌里落到这一句的牌数；* = 主线那四句）:");
+{
+  const bySeason = [{ season: 1, rs: results }, ...later.map(l => ({ season: l.season, rs: l.results }))];
+  const ids = [...new Set(bySeason.flatMap(b => b.rs.map(r => r.ending)))].sort((a, b) => rank(a) - rank(b));
+  console.log(`  ${"判词".padEnd(20)}${bySeason.map(b => `第${b.season}季`.padStart(7)).join("")}   合计`);
+  for (const id of ids) {
+    const cells = bySeason.map(b => b.rs.filter(r => r.ending === id).length);
+    const label = MAINLINE_ENDINGS.has(id) ? `${id}*` : id;
+    console.log(`  ${label.padEnd(20)}${cells.map(c => String(c).padStart(7)).join("")}   ${String(cells.reduce((a, c) => a + c, 0)).padStart(5)}`);
+  }
+  const kinds = bySeason.map(b => new Set(b.rs.map(r => r.ending)).size);
+  console.log(`  ${"这一季出现过的不同判词".padEnd(18)}${kinds.map(c => String(c).padStart(7)).join("")}`);
+}
+
 /** 落点分布从读数里现推，不写死 1~4：梁夏那条有六档，第 5、6 档以前折在表外，只能拿 160 去减。 */
 const endTally = (rows: Result[], id: string): string => {
   const seen = [...new Set(rows.map(r => r.arcs[id]?.end ?? 0))].filter(n => n >= 1).sort((a, b) => a - b);

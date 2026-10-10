@@ -15,7 +15,7 @@ import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
   Storylet, Verb, Visits, World, WorldRequest, Zone,
 } from "./types.ts";
-import { PLAYER, SEASON_DAYS } from "./types.ts";
+import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
@@ -233,8 +233,17 @@ export const remember = (w: World, holder: PersonId, act: string, valence: Memor
 export const say = (w: World, text: string, who?: PersonId[]): World =>
   ({ ...w, log: [...w.log, { day: w.day, slot: w.slot, text, ...(who?.length ? { who } : {}) }] });
 
-export const setQuality = (w: World, key: string, value: number): World =>
-  ({ ...w, qualities: { ...w.qualities, [key]: value } });
+/** 写一格进度：换季、剧情效果、引擎自己盖的章都只走这一个入口。
+ *  一处例外要在这里说明：落点（thread:<id>）的值每变一次，顺手把「这一季变的」钉进
+ *  <落点键>:landed —— 落点本身只说落到哪一档，结局那一层要认的是它落在第几季。
+ *  引擎仍只认前缀和后缀：哪条线有落点、哪一档算弄清，归 content/clues.ts。 */
+export const setQuality = (w: World, key: string, value: number): World => {
+  const qualities = { ...w.qualities, [key]: value };
+  if (key.startsWith("thread:") && !key.endsWith(THREAD_LANDED_SUFFIX)
+    && value >= 1 && value !== (w.qualities[key] ?? 0))
+    qualities[`${key}${THREAD_LANDED_SUFFIX}`] = w.season;
+  return { ...w, qualities };
+};
 
 export const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
 
@@ -1232,7 +1241,8 @@ export function endDay(world: World, people: Person[]): World {
  * 按天算的（away:/bought:/handoff-sale:/standing:social-day）、按季计的（served:、
  * storyteller:heat）都清零 —— 天数回到 1，那些数再留着会骗过当天的判断。
  * 线索、落点和幕号跨季不清：这一季埋下的那条，下一季才翻得过来，
- * 而主线不能每开一季就从第一幕重讲一遍。 */
+ * 而主线不能每开一季就从第一幕重讲一遍。落地那一季的记号（thread:<id>:landed）也一起带走：
+ * 它说的是这句话在哪一季说完的，换季不该把它换成新的季号。 */
 const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 

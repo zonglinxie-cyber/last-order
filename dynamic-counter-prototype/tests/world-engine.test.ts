@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
   evalCond, hasOpenedSale, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
-  related, resolveServe, seasonSummary, serializeWorld, verbOptions,
+  related, resolveServe, seasonSummary, serializeWorld, setQuality, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, STAFF_COUNTER_MAX, WORLD_SAVE_VERSION, ZONE_GUEST_CAPACITY,
   ARC_CHAPTERS_PER_DAY, ENERGY_PER_DAY, ENERGY_PER_SLOT, energyCeiling,
 } from "../src/world/engine.ts";
@@ -458,6 +458,42 @@ test("存档：旧档没有 season 按第 1 季读，乱写拒收", () => {
   const badScore = JSON.parse(serializeWorld(w));
   badScore.world.rivalMoney = "很多";
   assert.equal(parseWorld(JSON.stringify(badScore)), null, "rivalMoney 不是数就整份拒收");
+});
+
+// 落点（thread:<id>）只说落到哪一档，不说落在哪一季。结局那一层要认「落地的那一季」，
+// 所以写落点的那一刻顺手把季号钉进同一个前缀下的记号里。记在 setQuality 这一处，因为它是
+// quality 唯一的写入入口（剧情效果和引擎自己盖的章都走它），换季只负责把记号原样带走。
+test("写落点：值一变就把季号钉进记号，换季带着走不覆盖", () => {
+  const w4 = { ...newWorld("land-season", PEOPLE), season: 4 };
+
+  // 第 1 季就把线弄清（落点 1~11 也是落点）：记号认的是落点变动那一季。
+  assert.equal(setQuality({ ...w4, season: 1 }, "thread:return-slip", 1).qualities["thread:return-slip:landed"], 1);
+
+  // 第 4 幕收尾那三张把落点抬到 12~17：这一季就是它落地的那一季。
+  const landed = setQuality(setQuality(w4, "mainline:act", 4), "thread:return-slip", 12);
+  assert.equal(landed.qualities["thread:return-slip"], 12);
+  assert.equal(landed.qualities["thread:return-slip:landed"], 4);
+
+  // 原值重写不动记号：门槛一直成立的卡不该把已经说完的话挪到新的一季。
+  assert.equal(setQuality(landed, "thread:return-slip", 12).qualities["thread:return-slip:landed"], 4);
+  assert.equal(setQuality({ ...landed, season: 5 }, "thread:return-slip", 12).qualities["thread:return-slip:landed"], 4,
+    "换到第 5 季再写同一档，落地季号不该跟着挪");
+
+  // 0 不是落点：还没弄清，不该有「哪一季弄清」。
+  const cleared = setQuality({ ...w4, qualities: {} }, "thread:return-slip", 0);
+  assert.ok(!("thread:return-slip:landed" in cleared.qualities), "还没弄清不该有落地季号");
+
+  // 往回抹也不钉：已经落过的线被一张卡收回 0，那一季不是落地那一季。
+  assert.equal(setQuality({ ...landed, season: 5 }, "thread:return-slip", 0).qualities["thread:return-slip:landed"], 4,
+    "把落点收回 0，不许说成第 5 季才落地");
+
+  // 换季带着走，且不换成新的季号：这句话在哪一季说完的，不能过一季就变。
+  const next = nextSeason(landed, PEOPLE);
+  assert.equal(next.season, 5);
+  assert.equal(next.qualities["thread:return-slip:landed"], 4, "记号跟着 thread: 前缀过季，季号不改");
+
+  // 引擎只认前缀和后缀，不认是哪条线：内容新加一条线，记号自己跟上。
+  assert.equal(setQuality(w4, "thread:wedding-list", 1).qualities["thread:wedding-list:landed"], 4);
 });
 
 test("换季：看法往 0 收一半，关系网原样带走，只留大事", () => {

@@ -145,6 +145,13 @@ export type WorldRequest = {
   reward: string;
 };
 
+/** quality 键的一个写法契约，放在数据契约这一层是因为引擎和内容两侧都要用它：
+ *  「这条线落在第几季」= 落点键（thread:<id>）+ 这个后缀，值 = 落点最后变动的那一季。
+ *  落点本身只说落到哪一档，不说落在哪一季。记号由写落点那一刻钉上（engine.ts 的 setQuality），
+ *  换季原样带走。哪条线有落点、哪一档算弄清，仍归内容（content/clues.ts）——
+ *  引擎只认这个前缀和后缀。 */
+export const THREAD_LANDED_SUFFIX = ":landed";
+
 export type World = {
   seed: string;
   /** 第几季：从 1 起，nextSeason +1。旧存档缺这个字段按 1 读。 */
