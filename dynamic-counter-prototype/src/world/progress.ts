@@ -3,6 +3,7 @@
 // localStorage 读写只放在最下面两个浏览器侧包装里；坏数据整份丢弃，不做半份图鉴。
 // 规则口径见 docs/人情场设计.md；读的是 engine 写进 World 的 quality 旗，不改引擎。
 import { ENDINGS } from "./ending.ts";
+import { HEAT_MAX } from "./heat.ts";
 import { CLUE_PREFIX } from "./engine.ts";
 import { CLUE_THREADS, PEOPLE, isClueId, isThreadId, threadKey } from "./content/index.ts";
 import type { PersonId, Storylet, World } from "./types.ts";
@@ -57,10 +58,12 @@ export type WorldProgress = {
   threadEnds: Record<string, number[]>;
   /** 拿到的结局 id（seasonEnding 的 id） */
   endings: string[];
+  /** 每个结局拿到过的**最高**规矩条数（自选加难：勾 0~5 条）。只升不降；旧档案缺这个键按空读。 */
+  endingsAtHeat: Record<string, number>;
 };
 
 export const emptyWorldProgress = (): WorldProgress =>
-  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [] });
+  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {} });
 
 const clampOpinion = (v: number): number => Math.max(-100, Math.min(100, v));
 
@@ -98,6 +101,13 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     ? [...progress.endings, endingId]
     : [...progress.endings];
 
+  // 章按"最难那一次"盖：同一句判词在勾了 3 条的档上拿到过，以后哪怕勾 0 条再拿到，章仍是 3。
+  const endingsAtHeat = { ...progress.endingsAtHeat };
+  if (endingId && ENDING_IDS.has(endingId)) {
+    const level = world.heat?.length ?? 0;
+    if (level > (endingsAtHeat[endingId] ?? -1)) endingsAtHeat[endingId] = level;
+  }
+
   const clues = new Set(progress.clues);
   for (const key of Object.keys(world.qualities)) {
     if (!key.startsWith(CLUE_PREFIX)) continue;
@@ -122,6 +132,7 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     clues: [...clues],
     threadEnds,
     endings,
+    endingsAtHeat,
   };
 }
 
@@ -163,6 +174,13 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
   }
   if (!Array.isArray(parsed.endings) || !parsed.endings.every(isStr) || new Set(parsed.endings).size !== parsed.endings.length) return null;
   if (!parsed.endings.every(id => ENDING_IDS.has(id))) return null;
+  // 旧档案（这一刀之前存的）没有这一格：缺键按空读，有键就逐个验 —— 章只认得目录里的结局，条数不许超过规矩表。
+  if (parsed.endingsAtHeat !== undefined) {
+    if (!isRecord(parsed.endingsAtHeat)) return null;
+    for (const [id, level] of Object.entries(parsed.endingsAtHeat)) {
+      if (!ENDING_IDS.has(id) || !Number.isInteger(level) || (level as number) < 0 || (level as number) > HEAT_MAX) return null;
+    }
+  }
 
   const best = parsed.bestOpinion as Record<PersonId, number>;
   const worst = parsed.worstOpinion as Record<PersonId, number>;
@@ -180,6 +198,7 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     clues: [...parsed.clues as string[]],
     threadEnds: Object.fromEntries(Object.entries(parsed.threadEnds).map(([id, list]) => [id, [...list as number[]]])),
     endings: [...parsed.endings as string[]],
+    endingsAtHeat: { ...(parsed.endingsAtHeat as Record<string, number> ?? {}) },
   };
 }
 

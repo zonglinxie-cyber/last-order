@@ -13,6 +13,7 @@ import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
 import { ARC_PEOPLE, threadLandings } from "../src/world/progress.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
+import { HEAT_IDS, HEAT_MAX, HEAT_RULES } from "../src/world/heat.ts";
 import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestChoice, soldUnitsKey } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
 import { SHELF_IDS } from "../src/world/shelf.ts";
@@ -434,6 +435,24 @@ console.log("\n比分（第 1 季，我 vs 对面维珞）:");
     const n = (f: (r: Result) => boolean) => rs.filter(f).length;
     console.log(`  ${style.padEnd(8)} 对面 ${dist(rs.map(r => r.rival))} · 成交 ${dist(rs.map(r => r.rivalWins))} 单`
       + ` · 领先 ${n(r => r.money > r.rival)}/打平 ${n(r => r.money === r.rival)}/落后 ${n(r => r.money < r.rival)}`);
+  }
+}
+
+// 自选加难：同一批种子按"勾前 N 条"各跑 honest 一季，看比分压力是不是真的一条比一条重。
+// 只看 honest 是因为这条要回答的是"会不会玩"，不是"哪种手法占便宜"；那张表在下面按四种风格给。
+// 5 条全开允许几乎赢不了 —— 但"几乎"不等于"永远"，所以这里也数领先那格，0 领先就是要改数值。
+console.log("\n自选加难各档（honest × " + N + " 副 × 1 季，勾法按 heat.ts 那张表的顺序）:");
+{
+  const word = (level: number): string => HEAT_IDS.slice(0, level).map(h => HEAT_RULES.find(r => r.id === h)!.word).join("、") || "平时的柜上";
+  for (let level = 0; level <= HEAT_MAX; level++) {
+    let ahead = 0, tie = 0, behind = 0, rivalWins = 0;
+    for (let i = 0; i < N; i++) {
+      const seed = `heat-${level}-${i}`;
+      const w = playSeason("honest", newWorld(seed, people, HEAT_IDS.slice(0, level)), people, storylets, festivalsFor(1), 1, burnOf("honest", seed));
+      if (w.money > w.rivalMoney) ahead++; else if (w.money === w.rivalMoney) tie++; else behind++;
+      rivalWins += w.rivalWins;
+    }
+    console.log(`  勾 ${level} 条（${word(level)}）  领先 ${ahead} / 打平 ${tie} / 落后 ${behind} · 对面成交中位 ${(rivalWins / N).toFixed(1)} 单`);
   }
 }
 

@@ -95,9 +95,18 @@ const reachableNow = (w: World, id: PersonId) => id in w.present && w.present[id
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+/** 「罗曼多要一件」（自选加难 heat.ts）：整把阶梯上移一格 —— 季初就要 3 件，第 15 天起要 4 件。
+ *  只在勾了那条规矩的那一季生效，没勾时 shift 是 0，每个数与以前逐字节相同。 */
+const quotaShift = (w: World): number => (w.heat?.includes("roman-tough") ? 1 : 0);
+
 /** 罗曼今天要几件：季初下限件数起步，每 STEP_DAYS 天加一件，到 TOP 封顶。跟历史业绩无关。 */
-const quotaTarget = (w: World): number =>
-  Math.min(QUOTA_TOP, QUOTA_MIN + Math.floor((w.day - 1) / QUOTA_STEP_DAYS));
+const quotaTarget = (w: World): number => {
+  const shift = quotaShift(w);
+  return Math.min(QUOTA_TOP + shift, QUOTA_MIN + shift + Math.floor((w.day - 1) / QUOTA_STEP_DAYS));
+};
+
+/** 给规则测试与模拟器用的出口：同一副盘（含 heat）今天该要几件。 */
+export const quotaTargetOf = quotaTarget;
 
 const TEMPLATES: Template[] = [
   {
@@ -109,7 +118,7 @@ const TEMPLATES: Template[] = [
         by: "roman", kind: "quota", n,
         text: `今天卖出 ${n} 件`,
         reward: `做到柜位 +${QUOTA_STANDING}，差一件也算失约，柜位 ${QUOTA_MISS_STANDING}`,
-        log: n > QUOTA_MIN
+        log: n > QUOTA_MIN + quotaShift(w)
           ? `早会罗曼把单子往上拧了一格：今天卖出 ${n} 件。`
           : `早会罗曼点了你的名：今天卖出 ${n} 件。`,
       }];

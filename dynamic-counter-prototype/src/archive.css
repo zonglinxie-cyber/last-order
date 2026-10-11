@@ -32,6 +32,7 @@
 .ending-row { padding:13px 14px; border:1px solid #f0cf9122; border-radius:16px; background:linear-gradient(145deg,rgba(32,17,18,.9),rgba(16,9,9,.96)); }
 .ending-row b { display:block; color:#ffedca; font:700 15px 'Noto Serif SC'; letter-spacing:.04em; }
 .ending-row.locked b { color:#6d5b50; letter-spacing:.2em; }
+.ending-heat { display:inline-block; margin:0 0 0 8px; padding:2px 8px; border:1px solid #ffedca55; border-radius:999px; color:#ffedca; font-size:12px; font-weight:400; letter-spacing:.02em; vertical-align:2px; }
 .ending-row p { margin:6px 0 0; color:#bba89b; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
 /* 封面与结局屏上那颗「档案」：次级动作，压过 .text-action 的 32px，够手指。 */
 .archive-entry { display:block; width:100%; min-height:44px; margin-top:7px; padding:9px 12px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#d9bd97; font:600 13px 'Noto Serif SC'; }

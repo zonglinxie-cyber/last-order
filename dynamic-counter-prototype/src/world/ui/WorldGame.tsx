@@ -34,6 +34,7 @@ import {
 import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, servePickWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
+import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
 
@@ -63,6 +64,40 @@ type DayReport = {
   tomorrow: Array<{ name: string; slot: Slot }>;
   week: boolean;
 };
+/** 「自选加难」的勾选：存在自己的钥匙里（与 COACH_KEY 同类），刷新与重开一季都记得。
+ *  真正生效的是 World.heat —— 这里只记"下一季想勾哪几条"。 */
+const HEAT_PICK_KEY = "last-order-world-heat-v1";
+const readHeatPick = (): HeatId[] => {
+  try {
+    const raw = window.localStorage.getItem(HEAT_PICK_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.every(isHeatId) ? [...new Set(parsed)] : [];
+  } catch { return []; }
+};
+const writeHeatPick = (heat: HeatId[]): void => {
+  try { window.localStorage.setItem(HEAT_PICK_KEY, JSON.stringify(heat)); } catch { /* 存不进就算，勾着玩这一季 */ }
+};
+
+/** 开季前那排勾选。aria-pressed 的按压式开关（与静音那颗同一形状），选中那条的说明念在下面。 */
+function HeatPicker({ heat, onChange }: { heat: HeatId[]; onChange: (next: HeatId[]) => void }) {
+  const toggle = (id: HeatId) => {
+    const next = heat.includes(id) ? heat.filter(x => x !== id) : [...heat, id];
+    writeHeatPick(next);
+    onChange(next);
+  };
+  return <div className="world-heat" role="group" aria-label="自选加难">
+    <p className="world-heat-title">要给自己加点难度吗（勾 {heat.length} / {HEAT_MAX} 条）</p>
+    <div className="world-heat-chips">
+      {HEAT_RULES.map(rule => <button key={rule.id} type="button" className="world-heat-chip"
+        aria-pressed={heat.includes(rule.id)} onClick={() => toggle(rule.id)}>{rule.word}</button>)}
+    </div>
+    {heat.length === 0
+      ? <p className="world-heat-note">一条都不勾，就是平时的柜上。</p>
+      : <ul className="world-heat-note">{HEAT_RULES.filter(r => heat.includes(r.id)).map(r => <li key={r.id}>{r.word}：{r.note}</li>)}</ul>}
+  </div>;
+}
+
 type UiState = {
   screen?: "play" | "report" | "season";
   pending?: { id: string; binding: Record<string, PersonId> };
@@ -260,6 +295,8 @@ export default function WorldGame() {
   const [result, setResult] = useState<string | null>(null);
   const [muted, setMuted] = useState(sfxMuted());
   const [reqSeenDay, setReqSeenDay] = useState(boot?.ui.reqSeen ?? 0);
+  // 勾着开下一季：读盘里已经生效的那几条（继续玩时），没档就读上次勾选的。
+  const [heat, setHeat] = useState<HeatId[]>(() => boot ? [...boot.world.heat ?? []] : readHeatPick());
   const [reqPanelOpen, setReqPanelOpen] = useState(false);
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
@@ -357,7 +394,8 @@ export default function WorldGame() {
 
   // —— 开局 / 继续 ——
   const startNew = () => {
-    const fresh = newWorld(`world-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`, PEOPLE);
+    const fresh = newWorld(`world-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`, PEOPLE, heat);
+    writeHeatPick(heat);
     const base: DayBase = { day: fresh.day, money: fresh.money, opinion: { ...fresh.opinion } };
     setDayBase(base);
     const { world: w, drawn } = runPipeline(fresh);
@@ -413,7 +451,7 @@ export default function WorldGame() {
   };
   // 季末「进入第 N+1 季」：人和关系网带过去，天数回到 1，从开季那个上午接着玩。
   const startNextSeason = () => {
-    const next = nextSeason(world, PEOPLE);
+    const next = nextSeason(world, PEOPLE, heat);
     setDayBase({ day: next.day, money: next.money, opinion: { ...next.opinion } });
     const { world: w, drawn } = runPipeline(next);
     prevWorld.current = w;
@@ -515,6 +553,7 @@ export default function WorldGame() {
           {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
         </button>
         {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}
+        <HeatPicker heat={heat} onChange={setHeat} />
         <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
       </section>
       {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
@@ -620,6 +659,7 @@ export default function WorldGame() {
       </main></MobileScroll>
       <div className="report-foot recap-foot">
         <button className="world-primary" type="button" onClick={startNextSeason}>进入第 {world.season + 1} 季</button>
+        <HeatPicker heat={heat} onChange={setHeat} />
         <div className="recap-foot-row">
           <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
           <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>

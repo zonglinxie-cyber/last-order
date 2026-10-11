@@ -2,6 +2,7 @@
 // 引擎（engine.ts）只读这里的类型；人物与故事碎片（content/）只写成这里的数据。
 // 卖货的判断复用 campaign.ts 的 Demand / ProductId / fitScore，不另起一套。
 import type { Demand, Trait } from "../campaign.ts";
+import type { HeatId } from "./heat.ts";
 
 export type PersonId = string;
 /** 玩家自己在关系网上的节点 id。 */
@@ -194,6 +195,9 @@ export type World = {
   requests: WorldRequest[];
   /** 故事碎片的使用记录：id -> 最近一次触发的天 */
   fired: Record<string, number>;
+  /** 「自选加难」：开这一季时勾了哪几条规矩（见 heat.ts）。跨季带着走（下一季沿用，除非在季末那屏改），
+   *  引擎与委托读它现推旋钮 —— 空数组与"这一刀以前的每一版"数值完全相同。旧存档缺字段按空读。 */
+  heat?: HeatId[];
   log: LogEntry[];
 };
 

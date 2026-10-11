@@ -10,6 +10,7 @@ import {
   fitOfPerson, type ShelfId,
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
+import { isHeatId, type HeatId } from "./heat.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
@@ -277,15 +278,37 @@ export const clueIds = (w: World): string[] =>
     .sort((a, b) => a[1] - b[1])
     .map(([key]) => key.slice(CLUE_PREFIX.length));
 
-export function newWorld(seed: string, _people: Person[]): World {
+/** —— 自选加难（表在 heat.ts）—— 每颗旋钮都是"现有常量 + 这一季勾的规矩"。
+ *  一条都不勾（`heat` 为空或旧存档缺字段）时，下面每一个函数返回的就是以前那个数：
+ *  这条不变量由 tests/world-heat.test.ts 钉着，改任何一颗旋钮都要同时改它。 */
+export const COMPLIANCE_COLD_START = 40;
+export const POACH_CHANCE_HEATED = 0.55;
+/** 「陆遥更狠」为什么是 +0.15 而不是 +0.25：`tests/world-sim.ts 20 1` 那张「自选加难各档」量过 ——
+ *  0.65 时勾到第三条（含这条）honest 20 副 **一次都没赢**（领先 0 / 落后 20，对面中位 61 单），
+ *  而验收要的是"每一档领先率 > 0，5 条全开允许几乎赢不了"。0.55 那一档还留得下一线赢面。 */
+const heated = (heat: readonly HeatId[] | undefined, id: HeatId): boolean => heat !== undefined && heat.includes(id);
+/** 起手与换季那一次发几张小样。 */
+export const startSamplesOf = (heat?: readonly HeatId[]): number => heated(heat, "thin-samples") ? START_SAMPLES / 2 : START_SAMPLES;
+/** 每晚品牌补几支。 */
+export const nightlySamplesOf = (heat?: readonly HeatId[]): number => heated(heat, "thin-samples") ? SAMPLES_PER_NIGHT / 2 : SAMPLES_PER_NIGHT;
+/** 开局与换季往回折的那条基线台账。 */
+export const startComplianceOf = (heat?: readonly HeatId[]): number => heated(heat, "cold-ledger") ? COMPLIANCE_COLD_START : START_COMPLIANCE;
+/** 陆遥请走漏掉那一位的概率。 */
+export const poachChanceOf = (heat?: readonly HeatId[]): number => heated(heat, "luyao-hungry") ? POACH_CHANCE_HEATED : POACH_CHANCE;
+/** 柜上放不放「加微信」那一下。 */
+export const wechatAllowed = (heat?: readonly HeatId[]): boolean => !heated(heat, "no-wechat");
+
+export function newWorld(seed: string, _people: Person[], heat: readonly HeatId[] = []): World {
+  const compliance = startComplianceOf(heat);
   return {
     seed, season: 1, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
-    standing: START_STANDING, compliance: START_COMPLIANCE,
-    energy: 0, samples: START_SAMPLES,
+    standing: START_STANDING, compliance,
+    energy: 0, samples: startSamplesOf(heat),
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
     present: {}, touched: [], rngCalls: 0, appointments: [], requests: [], fired: {}, log: [],
     opinionAtSeasonStart: {},
-    statsAtSeasonStart: { standing: START_STANDING, compliance: START_COMPLIANCE },
+    statsAtSeasonStart: { standing: START_STANDING, compliance },
+    heat: [...heat],
   };
 }
 
@@ -637,7 +660,7 @@ export function ambient(world: World, people: Person[]): World {
       const mark = marks.reduce((lo, p) => (opinionOf(w, p.id) < opinionOf(w, lo.id) ? p : lo));
       if (opinionOf(w, mark.id) < POACH_MAX_OPINION) {
         let r: number; [r, w] = roll(w);
-        if (r < POACH_CHANCE) {
+        if (r < poachChanceOf(w.heat)) {
           w = { ...w, present: { ...w.present, [mark.id]: "rival" } };
           w = addOpinion(w, mark.id, POACH_OPINION);
           w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
@@ -865,7 +888,7 @@ export function availableVerbs(world: World, people: Person[], targets: PersonId
     if (ok("greet")) out.push("greet");
     if (ok("sample") && world.samples > 0) out.push("sample");
     if (ok("serve") && a.skin && world.compliance > SERVE_STAT_FLOOR && world.standing > SERVE_STAT_FLOOR) out.push("serve");
-    if (ok("wechat") && opinionOf(world, a.id) >= WECHAT_MIN_OPINION && !qualityOf(world, `wechat:${a.id}`)) out.push("wechat");
+    if (ok("wechat") && wechatAllowed(world.heat) && opinionOf(world, a.id) >= WECHAT_MIN_OPINION && !qualityOf(world, `wechat:${a.id}`)) out.push("wechat");
   }
   if (a.role === "staff" && isPresent(world, a.id)) {
     if (ok("help")) out.push("help");
@@ -1247,7 +1270,7 @@ export function endDay(world: World, people: Person[]): World {
   w = { ...w,
     // 过夜不回满：一天的劲改成四个时段各发一格（见 beginSlot），这里只把昨天没花完的清掉。
     energy: 0,
-    samples: Math.min(SAMPLES_MAX, w.samples + SAMPLES_PER_NIGHT),
+    samples: Math.min(SAMPLES_MAX, w.samples + nightlySamplesOf(w.heat)),
     day: w.day + 1, slot: 0, present: {}, touched: [] };
   return say(w, `—— 第 ${w.day} 天 ——`);
 }
@@ -1270,7 +1293,8 @@ const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.star
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。
  *  账上的钱、手里的精力小样、还没赴的约都清零 —— 那是上一季的事。
  *  世界之外的人（名单里已经没有的 id）连同关于她的看法、关系和记忆一起放下。 */
-export function nextSeason(world: World, people: Person[]): World {
+export function nextSeason(world: World, people: Person[], heat?: readonly HeatId[]): World {
+  const nextHeat = [...heat ?? world.heat ?? []];
   const roster = new Set(people.map(p => p.id));
   const bothKnown = (key: string) => key.split(">").every(id => roster.has(id));
   const opinion: Record<PersonId, number> = {};
@@ -1284,11 +1308,12 @@ export function nextSeason(world: World, people: Person[]): World {
   for (const [key, v] of Object.entries(world.qualities)) if (carriedAcrossSeasons(key)) qualities[key] = v;
   const season = world.season + 1;
   const standing = Math.round(START_STANDING + (world.standing - START_STANDING) / 2);
-  const compliance = Math.round(START_COMPLIANCE + (world.compliance - START_COMPLIANCE) / 2);
+  const complianceBase = startComplianceOf(nextHeat);
+  const compliance = Math.round(complianceBase + (world.compliance - complianceBase) / 2);
   return {
     seed: world.seed, season, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing, compliance,
-    energy: 0, samples: START_SAMPLES,
+    energy: 0, samples: startSamplesOf(nextHeat),
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
     qualities, present: {}, touched: [], rngCalls: world.rngCalls,
@@ -1297,6 +1322,7 @@ export function nextSeason(world: World, people: Person[]): World {
     // 季初快照记的是新季开局那一刻：看法收过一半之后的样子。
     opinionAtSeasonStart: { ...opinion },
     statsAtSeasonStart: { standing, compliance },
+    heat: nextHeat,
   };
 }
 
@@ -1386,6 +1412,7 @@ export function parseWorld(data: unknown): World | null {
   if (w.opinionAtSeasonStart !== undefined && !isNumRecord(w.opinionAtSeasonStart)) return null;
   for (const k of ["rivalMoney", "rivalWins"] as const)
     if (w[k] !== undefined && !isNum(w[k])) return null;
+  if (w.heat !== undefined && !(Array.isArray(w.heat) && new Set(w.heat).size === w.heat.length && w.heat.every(isHeatId))) return null;
   if (w.statsAtSeasonStart !== undefined && !(isRecord(w.statsAtSeasonStart)
     && isNum(w.statsAtSeasonStart.standing) && isNum(w.statsAtSeasonStart.compliance))) return null;
   const world = w as unknown as World;
@@ -1395,5 +1422,6 @@ export function parseWorld(data: unknown): World | null {
   world.opinionAtSeasonStart ??= {}; // 旧存档没有季初快照：按空读，变化榜只认这季攒下的
   world.rivalMoney ??= 0; // 对面这本账是后来加的：老档缺字段按"那一季她还没开张"读，不为一个新字段丢整份档
   world.rivalWins ??= 0;
+  world.heat ??= []; // 旧存档没有"自选加难"这一格：按一条都没勾读，不为一个新字段丢整份档
   return world;
 }
