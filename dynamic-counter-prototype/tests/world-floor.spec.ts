@@ -88,14 +88,15 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接待/ }).click();
       await expect(page.locator(".world-serve")).toBeVisible();
-      // 她说出口的需要 + 预算上限要摆出来。看法 20 是"肯说两条"那一档（serve-talk.ts）。
-      await expect(page.locator(".serve-said")).toContainText("干燥泛红");
-      await expect(page.locator(".serve-said")).toContainText("干燥泛红是我眼下最大的事，别拿厚东西糊我；温和点就行，我懒得闹脸");
+      // 她说出口的需要要摆出来。看法 20 是"肯说两条"那一档（serve-talk.ts）。件数上限要问才知道。
+      const said = page.locator(".serve-lines p:not(.serve-hold)");
+      await expect(said).toHaveText(["「干燥泛红是我眼下最大的事，别拿厚东西糊我」", "「温和点就行，我懒得闹脸」"]);
+      await expect(page.locator(".serve-meta")).toContainText("想带几件还没问");
       // 没说出口的那条不报数、也不漏出来。
       await expect(page.locator(".serve-hold")).toContainText("她像是还有顾虑，没说出来。");
-      await expect(page.locator(".serve-said")).not.toContainText("立竿见影");
+      await expect(page.locator(".serve-lines")).not.toContainText("立竿见影");
       // 挑一支货，下面那行念它的性子，给玩家对照她自己那句话。
-      await page.getByRole("button", { name: /修护/ }).click();
+      await page.getByRole("button", { name: /精华/ }).click();
       await expect(page.locator(".serve-note")).toContainText("舒缓干燥与泛红");
       await page.getByRole("button", { name: "开给她" }).click();
       await expect(page.locator(".world-toast")).toContainText(/进账 ¥1,?680/);
@@ -105,9 +106,37 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page, envelope({ opinion: { mei: 3 } }));
       await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接待/ }).click();
-      await expect(page.locator(".serve-said")).toHaveText("她说过：干燥泛红是我眼下最大的事，别拿厚东西糊我");
+      await expect(page.locator(".serve-lines p:not(.serve-hold)")).toHaveText(["「干燥泛红是我眼下最大的事，别拿厚东西糊我」"]);
       await expect(page.locator(".serve-hold")).toContainText("她像是还有顾虑，没说出来。");
-      await expect(page.locator(".serve-said")).not.toContainText("温和点就行");
+      await expect(page.locator(".serve-lines")).not.toContainText("温和点就行");
+    });
+
+    test("看、问、试：第一下才花劲，每下花她一句耐心，试过的货留字，关掉再回来接着谈", async ({ page }) => {
+      await enter(page, envelope());
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      await page.getByRole("button", { name: /接待/ }).click();
+      const saved = async () => JSON.parse((await page.evaluate(() => localStorage.getItem("last-order-world-v1")))!).world.energy as number;
+      const energy = await saved();
+      const meta = page.locator(".serve-meta");
+      const before = await meta.textContent();
+      await page.locator('.serve-probe[aria-label="问"] button', { hasText: "几支" }).click();
+      await expect(page.locator(".serve-lines p.fresh")).toContainText("一支就够");
+      await expect(meta).toContainText("上限 1 件");
+      await expect(meta).not.toHaveText(before!);
+      await expect.poll(saved).toBe(energy - 12);
+      await page.getByRole("button", { name: /精华/ }).click();
+      await page.getByRole("button", { name: "试一下" }).click();
+      await expect(page.locator(".serve-products button.on small")).toHaveText(/她(点头|犹豫|摇头)/);
+      await expect(page.getByRole("button", { name: "试一下" })).toBeDisabled();
+      await expect.poll(saved).toBe(energy - 12);
+      await page.locator(".pc-close").click();
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      await page.getByRole("button", { name: /接着谈/ }).click();
+      await expect(page.locator(".serve-lines")).toContainText("一支就够");
+      await page.getByRole("button", { name: /精华/ }).click();
+      await page.getByRole("button", { name: "开给她" }).click();
+      await expect(page.locator(".world-toast")).toContainText(/进账 ¥1,?680/);
+      await expect.poll(saved).toBe(energy - 12);
     });
 
     test("新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度", async ({ page }) => {
@@ -279,7 +308,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       // 招呼过一次她就从"新客"翻成"回头客"，计数跟着掉一格。
       await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接待/ }).click();
-      await page.getByRole("button", { name: /修护/ }).click();
+      await page.getByRole("button", { name: /精华/ }).click();
       await page.getByRole("button", { name: "开给她" }).click();
       await expect(page.locator('.wf-actor[data-pid="mei"] .wf-kind')).toHaveText("回头客");
       await expect(page.locator(".world-scene h2")).toHaveText("现场 · 5 位客人 · 新客 2");

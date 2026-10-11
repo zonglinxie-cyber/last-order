@@ -3,12 +3,11 @@
 // 念 engine 写进 log 的句子；世界状态走 serializeWorld/parseWorld 落盘。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { MobileScroll } from "../../mobile";
-import { demandBudgetWord, type Customer } from "../../campaign.ts";
 import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  drawStorylet, endDay, hasOpenedSale, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, substitute,
+  beginServe, drawStorylet, endDay, hasOpenedSale, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
   verbOptions, energyCeiling, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
@@ -18,8 +17,9 @@ import { askedToday, dueToday, resolveRequestChoice } from "../requests.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
-import { SECRET_KNOWN_KEY, demandWords, serveTalk, unsaidWord } from "../serve-talk.ts";
-import { SHELF, SHELF_IDS, affordableUnits, type ShelfId } from "../shelf.ts";
+import { unsaidWord } from "../serve-talk.ts";
+import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
+import { SHELF, SHELF_IDS, type ShelfId } from "../shelf.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -291,6 +291,8 @@ export default function WorldGame() {
   const [serving, setServing] = useState(false);
   const [serveProduct, setServeProduct] = useState<ShelfId | null>(null);
   const [serveUnits, setServeUnits] = useState(1);
+  // 这一时段柜上谈到一半的接待：关掉抽屉再点回来接着谈，翻时段清空（她走了，话也就断了）。
+  const [consults, setConsults] = useState<Record<PersonId, Consult>>({});
   const [webOpen, setWebOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -313,15 +315,9 @@ export default function WorldGame() {
     [world, selected]);
   const verbs = selected ? availableVerbs(world, PEOPLE, [selected]) : [];
   const pairVerbs = TWO_TARGET.filter(v => calls.some(c => c.verb === v));
-  // 接待面板上她肯说出口的那几条，判定全在 serve-talk.ts；没说的那几条照样参与 fitScore。
-  const talk = serving && person?.skin
-    ? serveTalk(person.skin.demands, world.opinion[person.id] ?? 0, !!world.qualities[SECRET_KNOWN_KEY(person.id)], person.skin.veto)
-    : null;
-  const serveSaid = talk && person ? {
-    lines: talk.said.map(d => demandWords(person.id, d)).join("；"),
-    veto: talk.vetoNote,
-    hold: talk.unsaid > 0 ? unsaidWord(person.gender) : null,
-  } : null;
+  // 接待那一屏：看 / 问 / 试 的判定全在 consult.ts；没摸出来的诉求照样参与 fitScore。
+  const consult = serving && person?.skin ? consults[person.id] ?? null : null;
+  const midConsult = person ? consults[person.id]?.begun ?? false : false;
   const pickTargets = useMemo(() => {
     if (!pick || !selected) return [] as PersonId[];
     return [...new Set(pick.calls.map(c => c.targets.find(t => t !== selected)!))];
@@ -402,7 +398,7 @@ export default function WorldGame() {
     const { world: w, drawn } = runPipeline(fresh);
     prevWorld.current = w;
     setWorld(w); setPending(drawn); setReport(null);
-    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults({});
     if (drawn) sfx("card");
     setPhase("play");
   };
@@ -414,7 +410,7 @@ export default function WorldGame() {
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
     setReqSeenDay(ui.reqSeen ?? 0);
     setWorld(w);
-    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults({});
     if (ui.screen === "season") { setPhase("season"); return; }
     if (ui.screen === "report" && ui.report) { setReport(ui.report); setPhase("report"); return; }
     const card = ui.pending ? STORYLETS.find(s => s.id === ui.pending!.id) : undefined;
@@ -425,7 +421,7 @@ export default function WorldGame() {
 
   // —— 时段推进 ——
   const nextTurn = () => {
-    setSelected(null); setPick(null); setServing(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setResult(null); setConsults({});
     const settled = ambient(world, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
     // 客人被对面请走是这一档唯一要在这里补的一声：它不改钱也不改比分，世界那一侧的时刻判据认不出它。
     if (coachPoached(settled, PEOPLE) && !coachPoached(world, PEOPLE)) sfx("down");
@@ -458,7 +454,7 @@ export default function WorldGame() {
     prevWorld.current = w;
     setWorld(w); setPending(drawn); setReport(null);
     if (drawn) sfx("card");
-    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults({});
     setPhase("play");
   };
 
@@ -478,11 +474,33 @@ export default function WorldGame() {
     }
     setSelected(id); setServing(false); setServeProduct(null); setServeUnits(1);
   };
+  const openServe = () => {
+    if (!person) return;
+    if (!consults[person.id]) setConsults(m => ({ ...m, [person.id]: openConsult(world, person) }));
+    setServing(true); setServeProduct(null); setServeUnits(1);
+  };
+  // 看 / 问 / 试的第一下才算正式接手：精力在这一刻花（beginServe），之后再点不重复扣。
+  const consultAct = (step: (c: Consult) => Consult) => {
+    if (!person || !consult) return;
+    const next = step(consult);
+    if (next === consult) return;
+    if (!consult.begun) {
+      const w = beginServe(world, PEOPLE, person.id);
+      if (w === world) return;
+      setWorld(w);
+    }
+    sfx("tap");
+    setConsults(m => ({ ...m, [person.id]: next }));
+  };
   const doServe = (force: boolean) => {
     if (!selected || !serveProduct) return;
-    const next = resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force);
+    const c = consults[selected];
+    const next = c?.begun
+      ? settleServe(world, PEOPLE, selected, serveProduct, serveUnits, force, c.mood)
+      : resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force);
     if (next === world) return;
     setWorld(next); setServing(false);
+    setConsults(m => { const { [selected]: _, ...rest } = m; return rest; });
     setResult(next.log.at(-1)?.text ?? null);
   };
   const chooseStory = (index: number) => {
@@ -791,24 +809,43 @@ export default function WorldGame() {
           {pickTargets.map(id => <button key={id} type="button" onClick={() => tapPerson(id)}>{nameOf(id)}{id in world.present ? "" : " · 不在场"}</button>)}
           <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
         </div>
-      </div> : serving && person.skin ? <div className="world-serve">
-        <p className="serve-said">{ta(person)}说过：{serveSaid?.lines}</p>
-        {serveSaid?.veto && <p className="serve-veto">{ta(person)}把底线也讲了出来：{serveSaid.veto}</p>}
-        {serveSaid?.hold && <p className="serve-hold">{serveSaid.hold}</p>}
-        <p className="serve-meta">{demandBudgetWord(person.skin as Customer)} · 「{person.voice.greet}」</p>
-        <div className="serve-products">{SHELF_IDS.map(pid => <button key={pid} type="button" className={serveProduct === pid ? "on" : ""} onClick={() => setServeProduct(pid)}><b>{SHELF[pid].short}</b><small>{yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>)}</div>
-        <p className="serve-note">{serveProduct ? `${SHELF[serveProduct].note} · 这个价${ta(person)}最多带走 ${affordableUnits(person, serveProduct)} 件` : servePickWord(ta(person), !hasOpenedSale(world))}</p>
+      </div> : serving && person.skin && consult ? <div className="world-serve">
+        <p className="serve-meta">{patienceWord(consult, person)} · {budgetWord(consult, person)}</p>
+        <div className="serve-lines" aria-live="polite">
+          {consult.lines.length ? consult.lines.map((line, i) => <p key={i} className={i === consult.lines.length - 1 && consult.begun ? "fresh" : ""}>{line}</p>)
+            : <p>「{person.voice.greet}」</p>}
+          {stillHolding(consult, person) && <p className="serve-hold">{unsaidWord(person.gender)}</p>}
+        </div>
+        <div className="serve-probe" aria-label="看">
+          <span>看</span>
+          {spotsOf(person).map(spot => <button key={spot.key} type="button" disabled={consult.patience <= 0 || consult.looked.includes(spot.key)}
+            onClick={() => consultAct(c => lookAt(c, person, spot.key))}>{spot.label}</button>)}
+        </div>
+        <div className="serve-probe" aria-label="问">
+          <span>问</span>
+          {questionsOf(person).map(q => <button key={q.key} type="button" disabled={consult.patience <= 0 || consult.asked.includes(q.key)}
+            onClick={() => consultAct(c => askHer(c, person, q.key))}>{q.label}</button>)}
+        </div>
+        <div className="serve-products">{SHELF_IDS.map(pid => {
+          const tried = consult.tried[pid];
+          return <button key={pid} type="button" className={`${serveProduct === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => setServeProduct(pid)}>
+            <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
+        })}</div>
+        <p className="serve-note">{serveProduct ? priceWord(person, serveProduct) : servePickWord(ta(person), !hasOpenedSale(world))}</p>
         <div className="serve-foot">
-          <div className="serve-units">{Array.from({ length: Math.min(4, person.skin.maxUnits) }, (_, i) => i + 1).map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
+          <div className="serve-units">{[1, 2, 3, 4].map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
           <div className="serve-actions">
+            <button className="serve-try" type="button" disabled={!serveProduct || consult.patience <= 0 || !!consult.tried[serveProduct]}
+              onClick={() => serveProduct && consultAct(c => tryOn(c, person, serveProduct))}>试一下</button>
             <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>
             <button className="serve-force" type="button" disabled={!serveProduct} onClick={() => doServe(true)}>硬推</button>
           </div>
         </div>
       </div> : <div className="world-verbs">
-        {verbs.map(v => <button key={v} type="button" onClick={() => v === "serve" ? (setServing(true), setServeProduct(null), setServeUnits(1)) : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
+        {midConsult && <button type="button" className="resume" onClick={openServe}><b>接着谈</b><small>这一单的劲已经花过</small></button>}
+        {verbs.filter(v => !(midConsult && v === "serve")).map(v => <button key={v} type="button" onClick={() => v === "serve" ? openServe() : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
         {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力 · 再点一人</small></button>)}
-        {verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
+        {!midConsult && verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
       </div>}
     </div>}
 

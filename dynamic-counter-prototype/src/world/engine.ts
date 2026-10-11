@@ -1143,14 +1143,31 @@ export function poachSale(person: Person): { product: ShelfId; units: number; am
     word: units ? `那边开了 ${units} 件${SHELF[product].name}，进账 ¥${amount}` : `那边一支也没卖出去` };
 }
 
+/** 开口要的件数超过她自己说过的上限：每多一件扣这些看法。她照旧只拿她要的那几件。 */
+export const OVER_ASK_OPINION = -3;
+
 export function resolveServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false): World {
+  const begun = beginServe(world, people, personId);
+  return begun === world ? world : settleServe(begun, people, personId, productId, units, force);
+}
+
+/** 接待开头那一下：花掉接待的精力、把她记成"你接过手的"（陆遥不再对她下手）。
+ *  柜上的看 / 问 / 试（consult.ts）在第一下动作时走这一步，开单时不再扣第二遍。 */
+export function beginServe(world: World, people: Person[], personId: PersonId): World {
   const person = personOf(people, personId);
   if (!person?.skin || !reachable(world, personId) || world.energy < VERB_ENERGY.serve) return world;
   // 台账或柜位见底，开不了单。
   if (world.compliance <= SERVE_STAT_FLOOR || world.standing <= SERVE_STAT_FLOOR) return world;
-  let w: World = { ...world,
+  return { ...world,
     energy: world.energy - VERB_ENERGY.serve,
     touched: [...new Set([...world.touched, personId])] };
+}
+
+/** 接待的结账：精力已经由 beginServe 花过。mood 是看 / 问 / 试那几句攒下的看法增减，开单这一刻一起结。 */
+export function settleServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false, mood = 0): World {
+  const person = personOf(people, personId);
+  if (!person?.skin) return world;
+  let w: World = mood ? addOpinion(world, personId, mood) : world;
   const score = fitFor(person, productId);
   const tier = shelfFitTier(score);
   const price = SHELF[productId].price;
@@ -1219,6 +1236,12 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
   w = { ...w, money: w.money + amount, standing: clamp(w.standing + 1, 0, 100) };
   w = setQuality(w, `bought:${personId}`, w.day);
   w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + wanted);
+  // 开口比她说过的上限多：她只拿她要的，多出来那几件记在脸上。
+  const overAsk = Math.max(0, units - person.skin.maxUnits);
+  if (overAsk) {
+    w = addOpinion(w, personId, OVER_ASK_OPINION * overAsk);
+    w = say(w, `你开口要 ${units} 件，${person.name}皱了下眉：「用不了那么多。」`, [personId]);
+  }
   if (tier === "positive") {
     // 八支货里"过线"和"正中"是两件事：过线的那支也成交，但只有把她每一条诉求都接满的那支，
     // 她才会觉得你懂她 —— 多给的这一笔看法决定她下次肯多说几条（serve-talk.ts 的两条门槛）。

@@ -142,6 +142,22 @@
 .serve-units button.on { border-color:#f0c978; background:#f0c9781c; }
 .serve-actions { display:flex; gap:8px; margin-top:8px; }
 .serve-actions button { flex:1 1 0; min-height:48px; border-radius:12px; font:700 14px 'Noto Serif SC',serif; }
+.world-serve .serve-lines { margin:0 0 6px; padding:6px 8px; border-radius:10px; background:#ffffff06; }
+.world-serve .serve-lines p { margin:0 0 3px; color:#d9c2a4; font-size:12px; line-height:1.5; }
+.world-serve .serve-lines p:last-child { margin-bottom:0; }
+.world-serve .serve-lines p.fresh { color:#ffe8b6; }
+.serve-probe { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:0 0 6px; }
+.serve-probe > span { flex:none; width:22px; color:#f0c978; font:700 13px 'Noto Serif SC',serif; }
+.serve-probe button { min-height:44px; padding:4px 10px; border:1px solid #f0cf9133; border-radius:999px; background:#ffffff08; color:#ffe8b6; font-size:12px; }
+.serve-probe button:disabled { opacity:.4; }
+.serve-products button.tried-positive { border-color:#8fc59a88; }
+.serve-products button.tried-positive small { color:#a8dcb0; }
+.serve-products button.tried-mixed small { color:#e8cf8a; }
+.serve-products button.tried-negative { opacity:.6; }
+.serve-products button.tried-negative small { color:#e8a6a6; }
+.serve-try { border:1px solid #f0cf9155; background:#ffffff0d; color:#ffe8b6; }
+.serve-try:disabled { opacity:.45; }
+.world-verbs .resume { border-color:#f0c97888; }
 .serve-commit { border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
 .serve-commit:disabled { opacity:.45; }
 .serve-force { border:1px solid #8a4a5a88; background:#8a4a5a26; color:#e8b6c0; }

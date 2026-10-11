@@ -439,7 +439,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     tempers: ["face", "hasty"],
     skin: {
       demands: [{ trait: "soothe", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }, { trait: "natural", want: 1, weight: 1 }],
-      veto: { trait: "soothe", below: 2, note: "两颊泛红，柔焦叠上去会更干" },
+      veto: { trait: "soothe", below: 2, note: "两颊泛红，粉底叠上去会更干" },
       budget: 1500, maxUnits: 1,
     },
     visits: { days: [7], slots: [1, 2], chance: 0.55, fromDay: 8 },

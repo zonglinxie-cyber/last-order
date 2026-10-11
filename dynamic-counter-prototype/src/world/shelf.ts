@@ -24,56 +24,60 @@ export const TAG_WORD: Record<string, Trait> = {
   薄: "natural", 见效: "correct", 退红: "soothe", 不闷: "steady", 撑妆: "wear",
 };
 
+// 产品线照真实的顶奢专柜排（参考海蓝之谜 / 赫莲娜 / 肌肤之钥这一档的柜台）：一半底妆、一半护肤，
+// 价位梯度也照那一档的柜台价 —— 防晒隔离四五百、粉底一千上下、精华一千六七、面霜两千往上。
+// 名字是绮光自己的，不借真牌子的名。档位向量与价格沿用上一版（模拟器与货架测试钉着），
+// 换的是"它是什么东西"：玩家看到的是柜台上真有的品类，而不是八个编出来的功能名。
 export const SHELF: Record<ShelfId, ShelfItem> = {
   // 平替：只强在"薄"和"不闷"两条，见效与舒缓都是 0。低预算的正解，也是高预算那位的陷阱。
   plain: {
-    name: "素肌裸感霜", short: "裸感", price: 400,
-    note: "平替，薄且不闷，四百块一支；要说当天看出什么，它给不了",
+    name: "清透防晒隔离乳", short: "隔离", price: 400,
+    note: "薄、不闷、不堵毛孔，四百一支；它只管打底防晒，当天看不出什么变化",
     tag: "薄·不闷",
     traits: { natural: 2, correct: 0, soothe: 0, steady: 2, wear: 0 },
   },
   // 便宜那一档只管"先别泛红"，带妆和遮瑕一律不沾。
   mist: {
-    name: "冷调舒缓喷雾", short: "喷雾", price: 680,
-    note: "舒缓干燥与泛红，六百八一支；它是急救，不撑一整天",
+    name: "舒缓修护喷雾", short: "喷雾", price: 680,
+    note: "舒缓干燥与泛红，六百八一瓶；它是急救，不撑一整天",
     tag: "退红",
     traits: { natural: 1, correct: 0, soothe: 2, steady: 1, wear: 0 },
   },
   balm: {
-    name: "维稳净肤霜", short: "稳肤", price: 880,
-    note: "低风险不闷痘，八百八一支；见效慢，红得厉害时它压不住",
+    name: "维稳修护乳", short: "乳液", price: 880,
+    note: "温和不闷痘，八百八一支；见效慢，红得厉害时它压不住",
     tag: "不闷",
     traits: { natural: 1, correct: 0, soothe: 1, steady: 2, wear: 0 },
   },
   soft: {
-    name: "云纱柔焦粉底", short: "柔焦", price: 980,
+    name: "云纱轻薄粉底液", short: "粉底", price: 980,
     note: "轻薄分区叠加，镜头近看更自然；带妆时间越长越需要补",
     tag: "薄·撑妆",
     traits: { natural: 2, correct: 1, soothe: 0, steady: 2, wear: 1 },
   },
-  // 妆前比柔焦多一条"能稳住泛红"，代价是带妆那条让出去了。
+  // 粉霜比粉底液多一条"能稳住泛红"（底妆里掺了养肤的东西），代价是带妆那条让出去了。
   base: {
-    name: "打底润色妆前", short: "妆前", price: 1180,
-    note: "又薄又能撑住干燥，一千一百八；带妆一整天它不占这条",
+    name: "精华养肤粉霜", short: "粉霜", price: 1180,
+    note: "粉底里掺了养肤成分，又薄又能撑住干燥，一千一百八；带妆一整天它不占这条",
     tag: "薄·退红",
     traits: { natural: 2, correct: 1, soothe: 1, steady: 2, wear: 0 },
   },
   glow: {
     name: "鎏光持妆套组", short: "持妆", price: 1280,
-    note: "高遮瑕，强灯光和长时间带妆才站得住；皮肤正不稳时会发干",
+    note: "持妆粉底加定妆粉，高遮瑕，强灯光和长时间带妆才站得住；皮肤正不稳时会发干",
     tag: "见效·撑妆",
     traits: { natural: 0, correct: 2, soothe: 0, steady: 0, wear: 2 },
   },
   repair: {
-    name: "夜兰修护精华", short: "修护", price: 1680,
+    name: "夜兰修护精华", short: "精华", price: 1680,
     note: "舒缓干燥与泛红，见效不靠厚重遮盖；它是护肤，不是当天的妆",
     tag: "退红·不闷",
     traits: { natural: 0, correct: 1, soothe: 2, steady: 2, wear: 0 },
   },
-  // 最贵那一档：三条都给到，但"薄"那条是 0 —— 怕被看出化妆的人一律接不住。
+  // 最贵那一档：三条都给到，但"薄"那条是 0 —— 面霜化不出一张妆，怕被看出化妆的人一律接不住。
   mask: {
-    name: "夜兰密集面敷", short: "面敷", price: 2280,
-    note: "稳住、见效、低风险三条都占，两千二百八一支；它不是一张妆",
+    name: "夜兰密集修护面霜", short: "面霜", price: 2280,
+    note: "稳住、见效、低风险三条都占，两千二百八一罐；它是护肤，化不出一张妆",
     tag: "见效·退红",
     traits: { natural: 0, correct: 2, soothe: 2, steady: 2, wear: 1 },
   },
