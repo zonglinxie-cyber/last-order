@@ -1401,12 +1401,12 @@ test("第 4 季那两条线的分支门：只认换季带得下来的东西", ()
   }
 });
 
-test("第 4 幕「谁在写单子」：连玩四季开得了张、走得到落点，而且不抢第 3 幕那句", () => {
-  // 上一轮把第 4 季从「只有过场」抬到 9 张故事卡，代价那条写着：四季跑完幕号还是 3，
-  // main-a4-page 只是重读第 3 幕那句话。这一条把「故事有结尾」钉成三个可执行的判据：
-  // 幕号走到内容写到的最后一幕、那条退货单落到第 4 幕那一族落点（≥12）、第 4 幕那三张各不超过一次。
-  // 走法跟第 4 季那两条线一样是「取第一个看得见的选项」，所以这一条测的是最直的那条路能不能走通。
+test("主线第 4、5 幕：四季到第 4 幕、六季把整条讲完，而且同一幕不跨季重演", () => {
+  // 这条判据的形状在第 37 轮改过一次。原来钉的是「四季跑完幕号 == 最后一幕」（第 20 轮的取舍：主线在四季内讲完），
+  // 加了第 5 幕以后那句不成立了 —— 现在的不变量是**六季讲完**，而四季那一档只要求到得了第 4 幕（那笔账落地）。
+  // 换判据不是放水：旧的"四季讲完"被明文替换，新的那句更强（多两季还要一路走到最后一幕，中途不许卡住）。
   const A4 = ["main-a4-who", "main-a4-desk", "main-a4-valve"];
+  const A5 = ["main-a5-open", "main-a5-names", "main-a5-desk"];
   const playSeason = (world: World, mainline: string[]) => {
     let w = world;
     while (w.day <= SEASON_DAYS) {
@@ -1433,14 +1433,29 @@ test("第 4 幕「谁在写单子」：连玩四季开得了张、走得到落�
 
     assert.ok(mainline.includes("main-a4-who"),
       `种子 ${i}：第 4 幕没开局（第 4 季那几张主线卡：${mainline.slice(-4).join(", ") || "无"}，幕号停在 ${w.qualities["mainline:act"] ?? 0}）`);
-    assert.equal(w.qualities["mainline:act"] ?? 0, MAINLINE_ACTS.length,
-      `种子 ${i}：幕号停在 ${w.qualities["mainline:act"] ?? 0}，内容已经写到第 ${MAINLINE_ACTS.length} 幕 —— 四季跑完故事还没讲完`);
-    const landing = w.qualities["thread:return-slip"] ?? 0;
-    assert.ok(landing >= 12,
-      `种子 ${i}：第 4 幕开了局却没落到第 4 幕那一族落点（thread:return-slip = ${landing}，收法卡 main-a4-desk ${mainline.includes("main-a4-desk") ? "演过" : "没演过"}）`);
+    assert.ok((w.qualities["mainline:act"] ?? 0) >= 4,
+      `种子 ${i}：四季跑完幕号才 ${w.qualities["mainline:act"] ?? 0} —— 第 4 幕到不了，后面第 5 幕更是空话`);
+    const landing4 = w.qualities["thread:return-slip"] ?? 0;
+    assert.ok(landing4 >= 12,
+      `种子 ${i}：第 4 幕开了局却没落到第 4 幕那一族落点（thread:return-slip = ${landing4}，收法卡 main-a4-desk ${mainline.includes("main-a4-desk") ? "演过" : "没演过"}）`);
     for (const id of A4) {
       const n = mainline.filter(x => x === id).length;
       assert.ok(n <= 1, `种子 ${i}：${id} 在四季里演了 ${n} 次 —— 同一句主线的话不许跨季原样重演`);
+    }
+
+    // 第 5 幕：再走两季。这一档钉的是"主线不再在四季就断在半路"——
+    // 第 5 幕开得了张、两条新线索进得了本子、六季跑完幕号真的走到内容写的最后一幕。
+    for (let s = 5; s <= 6; s++) { w = nextSeason(w, PEOPLE); w = playSeason(w, mainline); }
+    assert.equal(w.season, 6, `种子 ${i}：没走到第 6 季`);
+    assert.ok(mainline.includes("main-a5-open"),
+      `种子 ${i}：第 5 幕没开局（最后四张主线卡：${mainline.slice(-4).join(", ") || "无"}，幕号停在 ${w.qualities["mainline:act"] ?? 0}）`);
+    assert.equal(w.qualities["mainline:act"] ?? 0, MAINLINE_ACTS.length,
+      `种子 ${i}：六季跑完幕号停在 ${w.qualities["mainline:act"] ?? 0}，内容写到第 ${MAINLINE_ACTS.length} 幕 —— 整条主线没讲完`);
+    assert.ok((w.qualities["clue:slip-handover"] ?? 0) >= 1, "本子第 7 条「那一栏今年还开着」没记上");
+    assert.ok((w.qualities["clue:slip-signature"] ?? 0) >= 1, "本子第 8 条「还是那个名字在签」没记上 —— 第 5 幕那句翻面就无从谈起");
+    for (const id of A5) {
+      const n = mainline.filter(x => x === id).length;
+      assert.ok(n <= 1, `种子 ${i}：${id} 在六季里演了 ${n} 次 —— 第 5 幕的话不许跨季原样重演`);
     }
   }
 });
@@ -1494,4 +1509,60 @@ test("第 4 幕那三张的门槛：不收第 3 幕的尾开不了局，签过�
   assert.equal(visible({ "arc:peilan": 1 }), 0, "她的线还没走到那一段，总表那一格不该露出来");
   assert.equal(visible({ "arc:peilan": 2 }, { fangmin: "cashier", shen: "counter" }), 0,
     "裴岚这一季不在楼上，就不能把这一行交给她 —— 那个落点要她本人接");
+});
+
+test("第 5 幕那三张的门槛：第 4 幕没收尾开不了局，两条线索得一条接一条", () => {
+  // 跟第 4 幕那条同一个道理：玩到第 5 幕的人一定先收过第 4 幕的尾，跑整季测不出"门被拆掉"这种写法，
+  // 所以逐副静态探一遍。翻面不许凭空掉下来 —— 「那一栏今年写谁」要的是玩家已经答过"谁在写单子"。
+  const card = (id: string) => STORYLETS.find(s => s.id === id)!;
+  const legal = (w: World, c: Storylet) => c.when.every(x => evalCond(w, PEOPLE, x));
+  const at = (patch: Partial<World>): World => ({
+    ...newWorld("a5-gate", PEOPLE), season: 5, day: 24,
+    present: { shen: "counter", fangmin: "cashier", peilan: "counter" }, ...patch,
+  });
+  const done4 = { "mainline:act": 4, "thread:return-slip": 13, "clue:slip-desk": 1 };
+
+  const open = card("main-a5-open");
+  assert.equal(legal(at({ qualities: done4 }), open), true, "第 4 幕落了地、第 5 季、沈薇在楼上 —— 第 5 幕就该开得了局");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 3, "thread:return-slip": 7 } }), open), false,
+    "第 4 幕还没收尾就开第 5 幕，玩家听到的是他还没挣到的下一问");
+  assert.equal(legal(at({ qualities: { ...done4, "thread:return-slip": 11 } }), open), false,
+    "幕号到 4 但那一笔没落到第 4 幕那一族落点（<12）—— 四季那本账还没结完，不该翻到第 5 幕");
+  assert.equal(legal(at({ season: 4, qualities: done4 }), open), false,
+    "第 4 季不许演第 5 幕 —— 那一栏要空到第二年才叫「又开了」");
+  assert.equal(legal(at({ qualities: done4, present: { fangmin: "cashier" } }), open), false,
+    "沈薇不在楼上，那页表没人翻给你看");
+  assert.equal(legal(at({ season: 5, day: 2, qualities: done4 }), open), false,
+    "第 5 季头两天不许开局：跟第 1 幕那张阀门同一个规矩，主线不许压在新季最前面");
+
+  const names = card("main-a5-names");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 5 } }), names), false,
+    "没查到那一栏今年还开着，就直接查谁在签 —— 第 7 条线索是第 8 条的前提");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 5, "clue:slip-handover": 1 } }), names), true,
+    "查过「待定」那两个字的第 5 季第 12 天以后，沈薇在楼上 —— 这一张就该来");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 4, "clue:slip-handover": 1 } }), names), false,
+    "幕号停在 4 时不许演第 5 幕中间的卡");
+
+  const desk = card("main-a5-desk");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 5, "clue:slip-handover": 1 } }), desk), false,
+    "还没查出「还是那个名字在签」，方敏就不该来问这一栏落谁 —— 收束要建立在第 8 条线索上");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 5, "clue:slip-handover": 1, "clue:slip-signature": 1 } }), desk), true,
+    "两条都查到了、第 5 季第 20 天以后、方敏在楼上 —— 这一幕收得了");
+
+  // 跨季不重演：抬幕号那张自己关门，另两张靠自动补的 mainline:seen 记号。
+  const seen = (id: string) => ({ [`mainline:seen:${id}`]: 1 });
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 5, "clue:slip-handover": 1, ...seen("main-a5-names") } }), names), false,
+    "main-a5-names 演过以后第 6 季不许原样再演一遍");
+  assert.equal(legal(at({ qualities: { ...done4, "mainline:act": 5, "clue:slip-handover": 1, "clue:slip-signature": 1, ...seen("main-a5-desk") } }), desk), false,
+    "main-a5-desk 演过以后不许再演 —— 这一幕的收束只说一次");
+  assert.equal(legal(at({ qualities: { ...done4, "thread:return-slip": 13, ...seen("main-a5-open") } }), open), true,
+    "main-a5-open 靠抬幕号自己关门（ACT(4) 抬到 5 就断），不需要 seen 记号 —— 别把它加进名单又漏掉别的");
+
+  // 内容里出现的最大幕号必须正好是 MAINLINE_ACTS 的长度：加一幕要真的写到底，不许名单先扩。
+  const actNumbers: number[] = [];
+  for (const s of STORYLETS) for (const x of s.when)
+    if ("quality" in x && x.quality === "mainline:act") actNumbers.push(x.eq ?? x.gte ?? 0);
+  const maxAct = Math.max(...actNumbers);
+  assert.equal(maxAct, MAINLINE_ACTS.length,
+    `内容里的门最大到第 ${maxAct} 幕，名单却有 ${MAINLINE_ACTS.length} 幕 —— 档案与回顾会念出一句没人演到的"下一幕"`);
 });

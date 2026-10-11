@@ -240,6 +240,16 @@ export const ACT_WORD: Record<string, string> = {
   "row-page-pulled": "把那一页从表上摘了下来",
   "row-she-filled": "散场前由她把那一栏填掉",
   "row-nobody": "那一栏谁也没写",
+  // 主线第 5 幕：那一栏今年写谁（storylets-mainline.ts 的 main-a5-*）
+  "a5-row-asked": "问过那一栏今年预备给谁",
+  "a5-row-wiped": "当面把「待定」两个字划掉",
+  "a5-row-refused": "说过那一栏与她无关",
+  "a5-who-signed": "去查这一年谁用她的名字签了字",
+  "a5-her-call": "先问过她自己要不要认那三张",
+  "a5-books-noted": "把三张收进台账注明非本人签",
+  "a5-her-name": "请她在那一栏写下自己的名字",
+  "a5-row-closed": "主张那一栏撤掉、不许再代签",
+  "a5-nobody-owned": "说过那一栏归谁你说了不算",
   // 第 4 季个人线：裴岚（storylets-arcs6.ts）
   "quarter-row-asked": "问她那一行为什么每季都抄一遍",
   "quarter-words-kept": "把今天的原话照她的规矩留下",

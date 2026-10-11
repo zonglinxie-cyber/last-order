@@ -1078,6 +1078,136 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       },
     ],
   },
+  // ============ 第 5 幕：那一栏今年写谁（第 5 季起，四季那笔账落地之后） ============
+  // 第 4 幕答的是「谁在写单子」，第 5 幕接的是下一问：那一栏今年又长出一个名字，这次是谁签的。
+  // 三张都在 ACT(4)/ACT(5) 里自我关闭或走 mainline:seen 记号 —— 幕号、线索、落点都跨季带着走，
+  // 不补这一层就会有一季原样重演一遍（判据在 tests/world-content.test.ts「主线整段只演一次」）。
+  {
+    id: "main-a5-open",
+    kind: "mainline",
+    cast: { a: { id: "shen", where: [] } },
+    when: [
+      ACT(4), { quality: "thread:return-slip", gte: 12 },
+      { season: { gte: 5 } }, { day: { gte: 4 } }, { present: "shen" },
+    ],
+    weight: 31,
+    tension: 1,
+    once: true,
+    text: "{$a}把这一季的领用表翻到第四页，那一栏没空着，也没写她的名 —— 底下两个字是「待定」，字是新的。她说去年这时候这一栏怎么合上的她全看见了，今年这一栏又开了。",
+    choices: [
+      {
+        label: "问这一栏今年预备给谁",
+        effects: [
+          { clue: "slip-handover" },
+          { quality: "mainline:act", set: 5 },
+          { remember: { holder: "shen", act: "a5-row-asked", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 4 }, { stat: "compliance", delta: 1 },
+        ],
+        result: "{$a}说写「待定」的人连问都不问一句，去年也是这样，一栏空着，等一个当时顶班的号 —— 今年她不想再当那个号。",
+      },
+      {
+        label: "把「待定」两个字划掉给她看",
+        effects: [
+          { clue: "slip-handover" },
+          { quality: "mainline:act", set: 5 },
+          { remember: { holder: "shen", act: "a5-row-wiped", valence: 2, subject: "player" } },
+          { opinion: "shen", delta: 6 }, { stat: "standing", delta: 1 },
+        ],
+        result: "{$a}看着那两个字被划掉，说划掉不算，得有人在这行上写自己的名字才算 —— 去年你写过一回，今年这一行是新的。",
+      },
+      {
+        label: "说这一栏与她无关",
+        effects: [
+          { clue: "slip-handover" },
+          { quality: "mainline:act", set: 5 },
+          { remember: { holder: "shen", act: "a5-row-refused", valence: -2, subject: "player" } },
+          { opinion: "shen", delta: -5 }, { stat: "standing", delta: -1 },
+        ],
+        result: "{$a}点头说她就知道你会这样答，去年这样答的人今年还在这行上被签着，说完把表推回去，没翻页。",
+      },
+    ],
+  },
+  {
+    id: "main-a5-names",
+    kind: "mainline",
+    cast: { a: { id: "shen", where: [] }, b: { id: "peilan", where: [], mustBePresent: false } },
+    when: [
+      ACT(5), { clue: "slip-handover" },
+      { season: { gte: 5 } }, { day: { gte: 12 } }, { present: "shen" },
+    ],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}拿了一张退单单来，签字那处写着她的名字，日期是这季的。她说她没签过。{$b}在旁听完只问一句：这一年来，这层楼有几个人用过这个名字。",
+    choices: [
+      {
+        label: "去查谁在这一年用她的名字签了字",
+        effects: [
+          { clue: "slip-signature" },
+          { remember: { holder: "shen", act: "a5-who-signed", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 5 }, { stat: "compliance", delta: 2 },
+        ],
+        result: "查出来是三张，都是她当班的日子，都不是她的手 —— 第三张的笔迹她认得，是那个每季来抄表的人，抄完顺手替她签。",
+      },
+      {
+        label: "先问她自己要不要认这三张",
+        effects: [
+          { clue: "slip-signature" },
+          { remember: { holder: "shen", act: "a5-her-call", valence: 2, subject: "player" } },
+          { opinion: "shen", delta: 6 }, { bond: ["shen", "player"], delta: 5 },
+        ],
+        result: "{$a}说她不认，也不求你替她撕掉 —— 撕了这一张，下一季还会有一张，除非那一栏不再拿她的号去签别人。",
+      },
+      {
+        label: "把三张都收进台账，注明非本人签",
+        effects: [
+          { clue: "slip-signature" },
+          { remember: { holder: "shen", act: "a5-books-noted", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 3 }, { stat: "compliance", delta: 4 }, { stat: "standing", delta: -1 },
+        ],
+        result: "{$a}看着那行小字被记进台账，说这一本里终于有一句是替她写的，说完把退单单留在柜面上，没带走。",
+      },
+    ],
+  },
+  {
+    id: "main-a5-desk",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "shen", where: [], mustBePresent: false } },
+    when: [
+      ACT(5), { clue: "slip-signature" },
+      { season: { gte: 5 } }, { day: { gte: 20 } }, { present: "fangmin" },
+    ],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}把那页抄件带来，第四页那一行还写着「待定」，旁边压着三张代签的退单单。她说这一栏今年必须落一个名字，落谁的，她只收当场念得出口的那一句。",
+    choices: [
+      {
+        label: "请她自己在那一栏写下自己的名字",
+        effects: [
+          { remember: { holder: "fangmin", act: "a5-her-name", valence: 2, subject: "player" } },
+          { opinion: "fangmin", delta: 6 }, { stat: "compliance", delta: 3 }, { stat: "standing", delta: 2 },
+        ],
+        result: "{$a}念了一遍再落笔，写的是她自己，不是那个号。她说这一栏往后拿她的名字去签，得先问她，这一句她今年说得很响。",
+      },
+      {
+        label: "主张把这一栏撤掉，不许再代签",
+        effects: [
+          { remember: { holder: "fangmin", act: "a5-row-closed", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 4 }, { stat: "standing", delta: -2 },
+        ],
+        result: "{$a}说撤栏要楼上的表改版，今年办不动；但「不许代签」这一句她可以现在就写进去，写完把笔递过来让你签。",
+      },
+      {
+        label: "那一栏归谁，你说了不算",
+        effects: [
+          { remember: { holder: "fangmin", act: "a5-nobody-owned", valence: -2, subject: "player" } },
+          { opinion: "fangmin", delta: -4 }, { stat: "compliance", delta: -3 },
+        ],
+        result: "{$a}点头说这一句她见过四季，每一季都有人说这栏与她无关，写到年底它总有一个名字，今年那个名字还是被借走的。",
+      },
+    ],
+  },
 ];
 
 // 这些卡的门槛在过季之后照样成立（幕号、落点、本子里的线索都带着走），所以每张的每一个分支
@@ -1086,7 +1216,10 @@ export const STORYLETS_MAINLINE: Storylet[] = [
 // main-a4-who 抬完幕号就被 ACT(3) 自己挡住。
 // 判据在 tests/world-content.test.ts「主线整段只演一次，而且第 2 季还有新的一幕可演」。
 for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-after-quiet",
-  "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror", "main-a4-page"]) {
+  "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror", "main-a4-page",
+  // 第 5 幕这两张抬完幕号就没人管了：线索发完它自己的门照样成立，不补记号第 6 季会原样再演一遍。
+  // main-a5-open 不用补 —— 它把幕号抬到 5，ACT(4) 那道门自己就关上了。
+  "main-a5-names", "main-a5-desk"]) {
   const s = STORYLETS_MAINLINE.find(x => x.id === id)!;
   s.when.push(SEEN(id));
   for (const c of s.choices) c.effects.push(MARK(id));

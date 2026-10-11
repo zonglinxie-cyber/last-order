@@ -33,6 +33,7 @@ export const MAINLINE_ACTS: Array<{ act: number; name: string }> = [
   { act: 2, name: "名字在谁手里" },
   { act: 3, name: "那一行是谁的手写的" },
   { act: 4, name: "谁在写单子" },
+  { act: 5, name: "那一栏今年写谁" },
 ];
 
 /** 贯穿四季的那条线只有一个 id，结局要认它，所以在这里钉死一份。 */
@@ -84,6 +85,20 @@ export const CLUES: Clue[] = [
     thread: "return-slip",
     text: "第四页那一栏每季空着，等一个当时顶班的号。要它的不是楼上，是这张表自己。",
     about: ["fangmin", "peilan"],
+  },
+  {
+    // 第 5 幕开局的条：四季那笔账落地以后，那一栏并没有合上，今年又多出一个新写的「待定」。
+    id: "slip-handover",
+    thread: "return-slip",
+    text: "那一栏今年还开着，底下写的是「待定」，字是新的，墨比哪一栏都浅。",
+    about: ["shen", "fangmin"],
+  },
+  {
+    // 第 5 幕的翻面：顶班的人今年还在签那个名字 —— 不是补签，是照旧。
+    id: "slip-signature",
+    thread: "return-slip",
+    text: "今年签在那一栏的还是那个名字，不是补四季的旧账，是照旧签，连日期都不改。",
+    about: ["shen", "peilan"],
   },
 ];
 

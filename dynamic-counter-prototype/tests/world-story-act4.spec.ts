@@ -128,3 +128,71 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
   });
 }
+
+/** 第 5 幕：第 4 幕那笔账落地以后，第 5 季那一栏又开了（season 5、幕号 4、落点 ≥12）。 */
+const act4World = (over: Partial<World> = {}): World => ({
+  ...newWorld("act5-ui", PEOPLE),
+  season: 5, day: 8, slot: 1, energy: energyCeiling(over.slot ?? 1),
+  present: { fangmin: "cashier", peilan: "counter", shen: "counter", suman: "counter", mei: "counter" },
+  qualities: {
+    "mainline:act": 4, "thread:return-slip": 13,
+    "clue:slip-hand": 1, "clue:slip-tape": 1, "clue:slip-desk": 1,
+  },
+  ...over,
+});
+
+const OPEN5 = { id: "main-a5-open", binding: { a: "shen" } };
+const NAMES5 = { id: "main-a5-names", binding: { a: "shen", b: "peilan" } };
+const DESK5 = { id: "main-a5-desk", binding: { a: "fangmin", b: "shen" } };
+
+for (const [width, height] of [[390, 844], [320, 568]] as const) {
+  test.describe(`第 5 幕演出 ${width}×${height}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+
+    test(`开局那张念得通，点完幕号抬到 5、本子上多第 7 条`, async ({ page }) => {
+      await enter(page, act4World(), OPEN5);
+      const text = page.locator(".world-story .story-text");
+      await expect(text).toBeVisible();
+      await expect(text).toContainText("沈薇把这一季的领用表翻到第四页");
+      await expect(text).toContainText("底下两个字是「待定」");
+      await expect(text).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(3);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "问这一栏今年预备给谁" }).click();
+      await expect(page.locator(".world-feed")).toContainText("写「待定」的人连问都不问一句");
+      const q = await savedQualities(page);
+      expect(q["mainline:act"], "第 5 幕开得了局").toBe(5);
+      expect(q["clue:slip-handover"], "第 7 条线索该记进本子").toBeGreaterThan(0);
+    });
+
+    test(`查名字那张：三条都读得到，点「记进台账」把第 8 条落下`, async ({ page }) => {
+      await enter(page, act4World({
+        day: 16,
+        qualities: { "mainline:act": 5, "thread:return-slip": 13, "clue:slip-handover": 1, "clue:slip-desk": 1 },
+      }), NAMES5);
+      await expect(page.locator(".world-story .story-text")).toContainText("签字那处写着她的名字");
+      await expect(choices(page)).toHaveCount(3);
+      await page.getByRole("button", { name: /把三张都收进台账/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("这一本里终于有一句是替她写的");
+      const q = await savedQualities(page);
+      expect(q["clue:slip-signature"], "第 8 条线索该记进本子").toBeGreaterThan(0);
+      expect(q["mainline:act"], "这张不抬幕号，第 5 幕还在第 5 幕里").toBe(5);
+    });
+
+    test(`收束那张：幕号不再往上抬，那一栏今年落的是她自己的名字`, async ({ page }) => {
+      const before = act4World({
+        day: 24,
+        qualities: { "mainline:act": 5, "thread:return-slip": 13, "clue:slip-handover": 1, "clue:slip-signature": 1 },
+      });
+      await enter(page, before, DESK5);
+      await expect(page.locator(".world-story .story-text")).toContainText("旁边压着三张代签的退单单");
+      await expect(choices(page)).toHaveCount(3);
+      await page.getByRole("button", { name: /写下自己的名字/ }).click();
+      await expect(page.locator(".world-feed")).toContainText("写的是她自己，不是那个号");
+      const q = await savedQualities(page);
+      expect(q["mainline:act"], "六季以内主线讲完：第 5 幕就是最后一幕").toBe(5);
+      expect(q["clue:slip-signature"], "前面查到的那条不许被这一步抹掉").toBeGreaterThan(0);
+    });
+  });
+}
