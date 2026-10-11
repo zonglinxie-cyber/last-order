@@ -464,5 +464,61 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       expect(q.qualities["life:fangmin:how"]).toBe(2);
       expect(q.money, "同事的那一步也不给钱").toBe(w.money);
     });
+
+    // —— 第 40 轮：第四格铺满以后，新那十位里的四位在界面上演一遍（含"门里还有门"那一条）。
+    test(`裴岚第四年：口红要不要给别人，桌上是「不给」那一格 + 兜底`, async ({ page }) => {
+      const w = life4Fixture("peilan", "life4-peilan40", 2, 0);
+      await enter(page, w, { id: "life4-peilan", binding: { a: "peilan" } });
+      await expect(storyText(page)).toContainText("那支旧口红今年被人看上了");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "给，摆到那一格去" })).toHaveCount(0);
+      await page.getByRole("button", { name: "不给，那支是她自己的" }).click();
+      await expect(page.locator(".world-feed")).toContainText("曾经跪着擦那一行");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:peilan"], "第四年这一步走到 4").toBe(4);
+      expect(q.qualities["life:peilan:how"]).toBe(2);
+      expect(q.money, "第四格不给钱").toBe(w.money);
+    });
+
+    test(`罗曼第四年：她第三年只写得出两档，界面上就该只有两颗可点`, async ({ page }) => {
+      await enter(page, life4Fixture("roman", "life4-roman40", 1, 8), { id: "life4-roman", binding: { a: "roman" } });
+      await expect(storyText(page)).toContainText("今天她来是想买那一支");
+      // 她这一张只有两颗认档的格子（第三年写不出 how=3），其余两颗不认档 —— 所以是三颗，不是四颗。
+      await expect(choices(page)).toHaveCount(3);
+      await expect(page.getByRole("button", { name: "客人，照客人那一档开" })).toHaveCount(1);
+      await page.getByRole("button", { name: "客人，照客人那一档开" }).click();
+      await expect(page.locator(".world-feed")).toContainText("等的是有人不把她当柜长问");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:roman"]).toBe(4);
+    });
+
+    test(`段小姐第四年：看法淡到极低时「只办她一个人」那一格才开（门里还有门）`, async ({ page }) => {
+      await enter(page, life4Fixture("duan", "life4-duan40a", 2, 0), { id: "life4-duan", binding: { a: "duan" } });
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "这一柜今天只办她一个人" })).toHaveCount(0);
+      await enter(page, life4Fixture("duan", "life4-duan40b", 2, -8), { id: "life4-duan", binding: { a: "duan" } });
+      await expect(choices(page)).toHaveCount(3);
+      await page.getByRole("button", { name: "先问她那三行今年还改不改" }).click();
+      await expect(page.locator(".world-feed")).toContainText("那三行如今是楼里的格式");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:duan:how"]).toBe(2);
+    });
+
+    test(`梁夏第四年：第三行写完给自己看，「留」那一格开着、钱一分不动`, async ({ page }) => {
+      const w = life4Fixture("liangxia", "life4-liangxia40", 3, 4);
+      await enter(page, w, { id: "life4-liangxia", binding: { a: "liangxia" } });
+      await expect(storyText(page)).toContainText("那一页今年写到第三行");
+      await expect(choices(page)).toHaveCount(2);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box, "故事卡要有尺寸").not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "楼下那一位想要，就给他" }).click();
+      await expect(page.locator(".world-feed")).toContainText("四年没听见人这样讲");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:liangxia"]).toBe(4);
+      expect(q.qualities["life:liangxia:how"]).toBe(3);
+      expect(q.money, "推出去又抽回来那一步也不给钱").toBe(w.money);
+    });
   });
 }
