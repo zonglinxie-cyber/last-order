@@ -6,7 +6,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
-  ambient, applyChoice, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
+  ambient, applyChoice, availableVerbs, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
+  HARD_SELL_COMPLIANCE, resolveServe,
   newWorld, nextSeason, qualityOf, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
@@ -17,6 +18,7 @@ import { HEAT_IDS, HEAT_MAX, HEAT_RULES } from "../src/world/heat.ts";
 import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestChoice, soldUnitsKey } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
 import { SHELF_IDS } from "../src/world/shelf.ts";
+import { WEEK_IDS, isMonday, isSunday, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -215,12 +217,15 @@ const burnOf = (style: Style, seed: string): RunBurn => {
   return b;
 };
 
-function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn): World {
+function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn,
+  onWeek?: (week: { rule: WeekId; my: number; rival: number }) => void): World {
+  let weekBase = { money: w.money, rivalMoney: w.rivalMoney };
   const seasonTally: SeasonBurn = { season: seasonNo, draws: 0, repeats: 0, story: 0, arcFirst: new Set(), mainFirst: new Set(),
     slots: 0, noStory: 0, readOnly: 0, acted: 0, starved: [], noEnergy: 0, noGuest: 0 };
   burn.perSeason.push(seasonTally);
   standSeason = seasonNo;
   while (w.day <= DAYS) {
+    if (isMonday(w.day)) weekBase = { money: w.money, rivalMoney: w.rivalMoney };
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
       w = beginSlot(w, people, festivals);
@@ -287,8 +292,11 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
       bumpStand(style, "时段末传话", ba, w);
     }
     const bd = w;
+    const closingDay = w.day;
     w = endDay(w, people);
     bumpStand(style, "打烊(名额与委托)", bd, w);
+    // 周日打烊：把这一周的钱单独结一次，按当周轮到的那条归桶（规矩本身是周一落的）。
+    if (isSunday(closingDay)) onWeek?.({ rule: weekRuleOf(seasonNo, closingDay), my: w.money - weekBase.money, rival: w.rivalMoney - weekBase.rivalMoney });
   }
   return w;
 }
@@ -379,6 +387,8 @@ const tallyRequests = (w: World): { tally: Record<RequestState, number>; byKind:
 /** 第 2 季起每季一格：结局与"相对上一季谁倒戈了"。 */
 const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 /** 每天在柜上开出几件（季内的天号，两季都算）：罗曼的 quota 阶梯按这个分布定。 */
+/** 每周的钱：按当周轮到的那条规矩归桶（本周规矩那张表用）。 */
+const weekRows: Array<{ style: Style; seed: string; season: number; rule: WeekId; my: number; rival: number }> = [];
 const dayUnits: Array<{ style: Style; season: number; day: number; units: number }> = [];
 const pushDayUnits = (style: Style, season: number, w: World) => {
   for (let d = 1; d <= DAYS; d++) dayUnits.push({ style, season, day: d, units: w.qualities[soldUnitsKey(d)] ?? 0 });
@@ -386,14 +396,16 @@ const pushDayUnits = (style: Style, season: number, w: World) => {
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
-    let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1), 1, burnOf(style, seed));
+    let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1), 1, burnOf(style, seed),
+      week => weekRows.push({ style, seed, season: 1, ...week }));
     exTallies.push({ style, tally: exchangeTally(w) });
     reqTallies.push({ style, ...tallyRequests(w) });
     let s = seasonSummary(w, people);
     results.push(resultOf(style, seed, w));
     pushDayUnits(style, 1, w);
     for (let k = 2; k <= SEASON_COUNT; k++) {
-      w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed));
+      w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed),
+        week => weekRows.push({ style, seed, season: k, ...week }));
       exTallies.push({ style, tally: exchangeTally(w) });
       reqTallies.push({ style, ...tallyRequests(w) });
       const next = seasonSummary(w, people);
@@ -454,6 +466,53 @@ console.log("\n自选加难各档（honest × " + N + " 副 × 1 季，勾法按
     }
     console.log(`  勾 ${level} 条（${word(level)}）  领先 ${ahead} / 打平 ${tie} / 落后 ${behind} · 对面成交中位 ${(rivalWins / N).toFixed(1)} 单`);
   }
+}
+
+// —— 本周规矩（提案 §3）两张读数 ——
+// ① 同一位客人、同一个动作，只差"这一周落没落上那条规矩"，结果不同的比例。
+//    机制没接上以前这条必须是 0（`git archive HEAD` 那份跑出来就是 0）；它 > 0 才说明规矩改的是数，不是台词。
+console.log("\n规矩周结果不同探针（同一位客人、同一个动作，只差这一周落没落上那条）:");
+{
+  const withWeek = (w: World, id: WeekId | null): World => {
+    const qualities = { ...w.qualities };
+    for (const x of WEEK_IDS) delete qualities[`week:${x}`];
+    if (id) qualities[`week:${id}`] = 1;
+    return { ...w, qualities };
+  };
+  const base = (): World => ({ ...newWorld("week-probe", people), day: 3, slot: 1, energy: 0,
+    // 看法 30：平时在她射程内（门槛 40），休假周不在（收到 20）—— 摆 40 正好卡在门槛上，那条探针会永远不亮（本轮踩过）
+    present: { shen: "counter", luyao: "rival" }, opinion: { shen: 30 } });
+  // 硬推那一格要真走硬推那条分支：先探一个 (人, 货) 组合，扣分正好是 HARD_SELL_COMPLIANCE 才算数。
+  const hardPair = people.filter(p => p.skin).flatMap(p => SHELF_IDS.map(id => ({ p, id })))
+    .find(({ p, id }) => {
+      const w = resolveServe({ ...base(), energy: 100 }, people, p.id, id, 4, true);
+      return w.compliance - base().compliance === HARD_SELL_COMPLIANCE;
+    });
+  const probes: Array<[string, (w: World) => string]> = [
+    ["开一格发到手的精神", w => String(beginSlot(w, people).energy)],
+    ["这一格放不放「加微信」", w => String(availableVerbs({ ...w, energy: 3 }, people, ["shen"]).includes("wechat"))],
+    ["硬推一次的台账", w => hardPair ? String(resolveServe({ ...w, energy: 100 }, people, hardPair.p.id, hardPair.id, 4, true).compliance) : "量不到"],
+    ["漏掉的那位被请走没有", w => { let n = 0; for (let i = 0; i < 12; i++)
+      if (ambient({ ...w, seed: `wp-${i}` }, people).present.shen === "rival") n++; return String(n); }],
+  ];
+  let diff = 0, total = 0;
+  for (const rule of WEEK_IDS) for (const [name, fn] of probes) {
+    total++;
+    const changed = fn(withWeek(base(), null)) !== fn(withWeek(base(), rule));
+    if (changed) { diff++; console.log(`  ${rule} 改动了：${name}（${fn(withWeek(base(), null))} → ${fn(withWeek(base(), rule))}）`); }
+  }
+  console.log(`  ${diff} / ${total} —— 改之前这条该是 0（规矩只是台词），装上去以后要 > 0`);
+  if (!hardPair) console.log("  ↑ 注意：没探到走硬推那一档的（人, 货）组合，那一格是「量不到」，这条探针少一条腿");
+}
+// ② 每一条规矩周 × 四种风格：按周结钱，看有没有哪一种打法在这一周必赢。
+console.log("\n规矩周 × 风格（按周结的钱：领先周数 / 走过周数；100% = 这一周没人输，说明那条规矩没咬住）:");
+for (const rule of WEEK_IDS) {
+  const line = STYLES.map(style => {
+    const rs = weekRows.filter(r => r.style === style && r.rule === rule);
+    const ahead = rs.filter(r => r.my > r.rival).length;
+    return `${style.padEnd(7)} ${String(ahead).padStart(2)}/${String(rs.length).padStart(3)}${rs.length && ahead === rs.length ? " 必赢!" : ""}`;
+  }).join(" · ");
+  console.log(`  ${WEEK_IDS.indexOf(rule) + 1}. ${line}`);
 }
 
 // 每天开出几件：罗曼的 quota 阶梯按这个分布定。

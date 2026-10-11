@@ -301,3 +301,4 @@
 .world-heat-chip[aria-pressed="true"] { border-color:#ffedca88; color:#ffedca; background:linear-gradient(145deg,rgba(78,42,30,.92),rgba(36,18,16,.96)); }
 .world-heat-note { margin:0; color:#bba89b; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
 .world-heat-note li { margin:0 0 4px; list-style:none; }
+.world-week { border-color:#ffedca44; color:#ffedca; }

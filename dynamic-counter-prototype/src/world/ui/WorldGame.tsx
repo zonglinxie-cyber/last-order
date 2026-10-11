@@ -35,6 +35,7 @@ import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, score
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
 import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
+import { weekWordOf } from "../weeks.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
 
@@ -716,7 +717,7 @@ export default function WorldGame() {
     <header className="world-bar">
       <div className="world-bar-info">
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
-        <span className={lit.money ? "world-money is-hit" : "world-money"}>{yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>
+        <span className={lit.money ? "world-money is-hit" : "world-money"}>{yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>{weekWordOf(world.qualities) ? <span className="world-week">本周·{weekWordOf(world.qualities)}</span> : null}
       </div>
       <button className="world-mute" type="button" aria-label={muted ? "开声音" : "静音"} aria-pressed={muted}
         onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "🔇" : "🔊"}</button>

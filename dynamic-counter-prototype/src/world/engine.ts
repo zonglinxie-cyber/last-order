@@ -11,6 +11,7 @@ import {
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { isHeatId, type HeatId } from "./heat.ts";
+import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
   BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
@@ -466,13 +467,44 @@ export const festivalOn = (day: number, festivals: Festival[]): string | undefin
 const visitChance = (v: Visits, festival: string | undefined): number =>
   festival !== undefined && v.festivalBoost !== undefined ? clamp(v.chance * v.festivalBoost, 0, 1) : v.chance;
 
-/** 这一刻的精力上限：一天四个格子按发到手算，一个都没花就该有这个数。界面判"今天动过手没有"问它，别自己写死 ENERGY_PER_DAY。 */
-export const energyCeiling = (slot: Slot): number =>
-  Math.min(ENERGY_PER_DAY, ENERGY_PER_SLOT * (slot + 1));
+/** 这一刻的精力上限：一天四个格子按发到手算，一个都没花就该有这个数。界面判"今天动过手没有"问它，别自己写死 ENERGY_PER_DAY。
+ *  perSlot 给的是**这一周的格值**（品牌培训周少 5 点）；不传就是平时的格值。 */
+export const energyCeiling = (slot: Slot, perSlot: number = ENERGY_PER_SLOT): number =>
+  Math.min(ENERGY_PER_DAY, perSlot * (slot + 1));
+/** 这一周该轮到的那条规矩落在 qualities 上（周一早会那一刻），其余三条清掉。 */
+function setWeekRule(world: World): World {
+  const id = weekRuleOf(world.season, world.day);
+  const qualities = { ...world.qualities };
+  for (const other of WEEK_IDS) {
+    if (other === id) qualities[weekKey(other)] = 1;
+    else delete qualities[weekKey(other)];
+  }
+  return say({ ...world, qualities }, WEEK_RULES.find(r => r.id === id)!.line, ["roman"]);
+}
+/** 周日打烊把这一周的规矩清掉：留着它，下一周的早会就变成"改口"而不是"新一周"。 */
+function clearWeekRule(world: World): World {
+  const qualities = { ...world.qualities };
+  for (const id of WEEK_IDS) delete qualities[weekKey(id)];
+  return { ...world, qualities };
+}
+/** 这一刻的格值（培训周 15）。 */
+export const energySlotOf = (world: World): number => energyPerSlotOf(world.qualities, ENERGY_PER_SLOT);
+/** 这一刻硬推一次的台账扣分（巡查周翻倍）。 */
+export const hardSellComplianceNow = (world: World): number => hardSellComplianceOf(world.qualities, HARD_SELL_COMPLIANCE);
+/** 这一刻陆遥抢客的概率（只看自选加难那一档；本周规矩动的是她的**门槛**，见下一行）。 */
+export const poachChanceNow = (world: World): number => poachChanceOf(world.heat);
+/** 这一刻她请走"看法低于多少"的人（对面休假周收到 20）。 */
+export const poachMaxOpinionNow = (world: World): number => poachMaxOpinionOf(world.qualities, POACH_MAX_OPINION);
+/** 这一下动作要花几格精力（会员日周「加微信」不要）。 */
+export const verbEnergyNow = (world: World, verb: Verb): number =>
+  verb === "wechat" ? wechatEnergyOf(world.qualities, VERB_ENERGY[verb]) : VERB_ENERGY[verb];
 
 /** 开一个时段。festivals 给了就按当天日期设置 World.festival —— Visits.festivals 与 {festival} 条件都读它。 */
 export function beginSlot(world: World, people: Person[], festivals?: Festival[]): World {
-  let w: World = { ...world, present: {}, touched: [], energy: Math.min(ENERGY_PER_DAY, world.energy + ENERGY_PER_SLOT) };
+  // 周一上午那一格先开早会：罗曼念这一周的规矩，那一条落进 `week:<id>`（周日打烊清掉）。
+  // 先落规矩再发这一格的精力 —— 培训周从上午这一格起就少 5 点，不是下午才补扣。
+  const morning = isMonday(world.day) && world.slot === 0 ? setWeekRule(world) : world;
+  let w: World = { ...morning, present: {}, touched: [], energy: Math.min(ENERGY_PER_DAY, morning.energy + energySlotOf(morning)) };
   if (festivals) w = { ...w, festival: festivalOn(w.day, festivals) };
   const dayOfWeek = ((w.day - 1) % 7) + 1;
   const present: Record<PersonId, Zone> = {};
@@ -658,9 +690,9 @@ export function ambient(world: World, people: Person[]): World {
       && POACH_ZONES.includes(w.present[p.id]) && !w.touched.includes(p.id));
     if (marks.length) {
       const mark = marks.reduce((lo, p) => (opinionOf(w, p.id) < opinionOf(w, lo.id) ? p : lo));
-      if (opinionOf(w, mark.id) < POACH_MAX_OPINION) {
+      if (opinionOf(w, mark.id) < poachMaxOpinionNow(w)) {
         let r: number; [r, w] = roll(w);
-        if (r < poachChanceOf(w.heat)) {
+        if (r < poachChanceNow(w)) {
           w = { ...w, present: { ...w.present, [mark.id]: "rival" } };
           w = addOpinion(w, mark.id, POACH_OPINION);
           w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
@@ -878,7 +910,7 @@ const greetCountToday = (w: World, id: PersonId) =>
 export function availableVerbs(world: World, people: Person[], targets: PersonId[]): Verb[] {
   const t = targets;
   const p = (i: number) => t[i] && personOf(people, t[i]);
-  const ok = (verb: Verb) => world.energy >= VERB_ENERGY[verb];
+  const ok = (verb: Verb) => world.energy >= verbEnergyNow(world, verb);
   const out: Verb[] = [];
   if (!t.length) return out;
   const a = p(0), b = p(1);
@@ -959,7 +991,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
     return resolveServe(world, people, aId, product, args.units ?? a.skin?.maxUnits ?? 1, args.force ?? false);
   }
   let w: World = { ...world,
-    energy: world.energy - VERB_ENERGY[verb],
+    energy: world.energy - verbEnergyNow(world, verb),
     touched: [...new Set([...world.touched, ...targets])] };
 
   switch (verb) {
@@ -1147,7 +1179,7 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
     const amount = price * sold;
     w = { ...w, money: w.money + amount,
       standing: clamp(w.standing + HARD_SELL_STANDING, 0, 100),
-      compliance: clamp(w.compliance + HARD_SELL_COMPLIANCE, 0, 100) };
+      compliance: clamp(w.compliance + hardSellComplianceNow(w), 0, 100) };
     w = addOpinion(w, personId, HARD_SELL_OPINION);
     w = remember(w, personId, "hard-sell", -2);
     const refundUnits = sold - wanted;
@@ -1215,6 +1247,8 @@ export function endDay(world: World, people: Person[]): World {
   // 到期的委托在今夜结账：做到了的记人情，失约的记"说好的事没做" ——
   // 放在传话快照之前，这条坏话今晚就能被带出去。
   w = settleRequests(w, people);
+  // 周日打烊：这一周的规矩清掉（委托已经按当周的规则结完账）。
+  if (isSunday(w.day)) w = clearWeekRule(w);
   const mems = w.memories; // 今晚读的记忆快照：夜里讲出去的话不当晚再传。
   const nightPairs: Array<[Person, Person]> = [];
   for (const a of people) for (const b of people) {

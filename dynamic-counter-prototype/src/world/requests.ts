@@ -9,6 +9,7 @@ import {
   remember, say, warmthOf, MEDIATE_COLD_LIMIT,
 } from "./engine.ts";
 import { drawIndex, drawWeighted } from "./rng.ts";
+import { cleanWeightOf } from "./weeks.ts";
 import { ta, taOf } from "./pronoun.ts";
 import type { Person, PersonId, RequestKind, RequestState, Slot, World, WorldRequest } from "./types.ts";
 import { PLAYER } from "./types.ts";
@@ -89,7 +90,7 @@ type Draft = {
   log: string;
 };
 
-type Template = { kind: RequestKind; weight: number; drafts: (w: World, people: Person[]) => Draft[] };
+type Template = { kind: RequestKind; /** 权重可以给数，也可以给"按这一周的规矩现算"的函数（巡查周方敏那张多出）。 */ weight: number | ((w: World) => number); drafts: (w: World, people: Person[]) => Draft[] };
 
 const reachableNow = (w: World, id: PersonId) => id in w.present && w.present[id] !== "rival";
 
@@ -181,7 +182,7 @@ const TEMPLATES: Template[] = [
     },
   },
   {
-    kind: "clean", weight: 2,
+    kind: "clean", weight: (w) => cleanWeightOf(w.qualities, 2),
     drafts: (w) => reachableNow(w, "fangmin")
       ? [{
         by: "fangmin", kind: "clean",
@@ -224,7 +225,7 @@ export function openDay(world: World, people: Person[]): World {
       .map(t => ({ t, drafts: t.drafts(w, people).filter(d => !usedBy.has(d.by)) }))
       .filter(x => x.drafts.length);
     if (!elig.length) break;
-    const i = drawWeighted(w.seed, w.rngCalls, elig.map(x => x.t.weight));
+    const i = drawWeighted(w.seed, w.rngCalls, elig.map(x => typeof x.t.weight === "function" ? x.t.weight(w) : x.t.weight));
     w = { ...w, rngCalls: w.rngCalls + 1 };
     if (i < 0) break;
     const { t, drafts } = elig[i]!;
