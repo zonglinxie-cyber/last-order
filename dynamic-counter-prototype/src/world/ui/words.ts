@@ -250,6 +250,15 @@ export const ACT_WORD: Record<string, string> = {
   "a5-her-name": "请她在那一栏写下自己的名字",
   "a5-row-closed": "主张那一栏撤掉、不许再代签",
   "a5-nobody-owned": "说过那一栏归谁你说了不算",
+  // 主线第 5 幕的按季续写：第 6、7 季那两张（main-a6-relay / main-a7-same）
+  "a6-name-not-row": "问过那一栏上的名字今年认不认她",
+  "a6-row-merged": "去楼上问过撤栏那一步办到哪了",
+  "a6-for-newcomer": "替今年新来的孩子要过一句",
+  "a6-row-counted": "数过这一季从那一栏开出去几张",
+  "a7-row-personal": "说过那一栏还是一个名字不是表格",
+  "a7-row-nobody": "问过那一栏什么时候能不落人",
+  "a7-ledger-shown": "把去年那一栏开出去的四张摊到楼上",
+  "a7-who-added": "问过那行小字是谁加上去的",
   // 第 4 季个人线：裴岚（storylets-arcs6.ts）
   "quarter-row-asked": "问她那一行为什么每季都抄一遍",
   "quarter-words-kept": "把今天的原话照她的规矩留下",

@@ -273,4 +273,23 @@ test("本子：攒到的线索按学到的先后排，拧过来的那一档认�
   assert.equal(
     seasonRecap(recapWorld({ qualities: { "mainline:act": MAINLINE_ACTS.length, "thread:return-slip": 12 } }), FIXTURE_PEOPLE, storylets).threads[0].carriesOn,
     false, "幕号走到内容写到的最后一幕：这一页合上了，不许再挂下一季的钩子");
+
+  // 上面那两句成立的前提是"最后一幕 = 说完了"。第 38 轮主线改成按季续写（第 6、7 季各一张，都不抬幕号），
+  // 那句前提就不成立了，钩子改认**内容里有没有比这一季更晚的主线卡**。这两句钉的就是换掉之后的形状：
+  // 同一份幕号（已是最后一幕）、同一份落点，只有第几季不同 —— 第 5 季末得挂着，第 7 季末得收掉。
+  const relay = (from: number): Storylet => ({
+    id: `relay-${from}`, kind: "mainline", tension: 0, weight: 1, once: true,
+    cast: { a: { id: "mei", where: [] } }, when: [{ season: { gte: from } }], text: "x",
+    choices: [{ label: "接住那一栏", effects: [], result: "y" }],
+  });
+  const withLater: Storylet[] = [storylets[0], relay(7)];
+  const lastAct = (season: number) => recapWorld({
+    season, qualities: { "mainline:act": MAINLINE_ACTS.length, "thread:return-slip": 12 },
+  });
+  assert.equal(
+    seasonRecap(lastAct(5), FIXTURE_PEOPLE, withLater).threads[0].carriesOn,
+    true, "幕号已是最后一幕，可内容里还有第 7 季才开的主线卡 —— 这一页没合上，钩子得留着（摘掉『更晚的主线卡』那一项就红这一句）");
+  assert.equal(
+    seasonRecap(lastAct(7), FIXTURE_PEOPLE, withLater).threads[0].carriesOn,
+    false, "第 7 季末：内容里没有比第 7 季更晚的主线卡，钩子该收 —— 不许为了留悬念永远挂着");
 });

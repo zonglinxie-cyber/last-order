@@ -196,3 +196,95 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
   });
 }
+
+/** 按季续写那两张的盘：幕号 5、本子上有第 8 条、去年那一栏怎么落的记在 mainline:a5-row。 */
+const chainWorld = (over: Partial<World> = {}): World => ({
+  ...newWorld("chain-ui", PEOPLE),
+  season: 6, day: 12, slot: 1, energy: energyCeiling(over.slot ?? 1),
+  present: { fangmin: "cashier", shen: "counter", suman: "counter", mei: "counter" },
+  qualities: {
+    "mainline:act": 5, "thread:return-slip": 13,
+    "clue:slip-hand": 1, "clue:slip-desk": 1, "clue:slip-handover": 1, "clue:slip-signature": 1,
+    "mainline:a5-row": 1,
+  },
+  ...over,
+});
+
+const RELAY6 = { id: "main-a6-relay", binding: { a: "shen" } };
+const SAME7 = { id: "main-a7-same", binding: { a: "fangmin", b: "shen" } };
+
+/** 落盘的不只是记号：这两季各格都该一分钱不给，所以钱也要读出来比。 */
+const savedBoard = async (page: Page): Promise<{ qualities: Record<string, number>; money: number }> =>
+  page.evaluate(key => {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) throw new Error("存档没落盘");
+    const w = (JSON.parse(raw) as { world: { qualities: Record<string, number>; money: number } }).world;
+    return { qualities: w.qualities, money: w.money };
+  }, SAVE_KEY);
+
+for (const [width, height] of [[390, 844], [320, 568]] as const) {
+  test.describe(`主线按季续写演出 ${width}×${height}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+
+    test(`第 6 季那张：去年落的是「请她自己写名字」，桌上是该档那一格 + 兜底共两颗`, async ({ page }) => {
+      const came = chainWorld();
+      await enter(page, came, RELAY6);
+      const text = page.locator(".world-story .story-text");
+      await expect(text).toBeVisible();
+      await expect(text).toContainText("沈薇把这一季的领用表压在柜面上");
+      await expect(text).toContainText("号跟去年一模一样");
+      await expect(text).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(2);
+      // 另两档的话在这一副牌里不该露出来 —— 去年不是那样落的。
+      await expect(page.getByRole("button", { name: /撤栏那一步今年办到哪了/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /替今年那个新来的人要一句/ })).toHaveCount(0);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box, "故事卡要有尺寸").not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      for (const button of await choices(page).all()) {
+        const b = await button.boundingBox();
+        expect(b, "选项按钮要有位置").not.toBeNull();
+        expect(b!.height).toBeGreaterThanOrEqual(44);
+      }
+      const before = await page.evaluate(key => (JSON.parse(window.localStorage.getItem(key) ?? "{}") as
+        { world: { money: number } }).world.money, SAVE_KEY);
+      await page.getByRole("button", { name: "问那一栏上的名字今年认不认她" }).click();
+      await expect(page.locator(".world-feed")).toContainText("名字换过一回，号一年没换");
+      const q = await savedBoard(page);
+      expect(q.qualities["mainline:a6-row"], "这一格要把记号写下去，第 7 季那句全靠它").toBe(1);
+      expect(q.qualities["clue:slip-number"], "本子第 9 条「换的是名字，号一年没换」该落下").toBeGreaterThan(0);
+      expect(q.qualities["mainline:seen:main-a6-relay"], "演过的记号要落下，否则第 7 季原样再念一遍").toBe(1);
+      expect(q.money, "这一格一分钱都不给").toBe(before);
+    });
+
+    test(`去年那一栏压根没落名：第 6 季那张只剩兜底那一格，桌上不许是空的`, async ({ page }) => {
+      const qualities = { ...chainWorld().qualities };
+      delete qualities["mainline:a5-row"];
+      await enter(page, chainWorld({ qualities }), RELAY6);
+      await expect(choices(page)).toHaveCount(1);
+      await expect(page.getByRole("button", { name: "问那一栏上的名字今年认不认她" })).toHaveCount(0);
+      await page.getByRole("button", { name: "先数这一季从这一栏开出去几张" }).click();
+      const q = await savedQualities(page);
+      expect(q["mainline:a6-row"], "兜底那一格也要把记号写下去").toBe(4);
+    });
+
+    test(`第 7 季那张：去年只数了张数，「摊到楼上」那一格开着、「还是一个名字」关着`, async ({ page }) => {
+      await enter(page, chainWorld({
+        season: 7, day: 20,
+        qualities: { ...chainWorld().qualities, "clue:slip-number": 1, "mainline:a6-row": 4 },
+      }), SAME7);
+      const text = page.locator(".world-story .story-text");
+      await expect(text).toContainText("第四页那一栏旁边多印了一行小字：上一季同名");
+      await expect(text).not.toContainText("{$");
+      // 该档那一格 + 兜底 = 两颗；读别的档的两颗（含 any[1,2] 那一颗）都关着。
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: /那一栏还是一个名字/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /什么时候可以不落人/ })).toHaveCount(0);
+      await page.getByRole("button", { name: "把去年那四张摊到楼上去" }).click();
+      await expect(page.locator(".world-feed")).toContainText("今年变成抄件上那行小字里的「同名」两季");
+      const q = await savedQualities(page);
+      expect(q["clue:slip-selfrow"], "本子第 10 条「那一栏抄自己」该落下").toBeGreaterThan(0);
+      expect(q["mainline:act"], "续写不抬幕号 —— 第 5 幕还是最后一幕").toBe(5);
+    });
+  });
+}

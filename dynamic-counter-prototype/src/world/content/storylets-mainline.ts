@@ -1187,6 +1187,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { remember: { holder: "fangmin", act: "a5-her-name", valence: 2, subject: "player" } },
           { opinion: "fangmin", delta: 6 }, { stat: "compliance", delta: 3 }, { stat: "standing", delta: 2 },
+          { quality: "mainline:a5-row", set: 1 },
         ],
         result: "{$a}念了一遍再落笔，写的是她自己，不是那个号。她说这一栏往后拿她的名字去签，得先问她，这一句她今年说得很响。",
       },
@@ -1195,6 +1196,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { remember: { holder: "fangmin", act: "a5-row-closed", valence: 1, subject: "player" } },
           { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 4 }, { stat: "standing", delta: -2 },
+          { quality: "mainline:a5-row", set: 2 },
         ],
         result: "{$a}说撤栏要楼上的表改版，今年办不动；但「不许代签」这一句她可以现在就写进去，写完把笔递过来让你签。",
       },
@@ -1203,8 +1205,127 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { remember: { holder: "fangmin", act: "a5-nobody-owned", valence: -2, subject: "player" } },
           { opinion: "fangmin", delta: -4 }, { stat: "compliance", delta: -3 },
+          { quality: "mainline:a5-row", set: 3 },
         ],
         result: "{$a}点头说这一句她见过四季，每一季都有人说这栏与她无关，写到年底它总有一个名字，今年那个名字还是被借走的。",
+      },
+    ],
+  },
+  // 第 5 幕在第 5 季就讲完了，第 6、7 季那条主线整季 0 张（第 37 轮代价 ①，模拟器 7 季那行读得出）。
+  // 这两张不抬幕号、不新增落点档 —— 它们把「一幕讲完就停」改成「一幕里按季续写」：
+  // 每一季那一张读的是**上一季那一张写下的记号**（`mainline:a5-row` / `mainline:a6-row`，`mainline:` 前缀跨季带着走）。
+  // 为什么不读 `remember` 落点：`nextSeason` 只带走 valence 为 ±2 的记忆（engine.ts:1247），
+  // 第 5 幕那三格里有一格写的是 valence 1，过季就没了 —— 照它分叉就是一个死档（第 34 轮那条守卫抓的形状）。
+  // 兜底那一格不许省：去年那一栏可能压根没落名（没演到 main-a5-desk），三格全部门认档时桌上是空的。
+  {
+    id: "main-a6-relay",
+    kind: "mainline",
+    cast: { a: { id: "shen", where: [] } },
+    when: [
+      ACT(5), { clue: "slip-signature" },
+      { season: { gte: 6 } }, { day: { gte: 8 } }, { present: "shen" },
+    ],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}把这一季的领用表压在柜面上，第四页那一栏今年不是「待定」—— 上面有一个名字，从去年一直写到现在。她说她这季来退一张，柜员抬头看的是栏上那个名字不是她的脸；单子照样开出去，号跟去年一模一样。",
+    choices: [
+      {
+        label: "问那一栏上的名字今年认不认她",
+        when: [{ quality: "mainline:a5-row", eq: 1 }],
+        effects: [
+          { clue: "slip-number" },
+          { quality: "mainline:a6-row", set: 1 },
+          { remember: { holder: "shen", act: "a6-name-not-row", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 5 }, { stat: "compliance", delta: 2 },
+        ],
+        result: "{$a}笑了一下说认得 —— 去年那一笔是她自己落的笔，可这一季她站在栏前，柜员念的是名字后头那个号。名字换过一回，号一年没换。",
+      },
+      {
+        label: "去问楼上：撤栏那一步今年办到哪了",
+        when: [{ quality: "mainline:a5-row", eq: 2 }],
+        effects: [
+          { clue: "slip-number" },
+          { quality: "mainline:a6-row", set: 2 },
+          { remember: { holder: "shen", act: "a6-row-merged", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 4 }, { stat: "standing", delta: 2 }, { stat: "compliance", delta: -1 },
+        ],
+        result: "{$a}说没撤成，楼上把它并进区域总表，如今那一栏底下签的是另一个不认识的号 —— 你去年写进去那句「不许代签」，今年成了别人手上的章。",
+      },
+      {
+        label: "替今年那个新来的人要一句",
+        when: [{ quality: "mainline:a5-row", eq: 3 }],
+        effects: [
+          { clue: "slip-number" },
+          { quality: "mainline:a6-row", set: 3 },
+          { remember: { holder: "shen", act: "a6-for-newcomer", valence: 2, subject: "player" } },
+          { opinion: "shen", delta: 6 }, { bond: ["shen", "player"], delta: 5 }, { stat: "standing", delta: -1 },
+        ],
+        result: "{$a}说那一栏今年落到一个才来两周的孩子头上，第一个月就被代签三张 —— 去年你说这一栏与她无关，今年它归了一个更无关的人。",
+      },
+      {
+        label: "先数这一季从这一栏开出去几张",
+        effects: [
+          { clue: "slip-number" },
+          { quality: "mainline:a6-row", set: 4 },
+          { remember: { holder: "shen", act: "a6-row-counted", valence: 1, subject: "player" } },
+          { opinion: "shen", delta: 3 }, { stat: "compliance", delta: 3 },
+        ],
+        result: "{$a}说四张，三张的日期都在她当班的日子，最后一张是楼上自己退的那面镜 —— 那一栏不管谁站着，它只往外开单。",
+      },
+    ],
+  },
+  {
+    id: "main-a7-same",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "shen", where: [], mustBePresent: false } },
+    when: [
+      ACT(5), { clue: "slip-number" },
+      { season: { gte: 7 } }, { day: { gte: 16 } }, { present: "fangmin" },
+    ],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}带来这一季的抄件，第四页那一栏旁边多印了一行小字：上一季同名。她说这一栏今年不用再向楼上要谁，它照着上一季那一栏抄自己。{$b}在旁边只问一句：那行小字今年要写进说明里吗。",
+    choices: [
+      {
+        label: "那一栏还是一个名字，不是表格",
+        when: [{ any: [{ quality: "mainline:a6-row", eq: 1 }, { quality: "mainline:a6-row", eq: 2 }] }],
+        effects: [
+          { clue: "slip-selfrow" },
+          { remember: { holder: "fangmin", act: "a7-row-personal", valence: 2, subject: "player" } },
+          { opinion: "fangmin", delta: 5 }, { stat: "compliance", delta: 2 }, { stat: "standing", delta: 1 },
+        ],
+        result: "{$a}点头说去年也听过这一句，可那两个字去年是她手写的，今年是系统印的 —— 那行小字一加上去，那一栏就再没人手写过了。",
+      },
+      {
+        label: "问这一栏什么时候可以不落人",
+        when: [{ quality: "mainline:a6-row", eq: 3 }],
+        effects: [
+          { clue: "slip-selfrow" },
+          { remember: { holder: "fangmin", act: "a7-row-nobody", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 4 }, { stat: "standing", delta: 2 }, { stat: "compliance", delta: -2 },
+        ],
+        result: "{$a}说撤不掉，它进的是区域总表的表头；今年它连要一个名字都省了 —— 那一栏自己就是一个岗位，谁站过来都得往里签。",
+      },
+      {
+        label: "把去年那四张摊到楼上去",
+        when: [{ quality: "mainline:a6-row", eq: 4 }],
+        effects: [
+          { clue: "slip-selfrow" },
+          { remember: { holder: "fangmin", act: "a7-ledger-shown", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 5 }, { stat: "standing", delta: -1 },
+        ],
+        result: "{$a}说台账她收过，收完那一栏照旧开单 —— 你去年数出来的那四张，今年变成抄件上那行小字里的「同名」两季。",
+      },
+      {
+        label: "先问那行小字是谁加上去的",
+        effects: [
+          { clue: "slip-selfrow" },
+          { remember: { holder: "fangmin", act: "a7-who-added", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 3 }, { stat: "compliance", delta: 3 },
+        ],
+        result: "{$a}说是楼上的模板，去年冬天起就在改，没人签发起 —— 那一栏引用它自己，连一个要问的人都不问了。",
       },
     ],
   },
@@ -1219,7 +1340,9 @@ for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-afte
   "main-act3-row", "main-act3-tape", "main-a2-audit", "main-a2-tape", "main-a2-mirror", "main-a4-page",
   // 第 5 幕这两张抬完幕号就没人管了：线索发完它自己的门照样成立，不补记号第 6 季会原样再演一遍。
   // main-a5-open 不用补 —— 它把幕号抬到 5，ACT(4) 那道门自己就关上了。
-  "main-a5-names", "main-a5-desk"]) {
+  "main-a5-names", "main-a5-desk",
+  // 第 6、7 季那两张的门（season ≥ 6 / ≥ 7 + 本子上的线索）过季照样成立，不发记号就会一季重演一遍。
+  "main-a6-relay", "main-a7-same"]) {
   const s = STORYLETS_MAINLINE.find(x => x.id === id)!;
   s.when.push(SEEN(id));
   for (const c of s.choices) c.effects.push(MARK(id));

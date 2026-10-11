@@ -335,7 +335,11 @@ export function seasonRecap(world: World, people: Person[], storylets: Storylet[
   const act = world.qualities[MAINLINE_ACT_KEY] ?? 0;
   const spineOpened = act >= 1;
   // 这一幕还没走到内容写到的最后一幕：认这一页的人下一季还在楼上。
-  const carriesOn = act < MAINLINE_ACTS.length;
+  // 第 38 轮起这条不够了：主线改成按季续写（第 6、7 季各一张，都不抬幕号），幕号停在最后一幕
+  // 也不等于这条线说完 —— 所以还要认内容里有没有比这一季更晚的主线卡。
+  const laterMainline = storylets.some(s => s.kind === "mainline"
+    && s.when.some(c => "season" in c && c.season.gte !== undefined && c.season.gte > world.season));
+  const carriesOn = act < MAINLINE_ACTS.length || laterMainline;
   const threads: RecapThread[] = CLUE_THREADS
     .map(t => {
       const landing = threadLanding(world.qualities, t.id);

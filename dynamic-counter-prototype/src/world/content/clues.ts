@@ -100,6 +100,20 @@ export const CLUES: Clue[] = [
     text: "今年签在那一栏的还是那个名字，不是补四季的旧账，是照旧签，连日期都不改。",
     about: ["shen", "peilan"],
   },
+  {
+    // 第 6 季那一条：名字换过一回，号一年没换 —— 那一栏认的从来不是名字。
+    id: "slip-number",
+    thread: "return-slip",
+    text: "那一栏去年换过一个名字，号一年没换。它认的一直是当时站过来那个人身上的号。",
+    about: ["shen", "fangmin"],
+  },
+  {
+    // 第 7 季那一条：那一栏不再向楼上要人，它抄自己 —— 主线第 5 幕收在「流程自己长」。
+    id: "slip-selfrow",
+    thread: "return-slip",
+    text: "今年那页抄件上多了一行小字「上一季同名」。它引用的是自己，不再向楼上要谁。",
+    about: ["fangmin", "peilan"],
+  },
 ];
 
 const CLUE_IDS = new Set(CLUES.map(c => c.id));

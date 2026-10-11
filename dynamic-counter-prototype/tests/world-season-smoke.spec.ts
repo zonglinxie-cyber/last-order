@@ -697,7 +697,10 @@ const ACT3_LANDED: World = {
  */
 const LAST_ACT_LANDED: World = {
   ...newWorld("season-last-act", PEOPLE),
-  day: SEASON_DAYS + 1, slot: 3,
+  // 第 38 轮把钩子的判据从"幕号到没到最后一幕"换成"内容里还有没有比这一季更晚的主线卡"。
+  // 这副盘因此要把季号摆到内容讲完的那一季（第 7 季）才叫"合上了"：以前它停在第 1 季也成立，
+  // 是因为那时幕号名单就是内容的全部边界。同一屏"第 5 季末该挂着"那一条见 tests/world-ending-layer.spec.ts。
+  season: 7, day: SEASON_DAYS + 1, slot: 3,
   qualities: { "mainline:act": MAINLINE_ACTS.length, "thread:return-slip": 12, "clue:slip-desk": 9 },
 };
 
@@ -757,7 +760,9 @@ test.describe("季末回顾页", () => {
     await expect(book).toContainText("这一页没合上");
   });
 
-  test("幕号走到内容写到的最后一幕：钩子要收回去，不许年年都喊下一季", async ({ page }) => {
+  test("内容讲到最晚的那一季末：钩子要收回去，不许年年都喊下一季", async ({ page }) => {
+    // 第 38 轮的判据换法：以前"幕号到最后一幕"就够（那时名单 = 内容边界）；主线按季续写以后，
+    // 幕号停在 5 而第 6、7 季各还有一张，钩子必须留 —— 收钩子认的是"内容里没有更晚的主线卡"。
     await openSeasonScreen(page, LAST_ACT_LANDED);
     const book = page.locator(".recap-block", { hasText: "本子上的事" });
     await expect(book).toContainText("翻过来了");
