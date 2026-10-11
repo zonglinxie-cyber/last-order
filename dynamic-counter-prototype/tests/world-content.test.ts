@@ -5,6 +5,7 @@ import { CUSTOMERS } from "../src/campaign.ts";
 import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
 import { MAINLINE_ACTS, STORYLETS } from "../src/world/content/index.ts";
+import { CLUES } from "../src/world/content/clues.ts";
 import { ARC_PEOPLE, arcLandings } from "../src/world/progress.ts";
 import { absDay, applyChoice, beginSlot, choiceVisible, doVerb, drawStorylet, endDay, evalCond, newWorld, nextSeason, storyDeck } from "../src/world/engine.ts";
 import { PLAYER, type Cond, type Effect, type PersonId, type Ref, type Storylet, type Temper, type World, type Zone } from "../src/world/types.ts";
@@ -13,6 +14,17 @@ const SEASON_DAYS = 28;
 const TEMPERS: Temper[] = ["face", "wary", "warm", "gossip", "thrifty", "hasty", "loyal", "proud", "shy"];
 const IDS = new Set(PEOPLE.map(p => p.id));
 const RELATIONAL = (e: Effect) => "opinion" in e || "bond" in e || "remember" in e || "appoint" in e;
+
+/** 全柜 quality 键的值域：内容里 `set` 过的具体值；只出现过 `delta` 的键算开口（静态判不动它的范围）。 */
+const qualityValues = new Map<string, number[]>();
+const openQuality = new Set<string>();
+for (const s of STORYLETS) for (const c of s.choices) for (const e of c.effects) {
+  if (!("quality" in e)) continue;
+  if (typeof e.set === "number") {
+    const list = qualityValues.get(e.quality) ?? [];
+    if (!list.includes(e.set)) qualityValues.set(e.quality, [...list, e.set].sort((a, b) => a - b));
+  } else openQuality.add(e.quality);
+}
 
 function walkCond(cond: Cond, refs: Ref[]) {
   if ("any" in cond) {
@@ -491,6 +503,108 @@ test("梯子没有死格子：每一颗挂在去年读数上的选项，去年�
     assert.equal(missing.length, 0,
       `${card.id} 少了一档：去年写得出 how=${missing.join("/")}，今年没有一颗选项是为这一档写的`);
   }
+});
+
+test("全柜条件可达性：没有一颗门读一个谁也写不出的数，也没有一处自己跟自己矛盾", () => {
+  // 第 34 轮那个洞（选项挂在一个去年永远写不出的 how 上）不是梯子里独有的，任何一张卡都可能。
+  // 这一条把同一件事对所有卡开一遍，四类都是静态判得动的：
+  // A 一颗门读的 quality 值，全柜没有任何效果写得出；B clue id 不存在；C 问一个没有秘密的人的秘密；D 属性说错了人。
+  // 注意"引擎自己会写的键"不算：clue:/thread:/mainline:/secret-/wechat:/away:/bought:/served: 这些内容由引擎记账，
+  // arc:<id>（不带 :end）也是引擎递增的 —— 把它们当闭合值域会报一堆假洞（第一版探针就把 arc: 整族算进去了）。
+  const ENGINE_PREFIX = ["clue:", "thread:", "mainline:", "secret-", "wechat:", "away:", "bought:", "served:",
+    "storyteller:", "handoff-sale:", "standing:"];
+  const isOpenKey = (k: string) => openQuality.has(k) || ENGINE_PREFIX.some(p => k.startsWith(p)) || /^arc:[a-z]+$/.test(k);
+  const clueIds = new Set(CLUES.map(c => c.id));
+  const bad: string[] = [];
+  // 只在同一层"并且"关系里判矛盾：{ any: [eq 3, gte 4] } 是"或者"，不是自相矛盾（所以绝不往 any 里递归判这条）。
+  const contradictions = (owner: string, where: string, conds: Cond[]) => {
+    const lo: Record<string, number> = {}, hi: Record<string, number> = {}, hard: Record<string, number> = {};
+    for (const c of conds) {
+      if ("any" in c || "not" in c) continue;
+      const key = "quality" in c ? `q:${c.quality}` : "opinion" in c ? `o:${String(c.opinion)}` : "bond" in c ? `b:${c.bond.join(">")}` : null;
+      if (!key) continue;
+      const g = (c as { gte?: number }).gte, l = (c as { lte?: number }).lte, e = (c as { eq?: number }).eq;
+      if (typeof g === "number") lo[key] = Math.max(lo[key] ?? -1e9, g);
+      if (typeof l === "number") hi[key] = Math.min(hi[key] ?? 1e9, l);
+      if (typeof e === "number") hard[key] = e;
+    }
+    for (const key of Object.keys(hard)) {
+      const e = hard[key];
+      if ((key in lo && e < lo[key]) || (key in hi && e > hi[key]))
+        bad.push(`${owner} ${where}: 对 ${key} 既要 == ${e}，又要${key in lo ? ` >= ${lo[key]}` : ""}${key in hi ? ` <= ${hi[key]}` : ""} —— 这一颗永远点不亮`);
+    }
+    for (const key of Object.keys(lo))
+      if (key in hi && lo[key] > hi[key]) bad.push(`${owner} ${where}: 对 ${key} 既要 >= ${lo[key]} 又要 <= ${hi[key]} —— 无解`);
+  };
+  let visited = 0;
+  // 只钉"打算扫多少"是假绿：把 scan 那一行的入参切成空数组，计数照旧对得上，扫描却一次没做。
+  // 所以钉两个数：枚举出来的条件数 == 守卫真正看过的大小。
+  const countConds = (cs: Cond[]): number =>
+    cs.reduce((a, c) => a + 1 + ("any" in c ? countConds(c.any) : "not" in c ? countConds([c.not]) : 0), 0);
+  // 值域那一类只能在"并且"层判：{ any: [end==1, end>=5] } 整组是 satisfiable 的（走第一支），
+  // 但里面的 `end >= 5` 单独看写不出 —— 递归进去就会报假洞（U3b 就是这么抓出我自己的错的）。
+  // 线索 id、属性、指到不存在的人这三类与"或者"无关，照旧往 any / not 里递归。
+  const scan = (owner: string, where: string, conds: Cond[], andLevel = true) => {
+    for (const c of conds) {
+      visited++;
+      if ("any" in c) { scan(owner, `${where}（any 里）`, c.any, false); continue; }
+      if ("not" in c) { scan(owner, `${where}（取反里）`, [c.not], false); continue; }
+      if (andLevel && "quality" in c && !isOpenKey(c.quality)) {
+        const vals = qualityValues.get(c.quality) ?? [];
+        if (typeof c.eq === "number" && c.eq > 0 && !vals.includes(c.eq))
+          bad.push(`${owner} ${where}: 读 ${c.quality} === ${c.eq}，可全柜写得出的只有 [${vals.join(",") || "没人写这个键"}]`);
+        if (typeof c.gte === "number" && c.gte >= 1 && !vals.some(v => v >= c.gte!))
+          bad.push(`${owner} ${where}: 读 ${c.quality} >= ${c.gte}，写得出的最大是 ${vals.length ? Math.max(...vals) : "没有"}`);
+      }
+      if ("clue" in c && !clueIds.has(c.clue)) bad.push(`${owner} ${where}: clue "${c.clue}" 不在 CLUES（共 ${clueIds.size} 条）`);
+      const secretOf = (v: unknown) => (typeof v === "string" && !v.startsWith("$") ? PEOPLE.find(p => p.id === v) : undefined);
+      if ("knowsSecret" in c) {
+        const p = secretOf(c.knowsSecret);
+        if (p && !p.secret) bad.push(`${owner} ${where}: 问 ${p.name} 的秘密，可人物表里她没写 secret`);
+      }
+      if ("quality" in c && /^secret-(known|kept|out|backfired):/.test(c.quality)) {
+        const p = secretOf(c.quality.split(":")[1]);
+        if (p && !p.secret) bad.push(`${owner} ${where}: 读 ${c.quality}，可 ${p.name} 没有秘密可揭`);
+      }
+      if ("temper" in c && !String(c.temper).startsWith("$")) {
+        const p = PEOPLE.find(x => x.id === c.temper);
+        if (p && c.is && !p.tempers.includes(c.is)) bad.push(`${owner} ${where}: 说 ${p.name} 脾气是「${c.is}」，人物表里她是 [${p.tempers.join(",")}]`);
+      }
+      if ("role" in c && !String(c.role).startsWith("$")) {
+        const p = PEOPLE.find(x => x.id === c.role);
+        if (p && c.is && p.role !== c.is) bad.push(`${owner} ${where}: 说 ${p.name} 身份是「${c.is}」，人物表里是「${p.role}」`);
+      }
+      if ("gender" in c && !String(c.gender).startsWith("$")) {
+        const p = PEOPLE.find(x => x.id === c.gender);
+        if (p && c.is && p.gender !== c.is) bad.push(`${owner} ${where}: 说 ${p.name} 是「${c.is}」，人物表里是「${p.gender}」`);
+      }
+      for (const ref of ["present", "absent", "opinion", "temper", "role", "gender"] as const) {
+        if (ref in c && typeof (c as Record<string, unknown>)[ref] === "string" && !String((c as Record<string, unknown>)[ref]).startsWith("$")) {
+          const id = String((c as Record<string, unknown>)[ref]);
+          if (!PEOPLE.some(x => x.id === id)) bad.push(`${owner} ${where}: ${ref} 指到 "${id}" —— 不在人物表里`);
+        }
+      }
+    }
+  };
+  let total = 0, choiceConds = 0;
+  for (const s of STORYLETS) {
+    total += countConds(s.when);
+    contradictions(s.id, "卡级", s.when);
+    scan(s.id, "卡级", s.when);
+    s.choices.forEach((c, i) => {
+      const n = countConds(c.when ?? []);
+      total += n;
+      choiceConds += n;
+      contradictions(s.id, `第${i + 1}颗「${c.label}」`, c.when ?? []);
+      scan(s.id, `第${i + 1}颗「${c.label}」`, c.when ?? []);
+    });
+  }
+  // 这条守卫的价值全在"扫得到全部条件"上：读数掉了说明它悄悄漏了范围（比如新加一种 when 写法没进这里）。
+  // 两个数都要钉 —— 只钉枚举数的话，"扫描那一行被换成空数组"这种漏法看不见（U6 第一版就是这么溜过去的）。
+  assert.ok(STORYLETS.length > 300, `只扫了 ${STORYLETS.length} 张卡：范围缩水了，这条守卫会假绿`);
+  assert.ok(choiceConds > 300, `选项上的门只枚举到 ${choiceConds} 道：这一层的门最容易写错（第 34 轮那个洞就在这层），漏了它整条守卫就是假绿`);
+  assert.equal(visited, total, `枚举到 ${total} 道条件，守卫只看了 ${visited} 道 —— 有一层没扫到，这条守卫在假绿`);
+  assert.equal(bad.length, 0, bad.slice(0, 25).join("\n  "));
 });
 
 test("往牌堆加一张晚季才开的卡，前四季抽到的卡逐位不动", () => {
