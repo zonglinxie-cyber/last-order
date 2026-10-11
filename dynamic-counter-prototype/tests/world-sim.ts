@@ -19,6 +19,7 @@ import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestCho
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
 import { SHELF_IDS } from "../src/world/shelf.ts";
 import { WEEK_IDS, isMonday, isSunday, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
+import { batchStats, wordsOf } from "../src/world/content/batches.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -514,6 +515,15 @@ for (const rule of WEEK_IDS) {
   }).join(" · ");
   console.log(`  ${WEEK_IDS.indexOf(rule) + 1}. ${line}`);
 }
+
+// 按批次报平均字数（任务表第 4 项）：口径 = 正文 + 各选项结果，不含选项自己的 label。
+// 为什么要这张表：文档里那句"第五格 379 字/张、前三格 230~254"是回忆出来的，没有哪一处每周把它量一遍 ——
+// 手机上读一张卡要多久，就该有一个数。这张表不改任何玩法，纯读，也不碰 RNG 流。
+console.log("\n各批次平均字数（文 + 结果，不含 label；手机上读一张的份量）:");
+for (const b of batchStats(storylets))
+  console.log(`  ${b.word.padEnd(18)} ${String(b.cards).padStart(3)} 张 ${String(b.words).padStart(6)} 字 均 ${b.avg.toFixed(1).padStart(6)} 字/张`);
+const all = storylets.reduce((a, s) => a + wordsOf(s), 0);
+console.log(`  ${"全柜".padEnd(17)} ${String(storylets.length).padStart(3)} 张 ${String(all).padStart(6)} 字 均 ${(all / storylets.length).toFixed(1).padStart(6)} 字/张`);
 
 // 每天开出几件：罗曼的 quota 阶梯按这个分布定。
 // 阶梯不改变模拟里的手法（honest 只按她的 maxUnits 开单），所以任一阶梯的达成率能在这里直接算出来 ——

@@ -474,6 +474,8 @@ test("第 7 季那一格：前两年的账在这里结，格子不许缺也不�
 // 第 8 季那一格（life:<id> 走到 4）：第 39 轮开的第四格先给十位，第 40 轮铺满二十位 —— 四格等长。
 // 名单仍写死在这里：要给谁、要先给谁，得在名单上选边，不许悄悄加。
 // 第四格不写成"又一年"，写成**这一格归谁由她自己给答案**；分叉读第三年那一档（第 34 轮那条通用守卫两头咬）。
+import { batchStats, wordsOf } from "../src/world/content/batches.ts";
+
 const LIFE_STEP4: PersonId[] = ["shen", "anjie", "mei", "xiaoyu", "zhou", "suman", "luyao", "miduo", "zhao", "fangmin",
   "duan", "yinxiaojie", "zhaoning", "tangke", "roman", "qiaowan", "songjie", "baijie", "peilan", "liangxia"];
 
@@ -627,6 +629,19 @@ test("梯子没有死格子：每一颗挂在去年读数上的选项，去年�
     assert.equal(missing.length, 0,
       `${card.id} 少了一档：去年写得出 how=${missing.join("/")}，今年没有一颗选项是为这一档写的`);
   }
+});
+
+test("批次表分得干净：每一张卡都归得进某一批，各批张数与字数加起来等于全柜", () => {
+  // 这张表是"按批次报均字数"那条读数的地基：分桶漏一张，读数就把一批的账算到另一批头上。
+  // 只核自洽，不钉总数 —— 内容还在长，钉死 371 张这种数每次加卡都要来改测试。
+  const rows = batchStats(STORYLETS);
+  assert.ok(!rows.some(r => r.id === "unknown"), `有卡没归进任何一批：${rows.filter(r => r.id === "unknown").map(r => r.word).join(",")}`);
+  assert.equal(rows.reduce((a, r) => a + r.cards, 0), STORYLETS.length, "各批张数加起来不等于全柜：有卡被两批同时认走，或漏了");
+  assert.equal(rows.reduce((a, r) => a + r.words, 0), STORYLETS.reduce((a, s) => a + wordsOf(s), 0), "字数对不上：批次分类把同一张卡数了两次");
+  for (const r of rows) assert.ok(r.cards > 0 && r.avg > 0, `${r.word} 是空的一批`);
+  // 每批内部不许出现读不完的卡：单张超过 900 字（约三屏）就是写飞了，这一条按现值留一倍余量。
+  const fat = STORYLETS.filter(s => wordsOf(s) > 900).map(s => s.id);
+  assert.deepEqual(fat, [], `这些卡单张超过 900 字，手机上要滚三屏：${fat.join(", ")}`);
 });
 
 test("岁数只有一处算法：一季一岁、加十二季不荒唐，内容里不许写死年龄", () => {
