@@ -18,6 +18,13 @@ const landedIn = (season: number, landing: number, extra: Record<string, number>
   qualities: { "mainline:act": 4, "thread:return-slip": landing, "thread:return-slip:landed": season, ...extra },
 });
 
+/** 第 5 幕以后那四句认的是"这一步的线索是不是本季学到的"（线索存的是绝对天，见 engine 的 absDay）。
+ *  夹具自己算这个天：第 S 季第 12 天 = (S-1)*28 + 12。季号差一，判词就该换。 */
+const spokeIn = (season: number, clue: string): Partial<World> => ({
+  season,
+  qualities: { "mainline:act": 5, [`clue:${clue}`]: (season - 1) * 28 + 12 },
+});
+
 test("结局至少 8 个，rank 两两不同，排出来是全序", () => {
   assert.ok(ENDINGS.length >= 8);
   assert.equal(new Set(ENDINGS.map(e => e.id)).size, ENDINGS.length);
@@ -55,6 +62,12 @@ test("每个结局都能构造出来，更好的条件优先", () => {
       compliance: 30, standing: 36, money: 12000,
       ...landedIn(1, 17),
     })],
+    // 第 43 轮：第 5 幕以后那四句，一句一季。构造它们只要"这一步的线索是本季学到的"+ 幕号 5，
+    // 不需要新的落点档，也不需要新的存档字段 —— 这就是它们能靠线索的绝对天数的原因。
+    ["row-signed-again", at({ compliance: 55, standing: 48, money: 14000, ...spokeIn(5, "slip-signature") })],
+    ["row-numbers-only", at({ compliance: 52, standing: 45, money: 14000, ...spokeIn(6, "slip-number") })],
+    ["row-copies-itself", at({ compliance: 48, standing: 50, money: 14000, ...spokeIn(7, "slip-selfrow") })],
+    ["row-blank-season", at({ compliance: 44, standing: 46, money: 14000, ...spokeIn(8, "slip-blank") })],
     ["both-kept", at({
       compliance: 50, standing: 60, money: 20000,
       qualities: { "arc:shen:end": 1, "arc:anjie:end": 1 },
@@ -244,5 +257,40 @@ test("目录里每一句读幕号的，都必须同时读落地那一季", () =>
   for (const e of readsAct) {
     assert.ok(e.includes("s.landedThisSeason"),
       `「${e.match(/^([\w-]+)"/)?.[1]}」读幕号却不读落地那一季`);
+  }
+});
+
+test("第 5 幕以后那四句：隔一季不重念，也不跟第 4 幕那四句抢，且不靠幕号分季", () => {
+  // 同一条线索，学到那一天落在上一季 → 这一季不该再把同一句话原样念一遍。
+  // 这是第 27 轮给主线那四句立的口径，延伸到"按季续写"这一层：那一层的门槛不认季号就白搭。
+  const steps = [
+    ["slip-signature", "row-signed-again"], ["slip-number", "row-numbers-only"],
+    ["slip-selfrow", "row-copies-itself"], ["slip-blank", "row-blank-season"],
+  ] as const;
+  for (const [clue, id] of steps) {
+    const now = at({ season: 6, qualities: { "mainline:act": 5, [`clue:${clue}`]: (6 - 1) * 28 + 12 } });
+    assert.equal(seasonEnding(now, PEOPLE).id, id, `${clue} 本季学到的，却没念这一句`);
+    const before = at({ season: 6, qualities: { "mainline:act": 5, [`clue:${clue}`]: (5 - 1) * 28 + 12 } });
+    assert.notEqual(seasonEnding(before, PEOPLE).id, id, `${clue} 是上一季学的 —— 这一季把同一句话原样重念了`);
+  }
+  // 第 4 季那张退货单落地那一季，念的还得是第 4 幕那四句（那一步的线索那时还没有）
+  const landed4 = at({ compliance: 55, standing: 50, money: 12000, ...landedIn(4, 12) });
+  assert.ok(["row-is-yours", "page-carried"].includes(seasonEnding(landed4, PEOPLE).id),
+    `第 4 季末念成了「${seasonEnding(landed4, PEOPLE).id}」—— 新句子把第 4 幕那句抢了`);
+  // 边界（C2 那次反证抓出来的洞）：夹具原来全用季中第 12 天，于是 seasonOfAbsDay 少算一季
+  // （floor(day/28)+1）也照样全绿 —— 一条量不到东西的断言就是假绿。补上季末/季首那两天。
+  const lastDay = at({ season: 6, qualities: { "mainline:act": 5, "clue:slip-number": (6 - 1) * 28 + 28 } });
+  assert.equal(seasonEnding(lastDay, PEOPLE).id, "row-numbers-only", "第 28 天学的那一步，这一季没念自己的判词");
+  const firstDayNext = at({ season: 6, qualities: { "mainline:act": 5, "clue:slip-number": (6 - 1) * 28 + 29 } });
+  assert.notEqual(seasonEnding(firstDayNext, PEOPLE).id, "row-numbers-only",
+    "那是下一季第一天学的，这一季就念了下一季的话 —— 天数换算错一天就整季串台");
+  // 静态：这四句靠线索的绝对天数分季，不许再读幕号（幕号停在 5，读它分不出第 5~8 季）
+  const src = readFileSync(new URL("../src/world/ending.ts", import.meta.url), "utf8");
+  for (const id of ["row-signed-again", "row-numbers-only", "row-copies-itself", "row-blank-season"]) {
+    const at0 = src.indexOf(`id: "${id}"`);
+    assert.ok(at0 > 0, `${id} 不在目录里`);
+    const gate = src.slice(at0, src.indexOf("},", at0));
+    assert.ok(gate.includes("s.spoke["), `${id} 没靠线索季号 —— 它凭什么知道这一季说过那句话`);
+    assert.ok(!gate.includes("s.act"), `${id} 还在读幕号：幕号停在 5，读它分不出季`);
   }
 });

@@ -4,6 +4,7 @@
 import { seasonSummary, type SeasonSummary } from "./engine.ts";
 import { MAINLINE_ACT_KEY, MAINLINE_THREAD, threadLandedSeason, threadLanding } from "./content/clues.ts";
 import type { Person, PersonId, World } from "./types.ts";
+import { SEASON_DAYS } from "./types.ts";
 
 export type SeasonEnding = { id: string; title: string; body: string };
 
@@ -11,12 +12,54 @@ const endOf = (s: SeasonSummary, id: PersonId) => s.arcs[id]?.end ?? 0;
 const has = (ids: PersonId[], id: PersonId) => ids.includes(id);
 
 /** 主线走到第几幕、那条退货单落到哪一档、以及这一季是不是它落地的那一季。
- *  只有最前面那四句读它们，其余各句读不到。 */
-type Mainline = { act: number; landing: number; landedThisSeason: boolean };
+ *  只有最前面那几组读它们，其余各句读不到。 */
+type Mainline = { act: number; landing: number; landedThisSeason: boolean; spoke: Record<string, boolean> };
+
+/** 第 5 幕以后主线是**按季续写**的（第 38 轮那三张 + 第 41 轮那一张），每一步都发一条本子上的线索：
+ *  slip-signature 第 5 季 / slip-number 第 6 季 / slip-selfrow 第 7 季 / slip-blank 第 8 季。
+ *  线索记的是"第几天学到的"那个绝对天（engine 的 absDay），所以"这一步是不是这一季说的"算得出来 ——
+ *  结局层不用为新记号改引擎，也不会像旧那四句一样隔一季把同一句话再念一遍。 */
+const CHAIN_STEP_CLUES = ["slip-signature", "slip-number", "slip-selfrow", "slip-blank"] as const;
+const seasonOfAbsDay = (day: number): number => Math.floor((day - 1) / SEASON_DAYS) + 1;
+const spokeThisSeason = (qualities: Record<string, number>, season: number): Record<string, boolean> => {
+  const out: Record<string, boolean> = {};
+  for (const id of CHAIN_STEP_CLUES) {
+    const day = qualities[`clue:${id}`] ?? 0;
+    out[id] = day > 0 && seasonOfAbsDay(day) === season;
+  }
+  return out;
+};
 
 type Gate = (s: SeasonSummary & Mainline) => boolean;
 
 const CATALOG: Array<SeasonEnding & { when: Gate }> = [
+  // —— 第 5 幕以后那四句：一句对应一季，门槛只认"这一步的线索是不是本季学到的"，不认幕号
+  //    （幕号停在 5，靠它分不出季）；也不与上面那四句抢 —— 那四句要 `thread:return-slip` 本季落地，
+  //    而第 4 季之后落点不再动。
+  {
+    id: "row-signed-again",
+    title: "那一栏今年照旧签",
+    body: "今年签在那一栏的还是那个名字，不是补四季的旧账，是照旧 —— 你替她把这一笔记到第五季，台账上多出来的全是别人的日期。",
+    when: s => s.spoke["slip-signature"],
+  },
+  {
+    id: "row-numbers-only",
+    title: "认的是号，不是名字",
+    body: "那一栏去年换过一个名字，号一年没换。这一季的退单还是从那个号开出去：柜位认得它，认不得人。",
+    when: s => s.spoke["slip-number"],
+  },
+  {
+    id: "row-copies-itself",
+    title: "那一栏抄自己",
+    body: "抄件上多了一行小字「上一季同名」。它不再向楼上要谁了 —— 四季都要长出来的那个名字，今年由它自己复制自己。",
+    when: s => s.spoke["slip-selfrow"],
+  },
+  {
+    id: "row-blank-season",
+    title: "那一栏空着过完一季",
+    body: "今年没人写，也没人来问该谁填。柜上照旧开门，退单照旧进账 —— 原来它不是营业的条件，只是有人替它背着，这一年没人背。",
+    when: s => s.spoke["slip-blank"],
+  },
   // —— 主线第 4 幕那四句：门槛一律带 act >= 4 且 landedThisSeason，所以没跑完四季的人在下面那十三句里落，
   //    跑完的也只在那张退货单落地的那一季落一次 —— 往后的季这一句已经说完，回到下面那十三句。
   //    落点代号见 storylets-mainline.ts 第 4 幕那三张（12~17）。
@@ -159,6 +202,7 @@ export function seasonEnding(world: World, people: Person[]): SeasonEnding {
     act: world.qualities[MAINLINE_ACT_KEY] ?? 0,
     landing: threadLanding(world.qualities, MAINLINE_THREAD),
     landedThisSeason: threadLandedSeason(world.qualities, MAINLINE_THREAD) === world.season,
+    spoke: spokeThisSeason(world.qualities, world.season),
   };
   const hit = CATALOG.find(e => e.when(s)) ?? CATALOG[CATALOG.length - 1];
   return { id: hit.id, title: hit.title, body: hit.body };

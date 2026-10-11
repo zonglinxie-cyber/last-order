@@ -82,6 +82,32 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       await expect(body).toContainText("镜子");
     });
 
+    // —— 第 43 轮：第 5 幕以后那四句判词，一句一季。散场那一屏以前只会念第 4 幕的话，
+    //    跑完八季的人在收尾处读到的还是四季那一句。现在"这一步的线索是不是本季学的"决定念哪句。
+    test(`第 5 季末散场：念的是「那一栏今年照旧签」，不是第 4 幕那句`, async ({ page }) => {
+      await enter(page, mainlineWorld({
+        season: 5,
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4, "clue:slip-signature": 4 * 28 + 12 },
+      }));
+      await expect(page.locator("h1.recap-ending")).toHaveText("那一栏今年照旧签");
+      await expect(page.locator(".recap-ending-body")).toContainText("不是补四季的旧账");
+    });
+
+    test(`第 8 季末散场：念「那一栏空着过完一季」；同一季而线索是上一季学的就不念`, async ({ page }) => {
+      await enter(page, mainlineWorld({
+        season: 8,
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4, "clue:slip-blank": 7 * 28 + 12 },
+      }));
+      await expect(page.locator("h1.recap-ending")).toHaveText("那一栏空着过完一季");
+      await expect(page.locator(".recap-ending-body")).toContainText("这一年没人背");
+      // 隔一季不重念在界面上也要成立：这条线索是上一季学的，这一季该换别的话。
+      await enter(page, mainlineWorld({
+        season: 8,
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4, "clue:slip-blank": 6 * 28 + 12 },
+      }));
+      await expect(page.locator("h1.recap-ending")).not.toHaveText("那一栏空着过完一季");
+    });
+
     test(`钩子认的是内容里还有没有更晚的主线卡，不是幕号名单：第 5、7 季末挂着、第 8 季末收掉`, async ({ page }) => {
       // 第 38 轮主线改成按季续写（第 6、7 季各一张，都不抬幕号）：幕号停在最后一幕也不等于这条线说完。
       // 两份盘只差第几季 —— 落点、幕号、本子都一样。
