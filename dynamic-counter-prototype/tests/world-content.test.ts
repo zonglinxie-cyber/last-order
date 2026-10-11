@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CUSTOMERS } from "../src/campaign.ts";
 import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
-import { CIRCLES, PEOPLE } from "../src/world/content/people.ts";
+import { CIRCLES, PEOPLE, ageAtSeason } from "../src/world/content/people.ts";
 import { MAINLINE_ACTS, STORYLETS } from "../src/world/content/index.ts";
 import { CLUES } from "../src/world/content/clues.ts";
 import { ARC_PEOPLE, arcLandings } from "../src/world/progress.ts";
@@ -578,6 +578,29 @@ test("梯子没有死格子：每一颗挂在去年读数上的选项，去年�
     assert.equal(missing.length, 0,
       `${card.id} 少了一档：去年写得出 how=${missing.join("/")}，今年没有一颗选项是为这一档写的`);
   }
+});
+
+test("岁数只有一处算法：一季一岁、加十二季不荒唐，内容里不许写死年龄", () => {
+  // §4 那句「每过一年加 1 岁」。以前人物表里的 age 是个死数：第 8 季的人和第 1 季长得一样，
+  // "过了七年"这件事在界面上读不出来。现在由 season 现推 —— 而且**不进 qualities**：
+  // 写进盘就要背"换季带不带、旧档缺字段读成几"的账（mainline:seen 那一族踩过）。
+  const shen = PEOPLE.find(p => p.id === "shen")!;
+  assert.equal(ageAtSeason(shen, 1), shen.age, "第 1 季的岁数必须等于人物表那一格，不然人物表就不是真值");
+  for (const p of PEOPLE) {
+    for (const s of [2, 5, 9, 12])
+      assert.equal(ageAtSeason(p, s), ageAtSeason(p, s - 1) + 1, `${p.id} 第 ${s} 季没比第 ${s - 1} 季长一岁`);
+    assert.ok(ageAtSeason(p, 1) >= 16 && ageAtSeason(p, 12) <= 80,
+      `${p.name} 的岁数轨迹不合理：第 1 季 ${ageAtSeason(p, 1)}，连玩十二季到 ${ageAtSeason(p, 12)}`);
+  }
+  const w1 = nextSeason({ ...newWorld("age-seed", PEOPLE), season: 3 }, PEOPLE);
+  assert.equal(w1.season, 4, "换季没抬季号，岁数也就跟着不动");
+  assert.equal(Object.keys(w1.qualities).filter(k => /age|岁/.test(k)).length, 0,
+    "岁数被写进盘里了 —— 它该由 season 现推，不占存档字段");
+  // 内容卡里写死「三十二岁」，界面第二年就念三十三，两边打架且没有一条测试会红。
+  const hardcoded = [...new Set(STORYLETS
+    .flatMap(s => [s.text, ...s.choices.flatMap(c => [c.label, c.result ?? ""])])
+    .filter(x => /[0-9一二两三四五六七八九十百]+\s*岁/.test(x)).slice(0, 6))];
+  assert.deepEqual(hardcoded, [], "故事文本里出现写死的岁数 —— 界面上那一行是活的数");
 });
 
 test("全柜条件可达性：没有一颗门读一个谁也写不出的数，也没有一处自己跟自己矛盾", () => {

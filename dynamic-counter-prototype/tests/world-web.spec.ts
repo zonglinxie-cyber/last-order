@@ -13,10 +13,11 @@ const KNOWN: Record<string, number> = {
   shen: 65, luyao: -80, tangke: 30, suman: 12, roman: 0, mei: -55, zhou: -18, anjie: 48, ligui: 8,
 };
 
-const envelope = (): string => {
+const envelope = (season = 1): string => {
   const base = newWorld("web-seed", PEOPLE);
   const world: World = {
     ...base,
+    season,
     day: 3, slot: 1, money: 12_400, energy: energyCeiling(1),
     opinion: { ...KNOWN },
     bonds: { "shen>luyao": -78, "tangke>suman": 52, "mei>zhou": 26 },
@@ -40,8 +41,8 @@ const envelope = (): string => {
 const NODE_COUNT = PEOPLE.length + 1; // 42 个人 + 玩家中心节点
 const UNKNOWN_COUNT = PEOPLE.length - Object.keys(KNOWN).length; // 没见过也没听过的压暗在最外圈
 
-const openWeb = async (page: import("@playwright/test").Page) => {
-  await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [SAVE_KEY, envelope()]);
+const openWeb = async (page: import("@playwright/test").Page, season = 1) => {
+  await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [SAVE_KEY, envelope(season)]);
   // 引导已全看过：气泡指着顶栏返回键，不挡走查。
   await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [COACH_KEY, JSON.stringify(COACH_STEPS)]);
   await page.goto("/?mode=world");
@@ -110,6 +111,24 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".person-card")).toHaveCount(0);
       await expect(page.locator(".web-node")).toHaveCount(NODE_COUNT);
     });
+    test(`人物卡上的岁数：第 1 季就是人物表那一格（周姐 36）`, async ({ page }) => {
+      await openWeb(page);
+      await page.locator('.web-node[aria-label="周姐"]').click();
+      const card = page.locator(".person-card");
+      await expect(card).toBeVisible();
+      await expect(card.locator(".pc-descriptor")).toContainText("今年 36 岁");
+    });
+
+    test(`隔七季她长七岁：同一份盘只改季号，卡上念 43 岁`, async ({ page }) => {
+      await openWeb(page, 8);
+      await page.locator('.web-node[aria-label="周姐"]').click();
+      const card = page.locator(".person-card");
+      await expect(card).toBeVisible();
+      // 不是"看起来会变"：第 1 季那个数在这份盘上必须已经不见了。
+      await expect(card.locator(".pc-descriptor")).toContainText("今年 43 岁");
+      await expect(card.locator(".pc-descriptor")).not.toContainText("今年 36 岁");
+    });
+
   });
 }
 
@@ -130,5 +149,6 @@ test.describe("人情网 · 沈薇的卡", () => {
     // 她的熟人按冷暖排：同事米朵、粉丝唐糖在前，对头宋姐与陆遥垫底。
     const names = await card.locator(".pc-known b").allTextContents();
     expect(names).toEqual(["米朵", "唐糖", "宋姐", "陆遥"]);
+
   });
 });

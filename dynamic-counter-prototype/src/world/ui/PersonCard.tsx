@@ -1,6 +1,7 @@
 // 人物卡：只读 World 与 Person，不接引擎、不做任何判断。
 // 看法与冷暖一律说成话（words.ts 唯一出处），不出现数字和进度条。
 import { ta } from "../pronoun.ts";
+import { ageAtSeason } from "../content/people.ts";
 import { useMemo } from "react";
 import { MobileScroll } from "../../mobile";
 import { PLAYER, type Person, type PersonId, type World } from "../types.ts";
@@ -33,7 +34,7 @@ export function PersonCard({ person, world, people, onClose }: PersonCardProps) 
       </span>
       <div className="pc-title">
         <b className="pc-name">{person.name}</b>
-        <small className="pc-descriptor">{person.descriptor}</small>
+        <small className="pc-descriptor">{person.descriptor} · 今年 {ageAtSeason(person, world.season)} 岁</small>
       </div>
       <button className="pc-close" type="button" aria-label="关闭人物卡" onClick={onClose}>×</button>
     </header>

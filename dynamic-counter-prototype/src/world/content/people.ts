@@ -936,3 +936,8 @@ function attach(drafts: Array<Omit<Person, "bonds">>): Person[] {
 }
 
 export const PEOPLE: Person[] = attach(DRAFTS);
+
+/** 一季长一岁（§4「熟客的人生」里那句「每过一年加 1 岁」）。
+ *  岁数不进 `qualities`：它本来就只随季走，写进存档要背"换季带不带、旧档缺字段读成几"的账，
+ *  而它唯一的真值就是「人物表那一格 + 第几季」。界面要念就从这里现推，内容卡里不许写死数字。 */
+export const ageAtSeason = (person: Person, season: number): number => person.age + Math.max(0, season - 1);
