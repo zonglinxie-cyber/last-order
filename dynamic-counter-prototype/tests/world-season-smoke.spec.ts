@@ -699,9 +699,10 @@ const LAST_ACT_LANDED: World = {
   ...newWorld("season-last-act", PEOPLE),
   // 第 38 轮把钩子的判据从"幕号到没到最后一幕"换成"内容里还有没有比这一季更晚的主线卡"，
   // 这副盘因此要把季号摆到内容讲完的那一季才叫"合上了"。第 38 轮那一季是 7，第 41 轮接上
-  // main-a8-blank 以后是 8 —— 上一轮那句"第 7 季末该收钩子"这次自己红了，红的不是产品坏，是边界挪了：
-  // 这正是"认内容而不是认写死的季号"想要的反应。同一屏"第 5、7 季末该挂着"那一条见 tests/world-ending-layer.spec.ts。
-  season: 8, day: SEASON_DAYS + 1, slot: 3,
+  // main-a8-blank 以后是 8，第 45 轮接上 main-a9-ownrow 以后是 9 —— 每接一格，上一轮那句"该收钩子"
+  // 就自己红一次，红的不是产品坏，是边界挪了：这正是"认内容而不是认写死的季号"想要的反应。
+  // 同一屏"第 5、7、8 季末该挂着、第 9 季末收掉"那一条见 tests/world-ending-layer.spec.ts。
+  season: 9, day: SEASON_DAYS + 1, slot: 3,
   qualities: { "mainline:act": MAINLINE_ACTS.length, "thread:return-slip": 12, "clue:slip-desk": 9 },
 };
 

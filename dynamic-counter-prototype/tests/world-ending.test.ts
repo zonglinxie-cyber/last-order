@@ -86,6 +86,10 @@ test("每个结局都能构造出来，更好的条件优先", () => {
     ["row-blank-who-stands", at({ compliance: 55, standing: 48, money: 16000, ...spokeIn(8, "slip-blank", ["a8-row", 3]) })],
     ["row-blank-asked", at({ compliance: 50, standing: 44, money: 16000, ...spokeIn(8, "slip-blank", ["a8-row", 2]) })],
     ["row-blank-season", at({ compliance: 44, standing: 40, money: 16000, ...spokeIn(8, "slip-blank", ["a8-row", 1]) })],
+    ["row-crossed-again", at({ compliance: 55, standing: 48, money: 16000, ...spokeIn(9, "slip-ownrow", ["a9-row", 1]) })],
+    ["row-read-aloud", at({ compliance: 50, standing: 44, money: 16000, ...spokeIn(9, "slip-ownrow", ["a9-row", 2]) })],
+    ["row-system-answer", at({ compliance: 48, standing: 42, money: 16000, ...spokeIn(9, "slip-ownrow", ["a9-row", 3]) })],
+    ["row-in-your-hand", at({ compliance: 44, standing: 40, money: 16000, ...spokeIn(9, "slip-ownrow", ["a9-row", 4]) })],
     ["both-kept", at({
       compliance: 50, standing: 60, money: 20000,
       qualities: { "arc:shen:end": 1, "arc:anjie:end": 1 },
@@ -285,9 +289,10 @@ const CHAIN_STEPS = [
   ["slip-number", "a6-row", 6, ["row-numbers-only", "row-stamp-of-others", "row-signs-the-young", "row-only-counted"]],
   ["slip-selfrow", "a7-row", 7, ["row-name-printed", "row-is-a-post", "row-copies-itself", "row-nobody-added"]],
   ["slip-blank", "a8-row", 8, ["row-blank-season", "row-blank-asked", "row-blank-who-stands"]],
+  ["slip-ownrow", "a9-row", 9, ["row-crossed-again", "row-read-aloud", "row-system-answer", "row-in-your-hand"]],
 ] as const;
 
-test("第 5 幕以后那十四句：同一季换个档位就换一句，隔一季不重念，也不靠幕号分季", () => {
+test("第 5 幕以后那十八句：同一季换个档位就换一句，隔一季不重念，也不靠幕号分季", () => {
   // 这是第 43 轮记下的代价 ①（同一季里两种选择看到的是同一句话）在这一轮还上的账。
   // 同一条线索，学到那一天落在上一季 → 这一季不该再把同一句话原样念一遍（第 27 轮给主线那四句立的口径，
   // 延伸到"按季续写"这一层：那一层的门槛不认季号就白搭）。
@@ -341,10 +346,10 @@ test("内容写得出的每一档都正好有一句判词认它，判词也不�
   for (const card of STORYLETS_MAINLINE) for (const choice of card.choices) for (const effect of choice.effects) {
     const quality = "quality" in effect ? effect.quality : undefined;
     const set = "set" in effect ? effect.set : undefined;
-    const hit = /^mainline:(a[5-8]-row)$/.exec(quality ?? "");
+    const hit = /^mainline:(a[5-9]-row)$/.exec(quality ?? "");
     if (hit && set !== undefined) add(hit[1]!, set);
   }
-  assert.deepEqual([...written.keys()].sort(), ["a5-row", "a6-row", "a7-row", "a8-row"], "档位记号不止这四格了，这条守卫要跟着改");
+  assert.deepEqual([...written.keys()].sort(), ["a5-row", "a6-row", "a7-row", "a8-row", "a9-row"], "档位记号不止这五格了，这条守卫要跟着改");
 
   const src = readFileSync(new URL("../src/world/ending.ts", import.meta.url), "utf8");
   const entries = src.split('\n  {\n    id: "').slice(1);
@@ -352,10 +357,10 @@ test("内容写得出的每一档都正好有一句判词认它，判词也不�
   const admitted = new Map<string, number[]>();
   for (const e of chain) {
     const id = /^([\w-]+)"/.exec(e)?.[1] ?? "?";
-    const hits = [...e.matchAll(/s\.tier\["(a[5-8]-row)"\] === (\d+)/g)];
+    const hits = [...e.matchAll(/s\.tier\["(a[5-9]-row)"\] === (\d+)/g)];
     // 一句只认一档：范围门（>=/<=）铺不铺满量不出来，那条「死格子」守卫就白立了
     assert.equal(hits.length, 1, `「${id}」的门里读到 ${hits.length} 个「=== 某一档」，一句只该认一档`);
-    assert.ok(!/s\.tier\["a[5-8]-row"\] *(>=|<=|>|<)/.test(e), `「${id}」用了范围门`);
+    assert.ok(!/s\.tier\["a[5-9]-row"\] *(>=|<=|>|<)/.test(e), `「${id}」用了范围门`);
     const key = hits[0]?.[1]!, tier = Number(hits[0]?.[2]);
     assert.equal(new Set([key]).size, 1, `${id} 跨了两格的档位`);
     const list = admitted.get(key) ?? [];

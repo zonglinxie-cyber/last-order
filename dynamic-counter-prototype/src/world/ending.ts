@@ -15,15 +15,15 @@ const has = (ids: PersonId[], id: PersonId) => ids.includes(id);
  *  只有最前面那几组读它们，其余各句读不到。 */
 type Mainline = { act: number; landing: number; landedThisSeason: boolean; spoke: Record<string, boolean>; tier: Record<string, number> };
 
-/** 第 5 幕以后主线是**按季续写**的（第 38 轮那三张 + 第 41 轮那一张），每一步都发一条本子上的线索：
- *  slip-signature 第 5 季 / slip-number 第 6 季 / slip-selfrow 第 7 季 / slip-blank 第 8 季。
+/** 第 5 幕以后主线是**按季续写**的（第 38 轮那三张 + 第 41、45 轮各一张），每一步都发一条本子上的线索：
+ *  slip-signature 第 5 季 / slip-number 第 6 季 / slip-selfrow 第 7 季 / slip-blank 第 8 季 / slip-ownrow 第 9 季。
  *  线索记的是"第几天学到的"那个绝对天（engine 的 absDay），所以"这一步是不是这一季说的"算得出来 ——
  *  结局层不用为新记号改引擎，也不会像旧那四句一样隔一季把同一句话再念一遍。 */
-const CHAIN_STEP_CLUES = ["slip-signature", "slip-number", "slip-selfrow", "slip-blank"] as const;
+const CHAIN_STEP_CLUES = ["slip-signature", "slip-number", "slip-selfrow", "slip-blank", "slip-ownrow"] as const;
 const seasonOfAbsDay = (day: number): number => Math.floor((day - 1) / SEASON_DAYS) + 1;
-/** 当季那一步落在哪一档：由那一步自己写下的记号读（`mainline:a5-row` … `a8-row`）。
- *  没有它，同一季里两种选择看到的会是同一句判词 —— 第 43 轮的代价 ①。 */
-const CHAIN_TIERS = ["a5-row", "a6-row", "a7-row", "a8-row"] as const;
+/** 当季那一步落在哪一档：由那一步自己写下的记号读（`mainline:a5-row` … `a9-row`）。
+ *  没有它，同一季里两种选择看到的会是同一句判词 —— 第 43 轮的代价 ①，第 44 轮还的账。 */
+const CHAIN_TIERS = ["a5-row", "a6-row", "a7-row", "a8-row", "a9-row"] as const;
 const chainTier = (qualities: Record<string, number>): Record<string, number> => {
   const out: Record<string, number> = {};
   for (const key of CHAIN_TIERS) out[key] = qualities[`mainline:${key}`] ?? 0;
@@ -41,7 +41,8 @@ const spokeThisSeason = (qualities: Record<string, number>, season: number): Rec
 type Gate = (s: SeasonSummary & Mainline) => boolean;
 
 const CATALOG: Array<SeasonEnding & { when: Gate }> = [
-  // —— 第 5 幕以后那十四句：一季四档，一档一句（第 43 轮的代价 ①：同一季里两种选择看到的是同一句话）。
+  // —— 第 5 幕以后那十八句：一季四档，一档一句（第 43 轮的代价 ①：同一季里两种选择看到的是同一句话；
+  //    第 44 轮拆档，第 45 轮把链子最后一格第 9 季那四句接上）。
   //    门槛只认两件事：这一步的线索是不是本季学到的 + 那一步自己写下的档位记号（`mainline:a5-row` …）。
   //    不读幕号 —— 幕号停在 5，第 5~8 季在它眼里是同一个数。也不与下面第 4 幕那四句抢：
   //    那四句要 `thread:return-slip` 本季落地，而第 4 季之后落点不再动。
@@ -131,6 +132,31 @@ const CATALOG: Array<SeasonEnding & { when: Gate }> = [
     title: "那一栏空着过完一季",
     body: "今年没人写，也没人来问该谁填。柜上照旧开门，退单照旧进账 —— 原来它不是营业的条件，只是有人替它背着，这一年没人背。",
     when: s => s.spoke["slip-blank"] && s.tier["a8-row"] === 1,
+  },
+  // 第 9 季那四句：那一栏今年自己填上了一张柜台的号。四句按「越把这一栏交回给人办的排前」。
+  {
+    id: "row-crossed-again",
+    title: "那个号被你划掉了",
+    body: "今年那一栏底下打上来的是这张柜台的号，你拿笔把它划掉、重写「待定」。她说得对：划得掉今天这一行，划不掉明年那台打印机 —— 抄件上那一格空着，等下一季再印。",
+    when: s => s.spoke["slip-ownrow"] && s.tier["a9-row"] === 1,
+  },
+  {
+    id: "row-read-aloud",
+    title: "那个号当着这一层念过",
+    body: "那个号你举着抄件从收银念到库房，七八个人听了一遍。没人接话，也没人再说「轮到谁谁就病」—— 这一层今年都明白了：病的是台子，不是人。",
+    when: s => s.spoke["slip-ownrow"] && s.tier["a9-row"] === 2,
+  },
+  {
+    id: "row-system-answer",
+    title: "说明上也没有名字",
+    body: "楼上回的是一句「系统按柜位自动关联」，没有谁的签名。你要一纸说明，它说这就是说明 —— 那张纸上跟第 1 季那张单子一样，只有一个号。",
+    when: s => s.spoke["slip-ownrow"] && s.tier["a9-row"] === 3,
+  },
+  {
+    id: "row-in-your-hand",
+    title: "抄进台账的那一笔是你的字迹",
+    body: "你没动那一栏，只把今天这个号抄进台账。拿去跟第 1 季那张单子对了一遍，倒真有七分像 —— 那条线查到第九季，查到的是一笔自己的字迹。",
+    when: s => s.spoke["slip-ownrow"] && s.tier["a9-row"] === 4,
   },
   // —— 主线第 4 幕那四句：门槛一律带 act >= 4 且 landedThisSeason，所以没跑完四季的人在下面那十三句里落，
   //    跑完的也只在那张退货单落地的那一季落一次 —— 往后的季这一句已经说完，回到下面那十三句。

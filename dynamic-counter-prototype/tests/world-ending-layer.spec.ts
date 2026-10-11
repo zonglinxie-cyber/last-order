@@ -135,18 +135,38 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       await expect(page.locator("h1.recap-ending")).not.toHaveText("那一栏空着过完一季");
     });
 
-    test(`钩子认的是内容里还有没有更晚的主线卡，不是幕号名单：第 5、7 季末挂着、第 8 季末收掉`, async ({ page }) => {
+    test(`第 9 季末散场：那个号落在哪一格，屏幕上就是哪一句`, async ({ page }) => {
+      // 第 45 轮链子的最后一格。这一条同时钉两件事：第 9 季有它自己的判词（不是重念第 8 季那句），
+      // 而且它认档位 —— 档位 1 与档位 4 在屏幕上是两句不同的话。
+      const a9 = (tier: number, clueDay: number): World => mainlineWorld({
+        season: 9,
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4,
+          "clue:slip-blank": 7 * 28 + 12, "mainline:a8-row": 1, "clue:slip-ownrow": clueDay, "mainline:a9-row": tier },
+      });
+      await enter(page, a9(1, 8 * 28 + 12));
+      await expect(page.locator("h1.recap-ending")).toHaveText("那个号被你划掉了");
+      await expect(page.locator(".recap-ending-body")).toContainText("划不掉明年那台打印机");
+      await enter(page, a9(4, 8 * 28 + 12));
+      await expect(page.locator("h1.recap-ending")).toHaveText("抄进台账的那一笔是你的字迹");
+      // 同一季里另一半：线索是上一季学的，这一季就不许念第 9 季那四句。
+      await enter(page, a9(1, 7 * 28 + 12));
+      await expect(page.locator("h1.recap-ending")).not.toHaveText("那个号被你划掉了");
+    });
+
+    test(`钩子认的是内容里还有没有更晚的主线卡，不是幕号名单：第 5、7、8 季末挂着、第 9 季末收掉`, async ({ page }) => {
       // 第 38 轮主线改成按季续写（第 6、7 季各一张，都不抬幕号）：幕号停在最后一幕也不等于这条线说完。
-      // 两份盘只差第几季 —— 落点、幕号、本子都一样。
+      // 几份盘只差第几季 —— 落点、幕号、本子都一样。
       const lastAct = (season: number): World => mainlineWorld({
         season, qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4 },
       });
       await enter(page, lastAct(5));
       await expect(page.locator(".recap-arcs small")).toHaveText(["这一页没合上，下一季还有人认它"]);
-      // 第 41 轮把主线接到第 8 季，所以第 7 季末照旧挂着 —— 收钩子的那一季跟着往后挪一格。
+      // 第 41 轮把主线接到第 8 季、第 45 轮接到第 9 季：收钩子的那一季跟着往后挪，中间每一季末都还挂着。
       await enter(page, lastAct(7));
       await expect(page.locator(".recap-arcs small")).toHaveText(["这一页没合上，下一季还有人认它"]);
       await enter(page, lastAct(8));
+      await expect(page.locator(".recap-arcs small")).toHaveText(["这一页没合上，下一季还有人认它"]);
+      await enter(page, lastAct(9));
       await expect(page.locator(".recap-arcs small")).toHaveCount(0);
     });
   });

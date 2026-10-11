@@ -262,6 +262,10 @@ export const ACT_WORD: Record<string, string> = {
   "a8-left-blank": "说过那一栏今年空着就空着",
   "a8-asked-above": "去问过楼上那一栏还要不要留",
   "a8-who-should-stand": "先问过这一季谁本该站过来",
+  "a9-row-crossed": "把那一栏自己填上来的那个号划掉过",
+  "a9-read-aloud": "举着抄件把那个号念给这一层听过",
+  "a9-asked-route": "问过楼上这个号到底是谁给的",
+  "a9-written-down": "把今天那一行抄进台账，没动那一栏",
   // 第 4 季个人线：裴岚（storylets-arcs6.ts）
   "quarter-row-asked": "问她那一行为什么每季都抄一遍",
   "quarter-words-kept": "把今天的原话照她的规矩留下",

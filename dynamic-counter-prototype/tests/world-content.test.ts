@@ -1517,6 +1517,7 @@ test("主线第 4、5 幕：四季到第 4 幕、九季每季都有主线可演�
   const A6 = ["main-a6-relay"];
   const A7 = ["main-a7-same"];
   const A8 = ["main-a8-blank"];
+  const A9 = ["main-a9-ownrow"];
   const playSeason = (world: World, mainline: string[]) => {
     let w = world;
     while (w.day <= SEASON_DAYS) {
@@ -1589,7 +1590,7 @@ test("主线第 4、5 幕：四季到第 4 幕、九季每季都有主线可演�
       `种子 ${i}：第 7 季一张「续写」的主线卡都没演到（该季主线：${inSeven.join(", ") || "无"}）`);
     assert.ok((w.qualities["clue:slip-number"] ?? 0) >= 1, "本子第 9 条「换的是名字，号一年没换」没记上");
     assert.ok((w.qualities["clue:slip-selfrow"] ?? 0) >= 1, "本子第 10 条「那一栏抄自己」没记上");
-    for (const id of [...A6, ...A7, ...A8]) {
+    for (const id of [...A6, ...A7, ...A8, ...A9]) {
       const n = mainline.filter(x => x === id).length;
       assert.ok(n <= 1, `种子 ${i}：${id} 在九季里演了 ${n} 次 —— 按季续写不许有一季原样重演上一季那句话`);
     }
@@ -1610,6 +1611,16 @@ test("主线第 4、5 幕：四季到第 4 幕、九季每季都有主线可演�
     assert.equal(w.season, 9, `种子 ${i}：没走到第 9 季`);
     assert.equal(mainline.slice(before9).filter(id => id === "main-a8-blank").length, 0,
       `种子 ${i}：第 9 季把第 8 季那一句又念了一遍 —— 演过就不再演的记号没落上`);
+    // 第 45 轮：链子接到第 9 季。这一句从"第 9 季不许重演"改成正面判据 —— 那一季真有一张续写的卡，
+    // 读的是第 8 季那张写下的记号，并且把本子第 12 条发出来。
+    const inNine = mainline.slice(before9);
+    assert.ok(inNine.includes("main-a9-ownrow"),
+      `种子 ${i}：第 9 季那张「续写」的主线没演到（该季主线：${inNine.join(", ") || "无"}，a8-row=${w.qualities["mainline:a8-row"] ?? 0}）`);
+    assert.ok([1, 2, 3].includes(w.qualities["mainline:a8-row"] ?? 0),
+      `种子 ${i}：第 9 季那张读 mainline:a8-row，可它停在 ${w.qualities["mainline:a8-row"] ?? 0} —— 第 8 季那三格没把记号写下去`);
+    assert.ok([1, 2, 3, 4].includes(w.qualities["mainline:a9-row"] ?? 0),
+      `种子 ${i}：第 9 季那张没写出 a9-row（读到 ${w.qualities["mainline:a9-row"] ?? 0}）—— 散场那四句就没有上游`);
+    assert.ok((w.qualities["clue:slip-ownrow"] ?? 0) >= 1, "本子第 12 条「那一栏自己填上这张柜台的号」没记上");
   }
 });
 
@@ -1748,6 +1759,7 @@ test("主线按季续写：去年那一栏怎么落的，决定今年她说哪�
   const a6 = card("main-a6-relay");
   const a7 = card("main-a7-same");
   const a8 = card("main-a8-blank");
+  const a9 = card("main-a9-ownrow");
 
   // ① 上一季写得出哪几档 —— 这是分叉的前提，写不出来的档位在门里就是装饰。
   assert.deepEqual(qualityValues.get("mainline:a5-row"), [1, 2, 3],
@@ -1760,7 +1772,7 @@ test("主线按季续写：去年那一栏怎么落的，决定今年她说哪�
   assert.deepEqual(forkValues(a7, "mainline:a6-row"), [1, 2, 3, 4],
     `第 7 季那张读 mainline:a6-row 读到的是 ${JSON.stringify(forkValues(a7, "mainline:a6-row"))}，可上游写得出 [1,2,3,4]`);
   // ③ 兜底那一格不许省：去年那一栏可能压根没落名（没演到 main-a5-desk），门全认档时桌上是空的。
-  for (const s of [a6, a7, a8]) {
+  for (const s of [a6, a7, a8, a9]) {
     assert.ok(s.choices.some(c => !c.when || !c.when.length), `${s.id} 没有保底那一格：去年那一栏没落名时桌上是空的`);
     assert.equal(s.kind, "mainline", `${s.id} 不是主线卡，抽卡那层的优先级会走错`);
     for (const c of s.choices) {
@@ -1781,19 +1793,46 @@ test("主线按季续写：去年那一栏怎么落的，决定今年她说哪�
   }
   assert.deepEqual(qualityValues.get("mainline:a7-row"), [1, 2, 3, 4],
     "mainline:a7-row 全柜写出的档位不是 [1,2,3,4] —— 第 8 季那张的分叉就是照这四个值摆的");
+  // 第 44、45 轮接着往下一格：第 8 季那三格必须各写一个 mainline:a8-row（第 41 轮建那张卡时判词还没分档，
+  // 记号是第 44 轮补的 —— 这一轮起新格从第一版就带上），第 9 季那张的分叉照这三个值摆。
+  for (const c of a8.choices) {
+    assert.ok(c.effects.some(e => "quality" in e && e.quality === "mainline:a8-row" && typeof e.set === "number"),
+      `第 8 季那张「${c.label}」没写 mainline:a8-row —— 第 9 季那一句就没有上游`);
+  }
+  assert.deepEqual(qualityValues.get("mainline:a8-row"), [1, 2, 3],
+    "mainline:a8-row 全柜写出的档位不是 [1,2,3] —— 第 9 季那张的分叉就是照这三个值摆的");
+  for (const c of a9.choices) {
+    assert.ok(c.effects.some(e => "quality" in e && e.quality === "mainline:a9-row" && typeof e.set === "number"),
+      `第 9 季那张「${c.label}」没写 mainline:a9-row —— 散场那一句今年认的是这个记号，漏一格就有一档念不到话`);
+  }
+  assert.deepEqual(qualityValues.get("mainline:a9-row"), [1, 2, 3, 4],
+    "mainline:a9-row 全柜写出的档位不是 [1,2,3,4] —— 它是链子最后一格，第 10 季没有卡会读它");
   // 回顾页那句钩子（「这一页没合上」）现在认的是"内容里还有没有比这一季更晚的主线卡"（recap.ts）。
-  // 所以这一句把边界钉在内容上：主线讲到第 7 季为止。加第 8 季那张时要一起改的是这里与那句断言，
+  // 所以这一句把边界钉在内容上：主线讲到第 9 季为止。加第 10 季那张时要一起改的是这里与那句断言，
   // 不是回顾页的文案 —— 文案自己会从内容里推。
   const seasonGates = STORYLETS.filter(s => s.kind === "mainline")
     .flatMap(s => s.when.filter(c => "season" in c).map(c => (c as { season: { gte?: number } }).season.gte ?? 0));
-  assert.equal(Math.max(...seasonGates), 8,
-    `内容里最晚的一张主线卡开在第 ${Math.max(...seasonGates)} 季 —— 回顾页的钩子就该在这一季之后收，改了这里要一起改 docs 那句"讲到第 8 季为止"与那条界面用例`);
+  assert.equal(Math.max(...seasonGates), 9,
+    `内容里最晚的一张主线卡开在第 ${Math.max(...seasonGates)} 季 —— 回顾页的钩子就该在这一季之后收，改了这里要一起改 docs 那句"讲到第 9 季为止"与那条界面用例`);
   assert.deepEqual(forkValues(a8, "mainline:a7-row"), [1, 2, 3, 4],
     `第 8 季那张读 mainline:a7-row 读到的是 ${JSON.stringify(forkValues(a8, "mainline:a7-row"))}，可上游写得出 [1,2,3,4]`);
+  assert.deepEqual(forkValues(a9, "mainline:a8-row"), [1, 2, 3],
+    `第 9 季那张读 mainline:a8-row 读到的是 ${JSON.stringify(forkValues(a9, "mainline:a8-row"))}，可上游写得出 [1,2,3] —— 有一档去年落了这一格、今年没这句话`);
   for (const n of [1, 2, 3, 4]) {
     assert.equal(visible(at({ season: 8, day: 20, qualities: { ...at({}).qualities, "clue:slip-selfrow": 1, "mainline:a7-row": n } }), a8), 2,
       `第 7 季落在档 ${n} 时，第 8 季那张该有「这一档的话」+ 兜底共两颗开着`);
   }
+  for (const n of [1, 2, 3]) {
+    assert.equal(visible(at({ season: 9, day: 20, qualities: { ...at({}).qualities, "clue:slip-selfrow": 1, "clue:slip-blank": 1, "mainline:a8-row": n } }), a9), 2,
+      `第 8 季落在档 ${n} 时，第 9 季那张该有「这一档的话」+ 兜底共两颗开着`);
+  }
+  // 第 9 季那一张的门认第 11 条线索（slip-blank），而那条只有第 8 季那张会发：漏了它就不许开。
+  assert.equal(legal(at({ season: 9, day: 20, qualities: { ...at({}).qualities, "mainline:a8-row": 1 } }), a9), false,
+    "本子上没有第 11 条「那一栏空着过完一季」，第 9 季那句「它自己填上这张柜台的号」就没人接");
+  assert.equal(legal(at({ season: 8, day: 26, qualities: { ...at({}).qualities, "clue:slip-blank": 1, "mainline:a8-row": 1 } }), a9), false,
+    "第 8 季不许演第 9 季那一张 —— 那个号要跨过一整季才看得出它填的是哪台柜");
+  assert.equal(legal(at({ season: 9, day: 4, qualities: { ...at({}).qualities, "clue:slip-blank": 1, "mainline:a8-row": 1 } }), a9), false,
+    "第 9 季第 4 天不许演（day ≥ 10）—— 抄件上那一行得先印出来");
   // 第 8 季那张不给兜底留空桌：它自己的门认第 10 条线索，而那条线索只有第 7 季那张会发 —— 所以 a7-row 必然有值。
   assert.equal(legal(at({ season: 8, day: 20, qualities: { ...at({}).qualities, "mainline:a7-row": 2 } }), a8), false,
     "本子上没有第 10 条「那一栏抄自己」，第 8 季那句「今年它空着」就没人接");
@@ -1801,7 +1840,7 @@ test("主线按季续写：去年那一栏怎么落的，决定今年她说哪�
     "第 7 季不许演第 8 季那一张 —— 那一栏要空完一整季才看得出它从来不是条件");
 
   // ④ 每张都要在「演过就不再演」的名单里：门里的线索与幕号过季照样成立，不发记号就会一季重念一遍。
-  for (const s of [a6, a7, a8]) {
+  for (const s of [a6, a7, a8, a9]) {
     assert.ok(s.when.some(c => "not" in c && "quality" in c.not && c.not.quality === `mainline:seen:${s.id}`),
       `${s.id} 的门里没有「没演过」这一道 —— 它会跨季原样重演`);
     assert.ok(s.choices.every(c => c.effects.some(e => "quality" in e && e.quality === `mainline:seen:${s.id}`)),

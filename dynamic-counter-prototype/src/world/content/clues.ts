@@ -121,6 +121,14 @@ export const CLUES: Clue[] = [
     text: "今年那一栏空着过完一季，没人补，也没人问该谁填；柜上照旧开门，退单照旧进账。",
     about: ["fangmin", "shen"],
   },
+  {
+    // 第 9 季那一条：那一栏今年不抄上一季，它把这张柜台的号自己填上来了 ——
+    // 第 1 幕那张单子上署的名字，如今就挂在这个号底下（反转读的是已经给过的两条：认号不认名 / 那个名字）。
+    id: "slip-ownrow",
+    thread: "return-slip",
+    text: "那一栏今年写的是一个号，不是名字 —— 查出来是这张柜台的号，而第 1 幕那张单子上署的名字就挂在这个号底下。",
+    about: ["fangmin", "shen"],
+  },
 ];
 
 const CLUE_IDS = new Set(CLUES.map(c => c.id));

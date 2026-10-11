@@ -312,5 +312,35 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(q["mainline:seen:main-a8-blank"], "演过的记号要落下，不然第 9 季原样再念一遍").toBe(1);
       expect(q["mainline:act"], "第 8 季这句不抬幕号").toBe(5);
     });
+
+    test("第 9 季那一张：那一栏自己填上这张柜台的号，去年落第 2 档就只见「问楼上」那一格", async ({ page }) => {
+      // 第 45 轮：链子的最后一格在界面上演到 —— 门里那三档各认去年的落档，本子上多出第 12 条。
+      await enter(page, act4World({
+        season: 9, day: 22,
+        qualities: {
+          "mainline:act": 5, "thread:return-slip": 13,
+          "clue:slip-handover": 1, "clue:slip-signature": 1, "clue:slip-number": 1,
+          "clue:slip-selfrow": 1, "clue:slip-blank": 1,
+          "mainline:a8-row": 2,
+        },
+      }), { id: "main-a9-ownrow", binding: { a: "fangmin", b: "shen" } });
+      const text = page.locator(".world-story .story-text");
+      await expect(text).toContainText("是这张柜台的号");
+      await expect(text).not.toContainText("{$");
+      // 去年落的是「问楼上那一栏还要不要留着」（a8-row=2）：划号那格（认档 1）与摊名单那格（认档 3）都关着，
+      // 开着的是它自己那一格 + 兜底共两颗。
+      await expect(page.locator(".world-story .story-choices button")).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "拿笔把那个号划掉，重写「待定」" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "把这一层的名单摊开，让每个人看这一行" })).toHaveCount(0);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "问楼上：这个号是谁给的" }).click();
+      await expect(page.locator(".world-feed")).toContainText("系统按柜位自动关联");
+      const q = await savedQualities(page);
+      expect(q["clue:slip-ownrow"], "本子第 12 条「那一栏自己填上这张柜台的号」该落下").toBeGreaterThan(0);
+      expect(q["mainline:a9-row"], "这一格要写下今年落在哪一档 —— 散场那四句认的就是它").toBe(3);
+      expect(q["mainline:seen:main-a9-ownrow"], "演过的记号要落下，不然第 10 季原样再念一遍").toBe(1);
+      expect(q["mainline:act"], "第 9 季这句照样不抬幕号 —— 主线到第 5 幕为止，往后是按季续写").toBe(5);
+    });
   });
 }

@@ -1386,6 +1386,71 @@ export const STORYLETS_MAINLINE: Storylet[] = [
       },
     ],
   },
+  // 第 45 轮：主线第 9 季那一张，链子的最后一格（往后再没有更晚的主线卡，回顾页那句钩子就在第 9 季末收）。
+  // 它不抬幕号、不加落点档、一颗钱都不给，读的是第 8 季那张写下的 `mainline:a8-row`（1/2/3 各一颗选项，
+  // 加一颗没有门槛的兜底 —— 兜底那颗是守卫要求的，桌上任何时候都得有一格点得下去）。
+  // **这一张是重读，不是追加**：它把玩家早就拿到的三条凑到一起 —— `slip-number`（那一栏认的是号不是名字）、
+  // `slip-selfrow`（它引用自己）、`slip-blank`（空着一季也没人管），加上第 1 幕那张署了别人名字的单子。
+  // 第 9 季那一栏不再抄"上一季同名"，它把**这张柜台的号**填上来了：借名字那条线绕回玩家自己站着的这台柜。
+  // 新发的线索 `slip-ownrow` 是这一季的判词门槛（第 44 轮那套：一档一句，见 `src/world/ending.ts`）。
+  {
+    id: "main-a9-ownrow",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "shen", where: [], mustBePresent: false } },
+    when: [
+      ACT(5), { clue: "slip-blank" },
+      { season: { gte: 9 } }, { day: { gte: 10 } }, { present: "fangmin" },
+    ],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}把这季的抄件摊在柜上：那一栏底下不写「上一季同名」了，今年打上来一个号，她查了两遍 —— 是这张柜台的号。她说这一层今年没有一个人签过这一栏，它是自己填上来的。{$b}站在旁边把第 1 季那张单子上的名字又念了一遍：那个名字，如今就挂在这个号底下。",
+    choices: [
+      {
+        label: "拿笔把那个号划掉，重写「待定」",
+        when: [{ quality: "mainline:a8-row", eq: 1 }],
+        effects: [
+          { clue: "slip-ownrow" },
+          { remember: { holder: "fangmin", act: "a9-row-crossed", valence: 2, subject: "player" } },
+          { quality: "mainline:a9-row", set: 1 },
+          { opinion: "fangmin", delta: 5 }, { stat: "standing", delta: 2 }, { stat: "compliance", delta: -1 },
+        ],
+        result: "{$a}看着你把那一横拉过去，说去年它空着过一季没人问，今年它自己把号填上来 —— 划是划得掉今天这一行，明年那台打印机不归这支笔。抄件收回本子里，那一栏底下空着两格，等下一季再印上来。",
+      },
+      {
+        label: "把这一层的名单摊开，让每个人看这一行",
+        when: [{ quality: "mainline:a8-row", eq: 3 }],
+        effects: [
+          { clue: "slip-ownrow" },
+          { remember: { holder: "fangmin", act: "a9-read-aloud", valence: 2, subject: "player" } },
+          { quality: "mainline:a9-row", set: 2 },
+          { opinion: "fangmin", delta: 3 }, { bond: ["fangmin", "player"], delta: 4 }, { stat: "standing", delta: 1 },
+        ],
+        result: "{$a}举着抄件从收银走到库房，念给站过这一层的每个人听。那个号当着七八个人念过一遍，没人接话，也没人再说「轮到谁谁就病」—— 病的是台子，不是人。{$b}把笔搁在名单上，到底没签。",
+      },
+      {
+        label: "问楼上：这个号是谁给的",
+        when: [{ quality: "mainline:a8-row", eq: 2 }],
+        effects: [
+          { clue: "slip-ownrow" },
+          { remember: { holder: "fangmin", act: "a9-asked-route", valence: 1, subject: "player" } },
+          { quality: "mainline:a9-row", set: 3 },
+          { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 3 }, { stat: "standing", delta: -1 },
+        ],
+        result: "{$a}替你拟了一句话发上去，半天回来一句「系统按柜位自动关联」，没有谁的签名。你说要一纸说明，楼上说这就是说明 —— 那张纸上没有名字，跟第 1 季那张单子一样，只有一个号。",
+      },
+      {
+        label: "先不动它，把今天这一行记进账里",
+        effects: [
+          { clue: "slip-ownrow" },
+          { remember: { holder: "fangmin", act: "a9-written-down", valence: 1, subject: "player" } },
+          { quality: "mainline:a9-row", set: 4 },
+          { opinion: "fangmin", delta: 2 }, { stat: "compliance", delta: 2 },
+        ],
+        result: "{$a}点头说记下来也好：记进台账它就是账上的一条，不再是她手上的一页。你在那一栏底下抄今天这个号，字是你自己的，拿去跟第 1 季那张单子对了一遍 —— 倒真有七分像。",
+      },
+    ],
+  },
 ];
 
 // 这些卡的门槛在过季之后照样成立（幕号、落点、本子里的线索都带着走），所以每张的每一个分支
@@ -1401,7 +1466,10 @@ for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-afte
   // 第 6、7 季那两张的门（season ≥ 6 / ≥ 7 + 本子上的线索）过季照样成立，不发记号就会一季重演一遍。
   "main-a6-relay", "main-a7-same",
   // 第 8 季那一张：门里的 clue:slip-selfrow 过季照样成立，不发记号就会一季重念一遍。
-  "main-a8-blank"]) {
+  "main-a8-blank",
+  // 第 9 季那一张同理（它的门是 clue:slip-blank + ACT(5)，过季全成立）—— 第 45 轮就从第一版带上记号，
+  // 不再走第 8 季那张"先建卡、下一轮才补档位记号"的路。
+  "main-a9-ownrow"]) {
   const s = STORYLETS_MAINLINE.find(x => x.id === id)!;
   s.when.push(SEEN(id));
   for (const c of s.choices) c.effects.push(MARK(id));
