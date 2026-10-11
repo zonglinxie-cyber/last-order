@@ -50,6 +50,10 @@ const life2Fixture = (person: string, cardId: string, how: number, opinion: numb
 const life3Fixture = (person: string, cardId: string, how: number, opinion: number): World =>
   ladderFixture(person, cardId, 7, 2, how, opinion);
 
+/** 第 39 轮那格：前三年的账到期（life:=3），第四年由她自己给答案。 */
+const life4Fixture = (person: string, cardId: string, how: number, opinion: number): World =>
+  ladderFixture(person, cardId, 8, 3, how, opinion);
+
 const ladderFixture = (person: string, cardId: string, season: number, step: number, how: number, opinion: number): World => ({
   ...newWorld(`life-${cardId}`, PEOPLE),
   season, day: 6, slot: 1, energy: energyCeiling(1),
@@ -399,6 +403,66 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       const q = await savedWorld(page);
       expect(q.qualities["life:songjie"]).toBe(3);
       expect(q.qualities["life:songjie:how"]).toBe(1);
+    });
+
+    // —— 第 39 轮：第 8 季那一格（第四格）。界面上要读得出"前三年怎么待她"，还要一颗钱都不给。
+    test(`沈薇第四年：第三年是她自己落的名，桌上就该是「把名留下」那一格`, async ({ page }) => {
+      const w = life4Fixture("shen", "life4-shen39", 1, 10);
+      await enter(page, w, { id: "life4-shen", binding: { a: "shen" } });
+      await expect(storyText(page)).toContainText("沈薇手里那两张退单是她自己名下的");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: /替她把两张结清/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /今天不必谈/ })).toHaveCount(0);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box, "故事卡要有尺寸").not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "把她的名留在常客那一页，划不掉" }).click();
+      await expect(page.locator(".world-feed")).toContainText("留名这件事她等了四年");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:shen"], "第四年这一步走到 4").toBe(4);
+      expect(q.qualities["life:shen:how"]).toBe(1);
+      expect(q.money, "第四格也一颗钱都不给").toBe(w.money);
+    });
+
+    test(`沈薇第四年换第三年那一档：「不必谈」开着，「把名留下」关着`, async ({ page }) => {
+      await enter(page, life4Fixture("shen", "life4-shen39b", 3, -8), { id: "life4-shen", binding: { a: "shen" } });
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "把她的名留在常客那一页，划不掉" })).toHaveCount(0);
+      await page.getByRole("button", { name: "她名下那两张，今天不必谈" }).click();
+      const q = await savedWorld(page);
+      expect(q.qualities["life:shen"]).toBe(4);
+      expect(q.qualities["life:shen:how"], "第四年记的是「这一格她不留了」").toBe(3);
+    });
+
+    test(`小雨第四年：她第三年只写得出两档，how=3 那一格在界面上本来就该是空的`, async ({ page }) => {
+      const w = life4Fixture("xiaoyu", "life4-xiaoyu39", 2, 0);
+      await enter(page, w, { id: "life4-xiaoyu", binding: { a: "xiaoyu" } });
+      await expect(storyText(page)).toContainText("她带的那孩子满一年了");
+      // 两档：按数对那一格 + 兜底；「再讲一遍」（how=1）与「来不来」（要看法 ≤ -6）都关着。
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: /把去年那句再讲一遍/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /问那孩子今天自己来不来/ })).toHaveCount(0);
+      await page.getByRole("button", { name: "她如今也报数了，按数对" }).click();
+      await expect(page.locator(".world-feed")).toContainText("数她报得出来");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:xiaoyu"]).toBe(4);
+      expect(q.money, "第四格不给钱").toBe(w.money);
+    });
+
+    test(`方敏第四年：她那一行被抄进范例第三版，「撤出范例」开着、「签回名字」关着`, async ({ page }) => {
+      const w = life4Fixture("fangmin", "life4-fangmin39", 2, 0);
+      await enter(page, w, { id: "life4-fangmin", binding: { a: "fangmin" } });
+      await expect(storyText(page)).toContainText("被抄进楼里的范例编到第三版");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "把她的名字签回那一行" })).toHaveCount(0);
+      await page.getByRole("button", { name: "照流程办，把她那一行撤出范例" }).click();
+      await expect(page.locator(".world-feed")).toContainText("撤出来还得她自己开口");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:fangmin"]).toBe(4);
+      expect(q.qualities["life:fangmin:how"]).toBe(2);
+      expect(q.money, "同事的那一步也不给钱").toBe(w.money);
     });
   });
 }
