@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { MobileScroll } from "../../mobile";
 import { ENDINGS, rank } from "../ending.ts";
 import { endingHint } from "../ending-hints.ts";
+import { heatStampWord } from "../heat.ts";
 import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWorldProgress, threadLandings, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
 import { CLUES, CLUE_THREADS, PEOPLE, STORYLETS } from "../content/index.ts";
 import type { PersonId } from "../types.ts";
@@ -128,8 +129,9 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
 
       {tab === "endings" && <section className="archive-endings">{sortedEndings.map(ending => {
         const achieved = progress.endings.includes(ending.id);
+        const stamp = heatStampWord(progress.endingsAtHeat[ending.id] ?? 0);
         return <article className={"ending-row" + (achieved ? " achieved" : " locked")} key={ending.id}>
-          <b>{achieved ? ending.title : "？？？"}</b>
+          <b>{achieved ? ending.title : "？？？"}{achieved && stamp ? <small className="ending-heat">{stamp}</small> : null}</b>
           <p>{achieved ? ending.body : endingHint(ending.id)}</p>
         </article>;
       })}</section>}
