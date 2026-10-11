@@ -114,6 +114,13 @@ export const CLUES: Clue[] = [
     text: "今年那页抄件上多了一行小字「上一季同名」。它引用的是自己，不再向楼上要谁。",
     about: ["fangmin", "peilan"],
   },
+  {
+    // 第 8 季那一条：那一栏今年空着过完一季 —— 它从来不是营业的条件。
+    id: "slip-blank",
+    thread: "return-slip",
+    text: "今年那一栏空着过完一季，没人补，也没人问该谁填；柜上照旧开门，退单照旧进账。",
+    about: ["fangmin", "shen"],
+  },
 ];
 
 const CLUE_IDS = new Set(CLUES.map(c => c.id));

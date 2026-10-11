@@ -286,5 +286,31 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(q["clue:slip-selfrow"], "本子第 10 条「那一栏抄自己」该落下").toBeGreaterThan(0);
       expect(q["mainline:act"], "续写不抬幕号 —— 第 5 幕还是最后一幕").toBe(5);
     });
+
+    test("第 8 季那一张：那一栏空着过完一季，去年落第 3 档就只见「问楼上」那一格", async ({ page }) => {
+      await enter(page, act4World({
+        season: 8, day: 22,
+        qualities: {
+          "mainline:act": 5, "thread:return-slip": 13,
+          "clue:slip-handover": 1, "clue:slip-signature": 1, "clue:slip-number": 1, "clue:slip-selfrow": 1,
+          "mainline:a7-row": 3,
+        },
+      }), { id: "main-a8-blank", binding: { a: "fangmin", b: "shen" } });
+      const text = page.locator(".world-story .story-text");
+      await expect(text).toContainText("那一栏是空的");
+      await expect(text).not.toContainText("{$");
+      // 第 7 季落在档 3（问这一栏什么时候可以不落人），它落在 any[1,2] 之外 ——
+      // 所以「空着就空着」那格关着，开着的是它自己那一格 + 兜底共两颗。
+      await expect(page.locator(".world-story .story-choices button")).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "空着就空着，别替谁补" })).toHaveCount(0);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "问楼上：这一栏还要不要留着" }).click();
+      await expect(page.locator(".world-feed")).toContainText("楼上回了四个字");
+      const q = await savedQualities(page);
+      expect(q["clue:slip-blank"], "本子第 11 条「那一栏今年空着过完一季」该落下").toBeGreaterThan(0);
+      expect(q["mainline:seen:main-a8-blank"], "演过的记号要落下，不然第 9 季原样再念一遍").toBe(1);
+      expect(q["mainline:act"], "第 8 季这句不抬幕号").toBe(5);
+    });
   });
 }

@@ -259,6 +259,9 @@ export const ACT_WORD: Record<string, string> = {
   "a7-row-nobody": "问过那一栏什么时候能不落人",
   "a7-ledger-shown": "把去年那一栏开出去的四张摊到楼上",
   "a7-who-added": "问过那行小字是谁加上去的",
+  "a8-left-blank": "说过那一栏今年空着就空着",
+  "a8-asked-above": "去问过楼上那一栏还要不要留",
+  "a8-who-should-stand": "先问过这一季谁本该站过来",
   // 第 4 季个人线：裴岚（storylets-arcs6.ts）
   "quarter-row-asked": "问她那一行为什么每季都抄一遍",
   "quarter-words-kept": "把今天的原话照她的规矩留下",

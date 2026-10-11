@@ -82,7 +82,7 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       await expect(body).toContainText("镜子");
     });
 
-    test(`钩子认的是内容里还有没有更晚的主线卡，不是幕号名单：第 5 季末挂着、第 7 季末收掉`, async ({ page }) => {
+    test(`钩子认的是内容里还有没有更晚的主线卡，不是幕号名单：第 5、7 季末挂着、第 8 季末收掉`, async ({ page }) => {
       // 第 38 轮主线改成按季续写（第 6、7 季各一张，都不抬幕号）：幕号停在最后一幕也不等于这条线说完。
       // 两份盘只差第几季 —— 落点、幕号、本子都一样。
       const lastAct = (season: number): World => mainlineWorld({
@@ -90,7 +90,10 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       });
       await enter(page, lastAct(5));
       await expect(page.locator(".recap-arcs small")).toHaveText(["这一页没合上，下一季还有人认它"]);
+      // 第 41 轮把主线接到第 8 季，所以第 7 季末照旧挂着 —— 收钩子的那一季跟着往后挪一格。
       await enter(page, lastAct(7));
+      await expect(page.locator(".recap-arcs small")).toHaveText(["这一页没合上，下一季还有人认它"]);
+      await enter(page, lastAct(8));
       await expect(page.locator(".recap-arcs small")).toHaveCount(0);
     });
   });

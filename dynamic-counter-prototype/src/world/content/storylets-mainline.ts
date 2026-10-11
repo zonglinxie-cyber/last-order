@@ -1294,6 +1294,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-selfrow" },
           { remember: { holder: "fangmin", act: "a7-row-personal", valence: 2, subject: "player" } },
+          { quality: "mainline:a7-row", set: 1 },
           { opinion: "fangmin", delta: 5 }, { stat: "compliance", delta: 2 }, { stat: "standing", delta: 1 },
         ],
         result: "{$a}点头说去年也听过这一句，可那两个字去年是她手写的，今年是系统印的 —— 那行小字一加上去，那一栏就再没人手写过了。",
@@ -1304,6 +1305,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-selfrow" },
           { remember: { holder: "fangmin", act: "a7-row-nobody", valence: 1, subject: "player" } },
+          { quality: "mainline:a7-row", set: 2 },
           { opinion: "fangmin", delta: 4 }, { stat: "standing", delta: 2 }, { stat: "compliance", delta: -2 },
         ],
         result: "{$a}说撤不掉，它进的是区域总表的表头；今年它连要一个名字都省了 —— 那一栏自己就是一个岗位，谁站过来都得往里签。",
@@ -1314,6 +1316,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-selfrow" },
           { remember: { holder: "fangmin", act: "a7-ledger-shown", valence: 1, subject: "player" } },
+          { quality: "mainline:a7-row", set: 3 },
           { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 5 }, { stat: "standing", delta: -1 },
         ],
         result: "{$a}说台账她收过，收完那一栏照旧开单 —— 你去年数出来的那四张，今年变成抄件上那行小字里的「同名」两季。",
@@ -1323,9 +1326,60 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-selfrow" },
           { remember: { holder: "fangmin", act: "a7-who-added", valence: 1, subject: "player" } },
+          { quality: "mainline:a7-row", set: 4 },
           { opinion: "fangmin", delta: 3 }, { stat: "compliance", delta: 3 },
         ],
         result: "{$a}说是楼上的模板，去年冬天起就在改，没人签发起 —— 那一栏引用它自己，连一个要问的人都不问了。",
+      },
+    ],
+  },
+  // 第 41 轮：主线第 8 季那一张。第 38 轮把主线改成按季续写以后，第 8 季仍是 0 张
+  // （第 40 轮补满人物线，那条账就留在「个人线 20 张 / 主线 0 张」这一行上）。这一张把链子接到第 8 季：
+  // 读 main-a7-same 写下的 mainline:a7-row（1..4），不抬幕号、不加落点档、一颗钱都不给。
+  // 第 8 季的翻面是**那一栏今年空着过完一季，没人补也没人问**：四季都要长出一个名字的栏，
+  // 今年没长 —— 说明它从来不是营业的条件，只是让人背着（第 4 幕那句「只挑当时顶班的号」收到这一句）。
+  // 这张不许原样重演：门里的 clue:slip-selfrow 过季照样成立，所以它进了「演过就不再演」的名单。
+  {
+    id: "main-a8-blank",
+    kind: "mainline",
+    cast: { a: { id: "fangmin", where: [] }, b: { id: "shen", where: [], mustBePresent: false } },
+    when: [
+      ACT(5), { clue: "slip-selfrow" },
+      { season: { gte: 8 } }, { day: { gte: 10 } }, { present: "fangmin" },
+    ],
+    weight: 30,
+    tension: 1,
+    once: true,
+    text: "{$a}把这季的抄件摊到第四页，那一栏是空的 —— 不是「待定」，是真的一整季没人写。她说没人来问该谁填，也没人催她留白，{$b}站在旁边说这一栏空着比填着更难解释。",
+    choices: [
+      {
+        label: "空着就空着，别替谁补",
+        when: [{ any: [{ quality: "mainline:a7-row", eq: 1 }, { quality: "mainline:a7-row", eq: 2 }] }],
+        effects: [
+          { clue: "slip-blank" },
+          { remember: { holder: "fangmin", act: "a8-left-blank", valence: 2, subject: "player" } },
+          { opinion: "fangmin", delta: 5 }, { stat: "standing", delta: 2 }, { stat: "compliance", delta: -1 },
+        ],
+        result: "{$a}点头说去年她还急着要一个名字，今年她明白了：这一栏空着，柜上照样开门，那一季退的单没人担 —— 它原来不是营业的条件，是有人替它背着。",
+      },
+      {
+        label: "问楼上：这一栏还要不要留着",
+        when: [{ any: [{ quality: "mainline:a7-row", eq: 3 }, { quality: "mainline:a7-row", eq: 4 }] }],
+        effects: [
+          { clue: "slip-blank" },
+          { remember: { holder: "fangmin", act: "a8-asked-above", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 3 }, { stat: "standing", delta: -1 },
+        ],
+        result: "{$a}说楼上回了四个字「照旧留着」 —— 留着不填，明年抄件上那行小字还是「上一季同名」，只是同名同的是空白。",
+      },
+      {
+        label: "先问这一季谁本该站过来",
+        effects: [
+          { clue: "slip-blank" },
+          { remember: { holder: "fangmin", act: "a8-who-should-stand", valence: 1, subject: "player" } },
+          { opinion: "fangmin", delta: 3 }, { bond: ["fangmin", "player"], delta: 4 },
+        ],
+        result: "{$a}翻到名单那一页给这一柜看：今年这一层站过的人都签过别处，轮到谁谁就病 —— 不是躲，是这一栏的名声已经传出去了。",
       },
     ],
   },
@@ -1342,7 +1396,9 @@ for (const id of ["main-slip-after-own", "main-slip-after-name", "main-slip-afte
   // main-a5-open 不用补 —— 它把幕号抬到 5，ACT(4) 那道门自己就关上了。
   "main-a5-names", "main-a5-desk",
   // 第 6、7 季那两张的门（season ≥ 6 / ≥ 7 + 本子上的线索）过季照样成立，不发记号就会一季重演一遍。
-  "main-a6-relay", "main-a7-same"]) {
+  "main-a6-relay", "main-a7-same",
+  // 第 8 季那一张：门里的 clue:slip-selfrow 过季照样成立，不发记号就会一季重念一遍。
+  "main-a8-blank"]) {
   const s = STORYLETS_MAINLINE.find(x => x.id === id)!;
   s.when.push(SEEN(id));
   for (const c of s.choices) c.effects.push(MARK(id));
