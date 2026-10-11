@@ -3785,6 +3785,453 @@ export const STORYLETS_LIFE: Storylet[] = [
         result: "{$a}说抄走的是话，抄不走的是她站过的那两个柜位；这一句她练了很久，说出来时自己先信了 —— 说完她把那一页折了一道角，那角折得很浅。",
       },
     ],
-  }
-
+  },
+  // —— 第 46 轮：第 9 季那一格（life:<id> 走到 5）。写之前先量了第四格每人写得出哪几档 how（探针输出留着）：
+  // 十位里只有小雨是 [1,2] —— 她那一张就不许挂 how=3 的门（第 34 轮那条守卫两头咬，挂上去就是死格子）。
+  // 第五格不写成"又一年"，写成**这一格如今归她自己，玩家只剩接住或推回去**：
+  // 第 5 季她迈出一步、第 6 季看你怎么待她、第 7 季前两年的账到期、第 8 季她把答案给你，
+  // 第 9 季她自己把那一行办了 —— 办完才来这一柜说一声。仍旧一颗钱都不给。
+  // 本轮先铺十位（与第 39 轮同一批），剩下十位在下一轮补齐，两份名单的等长钉子也留到那一轮再钉。
+  {
+    id: "life5-shen",
+    kind: "arc",
+    cast: { a: shen },
+    when: [{ season: { gte: 9 } }, { quality: "arc:shen:end", gte: 1 }, { quality: "life:shen", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}今天没带退单，带的是一个号 —— 她名下那个用了四年的号。她说楼上下季度要把这个号并回通用号，她自己来办注销，办完顺手把注销单留下：这一柜往后有人退单没处落，就用这个号，不用再来问她。",
+    choices: [
+      {
+        label: "把那个号留给下一个不敢开口的人",
+        when: [how("shen", 1)],
+        effects: [
+          { opinion: "$a", delta: 8 }, { stat: "standing", delta: 3 }, { bond: ["shen", "player"], delta: 7 },
+          { quality: "life:shen", set: 5 }, { quality: "life:shen:how", set: 1 },
+        ],
+        result: "{$a}说她要的就是这一句：号别回收，留着给下一个站在栏前不敢报数的人。她当场在注销单背面写了一行小字 —— 写的是「先问一句要不要」，写完把笔搁下，说这一行比她那四年都管用。",
+      },
+      {
+        label: "按手续办，一式两份，她一份柜上一份",
+        when: [how("shen", 2)],
+        effects: [
+          { opinion: "$a", delta: -2 }, { bond: ["shen", "player"], delta: 2 },
+          { quality: "life:shen", set: 5 }, { quality: "life:shen:how", set: 2 },
+        ],
+        result: "{$a}点头说这样最好，公对公，谁也不欠谁一句。她把那两份对齐放在柜面上，指尖在纸边上停了一下才收回去 —— 就那一下，比说什么都清楚。",
+      },
+      {
+        label: "那个号今天不必留在柜上",
+        when: [how("shen", 3)],
+        effects: [
+          { opinion: "$a", delta: -7 }, { stat: "standing", delta: -1 },
+          { quality: "life:shen", set: 5 }, { quality: "life:shen:how", set: 3 },
+        ],
+        result: "{$a}说她就知道会是这样，把注销单收回包里，走到门口又回头补一句：号她带走，往后那孩子若要找人，别报柜上的号 —— 她报的是她自己那一个。",
+      },
+      {
+        label: "先问她今天来是为那个号，还是为她自己",
+        effects: [
+          { opinion: "$a", delta: 6 }, { bond: ["shen", "player"], delta: 5 },
+          { quality: "life:shen", set: 5 }, { quality: "life:shen:how", set: 1 },
+        ],
+        result: "{$a}想了很久才答：四年里每季都有一格由这一柜定她的位置，今天这一格她自己办完了才来 —— 来是为让人知道她是谁，不是为那个号。说完她把注销单推过来，签名处写得很重。",
+      },
+    ],
+  },
+  {
+    id: "life5-anjie",
+    kind: "arc",
+    cast: { a: anjie },
+    when: [{ season: { gte: 9 } }, { quality: "arc:anjie:end", gte: 1 }, { quality: "life:anjie", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}把一册楼下的范本页摊在柜上，第七页那一行是她两年前写的，页脚现在印上她的名字 —— 楼上按人归档，不按柜。她说这一行被抄到第三版，头一回有人问她能不能署她的名。",
+    choices: [
+      {
+        label: "让她署自己的名，页码留着给柜上",
+        when: [how("anjie", 1)],
+        effects: [
+          { opinion: "$a", delta: 7 }, { stat: "standing", delta: 2 }, { bond: ["anjie", "player"], delta: 6 },
+          { quality: "life:anjie", set: 5 }, { quality: "life:anjie:how", set: 1 },
+        ],
+        result: "{$a}说署名她不推，页码她也不带走 —— 这一行是从这张柜上长出来的，署她的名，归这一柜用。她把笔按在页脚上签了，签完推回来，说往后要改也得先跟她念一遍。",
+      },
+      {
+        label: "按外包那一档，把她那一行结清",
+        when: [how("anjie", 2)],
+        effects: [
+          { opinion: "$a", delta: -4 }, { bond: ["anjie", "player"], delta: 1 },
+          { quality: "life:anjie", set: 5 }, { quality: "life:anjie:how", set: 2 },
+        ],
+        result: "{$a}说她算过，一行字按几块钱算也行，只是往后楼下的版本再改，她不会再过目。她把那一页撕下来带走，剩下的册子留在柜上，撕口很齐。",
+      },
+      {
+        label: "那一行归范例，不归她",
+        when: [how("anjie", 3)],
+        effects: [
+          { opinion: "$a", delta: -8 }, { stat: "standing", delta: -1 },
+          { quality: "life:anjie", set: 5 }, { quality: "life:anjie:how", set: 3 },
+        ],
+        result: "{$a}笑了一下说这句话她四年前就听过了，那时候她还肯吵。她把册子合上，页码压平，走到楼梯口才回头问了一句：那这一行出错的时候，找谁 —— 她没等回答。",
+      },
+      {
+        label: "先问这一回她自己想去不想去",
+        effects: [
+          { opinion: "$a", delta: 5 }, { bond: ["anjie", "player"], delta: 4 },
+          { quality: "life:anjie", set: 5 }, { quality: "life:anjie:how", set: 1 },
+        ],
+        result: "{$a}说想去，但想带着这一柜一起去 —— 她要的不是楼上给她一个位置，是这一行别被人抄成别人的口气。说完她把那一页折了个角，折得很深。",
+      },
+    ],
+  },
+  {
+    id: "life5-mei",
+    kind: "arc",
+    cast: { a: mei },
+    when: [{ season: { gte: 9 } }, { quality: "arc:mei:end", gte: 1 }, { quality: "life:mei", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}把包里那张请帖掏出来放在镜台上 —— 带了四年的那一张，如今正面已经写了字，写的是楼上的席面，落款没有她的名。她说楼上今年不再问她回不回，改成通知她出席，她想在这一柜先把这句话答完。",
+    choices: [
+      {
+        label: "她那一下午还算这一柜的",
+        when: [how("mei", 1)],
+        effects: [
+          { opinion: "$a", delta: 8 }, { stat: "standing", delta: 2 }, { bond: ["mei", "player"], delta: 6 },
+          { quality: "life:mei", set: 5 }, { quality: "life:mei:how", set: 1 },
+        ],
+        result: "{$a}把请帖翻过来，在背面写了一行「某柜，可来可不来」，写完压在镜台上。她说四年里她一直在等有人先问这一句，如今她自己写了 —— 写的是她自己的名字，不是楼上的落款。",
+      },
+      {
+        label: "那一格归楼上，这里只谈生意",
+        when: [how("mei", 2)],
+        effects: [
+          { opinion: "$a", delta: -3 }, { bond: ["mei", "player"], delta: 2 },
+          { quality: "life:mei", set: 5 }, { quality: "life:mei:how", set: 2 },
+        ],
+        result: "{$a}点头说这样清楚。她把请帖收回包里，拉链拉到一半停住，又拉回去 —— 那一下她没看人，看的是镜台上自己那半张脸。",
+      },
+      {
+        label: "她回不回楼上都与这柜无关",
+        when: [how("mei", 3)],
+        effects: [
+          { opinion: "$a", delta: -7 }, { stat: "standing", delta: -1 },
+          { quality: "life:mei", set: 5 }, { quality: "life:mei:how", set: 3 },
+        ],
+        result: "{$a}说她四年里听过最熟的一句就是这个。她把请帖留在柜台上，说既然无关，那这一张她送给这一柜，往后谁要出席谁自己拿 —— 说完她自己先走了，比谁都早。",
+      },
+      {
+        label: "先问她自己想不想去那一场",
+        effects: [
+          { opinion: "$a", delta: 6 }, { bond: ["mei", "player"], delta: 5 },
+          { quality: "life:mei", set: 5 }, { quality: "life:mei:how", set: 1 },
+        ],
+        result: "{$a}说她想去，但不是为了回去 —— 是想让那一桌人看见她是自己站着的。她把落款那一处用手指按了按，说这一个名字她四年里改了三次，如今不改了。",
+      },
+    ],
+  },
+  {
+    id: "life5-xiaoyu",
+    kind: "arc",
+    cast: { a: xiaoyu },
+    when: [{ season: { gte: 9 } }, { quality: "arc:xiaoyu:end", gte: 1 }, { quality: "life:xiaoyu", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}身边那孩子今天自己开口了 —— 报数、问要不要、收尾，用的是两年前从小雨那里听去的那一句。{$a}站在后半步没插话，等孩子说完才过来：她说这一柜今天该记的是那孩子，不是她。",
+    choices: [
+      {
+        label: "把去年那句当着孩子的面再说一遍",
+        when: [how("xiaoyu", 1)],
+        effects: [
+          { opinion: "$a", delta: 7 }, { stat: "standing", delta: 2 }, { bond: ["xiaoyu", "player"], delta: 6 },
+          { quality: "life:xiaoyu", set: 5 }, { quality: "life:xiaoyu:how", set: 1 },
+        ],
+        result: "{$a}把那一句话原样又讲了一遍，一个字没改，讲完让孩子自己复述。孩子复述到一半换了词，{$a}没纠正，只说换得对 —— 她退到那孩子背后，第一次站得那么靠后。",
+      },
+      {
+        label: "按排班把孩子交给这一柜，她退到后面",
+        when: [how("xiaoyu", 2)],
+        effects: [
+          { opinion: "$a", delta: -2 }, { bond: ["xiaoyu", "player"], delta: 3 },
+          { quality: "life:xiaoyu", set: 5 }, { quality: "life:xiaoyu:how", set: 2 },
+        ],
+        result: "{$a}说交得出去最好，她原本担心的是这一柜只认她一个人。她把孩子的班次写在排班表上，写自己那一格时笔停了一下，还是照样写成「后备」。",
+      },
+      {
+        label: "先问她今天站前面还是后面",
+        effects: [
+          { opinion: "$a", delta: 5 }, { bond: ["xiaoyu", "player"], delta: 4 },
+          { quality: "life:xiaoyu", set: 5 }, { quality: "life:xiaoyu:how", set: 1 },
+        ],
+        result: "{$a}说站后面，但要说清楚是她自己退的，不是被人换下来的。她把那一页排班表折起来塞进口袋，说这一张她自己留着，柜上不用抄。",
+      },
+    ],
+  },
+  {
+    id: "life5-zhou",
+    kind: "arc",
+    cast: { a: zhou },
+    when: [{ season: { gte: 9 } }, { quality: "arc:zhou:end", gte: 1 }, { quality: "life:zhou", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}把那张排班表带来，最上头那一行这一年排下来的确是她的名。她说如今轮她提醒别人只有二十分钟，提醒了整整一年，结果是这一格没人肯接 —— 她把表摊平，问这一柜：那行字到底是在管人，还是在挡人。",
+    choices: [
+      {
+        label: "那一行写她的名，也写她定的规矩",
+        when: [how("zhou", 1)],
+        effects: [
+          { opinion: "$a", delta: 7 }, { stat: "standing", delta: 3 }, { bond: ["zhou", "player"], delta: 5 },
+          { quality: "life:zhou", set: 5 }, { quality: "life:zhou:how", set: 1 },
+        ],
+        result: "{$a}说这一行她管，但管法她自己写。她当场在表下面加了两行小字：谁要换班先来跟她念，别在群里@。写完把笔递过来让柜上也签一个，说这一行不该只有她一个人的名字。",
+      },
+      {
+        label: "按表办事，那一行归岗位不归她",
+        when: [how("zhou", 2)],
+        effects: [
+          { opinion: "$a", delta: -3 }, { bond: ["zhou", "player"], delta: 1 },
+          { quality: "life:zhou", set: 5 }, { quality: "life:zhou:how", set: 2 },
+        ],
+        result: "{$a}说她等了三年，等的不是这一行写她的名，是有人跟她确认那两行小字算不算数。她把表收回，折成原来的印子，说那就按表 —— 表上没写的，她以后也不说了。",
+      },
+      {
+        label: "二十分钟用完，谁也不留",
+        when: [how("zhou", 3)],
+        effects: [
+          { opinion: "$a", delta: -8 }, { stat: "standing", delta: -1 },
+          { quality: "life:zhou", set: 5 }, { quality: "life:zhou:how", set: 3 },
+        ],
+        result: "{$a}点头说她提醒了一年，早就知道会是这一句。她把表留在柜台上，连笔都没收 —— 第二天那两行小字被人抄走，抄的人是谁没人知道，{$a}也没来问。",
+      },
+      {
+        label: "先问她今年那张脸上要什么",
+        effects: [
+          { opinion: "$a", delta: 5 }, { bond: ["zhou", "player"], delta: 4 },
+          { quality: "life:zhou", set: 5 }, { quality: "life:zhou:how", set: 1 },
+        ],
+        result: "{$a}说她不要那一行归她，她要的是提醒别人以前先有人提醒她一声。这句说完她自己笑了，说四年里就这一句讲得最像人话。",
+      },
+    ],
+  },
+  {
+    id: "life5-suman",
+    kind: "arc",
+    cast: { a: suman },
+    when: [{ season: { gte: 9 } }, { quality: "arc:suman:end", gte: 1 }, { quality: "life:suman", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}上楼还是直接到镜前。她说去年那一场以后没人再问她那一格是谁的，因为她自己填了 —— 填的是她的名字，笔迹不是柜上的。她把那一页翻开给这一柜看，说今天来不是请示，是让人知道她填了。",
+    choices: [
+      {
+        label: "那一格的名字照她填的认",
+        when: [how("suman", 1)],
+        effects: [
+          { opinion: "$a", delta: 8 }, { stat: "standing", delta: 2 }, { bond: ["suman", "player"], delta: 6 },
+          { quality: "life:suman", set: 5 }, { quality: "life:suman:how", set: 1 },
+        ],
+        result: "{$a}说这一句她等的时候以为自己要吵一场，原来只要有人照着念一遍就行。她把那一页从本子上撕下来留给柜上，撕口她用指甲掐得很直，说往后有人问就给她看这一张。",
+      },
+      {
+        label: "按今天这一位客人待，格子的事先放下",
+        when: [how("suman", 2)],
+        effects: [
+          { opinion: "$a", delta: -4 }, { bond: ["suman", "player"], delta: 2 },
+          { quality: "life:suman", set: 5 }, { quality: "life:suman:how", set: 2 },
+        ],
+        result: "{$a}说好，那她今天就是客人。她坐下让柜上给她试妆，全程挑的是最贵那一支，付钱时也最客气 —— 客气到柜上有人后来才想起，她那一句「我填了」原本不是随口说的。",
+      },
+      {
+        label: "这一柜不再有她那一格",
+        when: [how("suman", 3)],
+        effects: [
+          { opinion: "$a", delta: -9 }, { stat: "standing", delta: -2 },
+          { quality: "life:suman", set: 5 }, { quality: "life:suman:how", set: 3 },
+        ],
+        result: "{$a}把本子推回去，说她填那一格本来也不是给这一柜看的。她走的时候把那支停产口红的空管留在镜台上，没带走，也没说留给谁。",
+      },
+      {
+        label: "问她今年还替谁说话",
+        effects: [
+          { opinion: "$a", delta: 5 }, { bond: ["suman", "player"], delta: 4 },
+          { quality: "life:suman", set: 5 }, { quality: "life:suman:how", set: 1 },
+        ],
+        result: "{$a}说今年谁也不替了，头一回只替她自己说一句。说完她自己也愣了一下，像是不习惯这句话是真的。",
+      },
+    ],
+  },
+  {
+    id: "life5-luyao",
+    kind: "arc",
+    cast: { a: luyao },
+    when: [{ season: { gte: 9 } }, { quality: "arc:luyao:end", gte: 1 }, { quality: "life:luyao", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}还是从楼梯上来，但今天她手里那本不是账，是一张她自己印的小票，招牌那处打的是她的名字。她说楼下那一格满两年，来的人里头有这一柜的老客 —— 她不是来比谁生意好，是把这一句当面说清楚。",
+    choices: [
+      {
+        label: "她那一名还在这本上，两本的账各走各",
+        when: [how("luyao", 1)],
+        effects: [
+          { opinion: "$a", delta: 7 }, { stat: "standing", delta: 2 }, { bond: ["luyao", "player"], delta: 6 },
+          { quality: "life:luyao", set: 5 }, { quality: "life:luyao:how", set: 1 },
+        ],
+        result: "{$a}把那张小票留在柜上，说她那一名不用谁划掉，也不用谁留着 —— 两本账各走各的，见面还是点头。走到门口她又回来补一句：这一柜要是哪天没人肯接她那几位，她接，按老客的价。",
+      },
+      {
+        label: "两本账各记各的，别并",
+        when: [how("luyao", 2)],
+        effects: [
+          { opinion: "$a", delta: -2 }, { bond: ["luyao", "player"], delta: 2 },
+          { quality: "life:luyao", set: 5 }, { quality: "life:luyao:how", set: 2 },
+        ],
+        result: "{$a}说就该这样，她要的从来不是并到这一柜来。她把小票收回口袋，掏出自己的本子在那一行后头画了一道竖线，说这样两边都清楚。",
+      },
+      {
+        label: "这面柜没有她的旧规矩",
+        when: [how("luyao", 3)],
+        effects: [
+          { opinion: "$a", delta: -8 }, { stat: "standing", delta: -1 },
+          { quality: "life:luyao", set: 5 }, { quality: "life:luyao:how", set: 3 },
+        ],
+        result: "{$a}说她早就知道这一柜的规矩里没有她，不然也不会自己印小票。她把那张小票按在柜面上推过来，说这一张送柜上，让站柜的都看看别人怎么把名字打在自己那一行。",
+      },
+      {
+        label: "先问她今天来是叙旧还是谈价",
+        effects: [
+          { opinion: "$a", delta: 5 }, { bond: ["luyao", "player"], delta: 4 },
+          { quality: "life:luyao", set: 5 }, { quality: "life:luyao:how", set: 1 },
+        ],
+        result: "{$a}说都不是，是来打招呼 —— 她那一格开两年，头一回有人正式跟她确认这件事。她把小票翻到背面，背面写着她那几个老客的名字，她说这几位她一个也不抢，先讲明白。",
+      },
+    ],
+  },
+  {
+    id: "life5-miduo",
+    kind: "arc",
+    cast: { a: miduo },
+    when: [{ season: { gte: 9 } }, { quality: "arc:miduo:end", gte: 1 }, { quality: "life:miduo", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}手里还是那三张纸，纸角已经磨圆。她说她那三张去年被抄进柜上的排货单，抄的人没问她 —— 如今柜上按她那三张排了整整一年，出了两次错，错在抄的人把「先问」那一栏省了。她把纸摊平，说自己今天来把那两行要回来。",
+    choices: [
+      {
+        label: "照她那三张念，一字不改，把那两行补回去",
+        when: [how("miduo", 1)],
+        effects: [
+          { opinion: "$a", delta: 8 }, { stat: "standing", delta: 3 }, { bond: ["miduo", "player"], delta: 5 },
+          { quality: "life:miduo", set: 5 }, { quality: "life:miduo:how", set: 1 },
+        ],
+        result: "{$a}自己把那两行补在抄件上，字歪，笔画很用力。补完她退开一步看了看，说这一张如今算她的名字也算这一柜的 —— 然后她把三支笔里的脏笔留给自己，新的推给柜上。",
+      },
+      {
+        label: "按她那本上的数开，字就不必补了",
+        when: [how("miduo", 2)],
+        effects: [
+          { opinion: "$a", delta: -3 }, { bond: ["miduo", "player"], delta: 1 },
+          { quality: "life:miduo", set: 5 }, { quality: "life:miduo:how", set: 2 },
+        ],
+        result: "{$a}说数她认，字她也要。她把三张纸对齐收好，收到一半又把最下面那一张抽出来留在柜上，说这一张柜上拿去用，那两行她回去再抄一份。",
+      },
+      {
+        label: "她那号的事别在这一柜谈",
+        when: [how("miduo", 3)],
+        effects: [
+          { opinion: "$a", delta: -7 }, { stat: "standing", delta: -1 },
+          { quality: "life:miduo", set: 5 }, { quality: "life:miduo:how", set: 3 },
+        ],
+        result: "{$a}点头说她就知道这一柜只把她的数当数。她把三张纸塞回口袋，走了两步又回来，把纸袋留下 —— 说这个袋子柜上放着，哪天有人要抄，先跟她念一声，这一句她说到第五年才说出口。",
+      },
+      {
+        label: "先问她今年还想不想自己挑",
+        effects: [
+          { opinion: "$a", delta: 6 }, { bond: ["miduo", "player"], delta: 5 },
+          { quality: "life:miduo", set: 5 }, { quality: "life:miduo:how", set: 1 },
+        ],
+        result: "{$a}说想，而且不想再等人给她那一格。她把那三张纸按顺序摆在柜台上，说要是不放心，可以让这一柜的人站在旁边看她挑一遍。",
+      },
+    ],
+  },
+  {
+    id: "life5-zhao",
+    kind: "arc",
+    cast: { a: zhao },
+    when: [{ season: { gte: 9 } }, { quality: "arc:zhao:end", gte: 1 }, { quality: "life:zhao", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}今天还是一个人来，女儿在门口等。她说去年那一张她填完给女儿看、女儿替她接了后半句；今年她自己把那半句想出来了，想在这一柜这一行字前头说完，说完再让女儿看。",
+    choices: [
+      {
+        label: "让她自己写完，一字不替她接",
+        when: [how("zhao", 1)],
+        effects: [
+          { opinion: "$a", delta: 8 }, { stat: "standing", delta: 2 }, { bond: ["zhao", "player"], delta: 6 },
+          { quality: "life:zhao", set: 5 }, { quality: "life:zhao:how", set: 1 },
+        ],
+        result: "{$a}写得很慢，写完把那一张立起来给门口的女儿看 —— 女儿点了个头，她反而笑了，说这半句她练了整整一年，为的就是让女儿看见是她自己写的。",
+      },
+      {
+        label: "照她去年那一档填，不用再想",
+        when: [how("zhao", 2)],
+        effects: [
+          { opinion: "$a", delta: -3 }, { bond: ["zhao", "player"], delta: 2 },
+          { quality: "life:zhao", set: 5 }, { quality: "life:zhao:how", set: 2 },
+        ],
+        result: "{$a}说好，照去年那一档就行。她把笔放下，放得很轻，像怕让人看出来她其实练过 —— 走出两步又回头问：那我那半句，往后还能不能来写。",
+      },
+      {
+        label: "那一行今天不必在柜上填",
+        when: [how("zhao", 3)],
+        effects: [
+          { opinion: "$a", delta: -7 }, { stat: "standing", delta: -1 },
+          { quality: "life:zhao", set: 5 }, { quality: "life:zhao:how", set: 3 },
+        ],
+        result: "{$a}说这一句她听懂了，意思是她那一行不算这一柜的范例。她把那一张折成四折放进手袋最内层，说那她带回去写，写完不给人看 —— 女儿在门口问她要不要紧，她说要紧的是她自己。",
+      },
+      {
+        label: "问她今天怎么自己来了",
+        effects: [
+          { opinion: "$a", delta: 6 }, { bond: ["zhao", "player"], delta: 5 },
+          { quality: "life:zhao", set: 5 }, { quality: "life:zhao:how", set: 1 },
+        ],
+        result: "{$a}说女儿要陪，她不让 —— 这一行她得一个人来填。说完她自己愣了一下，然后补一句：这句话也是那半句里的。",
+      },
+    ],
+  },
+  {
+    id: "life5-fangmin",
+    kind: "arc",
+    cast: { a: fangmin },
+    when: [{ season: { gte: 9 } }, { quality: "arc:fangmin:end", gte: 1 }, { quality: "life:fangmin", eq: 4 }],
+    weight: 27, tension: -1, cooldown: 28,
+    text: "{$a}今天一个人来，没带这层楼的人。她说楼下那一册范本页改版，编到第四版，她两年前写的那一行底下终于印了字 —— 印的是「某柜」两个字，不是她的名字。她把那一页翻到柜上，说她今天只要一句话：那两个字的后面要不要加她的名。",
+    choices: [
+      {
+        label: "把她的名字签回那一行",
+        when: [how("fangmin", 1)],
+        effects: [
+          { opinion: "$a", delta: 8 }, { stat: "standing", delta: 3 }, { bond: ["fangmin", "player"], delta: 6 },
+          { quality: "life:fangmin", set: 5 }, { quality: "life:fangmin:how", set: 1 },
+        ],
+        result: "{$a}自己在那两个字后面括号里写了她的名，写完把笔搁下，说她四年里等的不是这一行被人用，是用这一行的人别躲在那两个字后面。她说这一页她留着，柜上要再抄，先跟她念。",
+      },
+      {
+        label: "照流程办，那一行归范例不归她",
+        when: [how("fangmin", 2)],
+        effects: [
+          { opinion: "$a", delta: -4 }, { bond: ["fangmin", "player"], delta: 2 },
+          { quality: "life:fangmin", set: 5 }, { quality: "life:fangmin:how", set: 2 },
+        ],
+        result: "{$a}说流程她比谁都熟，这四个字她也念过五年。她把那一页合上，推回柜子的原位，推得很慢，说那她往后写东西前先想一下 —— 想这一句是不是又要变成别人的流程。",
+      },
+      {
+        label: "那一行撤出范例，别再抄她的",
+        when: [how("fangmin", 3)],
+        effects: [
+          { opinion: "$a", delta: -6 }, { stat: "standing", delta: -1 },
+          { quality: "life:fangmin", set: 5 }, { quality: "life:fangmin:how", set: 3 },
+        ],
+        result: "{$a}点头说撤就撤，她那一行本来也不是为范例写的。她把那一页从册子上撕下来带走，撕下来的时候说了一句：这一页我留着，哪天柜上又要抄，先来问 —— 这一句她说到第五年才说得这么平静。",
+      },
+      {
+        label: "先问那两个字的后面她想不想站人",
+        effects: [
+          { opinion: "$a", delta: 5 }, { bond: ["fangmin", "player"], delta: 4 },
+          { quality: "life:fangmin", set: 5 }, { quality: "life:fangmin:how", set: 1 },
+        ],
+        result: "{$a}说想，但要她自己站，不是被人写上去。她把笔帽盖好放回原处，说今天这一句她先记着，等这一柜哪天真要给她那一行，她再来签。",
+      },
+    ],
+  },
 ];
+

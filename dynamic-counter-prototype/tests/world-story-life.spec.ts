@@ -54,6 +54,10 @@ const life3Fixture = (person: string, cardId: string, how: number, opinion: numb
 const life4Fixture = (person: string, cardId: string, how: number, opinion: number): World =>
   ladderFixture(person, cardId, 8, 3, how, opinion);
 
+/** 第 46 轮：第五格开在第 9 季，门读 life:<人> = 4（第四年走完），点完写 5。 */
+const life5Fixture = (person: string, cardId: string, how: number, opinion: number): World =>
+  ladderFixture(person, cardId, 9, 4, how, opinion);
+
 const ladderFixture = (person: string, cardId: string, season: number, step: number, how: number, opinion: number): World => ({
   ...newWorld(`life-${cardId}`, PEOPLE),
   season, day: 6, slot: 1, energy: energyCeiling(1),
@@ -519,6 +523,68 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       expect(q.qualities["life:liangxia"]).toBe(4);
       expect(q.qualities["life:liangxia:how"]).toBe(3);
       expect(q.money, "推出去又抽回来那一步也不给钱").toBe(w.money);
+    });
+
+    // —— 第 46 轮：第 9 季那一格（第五格）。五年里前四年都是这一柜替她定位置，第五年她自己把那行办完，
+    // 界面上要读得出"第四年怎么待她"决定今天接住哪一句，还要一颗钱都不给。
+    test(`沈薇第五年：号是她自己来注销的，桌上就该是「留给下一个人」那一格`, async ({ page }) => {
+      const w = life5Fixture("shen", "life5-shen46", 1, 12);
+      await enter(page, w, { id: "life5-shen", binding: { a: "shen" } });
+      await expect(storyText(page)).toContainText("她名下那个用了四年的号");
+      await expect(storyText(page)).not.toContainText("{$");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: /今天不必留在柜上/ })).toHaveCount(0);
+      const box = await page.locator(".world-story").boundingBox();
+      expect(box, "故事卡要有尺寸").not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      await page.getByRole("button", { name: "把那个号留给下一个不敢开口的人" }).click();
+      await expect(page.locator(".world-feed")).toContainText("先问一句要不要");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:shen"], "第五年这一步走到 5").toBe(5);
+      expect(q.qualities["life:shen:how"]).toBe(1);
+      expect(q.money, "第五格也一颗钱都不给").toBe(w.money);
+    });
+
+    test(`沈薇第五年换第四年那一档：「不必留」开着，「留给下一个人」关着`, async ({ page }) => {
+      await enter(page, life5Fixture("shen", "life5-shen46b", 3, -8), { id: "life5-shen", binding: { a: "shen" } });
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "把那个号留给下一个不敢开口的人" })).toHaveCount(0);
+      await page.getByRole("button", { name: "那个号今天不必留在柜上" }).click();
+      const q = await savedWorld(page);
+      expect(q.qualities["life:shen"]).toBe(5);
+      expect(q.qualities["life:shen:how"], "第五年记的是「她自己带走」").toBe(3);
+    });
+
+    test(`小雨第五年：她第四年只写得出两档，界面上任何一档都点得下去`, async ({ page }) => {
+      // 上游（第四格）给小雨写的 how 只有 [1,2] —— 第五格那颗 how=3 的门是死格子，所以这里两档各验一遍。
+      for (const [how, label] of [[1, "把去年那句当着孩子的面再说一遍"], [2, "按排班把孩子交给这一柜，她退到后面"]] as const) {
+        const w = life5Fixture("xiaoyu", `life5-xiaoyu46-${how}`, how, how === 1 ? 8 : -4);
+        await enter(page, w, { id: "life5-xiaoyu", binding: { a: "xiaoyu" } });
+        await expect(storyText(page)).toContainText("用的是两年前从小雨那里听去的那一句");
+        await expect(choices(page)).toHaveCount(2);
+        await expect(page.getByRole("button", { name: label })).toBeVisible();
+        await page.getByRole("button", { name: label }).click();
+        const q = await savedWorld(page);
+        expect(q.qualities["life:xiaoyu"], `how=${how} 点完要把第五年写下`).toBe(5);
+        expect(q.qualities["life:xiaoyu:how"]).toBe(how);
+        expect(q.money, "带孩子的这一步也不给钱").toBe(w.money);
+      }
+    });
+
+    test(`方敏第五年：她要的是那一行署谁的名 —— 不许读成主线那一栏`, async ({ page }) => {
+      const w = life5Fixture("fangmin", "life5-fangmin46", 2, 6);
+      await enter(page, w, { id: "life5-fangmin", binding: { a: "fangmin" } });
+      // 第 41 轮那条教训留在界面上：方敏这条线读的是她自己写的那一行，不是主线里"那一栏归谁"。
+      await expect(storyText(page)).toContainText("范本页改版");
+      await expect(storyText(page)).not.toContainText("那一栏");
+      await expect(choices(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "把她的名字签回那一行" })).toHaveCount(0);
+      await page.getByRole("button", { name: "照流程办，那一行归范例不归她" }).click();
+      await expect(page.locator(".world-feed")).toContainText("变成别人的流程");
+      const q = await savedWorld(page);
+      expect(q.qualities["life:fangmin"]).toBe(5);
+      expect(q.qualities["life:fangmin:how"]).toBe(2);
+      expect(q.money, "第五格一颗钱都不给").toBe(w.money);
     });
   });
 }
