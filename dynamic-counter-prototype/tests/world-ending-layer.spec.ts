@@ -82,28 +82,55 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
       await expect(body).toContainText("镜子");
     });
 
-    // —— 第 43 轮：第 5 幕以后那四句判词，一句一季。散场那一屏以前只会念第 4 幕的话，
-    //    跑完八季的人在收尾处读到的还是四季那一句。现在"这一步的线索是不是本季学的"决定念哪句。
+    // —— 第 43 轮：第 5 幕以后一句一季；第 44 轮：一季四档，一档一句。散场那一屏以前只会念第 4 幕的话，
+    //    跑完八季的人在收尾处读到的还是四季那一句。现在"这一步的线索是不是本季学的"决定念哪句，
+    //    而那一步落在哪一档决定念这一季的四句里的哪一句。
     test(`第 5 季末散场：念的是「那一栏今年照旧签」，不是第 4 幕那句`, async ({ page }) => {
       await enter(page, mainlineWorld({
         season: 5,
-        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4, "clue:slip-signature": 4 * 28 + 12 },
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4,
+          "clue:slip-signature": 4 * 28 + 12, "mainline:a5-row": 1 },
       }));
       await expect(page.locator("h1.recap-ending")).toHaveText("那一栏今年照旧签");
-      await expect(page.locator(".recap-ending-body")).toContainText("不是补四季的旧账");
+      await expect(page.locator(".recap-ending-body")).toContainText("也是她自己写的");
+    });
+
+    test(`同一季换个档位，屏幕上那句就换一句：第 6 季那四档各念各的`, async ({ page }) => {
+      // 这条钉的是第 44 轮的机制本身：档位记号读进来了，而且四档在界面上是四句话，不是一句。
+      // 漏读档位（chainTier 不接、或者门写回 `>= 2` 那种范围）→ 这里会出现两句一样。
+      const seen: string[] = [];
+      for (const tier of [1, 2, 3, 4]) {
+        await enter(page, mainlineWorld({
+          season: 6,
+          qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4,
+            "clue:slip-number": 5 * 28 + 12, "mainline:a6-row": tier },
+        }));
+        seen.push((await page.locator("h1.recap-ending").textContent()) ?? "");
+      }
+      expect(seen).toEqual(["认的是号，不是名字", "你写的那句成了别人的章", "那一栏落到更年轻的人头上", "数得出四张，栏照旧开"]);
+      expect(new Set(seen).size).toBe(4);
     });
 
     test(`第 8 季末散场：念「那一栏空着过完一季」；同一季而线索是上一季学的就不念`, async ({ page }) => {
       await enter(page, mainlineWorld({
         season: 8,
-        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4, "clue:slip-blank": 7 * 28 + 12 },
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4,
+          "clue:slip-blank": 7 * 28 + 12, "mainline:a8-row": 1 },
       }));
       await expect(page.locator("h1.recap-ending")).toHaveText("那一栏空着过完一季");
       await expect(page.locator(".recap-ending-body")).toContainText("这一年没人背");
+      // 同一季的另一档：第 8 季那句按「越把这一栏交回给人办的排前」，档位 3 念的是「轮到谁谁就病」。
+      await enter(page, mainlineWorld({
+        season: 8,
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4,
+          "clue:slip-blank": 7 * 28 + 12, "mainline:a8-row": 3 },
+      }));
+      await expect(page.locator("h1.recap-ending")).toHaveText("轮到谁谁就病");
       // 隔一季不重念在界面上也要成立：这条线索是上一季学的，这一季该换别的话。
       await enter(page, mainlineWorld({
         season: 8,
-        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4, "clue:slip-blank": 6 * 28 + 12 },
+        qualities: { "mainline:act": 5, "thread:return-slip": 12, "thread:return-slip:landed": 4,
+          "clue:slip-blank": 6 * 28 + 12, "mainline:a8-row": 1 },
       }));
       await expect(page.locator("h1.recap-ending")).not.toHaveText("那一栏空着过完一季");
     });

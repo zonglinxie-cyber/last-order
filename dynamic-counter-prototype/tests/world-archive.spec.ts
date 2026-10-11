@@ -113,6 +113,9 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".ending-row.locked")).toHaveCount(ENDINGS.length - 1);
       await expect(page.locator(".ending-row.locked b").first()).toHaveText("？？？");
       await expect(page.getByText(`散过场 1 / ${ENDINGS.length} 种`)).toBeVisible();
+      // 每一句判词都得有自己的那句提示：兜底那句是给"还没写提示"漏下的口子用的，不该有行念到它。
+      // （第 42、43 轮加的主线那十八句就漏在这儿，屏幕上 18 行全是「还没解锁的结局。」。）
+      await expect(page.locator(".ending-row", { hasText: "还没解锁的结局。" })).toHaveCount(0);
     });
 
     test("正文 ≥12px、页签与返回 ≥44px、不横向溢出", async ({ page }) => {

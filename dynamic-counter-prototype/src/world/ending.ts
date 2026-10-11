@@ -13,7 +13,7 @@ const has = (ids: PersonId[], id: PersonId) => ids.includes(id);
 
 /** 主线走到第几幕、那条退货单落到哪一档、以及这一季是不是它落地的那一季。
  *  只有最前面那几组读它们，其余各句读不到。 */
-type Mainline = { act: number; landing: number; landedThisSeason: boolean; spoke: Record<string, boolean> };
+type Mainline = { act: number; landing: number; landedThisSeason: boolean; spoke: Record<string, boolean>; tier: Record<string, number> };
 
 /** 第 5 幕以后主线是**按季续写**的（第 38 轮那三张 + 第 41 轮那一张），每一步都发一条本子上的线索：
  *  slip-signature 第 5 季 / slip-number 第 6 季 / slip-selfrow 第 7 季 / slip-blank 第 8 季。
@@ -21,6 +21,14 @@ type Mainline = { act: number; landing: number; landedThisSeason: boolean; spoke
  *  结局层不用为新记号改引擎，也不会像旧那四句一样隔一季把同一句话再念一遍。 */
 const CHAIN_STEP_CLUES = ["slip-signature", "slip-number", "slip-selfrow", "slip-blank"] as const;
 const seasonOfAbsDay = (day: number): number => Math.floor((day - 1) / SEASON_DAYS) + 1;
+/** 当季那一步落在哪一档：由那一步自己写下的记号读（`mainline:a5-row` … `a8-row`）。
+ *  没有它，同一季里两种选择看到的会是同一句判词 —— 第 43 轮的代价 ①。 */
+const CHAIN_TIERS = ["a5-row", "a6-row", "a7-row", "a8-row"] as const;
+const chainTier = (qualities: Record<string, number>): Record<string, number> => {
+  const out: Record<string, number> = {};
+  for (const key of CHAIN_TIERS) out[key] = qualities[`mainline:${key}`] ?? 0;
+  return out;
+};
 const spokeThisSeason = (qualities: Record<string, number>, season: number): Record<string, boolean> => {
   const out: Record<string, boolean> = {};
   for (const id of CHAIN_STEP_CLUES) {
@@ -33,32 +41,96 @@ const spokeThisSeason = (qualities: Record<string, number>, season: number): Rec
 type Gate = (s: SeasonSummary & Mainline) => boolean;
 
 const CATALOG: Array<SeasonEnding & { when: Gate }> = [
-  // —— 第 5 幕以后那四句：一句对应一季，门槛只认"这一步的线索是不是本季学到的"，不认幕号
-  //    （幕号停在 5，靠它分不出季）；也不与上面那四句抢 —— 那四句要 `thread:return-slip` 本季落地，
-  //    而第 4 季之后落点不再动。
+  // —— 第 5 幕以后那十四句：一季四档，一档一句（第 43 轮的代价 ①：同一季里两种选择看到的是同一句话）。
+  //    门槛只认两件事：这一步的线索是不是本季学到的 + 那一步自己写下的档位记号（`mainline:a5-row` …）。
+  //    不读幕号 —— 幕号停在 5，第 5~8 季在它眼里是同一个数。也不与下面第 4 幕那四句抢：
+  //    那四句要 `thread:return-slip` 本季落地，而第 4 季之后落点不再动。
+  //    同一季里那几句的先后按「越把这一栏交回给人办的排前」：第 5、6、7 季顺着档位排，第 8 季倒着排
+  //    （问「该谁站过来」排在「没人问」前面）。它们互斥（一档一句，见 tests/world-ending.test.ts 那条守卫），
+  //    所以先后只影响档案里的陈列和 rank，不影响这一季念哪句。
   {
     id: "row-signed-again",
     title: "那一栏今年照旧签",
-    body: "今年签在那一栏的还是那个名字，不是补四季的旧账，是照旧 —— 你替她把这一笔记到第五季，台账上多出来的全是别人的日期。",
-    when: s => s.spoke["slip-signature"],
+    body: "今年签在那一栏的是她自己念一遍再落的那一笔，不是那个号。她说往后拿她的名字去签得先问她 —— 四季里第一次，这一句是她自己说的，也是她自己写的。",
+    when: s => s.spoke["slip-signature"] && s.tier["a5-row"] === 1,
+  },
+  {
+    id: "row-no-proxy",
+    title: "「不许代签」写进去了",
+    body: "撤栏要楼上的表改版，今年办不动。但那一句「不许代签」她当场写进去了，写完把笔递过来由你签 —— 那一栏还在，只是往后它不该再有别人代的一笔。",
+    when: s => s.spoke["slip-signature"] && s.tier["a5-row"] === 2,
+  },
+  {
+    id: "row-borrowed-name",
+    title: "那一栏还是借别人的名字",
+    body: "你说这一栏与她无关。她点头：这一句她见过四季，每一季都有人说它与她无关，可写到年底它总有一个名字 —— 今年那一个还是从别人那里借来的。",
+    when: s => s.spoke["slip-signature"] && s.tier["a5-row"] === 3,
   },
   {
     id: "row-numbers-only",
     title: "认的是号，不是名字",
-    body: "那一栏去年换过一个名字，号一年没换。这一季的退单还是从那个号开出去：柜位认得它，认不得人。",
-    when: s => s.spoke["slip-number"],
+    body: "去年那一笔是她自己落的。这一季她站在栏前，柜员念的却是名字后头那个号 —— 名字换过一回，号一年没换。",
+    when: s => s.spoke["slip-number"] && s.tier["a6-row"] === 1,
+  },
+  {
+    id: "row-stamp-of-others",
+    title: "你写的那句成了别人的章",
+    body: "撤栏没撤成：楼上把它并进区域总表，底下签的是一个不认识的号。你去年写进去的那句「不许代签」，今年成了别人手上的章。",
+    when: s => s.spoke["slip-number"] && s.tier["a6-row"] === 2,
+  },
+  {
+    id: "row-signs-the-young",
+    title: "那一栏落到更年轻的人头上",
+    body: "这一季它落到一个才来两周的孩子头上，第一个月就被代签三张。去年你说这一栏与她无关，今年它归了一个更无关的人。",
+    when: s => s.spoke["slip-number"] && s.tier["a6-row"] === 3,
+  },
+  {
+    id: "row-only-counted",
+    title: "数得出四张，栏照旧开",
+    body: "这一季你只把数数出来：四张，三张的日期都在她当班的日子，最后一张是楼上自己退的那面镜。那一栏不管谁站着，它只往外开单。",
+    when: s => s.spoke["slip-number"] && s.tier["a6-row"] === 4,
+  },
+  {
+    id: "row-name-printed",
+    title: "那一栏的名字是印出来的",
+    body: "那一栏还是一个名字，不是表格 —— 只是那两个字去年是她手写的，今年是系统印的。抄件上那行小字一加上去，就再没人手写过它。",
+    when: s => s.spoke["slip-selfrow"] && s.tier["a7-row"] === 1,
+  },
+  {
+    id: "row-is-a-post",
+    title: "那一栏自己就是一个岗位",
+    body: "撤不掉：它进的是区域总表的表头。今年它连要一个名字都省了，谁站过来都得往里签 —— 你去年替那个孩子要的一句话，成了它的说明。",
+    when: s => s.spoke["slip-selfrow"] && s.tier["a7-row"] === 2,
   },
   {
     id: "row-copies-itself",
     title: "那一栏抄自己",
-    body: "抄件上多了一行小字「上一季同名」。它不再向楼上要谁了 —— 四季都要长出来的那个名字，今年由它自己复制自己。",
-    when: s => s.spoke["slip-selfrow"],
+    body: "你把去年那四张摊到楼上去。台账她收过，收完那一栏照旧开单 —— 那四张今年变成抄件上那行小字里的「同名」，一季推一季。",
+    when: s => s.spoke["slip-selfrow"] && s.tier["a7-row"] === 3,
+  },
+  {
+    id: "row-nobody-added",
+    title: "没人签发起",
+    body: "你先问那行小字是谁加上去的：楼上的模板，去年冬天起就在改，没人签发起。那一栏引用它自己，连一个要问的人都不问了。",
+    when: s => s.spoke["slip-selfrow"] && s.tier["a7-row"] === 4,
+  },
+  {
+    id: "row-blank-who-stands",
+    title: "轮到谁谁就病",
+    body: "你问的是这一季谁本该站过来。她把名单翻给这一层看：站过的人都签过别处，轮到谁谁就病 —— 不是躲，是那一栏的名声已经传出去了。",
+    when: s => s.spoke["slip-blank"] && s.tier["a8-row"] === 3,
+  },
+  {
+    id: "row-blank-asked",
+    title: "空着的那一栏还是留着",
+    body: "楼上回了四个字「照旧留着」。今年那一栏空着过完一季，明年抄件上那行小字照样写「上一季同名」—— 只是同名的是一片空白。",
+    when: s => s.spoke["slip-blank"] && s.tier["a8-row"] === 2,
   },
   {
     id: "row-blank-season",
     title: "那一栏空着过完一季",
     body: "今年没人写，也没人来问该谁填。柜上照旧开门，退单照旧进账 —— 原来它不是营业的条件，只是有人替它背着，这一年没人背。",
-    when: s => s.spoke["slip-blank"],
+    when: s => s.spoke["slip-blank"] && s.tier["a8-row"] === 1,
   },
   // —— 主线第 4 幕那四句：门槛一律带 act >= 4 且 landedThisSeason，所以没跑完四季的人在下面那十三句里落，
   //    跑完的也只在那张退货单落地的那一季落一次 —— 往后的季这一句已经说完，回到下面那十三句。
@@ -203,6 +275,7 @@ export function seasonEnding(world: World, people: Person[]): SeasonEnding {
     landing: threadLanding(world.qualities, MAINLINE_THREAD),
     landedThisSeason: threadLandedSeason(world.qualities, MAINLINE_THREAD) === world.season,
     spoke: spokeThisSeason(world.qualities, world.season),
+    tier: chainTier(world.qualities),
   };
   const hit = CATALOG.find(e => e.when(s)) ?? CATALOG[CATALOG.length - 1];
   return { id: hit.id, title: hit.title, body: hit.body };

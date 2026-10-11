@@ -4,6 +4,26 @@ import type { SeasonEnding } from "./ending.ts";
 
 /** 还没拿到的结局，档案里只说这一句：给方向，不点破要凑成什么数。 */
 export const ENDING_HINTS: Record<string, string> = {
+  // —— 主线那十八句（第 4 幕四句 + 第 5 幕以后按季续写的十四句）。第 42、43 轮加的时候只改了 ending.ts，
+  //    档案里这十八句一直在念兜底那句「还没解锁的结局。」—— 由 tests/world-ending.test.ts 那条覆盖守卫钉住。
+  "row-signed-again": "那一栏上今年有她自己落的一笔。",
+  "row-no-proxy": "撤不掉那一栏，但可以把一句「不许代签」当场写进去。",
+  "row-borrowed-name": "说那一栏与谁都不相干，年底它照样有一个名字。",
+  "row-numbers-only": "名字换成谁的都会认得，那个号一年没人换过。",
+  "row-stamp-of-others": "你去岁写进去的那一句，今年在谁的手上。",
+  "row-signs-the-young": "那一栏落到一个还没站稳的人头上时，你替不替他要一句。",
+  "row-only-counted": "别急着主张什么，先把这一季从那一栏开出去几张数清楚。",
+  "row-name-printed": "那一栏上的字还是人手写的吗。",
+  "row-is-a-post": "让它不再要一个名字，比撤掉它容易 —— 也难看得多。",
+  "row-copies-itself": "把去年那几张摊到楼上去，看它抄谁。",
+  "row-nobody-added": "那行小字是谁加上去的，问到底没人认。",
+  "row-blank-who-stands": "空着的时候问一句「本该谁站过来」，名单上有答案。",
+  "row-blank-asked": "问楼上要不要留着，会拿到四个字。",
+  "row-blank-season": "一整季没人写、也没人来问，柜上照样开门。",
+  "page-carried": "第四页留在柜上，其余三张被收走 —— 得先有人认这一页。",
+  "row-is-yours": "把自己的号写在别人退的那一单上，台账和柜位都得站住。",
+  "row-in-total": "那一栏被并进总表，是走得最省事的那一步。",
+  "row-still-open": "四季都过去了，那一栏还是空的。",
   "both-kept": "有两条线几乎同时朝你点头，还得守住台账和柜位——很少人一次拿到两句。",
   "names-stay": "有人离开这张表，认老柜的人还留在你这三米。",
   "own-sentence": "实习生能自己把一句说完，晚班的表也交到你手里。上季还有一条线留在柜上。",

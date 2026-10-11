@@ -1358,6 +1358,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-blank" },
           { remember: { holder: "fangmin", act: "a8-left-blank", valence: 2, subject: "player" } },
+          { quality: "mainline:a8-row", set: 1 },
           { opinion: "fangmin", delta: 5 }, { stat: "standing", delta: 2 }, { stat: "compliance", delta: -1 },
         ],
         result: "{$a}点头说去年她还急着要一个名字，今年她明白了：这一栏空着，柜上照样开门，那一季退的单没人担 —— 它原来不是营业的条件，是有人替它背着。",
@@ -1368,6 +1369,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-blank" },
           { remember: { holder: "fangmin", act: "a8-asked-above", valence: 1, subject: "player" } },
+          { quality: "mainline:a8-row", set: 2 },
           { opinion: "fangmin", delta: 4 }, { stat: "compliance", delta: 3 }, { stat: "standing", delta: -1 },
         ],
         result: "{$a}说楼上回了四个字「照旧留着」 —— 留着不填，明年抄件上那行小字还是「上一季同名」，只是同名同的是空白。",
@@ -1377,6 +1379,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
         effects: [
           { clue: "slip-blank" },
           { remember: { holder: "fangmin", act: "a8-who-should-stand", valence: 1, subject: "player" } },
+          { quality: "mainline:a8-row", set: 3 },
           { opinion: "fangmin", delta: 3 }, { bond: ["fangmin", "player"], delta: 4 },
         ],
         result: "{$a}翻到名单那一页给这一柜看：今年这一层站过的人都签过别处，轮到谁谁就病 —— 不是躲，是这一栏的名声已经传出去了。",

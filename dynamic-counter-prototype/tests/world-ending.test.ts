@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
+import { ENDING_HINTS } from "../src/world/ending-hints.ts";
+import { STORYLETS_MAINLINE } from "../src/world/content/storylets-mainline.ts";
 import { newWorld } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/people.ts";
 import type { World } from "../src/world/types.ts";
@@ -18,11 +20,16 @@ const landedIn = (season: number, landing: number, extra: Record<string, number>
   qualities: { "mainline:act": 4, "thread:return-slip": landing, "thread:return-slip:landed": season, ...extra },
 });
 
-/** 第 5 幕以后那四句认的是"这一步的线索是不是本季学到的"（线索存的是绝对天，见 engine 的 absDay）。
- *  夹具自己算这个天：第 S 季第 12 天 = (S-1)*28 + 12。季号差一，判词就该换。 */
-const spokeIn = (season: number, clue: string): Partial<World> => ({
+/** 第 5 幕以后那十四句认的是两件事："这一步的线索是不是本季学到的"（线索存的是绝对天，见 engine 的 absDay）
+ *  + 那一步落在哪一档（第 44 轮）。夹具自己算这个天：第 S 季第 12 天 = (S-1)*28 + 12。季号差一，判词就该换。
+ *  档位记号必须一起带上：引擎里它们是同一个选项写的，只带线索的夹具是一份写坏了的盘。 */
+const spokeIn = (season: number, clue: string, tier?: [string, number]): Partial<World> => ({
   season,
-  qualities: { "mainline:act": 5, [`clue:${clue}`]: (season - 1) * 28 + 12 },
+  qualities: {
+    "mainline:act": 5,
+    [`clue:${clue}`]: (season - 1) * 28 + 12,
+    ...(tier ? { [`mainline:${tier[0]}`]: tier[1] } : {}),
+  },
 });
 
 test("结局至少 8 个，rank 两两不同，排出来是全序", () => {
@@ -62,12 +69,23 @@ test("每个结局都能构造出来，更好的条件优先", () => {
       compliance: 30, standing: 36, money: 12000,
       ...landedIn(1, 17),
     })],
-    // 第 43 轮：第 5 幕以后那四句，一句一季。构造它们只要"这一步的线索是本季学到的"+ 幕号 5，
+    // 第 43 轮：第 5 幕以后一句一季。第 44 轮：一季四档，一档一句 —— 每一档都要能单独造出来，
+    // 造不出来就是玩家走得到、档案里却永远空着的一句。构造它们只要"这一步的线索是本季学到的"+ 档位，
     // 不需要新的落点档，也不需要新的存档字段 —— 这就是它们能靠线索的绝对天数的原因。
-    ["row-signed-again", at({ compliance: 55, standing: 48, money: 14000, ...spokeIn(5, "slip-signature") })],
-    ["row-numbers-only", at({ compliance: 52, standing: 45, money: 14000, ...spokeIn(6, "slip-number") })],
-    ["row-copies-itself", at({ compliance: 48, standing: 50, money: 14000, ...spokeIn(7, "slip-selfrow") })],
-    ["row-blank-season", at({ compliance: 44, standing: 46, money: 14000, ...spokeIn(8, "slip-blank") })],
+    ["row-signed-again", at({ compliance: 55, standing: 48, money: 14000, ...spokeIn(5, "slip-signature", ["a5-row", 1]) })],
+    ["row-no-proxy", at({ compliance: 52, standing: 44, money: 14000, ...spokeIn(5, "slip-signature", ["a5-row", 2]) })],
+    ["row-borrowed-name", at({ compliance: 48, standing: 40, money: 14000, ...spokeIn(5, "slip-signature", ["a5-row", 3]) })],
+    ["row-numbers-only", at({ compliance: 55, standing: 48, money: 14000, ...spokeIn(6, "slip-number", ["a6-row", 1]) })],
+    ["row-stamp-of-others", at({ compliance: 52, standing: 44, money: 14000, ...spokeIn(6, "slip-number", ["a6-row", 2]) })],
+    ["row-signs-the-young", at({ compliance: 48, standing: 40, money: 14000, ...spokeIn(6, "slip-number", ["a6-row", 3]) })],
+    ["row-only-counted", at({ compliance: 44, standing: 46, money: 14000, ...spokeIn(6, "slip-number", ["a6-row", 4]) })],
+    ["row-name-printed", at({ compliance: 55, standing: 48, money: 15000, ...spokeIn(7, "slip-selfrow", ["a7-row", 1]) })],
+    ["row-is-a-post", at({ compliance: 52, standing: 44, money: 15000, ...spokeIn(7, "slip-selfrow", ["a7-row", 2]) })],
+    ["row-copies-itself", at({ compliance: 48, standing: 40, money: 15000, ...spokeIn(7, "slip-selfrow", ["a7-row", 3]) })],
+    ["row-nobody-added", at({ compliance: 44, standing: 46, money: 15000, ...spokeIn(7, "slip-selfrow", ["a7-row", 4]) })],
+    ["row-blank-who-stands", at({ compliance: 55, standing: 48, money: 16000, ...spokeIn(8, "slip-blank", ["a8-row", 3]) })],
+    ["row-blank-asked", at({ compliance: 50, standing: 44, money: 16000, ...spokeIn(8, "slip-blank", ["a8-row", 2]) })],
+    ["row-blank-season", at({ compliance: 44, standing: 40, money: 16000, ...spokeIn(8, "slip-blank", ["a8-row", 1]) })],
     ["both-kept", at({
       compliance: 50, standing: 60, money: 20000,
       qualities: { "arc:shen:end": 1, "arc:anjie:end": 1 },
@@ -260,18 +278,28 @@ test("目录里每一句读幕号的，都必须同时读落地那一季", () =>
   }
 });
 
-test("第 5 幕以后那四句：隔一季不重念，也不跟第 4 幕那四句抢，且不靠幕号分季", () => {
-  // 同一条线索，学到那一天落在上一季 → 这一季不该再把同一句话原样念一遍。
-  // 这是第 27 轮给主线那四句立的口径，延伸到"按季续写"这一层：那一层的门槛不认季号就白搭。
-  const steps = [
-    ["slip-signature", "row-signed-again"], ["slip-number", "row-numbers-only"],
-    ["slip-selfrow", "row-copies-itself"], ["slip-blank", "row-blank-season"],
-  ] as const;
-  for (const [clue, id] of steps) {
-    const now = at({ season: 6, qualities: { "mainline:act": 5, [`clue:${clue}`]: (6 - 1) * 28 + 12 } });
-    assert.equal(seasonEnding(now, PEOPLE).id, id, `${clue} 本季学到的，却没念这一句`);
-    const before = at({ season: 6, qualities: { "mainline:act": 5, [`clue:${clue}`]: (5 - 1) * 28 + 12 } });
-    assert.notEqual(seasonEnding(before, PEOPLE).id, id, `${clue} 是上一季学的 —— 这一季把同一句话原样重念了`);
+/** 一季那四步的账：线索 id、档位记号、哪一季、档位 1..N 各念哪一句（数组顺序就是档位顺序）。
+ *  第 8 季那句按「越把这一栏交回给人办的排前」倒着排，所以 1 档念的是「没人问」那一句。 */
+const CHAIN_STEPS = [
+  ["slip-signature", "a5-row", 5, ["row-signed-again", "row-no-proxy", "row-borrowed-name"]],
+  ["slip-number", "a6-row", 6, ["row-numbers-only", "row-stamp-of-others", "row-signs-the-young", "row-only-counted"]],
+  ["slip-selfrow", "a7-row", 7, ["row-name-printed", "row-is-a-post", "row-copies-itself", "row-nobody-added"]],
+  ["slip-blank", "a8-row", 8, ["row-blank-season", "row-blank-asked", "row-blank-who-stands"]],
+] as const;
+
+test("第 5 幕以后那十四句：同一季换个档位就换一句，隔一季不重念，也不靠幕号分季", () => {
+  // 这是第 43 轮记下的代价 ①（同一季里两种选择看到的是同一句话）在这一轮还上的账。
+  // 同一条线索，学到那一天落在上一季 → 这一季不该再把同一句话原样念一遍（第 27 轮给主线那四句立的口径，
+  // 延伸到"按季续写"这一层：那一层的门槛不认季号就白搭）。
+  for (const [clue, tierKey, season, ids] of CHAIN_STEPS) {
+    assert.equal(new Set(ids).size, ids.length, `${clue} 那几句里有重复的 id`);
+    for (let tier = 1; tier <= ids.length; tier++) {
+      const got = seasonEnding(at({ compliance: 50, standing: 45, money: 14000, ...spokeIn(season, clue, [tierKey, tier]) }), PEOPLE);
+      assert.equal(got.id, ids[tier - 1], `${clue} 第 ${season} 季落在档位 ${tier}，念到的却是「${got.title}」`);
+    }
+    const before = at({ season, qualities: { "mainline:act": 5, [`clue:${clue}`]: (season - 2) * 28 + 12, [`mainline:${tierKey}`]: 1 } });
+    const beforeId = seasonEnding(before, PEOPLE).id;
+    assert.ok(!(ids as readonly string[]).includes(beforeId), `${clue} 是上一季学的 —— 这一季把同一句话（${beforeId}）原样重念了`);
   }
   // 第 4 季那张退货单落地那一季，念的还得是第 4 幕那四句（那一步的线索那时还没有）
   const landed4 = at({ compliance: 55, standing: 50, money: 12000, ...landedIn(4, 12) });
@@ -279,18 +307,80 @@ test("第 5 幕以后那四句：隔一季不重念，也不跟第 4 幕那四�
     `第 4 季末念成了「${seasonEnding(landed4, PEOPLE).id}」—— 新句子把第 4 幕那句抢了`);
   // 边界（C2 那次反证抓出来的洞）：夹具原来全用季中第 12 天，于是 seasonOfAbsDay 少算一季
   // （floor(day/28)+1）也照样全绿 —— 一条量不到东西的断言就是假绿。补上季末/季首那两天。
-  const lastDay = at({ season: 6, qualities: { "mainline:act": 5, "clue:slip-number": (6 - 1) * 28 + 28 } });
+  const lastDay = at({ season: 6, qualities: { "mainline:act": 5, "clue:slip-number": (6 - 1) * 28 + 28, "mainline:a6-row": 1 } });
   assert.equal(seasonEnding(lastDay, PEOPLE).id, "row-numbers-only", "第 28 天学的那一步，这一季没念自己的判词");
-  const firstDayNext = at({ season: 6, qualities: { "mainline:act": 5, "clue:slip-number": (6 - 1) * 28 + 29 } });
+  const firstDayNext = at({ season: 6, qualities: { "mainline:act": 5, "clue:slip-number": (6 - 1) * 28 + 29, "mainline:a6-row": 1 } });
   assert.notEqual(seasonEnding(firstDayNext, PEOPLE).id, "row-numbers-only",
     "那是下一季第一天学的，这一季就念了下一季的话 —— 天数换算错一天就整季串台");
-  // 静态：这四句靠线索的绝对天数分季，不许再读幕号（幕号停在 5，读它分不出第 5~8 季）
+  // 旧档（第 43 轮那批存档）只有线索、没有档位记号：那一句认不到，落回通用判词。
+  // 这是本轮记下的代价，写死在这里，免得日后有人以为它还在念主线那句。
+  const noTier = at({ compliance: 50, standing: 45, money: 14000, ...spokeIn(6, "slip-number") });
+  assert.ok(!(CHAIN_STEPS[1][3] as readonly string[]).includes(seasonEnding(noTier, PEOPLE).id),
+    "缺档位记号的旧档不该硬认第 6 季那四句里的某一句");
+  // 静态：这十四句靠线索的绝对天数分季、靠那一步自己写的记号分档，不许再读幕号（幕号停在 5，读它分不出季）
   const src = readFileSync(new URL("../src/world/ending.ts", import.meta.url), "utf8");
-  for (const id of ["row-signed-again", "row-numbers-only", "row-copies-itself", "row-blank-season"]) {
+  for (const [, , , ids] of CHAIN_STEPS) for (const id of ids) {
     const at0 = src.indexOf(`id: "${id}"`);
     assert.ok(at0 > 0, `${id} 不在目录里`);
     const gate = src.slice(at0, src.indexOf("},", at0));
     assert.ok(gate.includes("s.spoke["), `${id} 没靠线索季号 —— 它凭什么知道这一季说过那句话`);
+    assert.ok(gate.includes("s.tier["), `${id} 没认档位 —— 它就是第 43 轮那句同一季通用判词`);
     assert.ok(!gate.includes("s.act"), `${id} 还在读幕号：幕号停在 5，读它分不出季`);
   }
+});
+
+test("内容写得出的每一档都正好有一句判词认它，判词也不认内容写不出的档", () => {
+  // 档位从内容读，不抄名单：`mainline:aX-row` 能被写成哪几档，是那些卡的选项 effects 说了算。
+  // 漏一档 = 玩家走得到、档案里却永远空着的一句；多一档 = 玩家永远读不到的死门
+  // （跟梯子那条「没有死格子」同一个口径）。
+  const written = new Map<string, number[]>();
+  const add = (key: string, n: number) => {
+    const list = written.get(key) ?? [];
+    if (!list.includes(n)) written.set(key, [...list, n].sort((a, b) => a - b));
+  };
+  for (const card of STORYLETS_MAINLINE) for (const choice of card.choices) for (const effect of choice.effects) {
+    const quality = "quality" in effect ? effect.quality : undefined;
+    const set = "set" in effect ? effect.set : undefined;
+    const hit = /^mainline:(a[5-8]-row)$/.exec(quality ?? "");
+    if (hit && set !== undefined) add(hit[1]!, set);
+  }
+  assert.deepEqual([...written.keys()].sort(), ["a5-row", "a6-row", "a7-row", "a8-row"], "档位记号不止这四格了，这条守卫要跟着改");
+
+  const src = readFileSync(new URL("../src/world/ending.ts", import.meta.url), "utf8");
+  const entries = src.split('\n  {\n    id: "').slice(1);
+  const chain = entries.filter(e => e.includes("s.spoke["));
+  const admitted = new Map<string, number[]>();
+  for (const e of chain) {
+    const id = /^([\w-]+)"/.exec(e)?.[1] ?? "?";
+    const hits = [...e.matchAll(/s\.tier\["(a[5-8]-row)"\] === (\d+)/g)];
+    // 一句只认一档：范围门（>=/<=）铺不铺满量不出来，那条「死格子」守卫就白立了
+    assert.equal(hits.length, 1, `「${id}」的门里读到 ${hits.length} 个「=== 某一档」，一句只该认一档`);
+    assert.ok(!/s\.tier\["a[5-8]-row"\] *(>=|<=|>|<)/.test(e), `「${id}」用了范围门`);
+    const key = hits[0]?.[1]!, tier = Number(hits[0]?.[2]);
+    assert.equal(new Set([key]).size, 1, `${id} 跨了两格的档位`);
+    const list = admitted.get(key) ?? [];
+    assert.ok(!list.includes(tier), `${key} 的第 ${tier} 档被两句判词同时认到 —— 后一句是永远念不到的死句`);
+    admitted.set(key, [...list, tier].sort((a, b) => a - b));
+  }
+  for (const [key, tiers] of written) {
+    assert.deepEqual(admitted.get(key), tiers,
+      `${key}：内容写得出 ${tiers.join("/")} 档，判词认到 ${admitted.get(key)?.join("/") ?? "一句也没有"}`);
+  }
+  assert.equal(chain.length, [...written.values()].reduce((n, t) => n + t.length, 0),
+    "按季续写那一段的句子数，要和内容能走出的档位数对上");
+  // 每一季那几句各自只认自己那一步的线索：a6-row 配 slip-signature 之类的串台要当场红
+  for (const [clue, tierKey, , ids] of CHAIN_STEPS) {
+    for (const id of ids) {
+      const gate = src.slice(src.indexOf(`id: "${id}"`), src.indexOf("},", src.indexOf(`id: "${id}"`)));
+      assert.ok(gate.includes(`s.spoke["${clue}"]`), `${id} 认的不是 ${clue} 那一步`);
+      assert.ok(gate.includes(`s.tier["${tierKey}"]`), `${id} 读的是别的记号`);
+    }
+  }
+});
+
+test("档案里每一句判词都有自己那句提示，不落兜底那句", () => {
+  // 判词越加越多，档案里那句「还没解锁的结局。」就越是白占地方：第 42、43 轮加的主线那十八句
+  // 一直念的是兜底句，这一条把口子堵上。
+  for (const e of ENDINGS) assert.ok(ENDING_HINTS[e.id], `${e.id}「${e.title}」在档案里念的是兜底那句`);
+  for (const id of Object.keys(ENDING_HINTS)) assert.ok(ENDINGS.some(e => e.id === id), `提示表里有 ${id}，目录里没有这一句`);
 });

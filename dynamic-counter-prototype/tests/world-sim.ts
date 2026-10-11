@@ -9,7 +9,7 @@ import {
   ambient, applyChoice, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
   newWorld, nextSeason, qualityOf, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
-import { rank, seasonEnding } from "../src/world/ending.ts";
+import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
 import { ARC_PEOPLE, threadLandings } from "../src/world/progress.ts";
 import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
@@ -477,8 +477,10 @@ for (const style of STYLES) {
   console.log(`  ${style.padEnd(8)} ${line}`);
 }
 
-/** 主线那四句的 id：认的是它们的门槛读 s.act。改哪一句要同步这里（表只数命中，不参与判定）。 */
-const MAINLINE_ENDINGS = new Set(["page-carried", "row-is-yours", "row-in-total", "row-still-open"]);
+/** 主线那十八句的 id（第 4 幕四句 + 第 5 幕以后按季续写十四句）。
+ *  不抄名单：目录里主线的 id 一律以 `row-` 开头，只有「这一页有人认」那一句是例外，点名一次。
+ *  表只数命中，不参与判定。 */
+const MAINLINE_ENDINGS = new Set([...ENDINGS.filter(e => e.id.startsWith("row-")).map(e => e.id), "page-carried"]);
 // 结局层逐季：同一句判词在哪几季被念到。主线那四句只该在退货单落地的那一季念一次，
 // 往后的季还念它，人物层那十三句就被盖住（第 27 轮 8 副牌 × 6 季量到：第 5、6 季三个人物结局 0/32）。
 // 纯读结果，不碰世界也不碰抽数。
