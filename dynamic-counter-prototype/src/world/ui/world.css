@@ -28,12 +28,13 @@
 /* 名牌第二行：新客 / 回头客。为什么单起一行 —— 柜台前那五个点只隔 6%（320 档约 35px），
    把「·回头客」横着接在名字后面，pill 就顶到邻位那位的 pill 上；换行后宽度还是一个名字之内。
    字号守在 12px 下限之上，和正文同一规矩。两行让整框高到 88px，站位上沿因此有下限，见 ui/zones.ts。 */
+.wf-tag.is-tucked { visibility:hidden; }
 .wf-kind { display:block; font-size:max(12px,1.8cqh); line-height:1.25; letter-spacing:.5px; }
 .wf-kind.is-new { color:#a8dccb; }
 .wf-kind.is-back { color:#f0c978; }
 .wf-figure { display:flex; flex-direction:column; align-items:center; animation:wf-bob 2.7s ease-in-out infinite; }
 @keyframes wf-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2.5%); } }
-.wf-chibi { height:11cqh; min-height:52px; filter:drop-shadow(0 4px 6px #0008); -webkit-user-drag:none; }
+.wf-chibi { height:11cqh; min-height:52px; aspect-ratio:256 / 384; width:auto; filter:drop-shadow(0 4px 6px #0008); -webkit-user-drag:none; }
 /* 还没有小人图的人：一枚带金边的圆形头像牌，脚下一圈影子；有了立绘小人再换。 */
 .wf-token { width:max(44px,9cqh); height:max(44px,9cqh); display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:50%; border:2px solid #f0cf91cc; background:radial-gradient(circle at 35% 30%,#5a3d35,#2a1a16); box-shadow:0 6px 10px #000a, 0 0 0 3px #120a0a66; }
 .wf-token img { width:100%; height:100%; object-fit:cover; object-position:50% 22%; }
@@ -379,3 +380,16 @@
 @keyframes rl-stamp { from { opacity:0; transform:scale(1.8) rotate(-8deg); } to { opacity:1; transform:none; } }
 @keyframes rl-stars { from { opacity:0; transform:translateY(6px) scale(.8); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion: reduce) { .report-level .rl-stamp,.report-level .rl-stars { animation:none; } }
+
+/* —— 员工通道那枚牌子：在通道里的同事收在这里，点开是名单（BACKROOM_CHIP）—— */
+.wf-backroom-wrap { position:absolute; z-index:130; transform:translate(-8%,-50%); }
+.wf-backroom { display:flex; align-items:center; gap:6px; min-height:44px; padding:4px 10px 4px 6px; border:1px solid #f0cf9155; border-radius:999px; background:#120a0acc; color:#ffe8b6; font:600 12px 'Noto Serif SC',serif; white-space:nowrap; box-shadow:0 4px 10px #0008; }
+.wf-backroom.is-target { background:#f0c978; color:#2a1713; }
+.wf-backroom .wb-faces { display:flex; }
+.wf-backroom .wb-faces img,.wf-backroom .wb-faces b { width:26px; height:26px; margin-left:-8px; border-radius:50%; border:1.5px solid #f0cf91aa; object-fit:cover; object-position:50% 20%; background:#2a1a16; display:grid; place-items:center; font-size:12px; }
+.wf-backroom .wb-faces > :first-child { margin-left:0; }
+.wf-backroom .wb-word b { margin-left:4px; color:#f0c978; }
+.wf-backroom.is-target .wb-word b { color:#2a1713; }
+.wf-backroom-list { position:absolute; top:calc(100% + 4px); left:0; display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid #f0cf9155; border-radius:12px; background:#1a0f0ef2; box-shadow:0 8px 18px #000a; }
+.wf-backroom-list button { min-width:88px; min-height:44px; padding:0 12px; border:1px solid #f0cf9133; border-radius:10px; background:#ffffff08; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; text-align:left; }
+.wf-backroom-list button.is-target { background:#f0c978; color:#2a1713; }

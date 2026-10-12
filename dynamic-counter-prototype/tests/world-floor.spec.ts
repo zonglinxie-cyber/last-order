@@ -346,14 +346,49 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       const at = await page.evaluate((list: string[]) => list.map(id => {
         const el = document.querySelector<HTMLElement>(`.wf-actor[data-pid="${id}"]`);
         if (!el) return { id, spot: "MISSING", hit: false };
-        const r = el.getBoundingClientRect();
+        // 量她自己那个小人：名牌会为了避让挪到头侧，按钮框的中心不一定还是她身上。
+        const r = el.querySelector<HTMLElement>(".wf-figure")!.getBoundingClientRect();
         const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-        return { id, spot: `${el.style.left},${el.style.top}`, hit: !!t && (t === el || el.contains(t)) };
+        return { id, spot: `${el.style.left},${el.style.top}`, hit: !!t && (t === el || el.contains(t)),
+          by: t ? `${t.tagName}.${String(t.className)} ${t.closest("[data-pid]")?.getAttribute("data-pid") ?? ""}` : "none" };
       }), ids);
       expect(at.filter(x => x.spot === "MISSING").map(x => x.id)).toEqual([]);
       const spots = at.filter(x => counter.includes(x.id)).map(x => x.spot);
       expect(new Set(spots).size, `站位有重复：${spots.join(" ")}`).toBe(counter.length);
       expect(at.filter(x => !x.hit).map(x => x.id), `这些人的中心点被邻位盖住了 ${JSON.stringify(at)}`).toEqual([]);
+    });
+
+    test("员工通道的同事收进一枚牌子：地图上不画，点开名单能点到人；全场名牌两两不叠", async ({ page }) => {
+      const counter = ["mei", "zhou", "xiaoyu", "shen", "duan"];
+      await enter(page, envelope({
+        present: {
+          suman: "counter", tangke: "counter", roman: "backroom", fangmin: "backroom", qiaowan: "backroom", peilan: "backroom",
+          luyao: "rival", ligui: "atrium", laokang: "atrium", huojie: "atrium",
+          ...Object.fromEntries(counter.map(id => [id, "counter"])), zhao: "cashier", baijie: "lounge",
+        },
+      }));
+      for (const id of ["roman", "fangmin", "qiaowan", "peilan"]) await expect(page.locator(`.wf-actor[data-pid="${id}"]`)).toHaveCount(0);
+      const chip = page.locator(".wf-backroom");
+      await expect(chip).toContainText("员工通道4");
+      await chip.click();
+      await page.getByRole("button", { name: "查看方敏" }).click();
+      await expect(page.locator(".person-card")).toContainText("方敏");
+      // 名牌避让：所有在地图上的名牌，两两不许压在一起（量的是挪过以后的真实位置）。
+      await page.locator(".pc-close").click();
+      await page.waitForTimeout(1000);
+      const clash = await page.evaluate(() => {
+        // 收起来的同事名牌（最窄那一档没处放时）不算 —— 客人的名牌一块都不许收。
+        const tags = [...document.querySelectorAll<HTMLElement>(".wf-actor .wf-tag:not(.is-tucked)")].map(t => ({ name: t.textContent, r: t.getBoundingClientRect() }));
+        const out: string[] = [];
+        for (let i = 0; i < tags.length; i++) for (let j = i + 1; j < tags.length; j++) {
+          const a = tags[i].r, b = tags[j].r;
+          const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (w > 2 && h > 2) out.push(`${tags[i].name} × ${tags[j].name}`);
+        }
+        return out;
+      });
+      expect(clash).toEqual([]);
+      expect(await page.locator(".wf-actor .wf-tag.is-tucked .wf-kind").count(), "客人的名牌不许收").toBe(0);
     });
 
     test("中庭站满：客人两行名牌、商场方一行名牌都不许被地图上沿切掉", async ({ page }) => {

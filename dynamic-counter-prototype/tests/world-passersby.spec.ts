@@ -190,8 +190,8 @@ test("通道与节奏是可核对的纯规则", () => {
     expect(pathSeconds(i)).toBeLessThanOrEqual(PB_SECONDS.max);
   }
   // 上午少、晚高峰多，节日再加两个；四种人轮换；补人间隔不至于半天不来人
-  expect([PB_BASE[0], PB_BASE[1], PB_BASE[2], PB_BASE[3]]).toEqual([3, 4, 5, 6]);
-  expect(PB_BASE[3] + PB_FESTIVAL_EXTRA).toBe(8);
+  expect([PB_BASE[0], PB_BASE[1], PB_BASE[2], PB_BASE[3]]).toEqual([2, 2, 3, 4]);
+  expect(PB_BASE[3] + PB_FESTIVAL_EXTRA).toBe(5);
   expect(PB_VARIANTS).toBe(4);
   expect(PB_SPAWN_GAP.max).toBeLessThanOrEqual(1200);
   // 每条通道都有一段自己的 @keyframes，位移用 cqw/cqh 跟着地图容器缩放

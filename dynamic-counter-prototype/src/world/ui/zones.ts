@@ -11,7 +11,8 @@ export type Spot = { x: number; y: number };
 // 收银与中庭这两档的 y 有下限（≥25）：同事的名牌只有一行、框高约 73px，
 // 脚落在 22% 以下时 pill 的顶边就压在地图上沿那条刀口上（320×568 那一档实测只剩 1.6px 余量）。
 export const ZONE_STAFF_SPOTS: Record<Zone, Spot[]> = {
-  counter: [{ x: 10.5, y: 66 }, { x: 14, y: 63 }, { x: 17.5, y: 60.5 }, { x: 21, y: 58 }],
+  // 柜台后最多两位同事（engine 的 STAFF_COUNTER_MAX）：一前一后错开 7%，名牌不叠；后两个点只给故事卡挪进来的人。
+  counter: [{ x: 11, y: 63 }, { x: 18, y: 58 }, { x: 6, y: 56 }, { x: 24, y: 50 }],
   cashier: [{ x: 42, y: 26 }, { x: 46, y: 25 }, { x: 38, y: 28 }],
   rival: [{ x: 80, y: 56 }, { x: 85, y: 52 }],
   atrium: [{ x: 62, y: 25 }, { x: 55, y: 30 }, { x: 69, y: 27 }],
@@ -26,8 +27,13 @@ export const ZONE_SPOTS: Record<Zone, Spot[]> = {
   // 隔 5% 以下邻位的框就会盖住自己的中心点 —— 人还在图上，但点不动了。
   // 第五位站不下的客人由引擎派去别的区（ZONE_GUEST_CAPACITY.counter），这正是"错峰"要的效果。
   // 点数必须等于引擎的 ZONE_GUEST_CAPACITY.counter —— 一个点站一个人，站满了不再往里派。
-  counter: [{ x: 21, y: 73 }, { x: 27, y: 70 }, { x: 33, y: 68 }, { x: 39, y: 71 }, { x: 45, y: 74 }],
-  cashier: [{ x: 44, y: 51 }, { x: 48, y: 49 }, { x: 52, y: 53 }],
+  // 2026-10-12 从隔 6% 放宽到隔 7.5%、前后错开：真机截图里相邻两位的名牌（两行，约 50px 宽）叠成一团。
+  // 剩下的挤由界面那一层的名牌避让（WorldGame 的 placeTags）收尾。
+  // 顺着长岛台朝外那条斜边排（台子从左下 (21,70) 斜到右上 (40,55)），客人站在台子外侧、同事站里侧。
+  // 头一位到末一位只跨 30%：开局那一眼（地图居中在 30% 处）五位都要在手机屏里。
+  counter: [{ x: 20, y: 81 }, { x: 27.5, y: 77 }, { x: 35, y: 73 }, { x: 42.5, y: 69 }, { x: 50, y: 65 }],
+  // 收银台客人站在台子右手边那片空地上，让出长岛台那一排。
+  cashier: [{ x: 53, y: 44 }, { x: 60, y: 50 }, { x: 50, y: 36 }],
   rival: [{ x: 66, y: 78 }, { x: 68, y: 66 }, { x: 72, y: 87 }, { x: 64, y: 72 }],
   // 中庭五个点全部压到 y ≥ 29：名牌两行（名字 + 新客/回头客）之后，整框高 88px，
   // 320×568 那一档地图只有 329px 高 —— 脚落在 26% 以下时 pill 的头顶就超出地图上沿，
@@ -35,8 +41,8 @@ export const ZONE_SPOTS: Record<Zone, Spot[]> = {
   // 29% 留约 10px 余量：地图高度跟着屏高走，屏再矮一点也不会重新被切。
   // 往下挪 5~11 个点仍在"上方橱窗和栏杆那一带"，不压到收银（y 49~53）那一排。
   atrium: [{ x: 62, y: 32 }, { x: 55, y: 36 }, { x: 69, y: 34 }, { x: 58, y: 29 }, { x: 75, y: 30 }],
-  lounge: [{ x: 10, y: 72 }, { x: 15, y: 78 }, { x: 7, y: 66 }],
-  entrance: [{ x: 51, y: 94 }, { x: 44, y: 92 }, { x: 59, y: 90 }, { x: 66, y: 95 }],
+  lounge: [{ x: 6, y: 80 }, { x: 12, y: 92 }, { x: 4, y: 66 }],
+  entrance: [{ x: 51, y: 95 }, { x: 41, y: 94 }, { x: 61, y: 92 }, { x: 70, y: 96 }],
   backroom: [{ x: 3, y: 46 }, { x: 5, y: 53 }, { x: 2.5, y: 40 }],
 };
 
@@ -59,9 +65,10 @@ export const WALK_PATHS: WalkPath[] = [
 // 路人的节奏。和通道摆在一起，是因为这几个数只有对着图才量得出来；
 // 界面（Passersby.tsx）只读不算，走查用例钉的也是这一份。
 /** 四个时段各自的常驻人流：上午冷清，晚高峰最挤。 */
-export const PB_BASE: Record<Slot, number> = { 0: 3, 1: 4, 2: 5, 3: 6 };
-/** 节日窗口再挤进来两位。 */
-export const PB_FESTIVAL_EXTRA = 2;
+/** 2026-10-12 从 3/4/5/6 减到 2/2/3/4：真人试玩把"走来走去点不动的小人"当成了能接待的客人。 */
+export const PB_BASE: Record<Slot, number> = { 0: 2, 1: 2, 2: 3, 3: 4 };
+/** 节日窗口再挤进来一位。 */
+export const PB_FESTIVAL_EXTRA = 1;
 /** 走路图：两张顾客图 × 两行 = 四种人。 */
 export const PB_VARIANTS = 4;
 /** 单趟通道压在 16~34 秒之间：太快不像逛街，太慢半天不动地方。 */
@@ -85,6 +92,10 @@ export const walkKeyframes = WALK_PATHS.map((points, i) => {
     `  ${((k / (points.length - 1)) * 100).toFixed(2)}% { transform: translate(calc(${(p.x - head.x).toFixed(2)} * 1cqw), calc(${(p.y - head.y).toFixed(2)} * 1cqh)); }`).join("\n");
   return `@keyframes wf-pb-walk-${i} {\n${stops}\n}`;
 }).join("\n");
+
+/** 员工通道里的同事不一个个画在地图上（六位同事常有四位在那里，挤在左边沿上叠成一团），
+ *  收成一枚牌子：点开是名单。牌子钉在员工通道那扇门上。 */
+export const BACKROOM_CHIP: Spot = { x: 5, y: 40 };
 
 // 区域名牌钉在图上的位置，纯装饰（aria-hidden）。2026-10-09 对着底图逐点画圈核过一遍。
 export const ZONE_LABEL: Record<Zone, { word: string } & Spot> = {

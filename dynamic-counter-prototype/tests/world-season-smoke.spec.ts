@@ -273,6 +273,16 @@ const reachableActors = (page: Page): Promise<Actor[]> =>
       if (hit !== el && !el.contains(hit) && !hit.contains(el)) continue;
       out.push({ pid: el.dataset.pid ?? "", name: el.querySelector(".wf-tag")?.textContent?.trim() ?? "" });
     }
+    // 员工通道那枚牌子里的同事：牌子本身点得到，就算这几位点得到（点开名单再点名字）。
+    const chip = document.querySelector<HTMLElement>(".wf-backroom");
+    if (chip) {
+      const r = chip.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const inView = r.left >= 0 && r.right <= window.innerWidth && r.top >= 0 && r.bottom <= window.innerHeight;
+      if (inView && hit && (hit === chip || chip.contains(hit))) {
+        for (const id of (chip.dataset.pids ?? "").split(",").filter(Boolean)) out.push({ pid: `@${id}`, name: id });
+      }
+    }
     return out;
   });
 
@@ -281,7 +291,17 @@ const reachableActors = (page: Page): Promise<Actor[]> =>
  * 点之前先确认中心点没有被浮层盖住——被盖住就是真问题，记下来，不代劳硬点。
  */
 const tapActor = (page: Page, actor: Actor): Promise<string | null> =>
-  page.evaluate(([pid, name]) => {
+  page.evaluate(async ([pid, name]) => {
+    if (pid.startsWith("@")) {
+      const chip = document.querySelector<HTMLElement>(".wf-backroom");
+      if (!chip) return "员工通道那枚牌子不见了";
+      if (chip.getAttribute("aria-expanded") !== "true") chip.click();
+      await new Promise(res => setTimeout(res, 50));
+      const item = document.querySelector<HTMLElement>(`.wf-backroom-list button[data-pid="${pid.slice(1)}"]`);
+      if (!item) return `员工通道名单里没有${name}`;
+      item.click();
+      return null;
+    }
     const el = [...document.querySelectorAll<HTMLElement>(".wf-actor")].find(x => x.dataset.pid === pid);
     if (!el) return "人不在场了";
     const r = el.getBoundingClientRect();

@@ -23,7 +23,7 @@ import { weekDaysLeft, weekGoalWord, weekLevelWord, weekMoneyOf, weekStarsKey, w
 import { readWorldProgress } from "../progress.ts";
 import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, plateOf, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
 import { SHELF, SHELF_LINES, type ShelfId } from "../shelf.ts";
-import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
+import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
 import { Passersby } from "./Passersby.tsx";
@@ -141,26 +141,85 @@ const shorten = (text: string) => (text.length > 30 ? `${text.slice(0, 29)}…` 
 const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
 
 /** 站在哪一区的人各就各位：同事/对手/商场方站前段，顾客站后段，同区按 id 排稳定序。 */
+/** 员工通道里的同事、对手、商场方不画在地图上，收进那枚牌子（BACKROOM_CHIP）。 */
+const inBackroomChip = (world: World, id: PersonId): boolean =>
+  world.present[id] === "backroom" && PEOPLE.find(p => p.id === id)?.role !== "customer";
+
 function layOut(world: World): Map<PersonId, Spot> {
   const out = new Map<PersonId, Spot>();
   const byZone = new Map<Zone, { staff: PersonId[]; guests: PersonId[] }>();
   for (const [id, zone] of Object.entries(world.present)) {
+    // 收进牌子的人：气泡与引导都指着牌子那一处。
+    if (inBackroomChip(world, id)) { out.set(id, BACKROOM_CHIP); continue; }
     const bag = byZone.get(zone) ?? { staff: [], guests: [] };
     const person = PEOPLE.find(p => p.id === id);
     (person?.role === "customer" ? bag.guests : bag.staff).push(id);
     byZone.set(zone, bag);
   }
   for (const [zone, bag] of byZone) {
-    // 柜台后只站得下四个人：多出来的同事站到收银台后面，不叠在同一个点上。
-    const overflow = zone === "counter" ? ZONE_STAFF_SPOTS.cashier : ZONE_SPOTS[zone];
-    bag.staff.sort().forEach((id, i) => {
-      const list = ZONE_STAFF_SPOTS[zone];
-      out.set(id, i < list.length ? list[i] : overflow[(i - list.length) % overflow.length]);
-    });
-    bag.guests.sort().forEach((id, i) => {
-      const list = ZONE_SPOTS[zone];
-      out.set(id, list[i % list.length]);
-    });
+    // 一个点只站一个人：先按各自那一段排，排满了从这一区还空着的点里挑，再不够才挪到隔壁的收银后面。
+    const taken = new Set<Spot>();
+    const free = (list: Spot[]) => list.find(s => !taken.has(s));
+    const put = (id: PersonId, s: Spot | undefined) => { if (!s) return; taken.add(s); out.set(id, s); };
+    bag.guests.sort().forEach(id => put(id, free(ZONE_SPOTS[zone]) ?? free(ZONE_STAFF_SPOTS[zone])));
+    bag.staff.sort().forEach(id => put(id, free(ZONE_STAFF_SPOTS[zone]) ?? free(ZONE_SPOTS[zone]) ?? free(ZONE_STAFF_SPOTS.cashier)));
+  }
+  return out;
+}
+
+/** hide：同事的名牌实在没处放（最窄那一档、柜台前站满）就先收起来，点人照样点得到；客人的名牌永远留着。 */
+type TagShift = { dx: number; dy: number; hide?: true };
+/** 名牌避让：先排客人（离镜头近的先），再排同事。每块名牌在头顶、头侧、再往上几格里挑第一处
+ *  既不压别人的名牌、也不压别人身子的位置，挑不到就取叠得最少的那处。坐标从站位百分比与元素自身尺寸现算，
+ *  不读 getBoundingClientRect —— 人换位置有 0.9 秒过渡，过渡中途量出来的是半路上的位置。 */
+function placeTags(map: HTMLElement, spots: Map<PersonId, Spot>, guestIds: Set<PersonId>): Record<PersonId, TagShift> {
+  const W = map.offsetWidth, H = map.offsetHeight;
+  type Box = [number, number, number, number];
+  const items = [...map.querySelectorAll<HTMLElement>(".wf-actor")].flatMap(el => {
+    const id = el.dataset.pid!, s = spots.get(id);
+    const tag = el.querySelector<HTMLElement>(".wf-tag"), fig = el.querySelector<HTMLElement>(".wf-figure");
+    if (!s || !tag || !fig) return [];
+    const x = (s.x / 100) * W, y = (s.y / 100) * H;
+    return [{ id, x, y, tw: tag.offsetWidth, th: tag.offsetHeight, fw: fig.offsetWidth, fh: fig.offsetHeight }];
+  });
+  const bodies: Array<{ id: PersonId; box: Box }> = items.map(i => ({ id: i.id, box: [i.x - i.fw / 2, i.y - i.fh, i.x + i.fw / 2, i.y] }));
+  const area = (a: Box, b: Box) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+  const order = [...items].sort((a, b) => Number(guestIds.has(b.id)) - Number(guestIds.has(a.id)) || b.y - a.y);
+  const placed: Box[] = [];
+  // 员工通道那枚牌子也算一块：名牌不往它底下钻。
+  const chip = map.querySelector<HTMLElement>(".wf-backroom");
+  if (chip) {
+    const m = map.getBoundingClientRect(), c = chip.getBoundingClientRect();
+    placed.push([c.left - m.left, c.top - m.top, c.right - m.left, c.bottom - m.top]);
+  }
+  const out: Record<PersonId, TagShift> = {};
+  for (const it of order) {
+    const base: Box = [it.x - it.tw / 2, it.y - it.fh - 2 - it.th, it.x + it.tw / 2, it.y - it.fh - 2];
+    const side = it.tw / 2 + it.fw / 2, lift = it.th + 3;
+    const tries: TagShift[] = [
+      { dx: 0, dy: 0 }, { dx: side, dy: it.th * 0.9 }, { dx: -side, dy: it.th * 0.9 },
+      { dx: 0, dy: -lift }, { dx: side, dy: 0 }, { dx: -side, dy: 0 }, { dx: 0, dy: -2 * lift },
+      { dx: side, dy: -lift }, { dx: -side, dy: -lift },
+      // 最后一招：挂到脚下 —— 柜台前那一排人的脚下往往是空地。
+      { dx: 0, dy: it.fh + it.th + 4 },
+    ];
+    let best = tries[0], bestCost = Infinity;
+    for (const t of tries) {
+      const box: Box = [base[0] + t.dx, base[1] + t.dy, base[2] + t.dx, base[3] + t.dy];
+      if (box[1] < 2) continue; // 名牌不许顶出地图上沿
+      if (box[2] > W - 2 || box[0] < 2 || box[3] > H - 2) continue; // 也不许挤出地图左右与下沿
+      // 离她越远越难认出是谁的：挪得越远加一点代价，叠一点点比飘到半空强。
+      const drift = (Math.abs(t.dx) + Math.abs(t.dy)) * it.th * 0.15;
+      const cost = drift + placed.reduce((c, p) => c + 2 * area(box, p), 0)
+        // 压到别人身上比压到名牌更糟：身子是手指点的地方。
+        + bodies.reduce((c, b) => c + (b.id === it.id ? 0 : 4 * area(box, b.box)), 0);
+      if (cost < bestCost) { best = t; bestCost = cost; }
+      if (cost === drift && cost === 0) break;
+    }
+    const clash = bestCost - (Math.abs(best.dx) + Math.abs(best.dy)) * it.th * 0.15;
+    if (clash > 0 && !guestIds.has(it.id)) { out[it.id] = { dx: 0, dy: 0, hide: true }; continue; }
+    placed.push([base[0] + best.dx, base[1] + best.dy, base[2] + best.dx, base[3] + best.dy]);
+    if (best.dx || best.dy) out[it.id] = { dx: Math.round(best.dx), dy: Math.round(best.dy) };
   }
   return out;
 }
@@ -552,6 +611,23 @@ export default function WorldGame() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // 名牌避让与员工通道那枚牌子（见 placeTags / BACKROOM_CHIP）。
+  const [tagShift, setTagShift] = useState<Record<PersonId, TagShift>>({});
+  const [backroomOpen, setBackroomOpen] = useState(false);
+  const guestSet = useMemo(() => new Set(guests), [guests]);
+  const backroomIds = useMemo(() => Object.keys(world.present).filter(id => inBackroomChip(world, id)).sort(), [world]);
+  useLayoutEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const run = () => {
+      const next = placeTags(map, spots, guestSet);
+      setTagShift(prev => JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
+    };
+    run();
+    // 字体晚到一拍会把名牌撑宽：到了再排一遍。
+    void document.fonts?.ready.then(run);
+  }, [spots, guestSet, bounds.map, phase, backroomIds.length]);
+  useEffect(() => { setBackroomOpen(false); }, [world.day, world.slot]);
   const onPanDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     drag.current = { id: event.pointerId, startX: event.clientX, startPan: panX, moved: false };
   };
@@ -766,13 +842,13 @@ export default function WorldGame() {
       <div className="world-map" ref={mapRef} style={{ transform: `translateX(${panX}px)` }}>
         <img className="wf-floor" src={asset("/assets/game/mall-floor.jpg")} alt="商场一层" draggable={false} />
         <Passersby slot={world.slot} festival={!!world.festival} />
-        {Object.entries(ZONE_LABEL).map(([zone, label]) =>
+        {Object.entries(ZONE_LABEL).filter(([zone]) => !(zone === "backroom" && backroomIds.length)).map(([zone, label]) =>
           <span key={zone} className="wf-zone" aria-hidden="true" style={{ left: `${label.x}%`, top: `${label.y}%` }}>{label.word}</span>)}
         {Object.keys(world.present).map((id, index) => {
           const p = PEOPLE.find(x => x.id === id);
           if (!p) return null;
           const spot = spots.get(id);
-          if (!spot) return null;
+          if (!spot || inBackroomChip(world, id)) return null;
           const isTarget = pickTargets.includes(id);
           // 客人分新客与回头客：同事、对手、商场方不戴这一行（他们本来就不算客人）。
           const back = p.role === "customer" && isReturningGuest(world, id);
@@ -783,7 +859,7 @@ export default function WorldGame() {
             aria-label={`${pick ? "选" : "查看"}${p.name}${kind ? ` ${kind}` : ""}`}
             onClick={() => tapPerson(id)}>
             {quarreling.has(id) && <i className="wf-heat" aria-hidden="true" />}
-            <span className="wf-tag">{p.name}{kind && <i className={`wf-kind ${back ? "is-back" : "is-new"}`} aria-hidden="true">{kind}</i>}</span>
+            <span className={`wf-tag${tagShift[id]?.hide && selected !== id ? " is-tucked" : ""}`} style={tagShift[id] && !tagShift[id].hide ? { translate: `${tagShift[id].dx}px ${tagShift[id].dy}px` } : undefined}>{p.name}{kind && <i className={`wf-kind ${back ? "is-back" : "is-new"}`} aria-hidden="true">{kind}</i>}</span>
             <span className="wf-figure" style={{ animationDelay: `${(index % 7) * 0.37}s` }}>
               {CHIBI.has(id)
                 ? <img className="wf-chibi" src={asset(`/assets/game/chibi/${id}.webp`)} alt="" aria-hidden="true" draggable={false} />
@@ -792,6 +868,21 @@ export default function WorldGame() {
             <i className="wf-glow" aria-hidden="true" />
           </button>;
         })}
+        {backroomIds.length > 0 && <div className="wf-backroom-wrap" style={{ left: `${BACKROOM_CHIP.x}%`, top: `${BACKROOM_CHIP.y}%` }}>
+          <button type="button" data-pids={backroomIds.join(",")} className={`wf-backroom${backroomIds.some(id => pickTargets.includes(id)) ? " is-target" : ""}`}
+            aria-expanded={backroomOpen} aria-label={`员工通道 · ${backroomIds.length} 位`}
+            onClick={() => { sfx("tap"); setBackroomOpen(o => !o); }}>
+            <span className="wb-faces" aria-hidden="true">{backroomIds.slice(0, 3).map(id => {
+              const p = PEOPLE.find(x => x.id === id);
+              return p?.portrait ? <img key={id} src={p.portrait} alt="" draggable={false} /> : <b key={id}>{nameOf(id).slice(0, 1)}</b>;
+            })}</span>
+            <span className="wb-word">员工通道<b>{backroomIds.length}</b></span>
+          </button>
+          {backroomOpen && <div className="wf-backroom-list" role="group" aria-label="员工通道里的人">
+            {backroomIds.map(id => <button key={id} type="button" data-pid={id} className={pickTargets.includes(id) ? "is-target" : ""}
+              aria-label={`${pick ? "选" : "查看"}${nameOf(id)}`} onClick={() => { setBackroomOpen(false); tapPerson(id); }}>{nameOf(id)}</button>)}
+          </div>}
+        </div>}
         {bubbles.map((x, bi) => {
           const anchor = x.entry.who!.map(id => spots.get(id)).find((s): s is Spot => !!s);
           if (!anchor) return null;

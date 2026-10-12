@@ -1,11 +1,12 @@
 /* 路人层：压在在场的人物（z-index 从 20 起）下面，整层不吃点击，稍微透明一点。
    走路图是 1536×1024 的 4 帧 × 2 行，一格 384×512，所以宽永远是高的 0.75。
    尺寸跟着地图容器走（cqh），再用 min() 兜一个下限，矮屏上不会缩成一粒米。 */
-.wf-passersby { position:absolute; inset:0; z-index:19; opacity:.85; pointer-events:none; }
+/* 路人要一眼看得出是背景：半透明、褪色、比在场的人小一号 —— 真人试玩把它们当成了点不动的客人。 */
+.wf-passersby { position:absolute; inset:0; z-index:19; opacity:.5; filter:saturate(.35) brightness(.92); pointer-events:none; }
 /* 切到后台：位移和脚都停住，人留在原地等回来 */
 .wf-passersby.is-paused .wf-pb,.wf-passersby.is-paused .wf-pb-figure { animation-play-state:paused; }
 
-.wf-pb { --pb-h:max(9.4cqh,42px); --pb-w:calc(var(--pb-h) * .75);
+.wf-pb { --pb-h:max(7.6cqh,34px); --pb-w:calc(var(--pb-h) * .75);
   position:absolute; width:var(--pb-w); height:var(--pb-h);
   /* 脚落在通道坐标上。位移交给 transform（keyframes 由 Passersby 按通道生成），
      这条独立的 translate 只用来对准，不跟动画抢同一个属性。 */
