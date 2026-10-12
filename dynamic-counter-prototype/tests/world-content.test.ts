@@ -148,7 +148,7 @@ test("旧人物的名字、皮肤和立绘沿用 campaign", () => {
     assert.deepEqual(person.skin?.veto, customer.veto);
     assert.equal(person.skin?.budget, customer.budget);
     assert.equal(person.skin?.maxUnits, customer.maxUnits);
-    assert.ok(person.portrait?.includes(`customer-${id}-consultation.png`), person.portrait);
+    assert.ok(person.portrait?.includes(`customer-${id}-consultation.webp`), person.portrait);
   }
   for (const [id, file] of [
     ["roman", "roman.png"], ["suman", "suman.png"], ["tangke", "tangke.png"],

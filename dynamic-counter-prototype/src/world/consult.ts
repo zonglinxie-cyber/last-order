@@ -1,6 +1,7 @@
 // 人情场的接待：看 → 问 → 试 → 开单。玩法从旧五日版的接待搬过来（观察线索、挑一个问题问、
 // 试用看反应、按她说过的上限开口要件数），但数据全部读人情场自己的人物表与货架，
-// 所以 32 位有诉求表的客人都能这样接，不必一人手写一套。
+// 所以 32 位有诉求表的客人都能这样接，不必一人手写一套。旧版手写过的那 7 位
+// （content/consult-lines.ts）用手写的线索、问话和近景大图，其余的人按诉求生成。
 //
 // 这一层只管"你知道了她什么"和"她还肯听你说几句"，钱、看法、退货仍由 engine.ts 的
 // beginServe / settleServe 结账。界面只读这里的句子，不在 JSX 里拼。
@@ -9,6 +10,7 @@ import { demandWords, serveTalk, SECRET_KNOWN_KEY } from "./serve-talk.ts";
 import { SHELF, PERFECT_MATCH, fitOfPerson, shelfFitTier, type ShelfId } from "./shelf.ts";
 import type { Person, PersonId, World } from "./types.ts";
 import { ta } from "./pronoun.ts";
+import { HAND_CONSULT, PLATE_CROP, PLATE_POINTS, PLATE_SIZE } from "./content/consult-lines.ts";
 
 /** 她肯听你说几句。每看一处、问一句、试一支都花一句；花完了只剩开单。 */
 export const CONSULT_PATIENCE = 4;
@@ -17,8 +19,10 @@ export const CONSULT_WARM_OPINION = 10;
 /** 推销味的那一问，开单时一起结的看法。 */
 export const PUSH_QUESTION_MOOD = -3;
 
-export type ConsultSpot = { key: string; label: string; finding: string; reveals: Trait | null };
-export type ConsultQuestion = { key: string; label: string; kind: "trait" | "units" | "push"; trait?: Trait };
+/** at：落在近景横幅上的位置（百分比），只有手写那几位有。 */
+export type ConsultSpot = { key: string; label: string; finding: string; reveals: Trait[]; at?: { x: number; y: number } };
+/** trait = 按诉求生成的问话；line = 手写的问话（reply 是她的原话）；units / push 两句人人都有。 */
+export type ConsultQuestion = { key: string; label: string; kind: "trait" | "line" | "units" | "push"; trait?: Trait; reply?: string; reveals?: Trait[] };
 
 export type Consult = {
   person: PersonId;
@@ -65,15 +69,21 @@ const SPOT_PROXY = { label: "手机", finding: "一直在翻手机里的照片 �
 /** 柜台上能看的三处：她的诉求按轻重排，看得出的露在脸上，不够三处的用"没什么可看的"补齐。 */
 export function spotsOf(person: Person): ConsultSpot[] {
   if (!person.skin) return [];
+  const hand = HAND_CONSULT[person.id];
+  if (hand) {
+    return hand.spots.map(sp => ({ key: `hand-${sp.at}`, label: sp.label, finding: sp.finding, reveals: [...sp.reveals],
+      at: { x: (PLATE_POINTS[sp.at].x / PLATE_SIZE.w) * 100,
+        y: ((PLATE_POINTS[sp.at].y - PLATE_CROP.top) / (PLATE_CROP.bottom - PLATE_CROP.top)) * 100 } }));
+  }
   if (person.skin.buysFor) {
-    return [{ key: "proxy", ...SPOT_PROXY, reveals: null },
-      ...SPOT_BLANKS.slice(0, 2).map((b, i) => ({ key: `blank-${i}`, ...b, reveals: null }))];
+    return [{ key: "proxy", ...SPOT_PROXY, reveals: [] },
+      ...SPOT_BLANKS.slice(0, 2).map((b, i) => ({ key: `blank-${i}`, ...b, reveals: [] }))];
   }
   const traits = [...person.skin.demands].sort((a, b) => b.weight - a.weight).map(d => d.trait).slice(0, 3);
-  const spots: ConsultSpot[] = traits.map(t => ({ key: `spot-${t}`, ...SPOT_WORDS[t], reveals: t }));
+  const spots: ConsultSpot[] = traits.map(t => ({ key: `spot-${t}`, ...SPOT_WORDS[t], reveals: [t] }));
   for (let i = 0; spots.length < 3; i++) {
     const b = SPOT_BLANKS[(hash(person.id) + i) % SPOT_BLANKS.length];
-    spots.push({ key: `blank-${i}`, ...b, reveals: null });
+    spots.push({ key: `blank-${i}`, ...b, reveals: [] });
   }
   // 按人洗一次牌：三处的位置不能永远是"头等事在最左边"。
   const h = hash(`${person.id}:spots`);
@@ -94,6 +104,16 @@ const TRAIT_ORDER: Trait[] = ["natural", "correct", "soothe", "steady", "wear"];
 /** 能问的五句：三句问诉求（她在意的和不在意的掺在一起）、一句问件数、一句推销味的。 */
 export function questionsOf(person: Person): ConsultQuestion[] {
   if (!person.skin) return [];
+  const hand = HAND_CONSULT[person.id];
+  if (hand) {
+    // 手写那几句按原来的顺序摆（旧版就是这么排的），件数那一句接在最后；没写推销味那一句的补一句通用的。
+    const list: ConsultQuestion[] = hand.questions.map((q, i) => q.push
+      ? { key: `hand-${i}`, label: q.label, kind: "push" as const, reply: q.reply }
+      : { key: `hand-${i}`, label: q.label, kind: "line" as const, reply: q.reply, reveals: [...q.reveals] });
+    if (!list.some(q => q.kind === "push")) list.push({ key: "ask-push", label: PUSH_QUESTION, kind: "push" });
+    list.push({ key: "ask-units", label: UNITS_QUESTION, kind: "units" });
+    return list;
+  }
   const mine = [...person.skin.demands].sort((a, b) => a.weight - b.weight).map(d => d.trait);
   const others = TRAIT_ORDER.filter(t => !mine.includes(t));
   // 先放她的忌讳那一条（只有问到才肯讲），再放她在意的里头分量轻的（重的那条她多半已经自己说了），
@@ -110,6 +130,14 @@ export function questionsOf(person: Person): ConsultQuestion[] {
   ];
   const h = hash(`${person.id}:ask`);
   return list.map((q, i) => ({ q, k: (h + i * 104729) % 97 })).sort((a, b) => a.k - b.k).map(x => x.q);
+}
+
+/** 近景大图（手写那几位才有）与横幅从原图哪一段裁（百分比，给 background-position 用）。 */
+export function plateOf(person: Person): { src: string; cropY: number } | null {
+  const hand = HAND_CONSULT[person.id];
+  if (!hand) return null;
+  const visible = PLATE_CROP.bottom - PLATE_CROP.top;
+  return { src: hand.plate, cropY: (PLATE_CROP.top / (PLATE_SIZE.h - visible)) * 100 };
 }
 
 /** 她一开口就肯说的那几条（看法越高越多），回头客的件数你心里有数。 */
@@ -151,9 +179,12 @@ export const outOfPatienceWord = (person: Person) => `${ta(person)}看了眼表�
 export function lookAt(c: Consult, person: Person, key: string): Consult {
   const spot = spotsOf(person).find(s => s.key === key);
   if (!spot || c.patience <= 0 || c.looked.includes(key)) return c;
-  const known = spot.reveals && !c.known.includes(spot.reveals) ? [...c.known, spot.reveals] : c.known;
-  return spend(c, person, `你看${ta(person)}的${spot.label}：${spot.finding}`, { looked: [...c.looked, key], known });
+  return spend(c, person, `你看${ta(person)}的${spot.label}：${spot.finding}`, { looked: [...c.looked, key], known: learn(c, person, spot.reveals) });
 }
+
+/** 摆上台面的诉求只认她真有的那几条。 */
+const learn = (c: Consult, person: Person, traits: Trait[]): Trait[] =>
+  [...new Set([...c.known, ...traits.filter(t => person.skin?.demands.some(d => d.trait === t))])];
 
 const SHRUGS = ["「这个我倒不太在意。」", "「还好，这不是我的事。」", "「没有，你问偏了。」"];
 
@@ -166,7 +197,12 @@ export function askHer(c: Consult, person: Person, key: string): Consult {
       { asked, unitsKnown: true });
   }
   if (q.kind === "push") {
-    return spend(c, person, `「${person.voice.hurt}」`, { asked, mood: c.mood + PUSH_QUESTION_MOOD });
+    return spend(c, person, `「${q.reply ?? person.voice.hurt}」`, { asked, mood: c.mood + PUSH_QUESTION_MOOD });
+  }
+  if (q.kind === "line") {
+    const veto = person.skin.veto && q.reveals?.includes(person.skin.veto.trait) ? person.skin.veto : undefined;
+    return spend(c, person, `「${q.reply}」${veto && !c.vetoKnown ? `（底线：${veto.note}）` : ""}`, {
+      asked, known: learn(c, person, q.reveals ?? []), vetoKnown: c.vetoKnown || !!veto });
   }
   const demand = person.skin.demands.find(d => d.trait === q.trait);
   if (!demand) return spend(c, person, SHRUGS[hash(`${person.id}:${key}`) % SHRUGS.length], { asked });

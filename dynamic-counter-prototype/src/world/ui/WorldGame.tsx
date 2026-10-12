@@ -21,7 +21,7 @@ import { unsaidWord } from "../serve-talk.ts";
 import { GoalStrip, LevelResult, SeasonLevels } from "./Levels.tsx";
 import { weekDaysLeft, weekGoalWord, weekLevelWord, weekMoneyOf, weekStarsKey, weekTargetOf } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
-import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
+import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, plateOf, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
 import { SHELF, SHELF_IDS, type ShelfId } from "../shelf.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
@@ -324,6 +324,7 @@ export default function WorldGame() {
   // 接待那一屏：看 / 问 / 试 的判定全在 consult.ts；没摸出来的诉求照样参与 fitScore。
   const consult = serving && person?.skin ? consults[person.id] ?? null : null;
   const midConsult = person ? consults[person.id]?.begun ?? false : false;
+  const plate = consult && person ? plateOf(person) : null;
   const pickTargets = useMemo(() => {
     if (!pick || !selected) return [] as PersonId[];
     return [...new Set(pick.calls.map(c => c.targets.find(t => t !== selected)!))];
@@ -831,11 +832,17 @@ export default function WorldGame() {
             : <p>「{person.voice.greet}」</p>}
           {stillHolding(consult, person) && <p className="serve-hold">{unsaidWord(person.gender)}</p>}
         </div>
-        <div className="serve-probe" aria-label="看">
+        {plate ? <div className="serve-face" role="group" aria-label="看"
+          style={{ backgroundImage: `url(${asset(plate.src)})`, backgroundPositionY: `${plate.cropY}%` }}>
+          {spotsOf(person).map(spot => <button key={spot.key} type="button" aria-label={`看${ta(person)}的${spot.label}`}
+            className={`face-spot${consult.looked.includes(spot.key) ? " found" : ""}`} style={{ left: `${spot.at!.x}%`, top: `${spot.at!.y}%` }}
+            disabled={consult.patience <= 0 || consult.looked.includes(spot.key)}
+            onClick={() => consultAct(c => lookAt(c, person, spot.key))}><i aria-hidden="true" /><span>{spot.label}</span></button>)}
+        </div> : <div className="serve-probe" aria-label="看">
           <span>看</span>
           {spotsOf(person).map(spot => <button key={spot.key} type="button" disabled={consult.patience <= 0 || consult.looked.includes(spot.key)}
             onClick={() => consultAct(c => lookAt(c, person, spot.key))}>{spot.label}</button>)}
-        </div>
+        </div>}
         <div className="serve-probe" aria-label="问">
           <span>问</span>
           {questionsOf(person).map(q => <button key={q.key} type="button" disabled={consult.patience <= 0 || consult.asked.includes(q.key)}

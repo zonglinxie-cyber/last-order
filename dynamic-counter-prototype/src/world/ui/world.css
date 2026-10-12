@@ -155,6 +155,14 @@
 .serve-products button.tried-mixed small { color:#e8cf8a; }
 .serve-products button.tried-negative { opacity:.6; }
 .serve-products button.tried-negative small { color:#e8a6a6; }
+.serve-face { position:relative; width:100%; aspect-ratio:853 / 340; margin:0 0 6px; border-radius:12px; background-size:100% auto; background-repeat:no-repeat; box-shadow:inset 0 0 0 1px #f0cf9133; }
+.serve-face .face-spot { position:absolute; width:44px; height:44px; margin:-22px 0 0 -22px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:#f5d08f18; box-shadow:0 0 0 1px #ffe2a9b8,0 0 20px #ffd77e66; animation:face-pulse 2s ease-in-out infinite; }
+.serve-face .face-spot i { width:7px; height:7px; border:1px solid #fff1cf; border-radius:50%; background:#e6b969; box-shadow:0 0 0 4px #e6b96930; }
+.serve-face .face-spot span { position:absolute; top:40px; left:50%; transform:translateX(-50%); padding:0 6px; border-radius:999px; background:#1a0f0ecc; color:#ffe8b6; font-size:12px; white-space:nowrap; }
+.serve-face .face-spot:disabled { animation:none; opacity:.45; }
+.serve-face .face-spot.found { opacity:.45; }
+@keyframes face-pulse { 0%,100% { box-shadow:0 0 0 1px #ffe2a9b8,0 0 12px #ffd77e44; } 50% { box-shadow:0 0 0 2px #ffe2a9,0 0 24px #ffd77e88; } }
+@media (prefers-reduced-motion: reduce) { .serve-face .face-spot { animation:none; } }
 .serve-try { border:1px solid #f0cf9155; background:#ffffff0d; color:#ffe8b6; }
 .serve-try:disabled { opacity:.45; }
 .world-verbs .resume { border-color:#f0c97888; }

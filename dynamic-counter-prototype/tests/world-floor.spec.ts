@@ -111,6 +111,20 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".serve-lines")).not.toContainText("温和点就行");
     });
 
+    test("旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句", async ({ page }) => {
+      await enter(page, envelope());
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      await page.getByRole("button", { name: /接待/ }).click();
+      const face = page.locator(".serve-face");
+      await expect(face).toBeVisible();
+      await expect(face.locator(".face-spot")).toHaveCount(3);
+      await page.getByRole("button", { name: "看她的眼下" }).click();
+      await expect(page.locator(".serve-lines p.fresh")).toContainText("干纹明显，厚粉底会让疲态更重。");
+      await expect(page.getByRole("button", { name: "看她的眼下" })).toBeDisabled();
+      await page.locator('.serve-probe[aria-label="问"] button', { hasText: "平时用高遮瑕吗？" }).click();
+      await expect(page.locator(".serve-lines p.fresh")).toContainText("几乎不用，越厚越显累。");
+    });
+
     test("看、问、试：第一下才花劲，每下花她一句耐心，试过的货留字，关掉再回来接着谈", async ({ page }) => {
       await enter(page, envelope());
       await page.getByRole("button", { name: /查看梅女士/ }).click();

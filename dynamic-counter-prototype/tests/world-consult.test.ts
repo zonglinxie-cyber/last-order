@@ -4,8 +4,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, askHer, consultPatience, lookAt, openConsult, questionsOf, spotsOf, stillHolding, tryOn,
+  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, spotsOf, stillHolding, tryOn,
 } from "../src/world/consult.ts";
+import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
+import { existsSync } from "node:fs";
 import {
   ENERGY_PER_DAY, OVER_ASK_OPINION, VERB_ENERGY, beginServe, newWorld, opinionOf, resolveServe, settleServe,
 } from "../src/world/engine.ts";
@@ -20,25 +22,46 @@ const atCounter = (ids: string[]): World => {
   return { ...w, present: Object.fromEntries(ids.map(id => [id, "counter"])), energy: ENERGY_PER_DAY };
 };
 
-test("每一位有诉求表的客人都接得了：三处可看、五句可问", () => {
+test("每一位有诉求表的客人都接得了：三处可看；按诉求生成的五句可问，手写的那几位照手写的问", () => {
   assert.ok(skinned.length >= 30);
   for (const p of skinned) {
+    const hand = HAND_CONSULT[p.id];
     const spots = spotsOf(p), qs = questionsOf(p);
     assert.equal(spots.length, 3, p.id);
     assert.equal(new Set(spots.map(s => s.key)).size, 3, `${p.id} 三处不能重名`);
-    assert.equal(qs.length, 5, p.id);
     assert.ok(qs.some(q => q.kind === "units") && qs.some(q => q.kind === "push"), p.id);
-    // 看得出的必须是她真有的那条；替别人买的人，脸上什么都看不出
+    assert.equal(new Set(qs.map(q => q.key)).size, qs.length, `${p.id} 问话的键重了`);
+    if (!hand) assert.equal(qs.length, 5, p.id);
+    // 看得出的必须是她真有的那条；替别人买的人（按诉求生成的那一路），脸上什么都看不出
     const mine = new Set(p.skin!.demands.map(d => d.trait));
-    for (const s of spots) if (s.reveals) assert.ok(mine.has(s.reveals), `${p.id} 的「${s.label}」露的是她没有的诉求`);
-    if (p.skin!.buysFor) assert.ok(spots.every(s => !s.reveals), `${p.id} 替人买，看她的脸不该看出东西`);
+    for (const s of spots) for (const t of s.reveals) assert.ok(mine.has(t), `${p.id} 的「${s.label}」露的是她没有的诉求`);
+    if (p.skin!.buysFor && !hand) assert.ok(spots.every(s => !s.reveals.length), `${p.id} 替人买，看她的脸不该看出东西`);
     // 至少有一句问得到点子上，也至少有一句问偏（不然"问"就不是选择）
-    const traitQs = qs.filter(q => q.kind === "trait");
-    assert.ok(traitQs.some(q => mine.has(q.trait!)), `${p.id} 一句有用的都问不出来`);
-    if (mine.size < 5) assert.ok(traitQs.some(q => !mine.has(q.trait!)), `${p.id} 五句里没有一句会问偏`);
+    const revealsOf = (q: (typeof qs)[number]) => q.kind === "trait" ? (mine.has(q.trait!) ? [q.trait!] : []) : q.kind === "line" ? q.reveals! : [];
+    const asking = qs.filter(q => q.kind === "trait" || q.kind === "line");
+    for (const q of asking) for (const t of revealsOf(q)) assert.ok(mine.has(t), `${p.id}「${q.label}」露的是她没有的诉求`);
+    assert.ok(asking.some(q => revealsOf(q).length), `${p.id} 一句有用的都问不出来`);
+    // 手写的那几位照旧版：问偏的那一句可以就是推销味那一句
+    if (mine.size < 5 && !hand) assert.ok(asking.some(q => !revealsOf(q).length), `${p.id} 没有一句会问偏`);
     // 有忌讳的人，忌讳那条必须问得到
-    if (p.skin!.veto) assert.ok(traitQs.some(q => q.trait === p.skin!.veto!.trait), `${p.id} 的忌讳问不出来`);
+    if (p.skin!.veto) assert.ok(asking.some(q => revealsOf(q).includes(p.skin!.veto!.trait)), `${p.id} 的忌讳问不出来`);
   }
+});
+
+test("旧版手写的 7 位：诉求表与手写线索对得上，大图在盘上，三处落在横幅里", () => {
+  const ids = Object.keys(HAND_CONSULT);
+  assert.deepEqual(ids.sort(), ["anjie", "duan", "mei", "shen", "xiaoyu", "zhao", "zhou"]);
+  for (const id of ids) {
+    const p = who(id), hand = HAND_CONSULT[id]!;
+    assert.ok(p.skin, id);
+    assert.ok(existsSync(new URL(`../public${hand.plate}`, import.meta.url)), `${id} 的近景大图不在盘上`);
+    assert.equal(new Set(hand.spots.map(s => s.at)).size, 3, `${id} 三处要落在三个不同的点`);
+    for (const s of spotsOf(p)) {
+      assert.ok(s.at && s.at.x > 0 && s.at.x < 100 && s.at.y > 0 && s.at.y < 100, `${id}「${s.label}」落在横幅外`);
+    }
+    assert.ok(plateOf(p), id);
+  }
+  assert.equal(plateOf(skinned.find(p => !HAND_CONSULT[p.id])!), null, "没有手写的人不出大图");
 });
 
 test("每一下都花一句耐心；花完了看 / 问 / 试都按不动", () => {
@@ -75,7 +98,7 @@ test("看与问把诉求摆上台面；问件数才知道上限；推销味那�
     const base = { ...openConsult(atCounter([p.id]), p), patience: 99 };
     for (const s of spotsOf(p)) {
       const c = lookAt(base, p, s.key);
-      if (s.reveals) assert.ok(c.known.includes(s.reveals), `${p.id} 看了${s.label}还不知道`);
+      for (const t of s.reveals) assert.ok(c.known.includes(t), `${p.id} 看了${s.label}还不知道`);
     }
     for (const q of questionsOf(p)) {
       const c = askHer(base, p, q.key);
@@ -83,6 +106,8 @@ test("看与问把诉求摆上台面；问件数才知道上限；推销味那�
       if (q.kind === "push") assert.equal(c.mood, PUSH_QUESTION_MOOD);
       if (q.kind === "trait" && p.skin!.demands.some(d => d.trait === q.trait)) assert.ok(c.known.includes(q.trait!));
       if (q.kind === "trait" && p.skin!.veto?.trait === q.trait) assert.equal(c.vetoKnown, true, `${p.id} 问到忌讳那条没说出来`);
+      if (q.kind === "line") for (const t of q.reveals!) assert.ok(c.known.includes(t), `${p.id}「${q.label}」问完还不知道`);
+      if (q.kind === "line" && p.skin!.veto && q.reveals!.includes(p.skin!.veto.trait)) assert.equal(c.vetoKnown, true, `${p.id} 问到忌讳那条没说出来`);
     }
   }
 });

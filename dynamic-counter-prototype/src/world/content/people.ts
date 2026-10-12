@@ -140,7 +140,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}没拿价格替我做判断。",
       complain: "{player}一开口就是品牌话术。{x}要是信了，镜头里全是粉。",
     },
-    portrait: asset("/assets/game/customer-shen-consultation.png"),
+    portrait: asset("/assets/game/customer-shen-consultation.webp"),
   },
   {
     id: "mei", name: "梅女士", role: "customer", age: 41, gender: "f",
@@ -161,7 +161,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}知道我赶时间，没加东西。",
       complain: "{player}明明看见我在看表，还在加。",
     },
-    portrait: asset("/assets/game/customer-mei-consultation.png"),
+    portrait: asset("/assets/game/customer-mei-consultation.webp"),
   },
   {
     id: "xiaoyu", name: "小雨", role: "customer", age: 22, gender: "f",
@@ -180,7 +180,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}先问了预算，没让我难堪。",
       complain: "{player}当着别人的面说我预算不够。",
     },
-    portrait: asset("/assets/game/customer-xiaoyu-consultation.png"),
+    portrait: asset("/assets/game/customer-xiaoyu-consultation.webp"),
   },
   {
     id: "zhao", name: "赵女士", role: "customer", age: 48, gender: "f",
@@ -201,7 +201,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}肯对一下过敏清单，不瞎包。",
       complain: "{player}看了我半天，单子是给{x}的。",
     },
-    portrait: asset("/assets/game/customer-zhao-consultation.png"),
+    portrait: asset("/assets/game/customer-zhao-consultation.webp"),
   },
   {
     id: "anjie", name: "安姐", role: "customer", age: 32, gender: "f",
@@ -221,7 +221,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}没在婚礼前让我试猛的。",
       complain: "{player}把{x}推到镜头前面了。",
     },
-    portrait: asset("/assets/game/customer-anjie-consultation.png"),
+    portrait: asset("/assets/game/customer-anjie-consultation.webp"),
   },
   {
     id: "zhou", name: "周姐", role: "customer", age: 36, gender: "f",
@@ -240,7 +240,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}让我自己试，没替我站队。",
       complain: "{player}急着证明对面是错的。",
     },
-    portrait: asset("/assets/game/customer-zhou-consultation.png"),
+    portrait: asset("/assets/game/customer-zhou-consultation.webp"),
   },
   {
     id: "duan", name: "段小姐", role: "customer", age: 24, gender: "f",
@@ -260,7 +260,7 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
       praise: "{player}让我把看看说完了。",
       complain: "{player}一围上来，我就走。{x}要是也被这样，她不会再来。",
     },
-    portrait: asset("/assets/game/customer-duan-consultation.png"),
+    portrait: asset("/assets/game/customer-duan-consultation.webp"),
   },
   {
     id: "roman", name: "罗曼", role: "staff", age: 34, gender: "f",
