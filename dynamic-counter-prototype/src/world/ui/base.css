@@ -1,0 +1,23 @@
+/* 人情场的底层样式：字体、页面底色、假状态栏让位。旧五日版删掉以前这几条在 src/prototype.css 里，
+ * 人情场一直借着用；旧版删掉以后搬到这里。只留 600 / 700 两档字重（500 那一档 1.5MB，全场只有人情网的名牌用过）。 */
+@font-face {
+  font-family: 'Noto Serif SC';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-700-normal.woff2') format('woff2');
+}
+:root { --gold:#f0c978; --ink:#18100e; --cream:#fff4df; --wine:#4a222c; --purple:#6d51a3; }
+:root { --fake-bar-height:54px; }
+html[data-phone-chrome="real"] { --fake-bar-height:8px; }
+.app-screen { --top-inset:calc(var(--fake-bar-height) + env(safe-area-inset-top)); background:#17100f; color:white; font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif; }
+.device-screen:has(.app-screen) .keyboard-dock { display:none; }
+.phone-device .device-screen { overflow:hidden; overscroll-behavior:none; }
+button { -webkit-tap-highlight-color:transparent; }

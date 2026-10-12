@@ -26,18 +26,19 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      # 桌面沙盘在 /last-order/，手机 PWA（含 ?mode=run/blitz/match/duel）在 /last-order/m/。
-      - run: npm run build
-        env:
-          VITE_BASE: /last-order/
+          cache-dependency-path: dynamic-counter-prototype/package-lock.json
+      # 旧版（桌面沙盘与五日剧情）已删：/last-order/m/ 是人情场本体，/last-order/ 只剩一页跳转，
+      # 以前分享出去的根地址和已经装到桌面的 PWA（scope 在 m/）都还打得开。
       - run: npm ci && npm run build
         working-directory: dynamic-counter-prototype
         env:
           VITE_BASE: /last-order/m/
-      - run: cp dist/index.html dist/404.html
-      # 把手机版产物挪进根 dist 的 m/ 子目录一起上传；m/404.html 兜底深链刷新。
-      - run: mkdir -p dist/m && cp -r dynamic-counter-prototype/dist/client/. dist/m/ && cp dynamic-counter-prototype/dist/client/index.html dist/m/404.html
+      - run: |
+          mkdir -p dist/m
+          cp -r dynamic-counter-prototype/dist/client/. dist/m/
+          cp dynamic-counter-prototype/dist/client/index.html dist/m/404.html
+          printf '%s\n' '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=./m/"><title>最后一单</title><a href="./m/">进入《最后一单 · 人情场》</a>' > dist/index.html
+          cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

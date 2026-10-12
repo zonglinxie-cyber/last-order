@@ -1,6 +1,6 @@
-# 最后一单
+# 最后一单 · 人情场（手机版）
 
-移动端美妆专柜生存游戏。玩家扮演试用期柜姐许愿，在五天新品活动中争夺注意力、观察面部线索、提问、试妆、应对竞品截胡、守住订单，并承担销售手段留下的后果。顾客会拒绝错误推荐，玩家也可以根据试用反应改推挽回。
+移动端美妆专柜销售游戏：看 → 问 → 试 → 开单，一周一关，跟对面柜台比业绩，一层楼的人情记着你怎么待人。项目约定见上一级 `../AGENTS.md`，设计见 `../docs/人情场设计.md`。
 
 ## 本地运行
 
@@ -9,20 +9,22 @@ npm install
 npm run dev
 ```
 
-默认打开 `http://127.0.0.1:5173/`。桌面端显示手机预览框；触屏手机和安装后的 PWA 使用全屏界面。
+打开 `http://127.0.0.1:5173/`。桌面端显示手机预览框；触屏手机和安装后的 PWA 用全屏界面。
 
-## 发布构建
+## 代码在哪
+
+- `src/world/`：引擎（`engine.ts`）、接待（`consult.ts`）、每周一关（`target.ts`）、货架（`shelf.ts`）、内容（`content/`）、界面（`ui/`，入口 `ui/WorldGame.tsx`）。
+- `src/mobile/`、`src/App.tsx`、`src/main.tsx` 等：手机外框运行时，受 `mobile-runtime.lock.json` 保护。
+
+## 测试
 
 ```bash
+npm run test:rules                                      # 规则单测
+node --experimental-strip-types tests/world-sim.ts 20 2 # 模拟器
+npx playwright test tests/world-floor.spec.ts --workers=1
 npm run build
 ```
 
-静态客户端位于 `dist/client/`，发布 Worker 位于 `dist/server/`。构建过程会生成包含全部哈希脚本、样式与游戏画面的离线预缓存 Service Worker。
+## 发布构建
 
-## 完整验证
-
-```bash
-npm test
-```
-
-验证范围包括五日正向主线、跨日因果、并发顾客、刷新续玩、风险结局、iPhone/Android 移动运行时、手机全屏、PWA 安装资源、生产包断网刷新与静态路由回退。
+`npm run build` 的静态客户端在 `dist/client/`，发布 Worker 在 `dist/server/`，带离线预缓存的 Service Worker。

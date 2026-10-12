@@ -1,10 +1,13 @@
-// 人情场的货架。旧版只有三支货（campaign.ts 的柔焦/持妆/修护），32 位有诉求表的客人里
+// 人情场的货架。旧五日版只有三支货（柔焦/持妆/修护），32 位有诉求表的客人里
 // 28 位只有一支"买得起的正解"，16 位挤在同一支上 —— 货架给不出选择，也满足不了低预算那几位。
-// 这一份是人情场自己的货架：8 支、六个价位（¥400~¥2,280），判断公式与 campaign.ts 同口径，
-// 但货不进旧五日版，所以旧版那些钉死的路线金额不受影响。柔焦/持妆/修护三支的档位和价格照抄旧版，
-// 三处以上共用的阈值（POSITIVE_FIT / MIXED_FIT）也从 campaign.ts 读，不在这里重定义。
-import { MIXED_FIT, POSITIVE_FIT, type Demand, type FitTier, type Trait } from "../campaign.ts";
-import type { Person } from "./types.ts";
+// 这一份先扩到 8 支，再照真专柜一整条线扩到 12 支（见 docs/人情场设计.md「货架扩到十二支」）。
+// 适配公式与两条分界线沿用旧版口径；旧版删掉以后，这两条线定义在这里。
+import type { Demand, Person, Trait } from "./types.ts";
+
+/** 过了这条线她认这支是对症的（positive），过了下一条只算勉强（mixed），再往下是不对症。 */
+export const POSITIVE_FIT = 0.78;
+export const MIXED_FIT = 0.55;
+export type FitTier = "positive" | "mixed" | "negative";
 
 export type ShelfId = "plain" | "mist" | "balm" | "soft" | "base" | "glow" | "repair" | "mask" | "wash" | "sheet" | "cushion" | "essence";
 

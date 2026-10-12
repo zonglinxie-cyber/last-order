@@ -1,11 +1,10 @@
 // 旧五日版那 7 位客人的手写接待：脸上三处线索、她答得出的几句问话，以及那张 853×1844 的近景大图。
-// 原文出自 campaign.ts 的 CUSTOMERS / QUESTIONS（旧版删除以后，这里是唯一出处）。
+// 原文出自旧五日版 campaign.ts 的 CUSTOMERS / QUESTIONS（旧版已删，这里是唯一出处）。
 // 诉求表与人情场 people.ts 逐条相同（沈薇到段小姐七位，档位、权重、忌讳、预算、件数都一致），
 // 所以每一处 reveals 都是她真有的那条 —— tests/world-consult.test.ts 逐条核。
 //
 // 没写进来的那几位（回头的沈薇、第 2 天回来的周姐、婚礼当天的安姐）是旧版按天排的变体，人情场里没有。
-import type { Trait } from "../../campaign.ts";
-import type { PersonId } from "../types.ts";
+import type { PersonId, Trait } from "../types.ts";
 
 /** 近景大图上三处线索的落点（art/blender-export.md 锁定的面部坐标，单位是原图像素）。 */
 export const PLATE_SIZE = { w: 853, h: 1844 } as const;

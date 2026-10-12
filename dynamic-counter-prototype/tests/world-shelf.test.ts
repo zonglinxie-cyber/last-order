@@ -3,7 +3,7 @@
 // 4 位连那一支都够不着 —— 货架给不出选择。这里钉的是**这张表的形状**（覆盖、挤位、陷阱、钱与懂的冲突），
 // 数字变了就必须重新读一遍内容，不许默默漂过去。
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   ENERGY_PER_DAY, PRICE_MISS_OPINION, SERVE_GOOD_OPINION, newWorld, opinionOf, resolveServe,
@@ -122,10 +122,10 @@ test("对症却买不起 ≠ 推错：那句「这解决不了我的事」不能
   assert.ok(wrong.log.some(l => l.text.includes("这解决不了我的事")));
 });
 
-test("货架只有一张：引擎和界面都不再从旧五日版拿货", () => {
-  // 两支货架各自定价迟早对不上账（人情场不受五日版那些金额约束，见根目录 AGENTS.md）。
+test("货架只有一张：旧五日版那份货架连同 campaign.ts 一起删了，没人再从那里拿货", () => {
+  assert.equal(existsSync(new URL("../src/campaign.ts", import.meta.url)), false);
   const engine = readFileSync(new URL("../src/world/engine.ts", import.meta.url), "utf8");
-  assert.equal(engine.includes('from "../campaign.ts"'), false, "引擎不该再 import campaign.ts");
+  assert.equal(engine.includes("campaign.ts\""), false, "引擎不该再 import campaign.ts");
   const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
   assert.equal(/\bPRODUCTS\b/.test(ui), false, "接待面板该读 shelf.ts 的 SHELF");
   assert.equal(SHELF_IDS.length, 12);

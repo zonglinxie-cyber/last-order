@@ -9,7 +9,7 @@ import {
 } from "../src/world/engine.ts";
 import type { Cond, Effect, Person, Storylet, World, Zone } from "../src/world/types.ts";
 import { PLAYER } from "../src/world/types.ts";
-import { PRODUCTS } from "../src/campaign.ts";
+import { SHELF as PRODUCTS } from "../src/world/shelf.ts";
 import { PEOPLE as CONTENT_PEOPLE, festivalsFor } from "../src/world/content/index.ts";
 import { ZONE_SPOTS } from "../src/world/ui/zones.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";

@@ -1,7 +1,7 @@
 // 人情场内容体检。引擎不在这里测，只核对人和故事碎片对得上契约。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CUSTOMERS } from "../src/campaign.ts";
+import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
 import { FESTIVALS, festivalsFor } from "../src/world/content/festivals.ts";
 import { CIRCLES, PEOPLE, ageAtSeason } from "../src/world/content/people.ts";
 import { MAINLINE_ACTS, STORYLETS } from "../src/world/content/index.ts";
@@ -136,18 +136,16 @@ test("人物、关系、脾气和主团", () => {
   assert.ok(cross >= 40, `跨团 ${cross}`);
 });
 
-test("旧人物的名字、皮肤和立绘沿用 campaign", () => {
+test("旧版那 7 位客人：近景大图做立绘，手写接待一位不缺", () => {
+  // 旧五日版（campaign.ts）删掉以后，这 7 位的诉求表、线索与问话只剩人情场这一份；
+  // 手写线索对得上她们的诉求表，由 world-consult 那条逐条核。
   const customers = ["shen", "mei", "xiaoyu", "zhao", "anjie", "zhou", "duan"] as const;
   for (const id of customers) {
     const person = PEOPLE.find(p => p.id === id);
-    const customer = CUSTOMERS[id];
     assert.ok(person, id);
-    assert.equal(person.name, customer.name);
     assert.equal(person.role, "customer");
-    assert.deepEqual(person.skin?.demands, customer.demands);
-    assert.deepEqual(person.skin?.veto, customer.veto);
-    assert.equal(person.skin?.budget, customer.budget);
-    assert.equal(person.skin?.maxUnits, customer.maxUnits);
+    assert.ok(person.skin, id);
+    assert.ok(HAND_CONSULT[id], `${id} 的手写接待不见了`);
     assert.ok(person.portrait?.includes(`customer-${id}-consultation.webp`), person.portrait);
   }
   for (const [id, file] of [

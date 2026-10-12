@@ -31,13 +31,13 @@ test("判据只有一处：样式表里不许再自己写媒体查询判全屏",
 });
 
 test("假状态栏那条 54px 不再写死在界面里：只认 --fake-bar-height", () => {
-  const files = ["../src/prototype.css", "../src/duel.css", "../src/blitz.css"];
+  const files = ["../src/world/ui/base.css", "../src/world/ui/world.css", "../src/world/ui/archive-base.css"];
   const offenders = files
     .map(f => [f, read(f)] as const)
     .filter(([, text]) => /calc\(\s*54px\s*\+\s*env\(safe-area-inset-top\)/.test(text)
       || /18px\s*\+\s*54px/.test(text));
   assert.deepEqual(offenders.map(([f]) => f), [], "这几处还自己写死 54px，全屏时会多出一条空带");
-  assert.match(read("../src/prototype.css"), /html\[data-phone-chrome="real"\]\s*\{\s*--fake-bar-height/);
+  assert.match(read("../src/world/ui/base.css"), /html\[data-phone-chrome="real"\]\s*\{\s*--fake-bar-height/);
 });
 
 test("安全区两个来源不混用：全屏读实测，画框读预设", () => {

@@ -19,7 +19,7 @@
 .web-ring { fill:none; stroke:#f0cf9155; stroke-width:1.5; }
 .web-token { fill:#3d2a26; stroke:#f0cf9188; stroke-width:1.5; }
 .web-letter { fill:#ffe8b6; font:700 15px 'Noto Serif SC',serif,serif; text-anchor:middle; }
-.web-label { fill:#d5b994; font:500 12px 'Noto Serif SC',serif,serif; text-anchor:middle; }
+.web-label { fill:#d5b994; font:600 12px 'Noto Serif SC',serif,serif; text-anchor:middle; }
 .web-node.unknown { opacity:.45; }
 .web-node.player .web-ring,.web-node.center .web-ring { stroke:#f0c978; stroke-width:2.5; }
 .web-node.center .web-label { fill:#ffedca; font-weight:700; }

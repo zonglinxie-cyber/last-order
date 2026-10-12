@@ -1,4 +1,4 @@
-// 人情场楼层界面（?mode=world）：一天四个时段的循环、可左右拖的横版大地图、
+// 人情场楼层界面（默认入口）：一天四个时段的循环、可左右拖的横版大地图、
 // 点人开抽屉做事、说书人的卡。规则全部问 engine.ts —— 这里只摆人、摆按钮、
 // 念 engine 写进 log 的句子；世界状态走 serializeWorld/parseWorld 落盘。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
@@ -40,6 +40,7 @@ import { seasonEnding } from "../ending.ts";
 import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
 import { weekNoOf, weekWordOf } from "../weeks.ts";
 import { commitWorldProgress } from "../progress.ts";
+import "./base.css";
 import "./world.css";
 
 const SEASON_DAYS = 28; // 与 content/festivals.ts 的一季同长

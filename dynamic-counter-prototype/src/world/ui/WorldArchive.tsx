@@ -10,7 +10,7 @@ import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWo
 import { CLUES, CLUE_THREADS, PEOPLE, STORYLETS } from "../content/index.ts";
 import type { PersonId } from "../types.ts";
 import { opinionWord } from "./words.ts";
-import "../../archive.css";
+import "./archive-base.css";
 import "./world-archive.css";
 
 type Tab = "people" | "arcs" | "book" | "endings";

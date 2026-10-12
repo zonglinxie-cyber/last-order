@@ -8,7 +8,7 @@ test("installed production game reloads offline", async ({ context, page }) => {
   page.on("pageerror", (error) => runtimeErrors.push(`page: ${error.message}`));
   page.on("requestfailed", (request) => runtimeErrors.push(`request: ${request.url()} ${request.failure()?.errorText}`));
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "最后一单" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "人情场" })).toBeVisible();
 
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -30,26 +30,17 @@ test("installed production game reloads offline", async ({ context, page }) => {
   await page.reload({ waitUntil: "domcontentloaded" });
 
   await expect(page).toHaveTitle("最后一单 · 美妆专柜生存游戏");
-  await expect(page.getByRole("heading", { name: "最后一单" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /开始新品活动周|继续第/ })).toBeVisible();
-  await page.getByRole("button", { name: "开始新品活动周", exact: true }).click();
-  await page.getByRole("button", { name: "开始营业", exact: true }).click();
-  await page.getByRole("button", { name: "观察沈薇", exact: true }).click();
-  await expect.poll(() => page.locator(".customer-portrait").evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "观察眼下", exact: true }).click();
-  await page.getByRole("button", { name: "观察脸颊", exact: true }).click();
-  await page.getByRole("button", { name: "你最怕镜头看到什么？", exact: true }).click();
-  await page.getByRole("button", { name: /柔焦 ¥980/ }).click();
-  await page.getByRole("button", { name: "为沈薇试用", exact: true }).click();
-  await page.getByRole("button", { name: "先登记接待", exact: true }).click();
-  // 断网也要保住连带的开口：按她自己的上限要三件，多占三分钟。
-  await page.getByRole("button", { name: /^三件整套/ }).click();
-  await expect(page.getByLabel("本单报价")).toContainText("你入账 ¥2,940");
-  await page.getByRole("button", { name: "提出成交", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "沈薇成交", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "人情场" })).toBeVisible();
+  await page.getByRole("button", { name: "开这一季", exact: true }).click();
+  // 断网也能开一季：楼层、页顶那一关、地图上的人都画得出来（立绘与小人都在预缓存里）。
+  await expect(page.locator(".world-goal")).toContainText("第 1 关");
+  const skip = page.getByRole("button", { name: "跳过引导" });
+  if (await skip.count()) await skip.first().click();
+  const story = page.locator(".story-choices button");
+  if (await story.count()) await story.first().click();
+  const actor = page.locator(".wf-actor img").first();
+  await expect.poll(() => actor.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await page.reload();
-  await expect(page.getByRole("button", { name: "继续第 1 天", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "继续第 1 天", exact: true }).click();
-  await expect(page.locator(".brief-screen > header")).toContainText("¥2,940");
+  await expect(page.getByRole("button", { name: /继续 · 第 1 季 · 第 1 天/ })).toBeVisible();
   expect(runtimeErrors).toEqual([]);
 });

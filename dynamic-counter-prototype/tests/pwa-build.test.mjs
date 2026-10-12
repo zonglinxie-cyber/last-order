@@ -6,8 +6,9 @@ test("production service worker precaches the hashed app shell and game art", as
   const worker = await readFile("dist/client/sw.js", "utf8");
   assert.match(worker, /\/assets\/index-[^"']+\.js/);
   assert.match(worker, /\/assets\/index-[^"']+\.css/);
-  assert.match(worker, /\/assets\/game\/counter-stage-toy\.png/);
-  assert.match(worker, /\/assets\/game\/customer-anjie-consultation\.png/);
+  assert.match(worker, /\/assets\/game\/mall-floor\.jpg/);
+  assert.match(worker, /\/assets\/game\/customer-anjie-consultation\.webp/);
+  assert.match(worker, /\/assets\/game\/chibi\/[^"']+\.webp/);
   assert.match(worker, /\/manifest\.webmanifest/);
   assert.match(worker, /noto-serif-sc-chinese-simplified-[^"']+\.woff2/);
   assert.doesNotMatch(worker, /fonts\.googleapis\.com/);

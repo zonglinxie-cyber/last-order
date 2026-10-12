@@ -1,7 +1,6 @@
 // 人情场接待：她越信你，说得越多。这条规则只写在这里，界面（WorldGame 的 serve-said）只读不算。
 // 卖货判断照旧走 campaign.ts 的 fitScore —— 没说出口的诉求一样参与算分，这里买的只是信息。
-import type { Demand, Trait } from "../campaign.ts";
-import type { Gender } from "./types.ts";
+import type { Demand, Gender, Trait } from "./types.ts";
 
 /** 看法到 10，她肯多讲一条；到 40，全讲，连忌讳也自己说出来。 */
 export const TALK_WARM = 10;

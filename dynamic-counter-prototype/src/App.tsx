@@ -1,10 +1,10 @@
 import { MobileRuntime } from "./mobile";
-import Prototype from "./Prototype";
+import WorldGame from "./world/ui/WorldGame";
 
 export default function App() {
   return (
     <MobileRuntime>
-      <Prototype />
+      <WorldGame />
     </MobileRuntime>
   );
 }

@@ -5,10 +5,9 @@
 //
 // 这一层只管"你知道了她什么"和"她还肯听你说几句"，钱、看法、退货仍由 engine.ts 的
 // beginServe / settleServe 结账。界面只读这里的句子，不在 JSX 里拼。
-import type { FitTier, Trait } from "../campaign.ts";
 import { demandWords, serveTalk, SECRET_KNOWN_KEY } from "./serve-talk.ts";
-import { SHELF, PERFECT_MATCH, fitOfPerson, shelfFitTier, type ShelfId } from "./shelf.ts";
-import type { Person, PersonId, World } from "./types.ts";
+import { SHELF, PERFECT_MATCH, fitOfPerson, shelfFitTier, type FitTier, type ShelfId } from "./shelf.ts";
+import type { Person, PersonId, Trait, World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { HAND_CONSULT, PLATE_CROP, PLATE_POINTS, PLATE_SIZE } from "./content/consult-lines.ts";
 

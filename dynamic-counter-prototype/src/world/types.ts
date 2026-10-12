@@ -1,8 +1,12 @@
 // 人情场的数据契约。设计见 docs/人情场设计.md。
 // 引擎（engine.ts）只读这里的类型；人物与故事碎片（content/）只写成这里的数据。
-// 卖货的判断复用 campaign.ts 的 Demand / ProductId / fitScore，不另起一套。
-import type { Demand, Trait } from "../campaign.ts";
+// 卖货的判断（诉求档位、适配分）在 shelf.ts，口径沿用旧五日版那一套。
 import type { HeatId } from "./heat.ts";
+
+/** 五条诉求：薄 / 见效 / 退红 / 不闷 / 撑妆。旧五日版起的名字，旧版删掉以后定义搬到这里。 */
+export type Trait = "natural" | "correct" | "soothe" | "steady" | "wear";
+/** 她这一单的一条诉求：want 要到几档（1 顺带 / 2 头等事），weight 这一条在她心里多重。 */
+export type Demand = { trait: Trait; want: 1 | 2; weight: 1 | 2 | 3 };
 
 export type PersonId = string;
 /** 玩家自己在关系网上的节点 id。 */

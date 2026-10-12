@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PEOPLE } from "../src/world/content/people.ts";
-import type { Demand, Trait } from "../src/campaign.ts";
+import type { Demand, Trait } from "../src/world/types.ts";
 import {
   DEMAND_WORDS, SECRET_EXTRA, TALK_OPEN, TALK_WARM, demandWords, serveTalk, unsaidWord,
 } from "../src/world/serve-talk.ts";
