@@ -20,6 +20,7 @@ import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } 
 import { SHELF_IDS } from "../src/world/shelf.ts";
 import { WEEK_IDS, isMonday, isSunday, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
 import { batchStats, wordsOf } from "../src/world/content/batches.ts";
+import { SEASON_WEEKS, WEEK_STARS_MAX, WEEK_TARGETS, weekMadeKey, weekRivalKey, weekStarsKey } from "../src/world/target.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -391,6 +392,12 @@ const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 /** 每周的钱：按当周轮到的那条规矩归桶（本周规矩那张表用）。 */
 const weekRows: Array<{ style: Style; seed: string; season: number; rule: WeekId; my: number; rival: number }> = [];
 const dayUnits: Array<{ style: Style; season: number; day: number; units: number }> = [];
+/** 每周一关（target.ts）：每季结束时从盘上读四关的钱、对面、星。 */
+const levelRows: Array<{ style: Style; season: number; week: number; made: number; rival: number; stars: number }> = [];
+const pushLevels = (style: Style, season: number, w: World) => {
+  for (let n = 1; n <= SEASON_WEEKS; n++) levelRows.push({ style, season, week: n,
+    made: w.qualities[weekMadeKey(n)] ?? 0, rival: w.qualities[weekRivalKey(n)] ?? 0, stars: w.qualities[weekStarsKey(n)] ?? 0 });
+};
 const pushDayUnits = (style: Style, season: number, w: World) => {
   for (let d = 1; d <= DAYS; d++) dayUnits.push({ style, season, day: d, units: w.qualities[soldUnitsKey(d)] ?? 0 });
 };
@@ -404,6 +411,7 @@ for (const style of STYLES) {
     let s = seasonSummary(w, people);
     results.push(resultOf(style, seed, w));
     pushDayUnits(style, 1, w);
+    pushLevels(style, 1, w);
     for (let k = 2; k <= SEASON_COUNT; k++) {
       w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed),
         week => weekRows.push({ style, seed, season: k, ...week }));
@@ -413,6 +421,7 @@ for (const style of STYLES) {
       const bag = (later[k - 2] ??= { season: k, results: [], flips: [] });
       bag.results.push(resultOf(style, seed, w));
       pushDayUnits(style, k, w);
+      pushLevels(style, k, w);
       bag.flips.push({
         style, seed,
         allyToEnemy: s.allies.filter(id => next.enemies.includes(id)),
@@ -514,6 +523,31 @@ for (const rule of WEEK_IDS) {
     return `${style.padEnd(7)} ${String(ahead).padStart(2)}/${String(rs.length).padStart(3)}${rs.length && ahead === rs.length ? " 必赢!" : ""}`;
   }).join(" · ");
   console.log(`  ${WEEK_IDS.indexOf(rule) + 1}. ${line}`);
+}
+
+// 每周一关：目标按这张表定 —— 会做生意的那一路大多数关过得去、最后一关要拼，乱来的多半过不去；
+// 也看"赢对面"那颗星是不是谁都拿得到（拿得到 100% 就是对面太弱，0% 就是那颗星是摆设）。
+console.log("\n每周一关（每格：这一关过关率 · 钱 P25/中位/P75 · 平均星；目标 " + WEEK_TARGETS.join(" / ") + "）:");
+for (const [style, season] of STYLES.flatMap(st => Array.from({ length: SEASON_COUNT }, (_, k) => [st, k + 1] as const))) {
+  const cells = Array.from({ length: SEASON_WEEKS }, (_, i) => {
+    const rs = levelRows.filter(r => r.style === style && r.season === season && r.week === i + 1);
+    const made = rs.map(r => r.made).sort((a, b) => a - b);
+    const pass = rs.filter(r => r.stars > 0).length;
+    const stars = rs.reduce((a, r) => a + r.stars, 0) / Math.max(1, rs.length);
+    const q = (p: number) => made[Math.min(made.length - 1, Math.floor(made.length * p))] ?? 0;
+    return `${String(Math.round(pass * 100 / Math.max(1, rs.length))).padStart(3)}% ¥${q(0.25)}/${q(0.5)}/${q(0.75)} ${stars.toFixed(1)}★`;
+  });
+  console.log(`  ${style.padEnd(8)} 第${season}季 ${cells.join(" | ")}`);
+}
+{
+  const bySeason = new Map<string, number>();
+  for (const r of levelRows) bySeason.set(`${r.style}|${r.season}|${levelRows.indexOf(r) - (r.week - 1)}`, (bySeason.get(`${r.style}|${r.season}|${levelRows.indexOf(r) - (r.week - 1)}`) ?? 0) + r.stars);
+  for (const style of STYLES) {
+    const totals = [...bySeason.entries()].filter(([k]) => k.startsWith(style + "|")).map(([, v]) => v).sort((a, b) => a - b);
+    const beat = levelRows.filter(r => r.style === style && r.made > r.rival).length;
+    const all = levelRows.filter(r => r.style === style).length;
+    console.log(`  ${style.padEnd(8)} 一季星数 min ${totals[0]} / 中位 ${totals[Math.floor(totals.length / 2)]} / max ${totals[totals.length - 1]}（满 ${SEASON_WEEKS * WEEK_STARS_MAX}）· 周赢对面 ${Math.round(beat * 100 / Math.max(1, all))}%`);
+  }
 }
 
 // 按批次报平均字数（任务表第 4 项）：口径 = 正文 + 各选项结果，不含选项自己的 label。

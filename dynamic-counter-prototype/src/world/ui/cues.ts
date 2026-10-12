@@ -9,12 +9,14 @@
 import type { SfxKind } from "../../sfx.ts";
 import { qualityOf } from "../engine.ts";
 import type { PersonId, World } from "../types.ts";
+import { weekMoneyOf, weekTargetOf } from "../target.ts";
+import { weekNoOf } from "../weeks.ts";
 
-export type MomentKind = "sale" | "regular" | "lead" | "trail";
+export type MomentKind = "goal" | "sale" | "regular" | "lead" | "trail";
 export type Moment = { kind: MomentKind; who: PersonId | null };
 
 /** 动画落在哪几处：钱那一格、比分那一格、她自己那块名牌。 */
-export type MomentAnchor = "money" | "score" | "person";
+export type MomentAnchor = "money" | "score" | "person" | "goal";
 
 // 与 engine.ts 写账时用的键同一套前缀（bought: 由成交、赴约回流和托单写）。
 const BOUGHT = "bought:";
@@ -38,7 +40,7 @@ const buyerOf = (before: World, after: World): PersonId | null => {
 }
 
 /** 一次状态变化里同时出现的时刻按这个顺序出声（只响一个，其余各亮各的动画）。 */
-const RANK: Record<MomentKind, number> = { lead: 0, trail: 1, regular: 2, sale: 3 };
+const RANK: Record<MomentKind, number> = { goal: 0, lead: 1, trail: 2, regular: 3, sale: 4 };
 
 export function worldMoments(before: World, after: World): Moment[] {
   const out: Moment[] = [];
@@ -49,6 +51,11 @@ export function worldMoments(before: World, after: World): Moment[] {
   }
   // 反超要真的从落后翻上来：0:0 那一拍你先开张， headline 该是「成交」，不是「超过对面了」。
   // 反过来那一下不留这个口子 —— 对面先开张是要紧的警讯，哪怕当时还打平。
+  // 这一关的数在这一下被跨过去：过关感就该落在这一拍，不等周日对账。
+  if (weekNoOf(before.day) === weekNoOf(after.day) && after.money > before.money) {
+    const target = weekTargetOf(after.day);
+    if (weekMoneyOf(before) < target && weekMoneyOf(after) >= target) out.push({ kind: "goal", who: null });
+  }
   if (margin(before) < 0 && margin(after) > 0) out.push({ kind: "lead", who: null });
   if (margin(before) >= 0 && margin(after) < 0) out.push({ kind: "trail", who: null });
   return out;
@@ -58,10 +65,10 @@ export const byPriority = (moments: Moment[]): Moment[] =>
   [...moments].sort((a, b) => RANK[a.kind] - RANK[b.kind]);
 
 export const momentSound: Record<MomentKind, SfxKind> = {
-  sale: "register", regular: "regular", lead: "lead", trail: "down",
+  goal: "lead", sale: "register", regular: "regular", lead: "lead", trail: "down",
 };
 
 export const momentAnchor: Record<MomentKind, MomentAnchor[]> = {
   // 回头客是两件事一起发生：钱到账，而且回来的是她 —— 所以那一格和她那块名牌一起亮。
-  sale: ["money"], regular: ["money", "person"], lead: ["score"], trail: ["score"],
+  goal: ["goal", "money"], sale: ["money"], regular: ["money", "person"], lead: ["score"], trail: ["score"],
 };

@@ -4,6 +4,7 @@
 // 规则口径见 docs/人情场设计.md；读的是 engine 写进 World 的 quality 旗，不改引擎。
 import { ENDINGS } from "./ending.ts";
 import { HEAT_MAX } from "./heat.ts";
+import { SEASON_WEEKS, WEEK_STARS_MAX, seasonStarsOf } from "./target.ts";
 import { CLUE_PREFIX } from "./engine.ts";
 import { CLUE_THREADS, PEOPLE, isClueId, isThreadId, threadKey } from "./content/index.ts";
 import type { PersonId, Storylet, World } from "./types.ts";
@@ -60,10 +61,12 @@ export type WorldProgress = {
   endings: string[];
   /** 每个结局拿到过的**最高**规矩条数（自选加难：勾 0~5 条）。只升不降；旧档案缺这个键按空读。 */
   endingsAtHeat: Record<string, number>;
+  /** 最好的一季拿到过几颗星（四关加起来，满 12）。只升不降；旧档案缺这个键按 0 读。 */
+  bestSeasonStars: number;
 };
 
 export const emptyWorldProgress = (): WorldProgress =>
-  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {} });
+  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {}, bestSeasonStars: 0 });
 
 const clampOpinion = (v: number): number => Math.max(-100, Math.min(100, v));
 
@@ -108,6 +111,10 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     if (level > (endingsAtHeat[endingId] ?? -1)) endingsAtHeat[endingId] = level;
   }
 
+  // 星数只在收季那一刻认（四关都结完了）：季中途的半季不算一季。
+  const seasonStars = seasonStarsOf(world).reduce((a, b) => a + b, 0);
+  const bestSeasonStars = endingId ? Math.max(progress.bestSeasonStars, seasonStars) : progress.bestSeasonStars;
+
   const clues = new Set(progress.clues);
   for (const key of Object.keys(world.qualities)) {
     if (!key.startsWith(CLUE_PREFIX)) continue;
@@ -133,6 +140,7 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     threadEnds,
     endings,
     endingsAtHeat,
+    bestSeasonStars,
   };
 }
 
@@ -182,6 +190,10 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     }
   }
 
+  const starsCap = SEASON_WEEKS * WEEK_STARS_MAX;
+  if (parsed.bestSeasonStars !== undefined
+    && !(Number.isInteger(parsed.bestSeasonStars) && (parsed.bestSeasonStars as number) >= 0 && (parsed.bestSeasonStars as number) <= starsCap)) return null;
+
   const best = parsed.bestOpinion as Record<PersonId, number>;
   const worst = parsed.worstOpinion as Record<PersonId, number>;
   for (const id of new Set([...Object.keys(best), ...Object.keys(worst)])) {
@@ -199,6 +211,7 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     threadEnds: Object.fromEntries(Object.entries(parsed.threadEnds).map(([id, list]) => [id, [...list as number[]]])),
     endings: [...parsed.endings as string[]],
     endingsAtHeat: { ...(parsed.endingsAtHeat as Record<string, number> ?? {}) },
+    bestSeasonStars: (parsed.bestSeasonStars as number | undefined) ?? 0,
   };
 }
 

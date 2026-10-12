@@ -18,6 +18,9 @@ import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../typ
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
 import { unsaidWord } from "../serve-talk.ts";
+import { GoalStrip, LevelResult, SeasonLevels } from "./Levels.tsx";
+import { weekDaysLeft, weekGoalWord, weekLevelWord, weekMoneyOf, weekStarsKey, weekTargetOf } from "../target.ts";
+import { readWorldProgress } from "../progress.ts";
 import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
 import { SHELF, SHELF_IDS, type ShelfId } from "../shelf.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
@@ -35,7 +38,7 @@ import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, score
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
 import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
-import { weekWordOf } from "../weeks.ts";
+import { weekNoOf, weekWordOf } from "../weeks.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./world.css";
 
@@ -301,6 +304,9 @@ export default function WorldGame() {
   // 勾着开下一季：读盘里已经生效的那几条（继续玩时），没档就读上次勾选的。
   const [heat, setHeat] = useState<HeatId[]>(() => boot ? [...boot.world.heat ?? []] : readHeatPick());
   const [reqPanelOpen, setReqPanelOpen] = useState(false);
+  // 收季那一刻之前的最好成绩：季末那排四关战绩拿它判"新纪录"（存档一并进档案以后就分不出来了）。
+  const [prevBest, setPrevBest] = useState<number | null>(null);
+  const bestStars = useMemo(() => readWorldProgress().bestSeasonStars, [phase]);
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
   const spots = useMemo(() => layOut(world), [world]);
@@ -375,9 +381,10 @@ export default function WorldGame() {
     return () => window.clearTimeout(timer);
   }, [moments]);
   const lit = useMemo(() => {
-    const out = { money: false, score: null as null | "is-lead" | "is-trail", person: null as PersonId | null };
+    const out = { money: false, goal: false, score: null as null | "is-lead" | "is-trail", person: null as PersonId | null };
     for (const m of byPriority(moments)) for (const at of momentAnchor[m.kind]) {
       if (at === "money") out.money = true;
+      else if (at === "goal") out.goal = true;
       else if (at === "score") out.score ??= m.kind === "lead" ? "is-lead" : "is-trail";
       else if (m.who && !out.person) out.person = m.who;
     }
@@ -429,10 +436,12 @@ export default function WorldGame() {
     if (world.slot === 3) {
       const w = endDay(settled, PEOPLE);
       const rep = buildReport(world, w, dayBase ?? { day: world.day, money: 0, opinion: {} });
+      // 周日对账那一下：过关一声亮的，没过一声沉的（结算屏同时盖章）。
+      if (rep.week) sfx((w.qualities[weekStarsKey(weekNoOf(world.day))] ?? 0) > 0 ? "lead" : "down", 0.45);
       setDayBase({ day: w.day, money: w.money, opinion: { ...w.opinion } });
       setWorld(w);
       setPending(null);
-      if (w.day > SEASON_DAYS) { setReport(null); setPhase("season"); }
+      if (w.day > SEASON_DAYS) { setPrevBest(readWorldProgress().bestSeasonStars); setReport(null); setPhase("season"); }
       else { setReport(rep); setPhase("report"); }
       return;
     }
@@ -566,7 +575,9 @@ export default function WorldGame() {
       <section className="world-intro-card">
         <p className="world-intro-eyebrow">AURORA · 绮光</p>
         <h1>人情场</h1>
-        <p className="world-intro-copy">商场一层是一整张人情网。你在柜上怎么待一个人，会顺着这张网传出去。没有关卡，一季 28 天，看看最后谁还会回来。</p>
+        <p className="world-intro-copy">一季四关，一周一关。周一罗曼报这周的业绩数，周日打烊对账：过关拿星、柜位往前挪，没过罗曼记着。对面维珞的陆遥抢的是同一批客人 —— 每周比，季末总账也比。</p>
+        <p className="world-intro-copy world-intro-sub">商场一层是一张人情网：你怎么待一个人，会顺着网传出去，没见过面的人进门时已经对你有了看法。</p>
+        {bestStars > 0 && <p className="world-intro-best">最好的一季：{bestStars} / 12 颗星</p>}
         {stale && <p className="world-intro-stale">柜上留过一份记录，这一版读不出来了：存档格式换过，或是上一次存到一半被打断。开新一季，旧的那一份就接不回来了。</p>}
         <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
           {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
@@ -604,6 +615,7 @@ export default function WorldGame() {
         <p className="report-eyebrow">第 {world.season} 季 · {SEASON_DAYS} 天散场</p>
         <h1 className="recap-ending">{ending.title}</h1>
         <p className="recap-ending-body">{ending.body}</p>
+        <SeasonLevels world={world} prevBest={prevBest} />
 
         <section className="recap-block">
           <h2>这一季的高光</h2>
@@ -693,11 +705,13 @@ export default function WorldGame() {
     const enemies = PEOPLE.filter(p => (world.opinion[p.id] ?? 0) <= -30);
     return <div className="app-screen world-app world-report-page">
       <MobileScroll className="world-report-scroll"><main className="world-report">
-        <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "一周盘点" : "今日收工"}</p>
-        <h1>{report.week ? "这一周过去了" : "今天打烊了"}</h1>
+        <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "周日对账" : "今日收工"}</p>
+        {report.week ? <LevelResult world={world} day={report.day} /> : <h1>今天打烊了</h1>}
         <div className="report-numbers">
           <span><small>今天进账</small><b>{report.moneyDelta === 0 ? "没开单" : `${report.moneyDelta > 0 ? "+" : "−"}${yuan(Math.abs(report.moneyDelta))}`}</b></span>
-          <span><small>累计</small><b>{yuan(world.money)}</b></span>
+          {report.week
+            ? <span><small>这一季累计</small><b>{yuan(world.money)}</b></span>
+            : <span><small>{weekLevelWord(world)}</small><b>{weekGoalWord(world)}</b><em>{weekMoneyOf(world) >= weekTargetOf(world.day) ? "这一关已经过了" : `还差 ${yuan(weekTargetOf(world.day) - weekMoneyOf(world))} · ${weekDaysLeft(world.day)} 天`}</em></span>}
           <span><small>对面这一季</small><b>{yuan(world.rivalMoney)}</b><em>{scoreWord(world.money, world.rivalMoney)}</em></span>
           <span><small>柜位 / 台账</small><b>{world.standing} / {world.compliance}</b></span>
         </div>
@@ -742,6 +756,7 @@ export default function WorldGame() {
       <button className="world-web-btn" type="button" aria-label="人情网" onClick={() => setWebOpen(true)}>人情网</button>
       <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
     </header>
+    <GoalStrip world={world} lit={lit.goal} />
 
     <div className="world-map-view" ref={viewRef}
       onPointerDown={onPanDown} onPointerMove={onPanMove} onPointerUp={onPanUp} onPointerCancel={onPanUp}

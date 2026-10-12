@@ -28,7 +28,7 @@ test("开局那个上午：指着柜前的顾客，说先点一个人看看她�
   const tip = coachTip(view(), floor(), PEOPLE, []);
   assert.ok(tip, "新档进楼层该有一句");
   assert.equal(tip.step, "open");
-  assert.equal(tip.text, "柜前这两位，先点一个人看看她是谁。");
+  assert.equal(tip.text, "页顶那条是这周的关：周日打烊前把钱做到那个数。先点一位客人，看看她是谁。");
   assert.deepEqual(tip.anchor, { kind: "actor", id: "shen" }); // 柜前的优先于中庭的
   assert.equal(tip.side, "above");
 });

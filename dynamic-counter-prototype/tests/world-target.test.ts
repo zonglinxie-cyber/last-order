@@ -1,0 +1,100 @@
+// 每周一关（src/world/target.ts）：周一早会记起点、周日打烊对账盖星、柜位跟着动、
+// 楼层上跨过目标那一下有一声、档案记最好的一季。
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { beginSlot, endDay, newWorld } from "../src/world/engine.ts";
+import {
+  SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_ROMAN, WEEK_HIT_STANDING, WEEK_MISS_ROMAN, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS,
+  seasonStarsOf, weekMadeKey, weekMoneyOf, weekStarsKey, weekStarsOf, weekTargetOf,
+} from "../src/world/target.ts";
+import { worldMoments } from "../src/world/ui/cues.ts";
+import { emptyWorldProgress, observeWorldProgress, parseWorldProgress } from "../src/world/progress.ts";
+import { SEASON_DAYS } from "../src/world/types.ts";
+import { PEOPLE } from "../src/world/content/index.ts";
+import type { World } from "../src/world/types.ts";
+
+/** 这周起点在 money0、对面 rival0 的一副盘，摆到第 day 天。 */
+const books = (day: number, money: number, rivalMoney: number, money0 = 0, rival0 = 0): World => {
+  const w = newWorld("target-seed", PEOPLE);
+  return { ...w, day, slot: 3, money, rivalMoney, standing: 50,
+    qualities: { ...w.qualities, [WEEK_START_MONEY]: money0, [WEEK_START_RIVAL]: rival0 } };
+};
+
+test("一季四关，目标数与天数对得上", () => {
+  assert.equal(SEASON_DAYS, SEASON_WEEKS * 7);
+  assert.equal(weekTargetOf(1), WEEK_TARGETS[0]);
+  assert.equal(weekTargetOf(7), WEEK_TARGETS[0]);
+  assert.equal(weekTargetOf(8), WEEK_TARGETS[1]);
+  assert.equal(weekTargetOf(28), WEEK_TARGETS[3]);
+});
+
+test("三颗星：过关 / 赢对面 / 超额；没过关一颗都不给", () => {
+  const t = 10_000;
+  assert.equal(weekStarsOf(9_999, 0, t).stars, 0, "差一块也没过");
+  assert.equal(weekStarsOf(9_999, 0, t).beatRival, true, "赢了对面也照样 0 星");
+  assert.equal(weekStarsOf(10_000, 20_000, t).stars, 1);
+  assert.equal(weekStarsOf(10_000, 9_000, t).stars, 2);
+  assert.equal(weekStarsOf(Math.ceil(t * WEEK_EXCEED_RATE), 99_999, t).stars, 2, "超额但输给对面：两颗");
+  assert.equal(weekStarsOf(Math.ceil(t * WEEK_EXCEED_RATE), 0, t).stars, 3);
+});
+
+test("周一早会记下这一关的起点：本周挣的 = 现在 − 起点", () => {
+  const w0 = { ...newWorld("target-monday", PEOPLE), day: 8, slot: 0 as const, money: 12_345, rivalMoney: 6_789 };
+  const w = beginSlot(w0, PEOPLE);
+  assert.equal(w.qualities[WEEK_START_MONEY], 12_345);
+  assert.equal(w.qualities[WEEK_START_RIVAL], 6_789);
+  assert.equal(weekMoneyOf(w), 0);
+  // 周中不重记
+  const mid = beginSlot({ ...w, day: 9, slot: 0, money: 20_000 }, PEOPLE);
+  assert.equal(mid.qualities[WEEK_START_MONEY], 12_345);
+});
+
+test("周日打烊对账：落三格、过关柜位与罗曼 +、没过柜位不动罗曼 −、罗曼说一句", () => {
+  const t = WEEK_TARGETS[0];
+  const pass = endDay(books(7, t + 500, 100), PEOPLE);
+  assert.equal(pass.qualities[weekMadeKey(1)], t + 500);
+  assert.equal(pass.qualities[weekStarsKey(1)], 2);
+  assert.equal(pass.standing, 50 + WEEK_HIT_STANDING);
+  assert.equal(pass.opinion.roman - (books(7, 0, 0).opinion.roman ?? 0), WEEK_HIT_ROMAN);
+  assert.ok(pass.log.some(l => l.text.includes("第 1 关对账") && l.text.includes("过关")));
+
+  const fail = endDay(books(14, 30_000, 0, 25_000, 0), PEOPLE);
+  assert.equal(fail.qualities[weekMadeKey(2)], 5_000, "本周只算起点之后的钱");
+  assert.equal(fail.qualities[weekStarsKey(2)], 0);
+  assert.equal(fail.standing, 50, "没过不扣柜位（这是卖货的关，不替人情那条路判死刑）");
+  assert.equal(fail.opinion.roman - (books(14, 0, 0).opinion.roman ?? 0), WEEK_MISS_ROMAN);
+  assert.ok(fail.log.some(l => l.text.includes("第 2 关对账") && l.text.includes("差")));
+  assert.deepEqual(seasonStarsOf(fail), [0]);
+
+  // 不是周日不结账
+  const wed = endDay(books(3, 99_999, 0), PEOPLE);
+  assert.equal(wed.qualities[weekMadeKey(1)], undefined);
+  assert.equal(wed.standing, 50);
+});
+
+test("楼层上跨过这一关的数那一下，有「本周过关」那一声；周与周之间不误报", () => {
+  const t = WEEK_TARGETS[0];
+  const before = books(3, t - 100, 0), after = { ...before, money: t + 900 };
+  assert.ok(worldMoments(before, after).some(m => m.kind === "goal"));
+  assert.ok(!worldMoments(after, { ...after, money: after.money + 500 }).some(m => m.kind === "goal"), "已经过了不再响");
+  const nextWeek = { ...after, day: 8 };
+  assert.ok(!worldMoments(before, nextWeek).some(m => m.kind === "goal"), "跨周那一下不算");
+});
+
+test("档案记最好的一季（四关星数加起来），只在收季那一刻认、只升不降，旧档案缺键按 0 读", () => {
+  const w = books(28, 0, 0);
+  const done: World = { ...w, qualities: { ...w.qualities,
+    [weekMadeKey(1)]: 1, [weekStarsKey(1)]: 3, [weekMadeKey(2)]: 1, [weekStarsKey(2)]: 2,
+    [weekMadeKey(3)]: 1, [weekStarsKey(3)]: 0, [weekMadeKey(4)]: 1, [weekStarsKey(4)]: 1 } };
+  const mid = observeWorldProgress(emptyWorldProgress(), done);
+  assert.equal(mid.bestSeasonStars, 0, "没收季不认");
+  const end = observeWorldProgress(emptyWorldProgress(), done, "nobody-left");
+  assert.equal(end.bestSeasonStars, 6);
+  const worse = { ...done, qualities: { ...done.qualities, [weekStarsKey(1)]: 0 } };
+  assert.equal(observeWorldProgress(end, worse, "nobody-left").bestSeasonStars, 6, "只升不降");
+  const round = parseWorldProgress(JSON.stringify(end));
+  assert.equal(round?.bestSeasonStars, 6);
+  const { bestSeasonStars: _, ...legacy } = end;
+  assert.equal(parseWorldProgress(JSON.stringify(legacy))?.bestSeasonStars, 0);
+  assert.equal(parseWorldProgress(JSON.stringify({ ...end, bestSeasonStars: 13 })), null, "超过满星整份拒收");
+});

@@ -354,6 +354,7 @@ export const newGuestWord = (fresh: number): string => fresh ? ` · 新客 ${fre
  *  它不复述流水里那句「带走 2 件，进账 ¥1,960」—— 牌上只给判断，数字留给流水与页顶那一格，
  *  免得同一件事在一屏里念两遍（也不做成飘出来的数字）。 */
 export const momentWord = (kind: MomentKind, name?: string): string => {
+  if (kind === "goal") return "本周过关！";
   if (kind === "sale") return name ? `成交 · ${name}` : "成交";
   if (kind === "regular") return name ? `回头客 · ${name}` : "回头客";
   return kind === "lead" ? "超过对面了" : "被对面超过";

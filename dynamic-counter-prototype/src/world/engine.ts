@@ -11,6 +11,7 @@ import {
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { isHeatId, type HeatId } from "./heat.ts";
+import { markWeekStart, settleWeek } from "./target.ts";
 import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
@@ -479,7 +480,8 @@ function setWeekRule(world: World): World {
     if (other === id) qualities[weekKey(other)] = 1;
     else delete qualities[weekKey(other)];
   }
-  return say({ ...world, qualities }, WEEK_RULES.find(r => r.id === id)!.line, ["roman"]);
+  // 这一关的起点也在这一刻记下：本周挣了多少 = 现在 − 起点（target.ts）。
+  return say(markWeekStart({ ...world, qualities }), WEEK_RULES.find(r => r.id === id)!.line, ["roman"]);
 }
 /** 周日打烊把这一周的规矩清掉：留着它，下一周的早会就变成"改口"而不是"新一周"。 */
 function clearWeekRule(world: World): World {
@@ -1270,8 +1272,13 @@ export function endDay(world: World, people: Person[]): World {
   // 到期的委托在今夜结账：做到了的记人情，失约的记"说好的事没做" ——
   // 放在传话快照之前，这条坏话今晚就能被带出去。
   w = settleRequests(w, people);
-  // 周日打烊：这一周的规矩清掉（委托已经按当周的规则结完账）。
-  if (isSunday(w.day)) w = clearWeekRule(w);
+  // 周日打烊：先对这一关的账（过关柜位涨、没过柜位掉、盖星），再把这一周的规矩清掉
+  // （委托已经按当周的规则结完账）。
+  if (isSunday(w.day)) {
+    const settled = settleWeek(w);
+    w = say(settled.world, settled.line, ["roman"]);
+    w = clearWeekRule(w);
+  }
   const mems = w.memories; // 今晚读的记忆快照：夜里讲出去的话不当晚再传。
   const nightPairs: Array<[Person, Person]> = [];
   for (const a of people) for (const b of people) {

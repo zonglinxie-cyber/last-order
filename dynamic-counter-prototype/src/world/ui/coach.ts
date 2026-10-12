@@ -36,7 +36,7 @@ export type CoachView = {
 };
 
 const TEXT: Record<CoachStep, string> = {
-  open: "柜前这两位，先点一个人看看她是谁。",
+  open: "页顶那条是这周的关：周日打烊前把钱做到那个数。先点一位客人，看看她是谁。",
   card: "下面那排是你能做的事，每件都花精力。",
   action: "每做一件事都花精力。想让时间往前走，就点右上角的「下一时段」。",
   story: "这种事没有标准答案，她们会记住你怎么选。",
@@ -78,7 +78,7 @@ export function coachTip(view: CoachView, world: World, people: Person[], seen: 
   if (view.acted && fresh("action"))
     return { step: "action", text: TEXT.action, anchor: { kind: "nextSlot" }, side: "below" };
   const first = coachCustomer(world, people);
-  // 开局那句只在开局那个上午讲：过了这个村再说"柜前这两位"就是念错词。
+  // 开局那句只在开局那个上午讲：过了这个村再说"先点一位客人"就是念错词。
   if (fresh("open") && first && world.day === 1 && world.slot === 0)
     return { step: "open", text: TEXT.open, anchor: { kind: "actor", id: first }, side: "above" };
   return null;

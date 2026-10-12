@@ -425,7 +425,7 @@ test.describe("新手引导 390×844", () => {
     await dismissCard(page);
     const coach = page.locator(".world-coach");
     await expect(coach).toBeVisible();
-    await expect(coach).toContainText("先点一个人看看她是谁");
+    await expect(coach).toContainText("先点一位客人，看看她是谁");
     await expect(coach.getByText("苏蔓")).toBeVisible();
     await page.getByRole("button", { name: "跳过引导" }).click();
     await expect(coach).toHaveCount(0);
@@ -450,7 +450,7 @@ test.describe("新手引导 390×844", () => {
 
     // 换一档看「先点一个人」那句：只在开局那个上午讲，指着地图上的人，同样不许盖住顶栏按钮。
     await enter(page, envelope({ day: 1, slot: 0 }), false);
-    await expect(page.locator(".world-coach")).toContainText("先点一个人看看她是谁");
+    await expect(page.locator(".world-coach")).toContainText("先点一位客人，看看她是谁");
     expect(await hitNext()).toBe(true);
   });
 });
