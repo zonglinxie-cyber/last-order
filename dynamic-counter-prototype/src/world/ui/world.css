@@ -119,7 +119,7 @@
 .pick-targets button { flex:0 0 auto; min-height:44px; padding:0 14px; border:1px solid #f0cf9155; border-radius:999px; background:#f0c97814; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
 .pick-targets .pick-cancel { border-color:#ffffff22; background:transparent; color:#a99689; }
 
-/* 接待：八支货、件数、她自己说出口的需要。带子装不下时这一段自己滚，
+/* 接待：十二支货、件数、她自己说出口的需要。带子装不下时这一段自己滚，
    件数与开单那一排（.serve-foot）钉在带子底 —— 关单按钮不许掉出屏幕。 */
 .world-serve { flex:0 0 auto; max-height:calc(100% - 104px); overflow-y:auto; }
 .world-serve .serve-said { margin:0 0 4px; color:#ffe8b6; font-size:12px; line-height:1.5; }
@@ -127,14 +127,14 @@
 .world-serve .serve-hold { margin:0 0 4px; color:#b99b7f; font-size:12px; line-height:1.5; }
 .world-serve .serve-meta { margin:0 0 8px; color:#a99689; font-size:12px; line-height:1.5; }
 .world-serve .serve-note { margin:8px 0 0; color:#b99b7f; font-size:12px; line-height:1.5; }
-/* 八支货按价格从低到高排，四列两行。原来 flex 一行三支，八支会挤成 40px 一格，
+/* 十二支货分底妆一排、护肤两排，每排四列（SHELF_LINES）。原来 flex 一行三支，八支就会挤成 40px 一格，
    「¥2,280」在 320 宽那一档直接被 min-width:0 裁掉 —— 网格 + minmax(0,1fr) 才既等宽又不越界。 */
 .serve-products { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
-.serve-products button { min-width:0; min-height:72px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:6px 2px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; }
+.serve-products button { min-width:0; min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:6px 2px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; }
 .serve-products button.on { border-color:#f0c978; background:#f0c9781c; }
 .serve-products button b { font:600 13px 'Noto Serif SC',serif; }
 .serve-products button small { color:#b99b7f; font-size:12px; }
-/* 短标签 = note 里"它管什么"那半句的压缩版，八支不点也能扫完（出处 shelf.ts 的 tag）。 */
+/* 短标签 = note 里"它管什么"那半句的压缩版，十二支不点也能扫完（出处 shelf.ts 的 tag）。 */
 .serve-products button em { color:#d5b994; font:600 12px 'Noto Serif SC',serif; font-style:normal; }
 .serve-foot { position:sticky; bottom:calc(8px + env(safe-area-inset-bottom)); margin-top:8px; background:#241413; }
 .serve-units { display:flex; gap:8px; }
@@ -163,6 +163,8 @@
 .serve-face .face-spot.found { opacity:.45; }
 @keyframes face-pulse { 0%,100% { box-shadow:0 0 0 1px #ffe2a9b8,0 0 12px #ffd77e44; } 50% { box-shadow:0 0 0 2px #ffe2a9,0 0 24px #ffd77e88; } }
 @media (prefers-reduced-motion: reduce) { .serve-face .face-spot { animation:none; } }
+.serve-line { margin:0 0 6px; }
+.serve-line-word { display:block; margin:0 0 3px; color:#a99689; font-size:12px; letter-spacing:.1em; }
 .serve-try { border:1px solid #f0cf9155; background:#ffffff0d; color:#ffe8b6; }
 .serve-try:disabled { opacity:.45; }
 .world-verbs .resume { border-color:#f0c97888; }

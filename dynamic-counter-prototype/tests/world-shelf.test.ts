@@ -30,34 +30,34 @@ test("32 位有诉求表的客人，每一个都有买得起的正解", () => {
   assert.equal(skinned.length, 32, "有脸的人数变了，上面那批覆盖结论要重读");
 });
 
-test("货架不再只给一个答案：只有一支买得起的正解的人从 28 降到 9", () => {
+test("货架不再只给一个答案：只有一支买得起的正解的人 28 → 9（八支）→ 1（十二支）", () => {
   const one = skinned.filter(p => affordablePositives(p).length === 1).map(p => p.id);
-  assert.deepEqual(one, ["zhao", "zhou", "tangtang", "zhaoning", "heqing", "jiangning", "suxiao", "yenushi", "cenning"]);
+  // 剩下的这一位是周姐：薄、见效、稳、撑妆四条都要，又不许厚 —— 只有粉底一支过线（也没有满分）。
+  assert.deepEqual(one, ["zhou"]);
   const counts = skinned.map(p => affordablePositives(p).length).sort((a, b) => a - b);
-  assert.equal(counts[Math.floor(counts.length / 2)], 2, "中位数：一位客人面前摆出两支可选的正解");
-  // 实测形状（不是"越多越好"）：1 支 9 人 / 2 支 8 人 / 3 支 12 人 / 4 支 2 人 / 5 支 1 人。
-  // 中位数是 2 而不是更多：21/32 位的用量上限只有 1 件，¥1,180 以上那三支对多数人属于"看过但买不起"。
+  assert.equal(counts[Math.floor(counts.length / 2)], 3, "中位数：一位客人面前摆出三支可选的正解");
+  // 实测形状：1 支 1 人 / 2 支 9 人 / 3 支 15 人 / 4~9 支 7 人（预算高、诉求少的宋姐九支都行）。
   const dist: Record<number, number> = {};
   for (const c of counts) dist[c] = (dist[c] ?? 0) + 1;
-  assert.deepEqual(dist, { 1: 9, 2: 8, 3: 12, 4: 2, 5: 1 });
+  assert.deepEqual(dist, { 1: 1, 2: 9, 3: 15, 4: 2, 5: 1, 6: 1, 7: 2, 9: 1 });
 });
 
-test("八支货没有死角也没有万能药", () => {
+test("十二支货没有死角也没有万能药", () => {
   for (const id of SHELF_IDS) {
     const pos = skinned.filter(p => shelfFitTier(fitOfPerson(p, id)) === "positive").length;
     const neg = skinned.filter(p => shelfFitTier(fitOfPerson(p, id)) === "negative").length;
     assert.ok(pos >= 3, `${SHELF[id].short} 只有 ${pos} 位当它是正解 —— 摆着一支没人要的货是内容浪费`);
     assert.ok(neg >= 2, `${SHELF[id].short} 谁都接不住 —— 一支对所有人都正的货会把判断变成挑最贵的`);
   }
-  // 挤位：最贵买得起的正解落在谁身上。一支超过 12 位就说明这张表又变回"一个答案"了。
+  // 挤位：最贵买得起的正解落在谁身上。八支那版最挤的一支压着 12 位，十二支摊到 9 位。
   const heat = SHELF_IDS.map(id => skinned.filter(p => {
     const aff = affordablePositives(p);
     return aff.length && aff.reduce((x, y) => (SHELF[y].price > SHELF[x].price ? y : x)) === id;
   }).length);
-  assert.equal(Math.max(...heat), 12, `首选挤位读数变了：${heat.join("/")}`);
+  assert.equal(Math.max(...heat), 9, `首选挤位读数变了：${heat.join("/")}`);
 });
 
-test("钱与懂不是同一格：四位客人的满分那支不是最赚的那支", () => {
+test("钱与懂不是同一格：八位客人的满分那支不是最赚的那支", () => {
   // 看法是这个人情的货币（她肯不肯多讲一条、回不回来、会不会被对面请走），
   // 所以"多花一千块"和"她要的每条都被接住"必须真的能撞车，否则货架只是八个体价签。
   const same: string[] = [], conflict: string[] = [], noPerfect: string[] = [];
@@ -70,9 +70,11 @@ test("钱与懂不是同一格：四位客人的满分那支不是最赚的那�
     else if (fit === money) same.push(p.id);
     else conflict.push(p.id);
   }
-  assert.deepEqual([same.length, conflict.length, noPerfect.length], [22, 4, 6]);
-  assert.deepEqual(conflict, ["miduo", "liangxia", "caiaiyi", "dongayi"]);
-  assert.deepEqual(noPerfect, ["zhou", "tangtang", "heqing", "suxiao", "yenushi", "cenning"]);
+  // 十二支以后满分支多了（面膜接住唐糖、苏晓，气垫接住何晴、岑宁），而这几支恰好都比"过线但更贵"那支便宜 ——
+  // 钱与懂撞车的人从 4 位变成 8 位，这正是新货的用处。
+  assert.deepEqual([same.length, conflict.length, noPerfect.length], [22, 8, 2]);
+  assert.deepEqual(conflict, ["miduo", "tangtang", "liangxia", "heqing", "caiaiyi", "dongayi", "suxiao", "cenning"]);
+  assert.deepEqual(noPerfect, ["zhou", "yenushi"]);
   // 撞得最狠的一位：米朵 —— 修护 ¥1,680 只算"没推错"，喷雾 ¥680 才是她那两条都接住的那支。
   assert.ok(conflict.includes("miduo") && conflict.includes("dongayi"));
 });
@@ -126,10 +128,10 @@ test("货架只有一张：引擎和界面都不再从旧五日版拿货", () =>
   assert.equal(engine.includes('from "../campaign.ts"'), false, "引擎不该再 import campaign.ts");
   const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
   assert.equal(/\bPRODUCTS\b/.test(ui), false, "接待面板该读 shelf.ts 的 SHELF");
-  assert.equal(SHELF_IDS.length, 8);
+  assert.equal(SHELF_IDS.length, 12);
 });
 
-test("八支货的短标签不许虚标：写着「见效」这一支就得真有见效这条", () => {
+test("十二支货的短标签不许虚标：写着「见效」这一支就得真有见效这条", () => {
   // 标签是格子上那行小字，玩家不点就靠它扫完八支（tests/world-newbie.spec.ts 钉它在 320 那一档没被裁）。
   // 所以它是承诺不是营销：提到的每一条，这一支在该条上必须至少 1 分。
   const covered = new Set<string>();
@@ -144,7 +146,7 @@ test("八支货的短标签不许虚标：写着「见效」这一支就得真�
     }
     assert.ok([...tag].length <= 5, `${SHELF[id].short}「${tag}」${[...tag].length} 个字，320 那一档一格只有 70px`);
   }
-  assert.equal(new Set(SHELF_IDS.map(id => SHELF[id].tag)).size, SHELF_IDS.length, "八支标签两两不同，扫一眼才分得开");
+  assert.equal(new Set(SHELF_IDS.map(id => SHELF[id].tag)).size, SHELF_IDS.length, "标签两两不同，扫一眼才分得开");
   assert.deepEqual([...covered].sort(), ["correct", "natural", "soothe", "steady", "wear"],
     "她会被问到的五条诉求，货架上要每条都读得出来");
 });

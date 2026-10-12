@@ -3,7 +3,7 @@ import {
   beginSlot, ENERGY_PER_DAY, newWorld, SAVE_KEY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import { SHELF_IDS, type ShelfId } from "../src/world/shelf.ts";
+import { SHELF_LINES, type ShelfId } from "../src/world/shelf.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import type { World } from "../src/world/types.ts";
 
@@ -58,7 +58,7 @@ const heard = async (page: Page, frequency: number) => (await tones(page)).some(
 const serve = async (page: Page, product: ShelfId, force: boolean) => {
   await page.getByRole("button", { name: /查看梅女士/ }).first().click();
   await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
-  await page.locator(".serve-products button").nth(SHELF_IDS.indexOf(product)).click();
+  await page.locator(".serve-products button").nth(SHELF_LINES.flatMap(l => l.ids).indexOf(product)).click();
   await page.locator(force ? ".serve-force" : ".serve-commit").click();
 };
 

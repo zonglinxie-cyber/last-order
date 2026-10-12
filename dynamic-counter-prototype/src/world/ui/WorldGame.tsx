@@ -22,7 +22,7 @@ import { GoalStrip, LevelResult, SeasonLevels } from "./Levels.tsx";
 import { weekDaysLeft, weekGoalWord, weekLevelWord, weekMoneyOf, weekStarsKey, weekTargetOf } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
 import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, plateOf, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
-import { SHELF, SHELF_IDS, type ShelfId } from "../shelf.ts";
+import { SHELF, SHELF_LINES, type ShelfId } from "../shelf.ts";
 import { ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -848,11 +848,14 @@ export default function WorldGame() {
           {questionsOf(person).map(q => <button key={q.key} type="button" disabled={consult.patience <= 0 || consult.asked.includes(q.key)}
             onClick={() => consultAct(c => askHer(c, person, q.key))}>{q.label}</button>)}
         </div>
-        <div className="serve-products">{SHELF_IDS.map(pid => {
-          const tried = consult.tried[pid];
-          return <button key={pid} type="button" className={`${serveProduct === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => setServeProduct(pid)}>
-            <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
-        })}</div>
+        {SHELF_LINES.map(line => <div key={line.word} className="serve-line" role="group" aria-label={line.word}>
+          <span className="serve-line-word">{line.word}</span>
+          <div className="serve-products">{line.ids.map(pid => {
+            const tried = consult.tried[pid];
+            return <button key={pid} type="button" className={`${serveProduct === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => setServeProduct(pid)}>
+              <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
+          })}</div>
+        </div>)}
         <p className="serve-note">{serveProduct ? priceWord(person, serveProduct) : servePickWord(ta(person), !hasOpenedSale(world))}</p>
         <div className="serve-foot">
           <div className="serve-units">{[1, 2, 3, 4].map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>

@@ -3,7 +3,10 @@ import {
   beginSlot, ENERGY_PER_DAY, newWorld, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
 } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import { SHELF, SHELF_IDS } from "../src/world/shelf.ts";
+import { SHELF, SHELF_IDS, SHELF_LINES } from "../src/world/shelf.ts";
+
+/** 格子在界面上的排法：底妆一排、护肤两排。 */
+const SHOWN_IDS = SHELF_LINES.flatMap(l => l.ids);
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import type { World } from "../src/world/types.ts";
 
@@ -60,24 +63,25 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       }
     });
 
-    test("八支货的短标签都读得到，且写的是货架那张表", async ({ page }) => {
+    test("十二支货的短标签都读得到，且写的是货架那张表（按底妆 / 护肤分排）", async ({ page }) => {
       await enter(page);
       await page.getByRole("button", { name: /查看梅女士/ }).first().click();
       await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
       await expect(page.locator(".world-serve")).toBeVisible();
       const cells = page.locator(".serve-products button");
       expect(await cells.count()).toBe(SHELF_IDS.length);
+      expect([...SHOWN_IDS].sort()).toEqual([...SHELF_IDS].sort());
       const shown: string[] = [];
-      for (let i = 0; i < SHELF_IDS.length; i++) {
+      for (let i = 0; i < SHOWN_IDS.length; i++) {
         const cell = cells.nth(i);
         shown.push((await cell.locator("em").textContent())!.trim());
         const b = await cell.boundingBox();
         expect(b!.height).toBeGreaterThanOrEqual(44);
         // 一格不许把自己撑横：短标签比格子宽就等于看不见（320 那一档只有 70px 一格）
-        expect(await cell.evaluate(el => el.scrollWidth - el.clientWidth), `${SHELF_IDS[i]} 这一格文字被裁`)
+        expect(await cell.evaluate(el => el.scrollWidth - el.clientWidth), `${SHOWN_IDS[i]} 这一格文字被裁`)
           .toBeLessThanOrEqual(1);
       }
-      expect(shown).toEqual(SHELF_IDS.map(id => SHELF[id].tag));
+      expect(shown).toEqual(SHOWN_IDS.map(id => SHELF[id].tag));
     });
 
     test("挑到最贵那一支，关单那颗仍在屏内、仍点得着，人物卡也没被顶没", async ({ page }) => {
@@ -85,7 +89,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("button", { name: /查看梅女士/ }).first().click();
       await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
       // 面敷那句 note 最长（两句 + 件数），选中它之后这一段最高 —— 量最坏的一屏。
-      await page.locator(".serve-products button").nth(SHELF_IDS.indexOf("mask")).click();
+      await page.locator(".serve-products button").nth(SHOWN_IDS.indexOf("mask")).click();
       const commit = page.locator(".serve-commit");
       const b = await commit.boundingBox();
       expect(b, "关单按钮整颗不在屏内").toBeTruthy();
