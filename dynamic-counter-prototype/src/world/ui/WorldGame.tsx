@@ -28,7 +28,6 @@ import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
-import { Passersby } from "./Passersby.tsx";
 import { WebView } from "./WebView.tsx";
 import { WorldArchive } from "./WorldArchive.tsx";
 import {
@@ -874,7 +873,6 @@ export default function WorldGame() {
       onClickCapture={e => { if (drag.current.moved) { e.stopPropagation(); e.preventDefault(); drag.current.moved = false; } }}>
       <div className="world-map" ref={mapRef} style={{ transform: `translateX(${panX}px)` }}>
         <img className="wf-floor" src={asset("/assets/game/mall-floor.jpg")} alt="商场一层" draggable={false} />
-        <Passersby slot={world.slot} festival={!!world.festival} />
         {Object.entries(ZONE_LABEL).filter(([zone]) => !(zone === "backroom" && backroomIds.length)).map(([zone, label]) =>
           <span key={zone} className="wf-zone" aria-hidden="true" style={{ left: `${label.x}%`, top: `${label.y}%` }}>{label.word}</span>)}
         {Object.keys(world.present).map((id, index) => {
