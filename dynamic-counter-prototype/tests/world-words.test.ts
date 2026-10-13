@@ -151,7 +151,7 @@ test("挑货那句占位话：第一单把三件事讲完，开过单之后不�
   // 代词跟着人走：男顾客那句不能写死"她"
   assert.ok(servePickWord("他", true).includes("他摇头") && !servePickWord("他", true).includes("她"));
   // 这句只在 words.ts 写一次，界面读函数
-  const ui = readFileSync(new URL("../src/world/ui/WorldGame.tsx", import.meta.url), "utf8");
+  const ui = readFileSync(new URL("../src/world/ui/ConsultPanel.tsx", import.meta.url), "utf8");
   assert.ok(ui.includes("servePickWord"));
   assert.equal(ui.includes("再对着每支货底下那行小字挑"), false, "占位句不许在 JSX 里再拼一份");
 });

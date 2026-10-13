@@ -1,6 +1,7 @@
 // 人物卡：只读 World 与 Person，不接引擎、不做任何判断。
 // 看法与冷暖一律说成话（words.ts 唯一出处），不出现数字和进度条。
 import { ta } from "../pronoun.ts";
+import { clientNotes, TRAIT_LABEL } from "../consult.ts";
 import { ageAtSeason } from "../content/people.ts";
 import { useMemo } from "react";
 import { MobileScroll } from "../../mobile";
@@ -16,6 +17,7 @@ type PersonCardProps = {
 };
 
 export function PersonCard({ person, world, people, onClose }: PersonCardProps) {
+  const notes = clientNotes(world, person);
   const byId = useMemo(() => new Map<PersonId, Person>(people.map(p => [p.id, p])), [people]);
   const nameOf = (id: PersonId): string => (id === PLAYER ? PLAYER_NAME : byId.get(id)?.name ?? id);
 
@@ -41,6 +43,12 @@ export function PersonCard({ person, world, people, onClose }: PersonCardProps) 
     <MobileScroll className="pc-scroll">
       <p className="pc-opinion">{ta(person)}看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
       <p className="pc-tempers">{person.tempers.map(t => TEMPER_WORD[t]).join(" · ")}</p>
+      {(notes.known.length > 0 || notes.vetoKnown || notes.unitsKnown) && <section className="pc-section" aria-label="客情笔记">
+        <h3>你记得的事</h3>
+        {notes.known.length > 0 && <p>{notes.known.map(t => TRAIT_LABEL[t]).join(" · ")}</p>}
+        {notes.vetoKnown && <p>底线：{person.skin?.veto?.note}</p>}
+        {notes.unitsKnown && <p>一次最多带 {person.skin?.maxUnits} 件</p>}
+      </section>}
       <section className="pc-section">
         <h3>{ta(person)}的熟人</h3>
         {known.length === 0 ? <p className="pc-empty">{ta(person)}在这个场上还没什么熟人。</p> : <ul className="pc-known">

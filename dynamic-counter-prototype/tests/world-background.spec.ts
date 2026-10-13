@@ -89,7 +89,13 @@ test.describe("人情场切后台回来", () => {
     await p.getByRole("button", { name: /查看梅女士/ }).first().click();
     await p.locator(".world-verbs button", { hasText: "接待" }).click();
     await expect(p.locator(".world-serve")).toBeVisible();
-    await p.locator(".serve-products button").first().click();
+    await p.getByRole("button", { name: "这一次大概想带几支？" }).click();
+    await p.getByRole("tab", { name: "挑货开单" }).click();
+    await p.getByRole("button", { name: /精华/ }).click();
+    await p.getByRole("button", { name: "试一下", exact: true }).click();
+    const draft = await p.evaluate(key => JSON.parse(localStorage.getItem(key)!).ui.consults.entries.mei, SAVE_KEY);
+    expect(draft.begun).toBe(true);
+    expect(draft.patience).toBeLessThan(4);
     const before = await savedWorld(p);
     const beforeBar = await barWords(p);
 
@@ -100,7 +106,15 @@ test.describe("人情场切后台回来", () => {
     // 面板是本地状态，回来收在楼层上：她人还在现场，重新点她就接得回去
     await expect(p.locator(".world-serve")).toHaveCount(0);
     await p.getByRole("button", { name: /查看梅女士/ }).first().click();
-    await expect(p.locator(".world-verbs button", { hasText: "接待" })).toBeVisible();
+    await p.getByRole("button", { name: /接着谈/ }).click();
+    await expect(p.getByRole("tab", { name: "挑货开单" })).toHaveAttribute("aria-selected", "true");
+    await expect(p.locator(".serve-meta")).toContainText("上限 1 件");
+    await expect(p.locator(".serve-products button.on b")).toHaveText("精华");
+    await expect(p.getByRole("button", { name: "试一下", exact: true })).toBeDisabled();
+    expect(await p.evaluate(key => JSON.parse(localStorage.getItem(key)!).ui.consults.entries.mei, SAVE_KEY)).toEqual(draft);
+    await p.getByRole("button", { name: "开给她", exact: true }).click();
+    await expect(p.locator(".receipt-amount")).toContainText("+¥1,680");
+    expect(JSON.parse(await savedWorld(p)).energy).toBe(JSON.parse(before).energy);
   });
 
   test("只是切出去看一眼（hidden→visible）：什么都不推进", async ({ page }) => {

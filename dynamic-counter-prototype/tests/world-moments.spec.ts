@@ -58,6 +58,7 @@ const heard = async (page: Page, frequency: number) => (await tones(page)).some(
 const serve = async (page: Page, product: ShelfId, force: boolean) => {
   await page.getByRole("button", { name: /查看梅女士/ }).first().click();
   await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+  await page.getByRole("tab", { name: "挑货开单" }).click();
   await page.locator(".serve-products button").nth(SHELF_LINES.flatMap(l => l.ids).indexOf(product)).click();
   await page.locator(force ? ".serve-force" : ".serve-commit").click();
 };

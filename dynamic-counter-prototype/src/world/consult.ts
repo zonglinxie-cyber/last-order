@@ -25,6 +25,9 @@ export type ConsultQuestion = { key: string; label: string; kind: "trait" | "lin
 
 export type Consult = {
   person: PersonId;
+  stage: "listen" | "offer";
+  product: ShelfId | null;
+  units: number;
   /** 还肯听几句 */
   patience: number;
   /** 第一下动作才算正式接手（精力在那一刻花），在那之前关掉抽屉不花劲 */
@@ -147,14 +150,16 @@ export function openConsult(world: World, person: Person): Consult {
     : { said: [], unsaid: 0, vetoNote: null };
   const lines = talk.said.map(d => `「${demandWords(person.id, d)}」`);
   if (talk.vetoNote) lines.push(`「${talk.vetoNote}」`);
+  const notes = clientNotes(world, person);
   return {
     person: person.id,
+    stage: "listen", product: null, units: 1,
     patience: consultPatience(person, opinion),
     begun: false,
     looked: [], asked: [],
-    known: talk.said.map(d => d.trait),
-    vetoKnown: !!talk.vetoNote,
-    unitsKnown: (world.qualities[`bought:${person.id}`] ?? 0) > 0,
+    known: [...new Set([...notes.known, ...talk.said.map(d => d.trait)])],
+    vetoKnown: notes.vetoKnown || !!talk.vetoNote,
+    unitsKnown: notes.unitsKnown || (world.qualities[`bought:${person.id}`] ?? 0) > 0,
     tried: {},
     matched: false,
     lines,
@@ -262,3 +267,70 @@ export function priceWord(person: Person, id: ShelfId): string {
 
 /** 试过的货在格子上留一个字。 */
 export const TRIED_MARK: Record<FitTier, string> = { positive: "点头", mixed: "犹豫", negative: "摇头" };
+
+// 客情笔记是玩家实际听见的事实，不存预算与试用的最优答案。人物表变动时按当前需求过滤。
+export const CLIENT_NOTE_PREFIX = "client-note:";
+const noteKey = (id: PersonId, fact: string) => `${CLIENT_NOTE_PREFIX}${id}:${fact}`;
+export const TRAIT_LABEL: Record<Trait, string> = {
+  natural: "轻薄自然", correct: "当天见效", soothe: "舒缓泛红", steady: "温和不闷", wear: "长效持妆",
+};
+export function clientNotes(world: World, person: Person): Pick<Consult, "known" | "vetoKnown" | "unitsKnown"> {
+  return {
+    known: (person.skin?.demands ?? []).filter(d => world.qualities[noteKey(person.id, d.trait)] === 1).map(d => d.trait),
+    vetoKnown: !!person.skin?.veto && world.qualities[noteKey(person.id, "veto")] === 1,
+    unitsKnown: world.qualities[noteKey(person.id, "units")] === 1,
+  };
+}
+
+/** 第一次实际观察/询问/试用后记笔记；只打开面板不能免费获知新事实。 */
+export function rememberConsult(world: World, person: Person, consult: Consult): World {
+  if (!consult.begun || consult.person !== person.id) return world;
+  const facts = [...consult.known.filter(t => person.skin?.demands.some(d => d.trait === t)),
+    ...(consult.vetoKnown && person.skin?.veto ? ["veto"] : []), ...(consult.unitsKnown ? ["units"] : [])];
+  const added = facts.filter(f => world.qualities[noteKey(person.id, f)] !== 1);
+  return added.length ? { ...world, qualities: { ...world.qualities,
+    ...Object.fromEntries(added.map(f => [noteKey(person.id, f), 1])) } } : world;
+}
+
+/** 开单前只对照玩家已经知道的事实；不调用完整适配分，不泄露隐藏诉求或未来退货抽签。 */
+export function offerEvidence(c: Consult, person: Person, id: ShelfId, units: number): string[] {
+  if (!person.skin) return [];
+  const item = SHELF[id], lines: string[] = [];
+  const missed = c.known.filter(t => item.traits[t] === 0);
+  if (missed.length) lines.push(`已知缺口：这支接不住「${missed.map(t => TRAIT_LABEL[t]).join("、")}」。`);
+  const veto = person.skin.veto;
+  if (c.vetoKnown && veto && item.traits[veto.trait] < veto.below) lines.push(`碰到已知底线：${veto.note}`);
+  if (item.price > person.skin.budget) lines.push("一件就超预算，正常推荐也开不成。可以换便宜的，或今天先不卖。");
+  else if (item.price * units > person.skin.budget) lines.push(`总价超预算，正常推荐最多买得起 ${Math.floor(person.skin.budget / item.price)} 件。`);
+  if (c.unitsKnown && units > person.skin.maxUnits) lines.push(`只想带 ${person.skin.maxUnits} 件；多开口不会多卖，还会伤人情。`);
+  if (c.tried[id]) lines.push(`试用反应：${ta(person)}${TRIED_MARK[c.tried[id]!] }。`);
+  else lines.push("这支还没试过，可以花 1 次耐心验证，也可以直接开口推荐。");
+  if (stillHolding(c, person)) lines.push("还有没说出的顾虑，已知线索对上也不保证成交。");
+  return lines;
+}
+
+type SavedConsults = { season: number; day: number; slot: number; entries: Record<PersonId, Consult> };
+export const saveConsults = (world: World, entries: Record<PersonId, Consult>): SavedConsults =>
+  ({ season: world.season, day: world.day, slot: world.slot, entries });
+const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
+
+/** 旧档没有这一格仍可继续；坏记录只丢当前接待，不丢整季。日期不同绝不续用已付费状态。 */
+export function restoreConsults(data: unknown, world: World, people: Person[]): Record<PersonId, Consult> {
+  if (!record(data) || data.season !== world.season || data.day !== world.day || data.slot !== world.slot || !record(data.entries)) return {};
+  const out: Record<PersonId, Consult> = {};
+  for (const [id, value] of Object.entries(data.entries)) {
+    const p = people.find(x => x.id === id);
+    if (!p?.skin || !world.present[id] || !record(value) || value.person !== id) continue;
+    const v = value;
+    const strList = (x: unknown): x is string[] => Array.isArray(x) && x.length <= 64 && x.every(y => typeof y === "string" && y.length < 2000);
+    if (v.stage !== "listen" && v.stage !== "offer" || v.product !== null && (typeof v.product !== "string" || !Object.hasOwn(SHELF, v.product))) continue;
+    if (!Number.isInteger(v.units) || Number(v.units) < 1 || Number(v.units) > 4 || !Number.isInteger(v.patience) || Number(v.patience) < 0 || Number(v.patience) > CONSULT_PATIENCE + 1) continue;
+    if (typeof v.begun !== "boolean" || v.begun && !world.touched.includes(id)) continue;
+    if (![v.vetoKnown, v.unitsKnown, v.matched].every(x => typeof x === "boolean") || !strList(v.looked) || !strList(v.asked) || !strList(v.known) || !strList(v.lines)) continue;
+    if (!v.looked.every(k => spotsOf(p).some(s => s.key === k)) || !v.asked.every(k => questionsOf(p).some(q => q.key === k)) || !v.known.every(t => p.skin!.demands.some(d => d.trait === t))) continue;
+    if (!record(v.tried) || !Object.entries(v.tried).every(([k, tier]) => Object.hasOwn(SHELF, k) && ["positive", "mixed", "negative"].includes(String(tier)))) continue;
+    if (typeof v.mood !== "number" || !Number.isFinite(v.mood) || v.mood > 0 || v.mood < -30) continue;
+    out[id] = v as Consult;
+  }
+  return out;
+}

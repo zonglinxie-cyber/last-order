@@ -1165,6 +1165,14 @@ export function beginServe(world: World, people: Person[], personId: PersonId): 
     touched: [...new Set([...world.touched, personId])] };
 }
 
+/** 已经接手后收起这单：花过的精力不退，谈话造成的脸色照结，不凭空奖励关系。 */
+export function leaveServe(world: World, people: Person[], personId: PersonId, mood = 0): World {
+  const person = personOf(people, personId);
+  if (!person?.skin || !world.touched.includes(personId)) return world;
+  const next = mood ? addOpinion(world, personId, mood) : world;
+  return say(next, `你收起了试用品，今天没给${person.name}开单。已经聊到的事记在了客情笔记里。`, [personId]);
+}
+
 /** 接待的结账：精力已经由 beginServe 花过。mood 是看 / 问 / 试那几句攒下的看法增减，开单这一刻一起结。 */
 export function settleServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false, mood = 0): World {
   const person = personOf(people, personId);
@@ -1351,7 +1359,7 @@ export function endDay(world: World, people: Person[]): World {
  * 它说的是这句话在哪一季说完的，换季不该把它换成新的季号。
  * 「人生一步」那一批同样靠跨季：life:<id> 是她走到第几步、life:<id>:how 是上一步怎么落的，
  * 今年的那一步要认去年的那一步，清零就等于每年把她重置成刚认识的人。 */
-const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:"] as const;
+const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:", "client-note:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。

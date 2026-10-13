@@ -5,15 +5,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   CONSULT_PATIENCE, PUSH_QUESTION_MOOD, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, spotsOf, stillHolding, tryOn,
+  clientNotes, offerEvidence, rememberConsult, restoreConsults, saveConsults,
 } from "../src/world/consult.ts";
 import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
 import { existsSync } from "node:fs";
 import {
-  ENERGY_PER_DAY, OVER_ASK_OPINION, VERB_ENERGY, beginServe, newWorld, opinionOf, resolveServe, settleServe,
+  ENERGY_PER_DAY, OVER_ASK_OPINION, VERB_ENERGY, beginServe, leaveServe, newWorld, nextSeason, opinionOf, parseWorld, resolveServe, serializeWorld, settleServe,
 } from "../src/world/engine.ts";
 import { SHELF, SHELF_IDS, bestShelf, fitOfPerson, shelfFitTier } from "../src/world/shelf.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { Person, World } from "../src/world/types.ts";
+import { saleFeedback } from "../src/world/sales-feedback.ts";
 
 const skinned = PEOPLE.filter(p => p.skin);
 const who = (id: string) => PEOPLE.find(p => p.id === id)!;
@@ -155,4 +157,99 @@ test("接待里攒下的脸色在开单那一刻结", () => {
   const calm = settleServe(w, PEOPLE, "shen", bestShelf(p), 1);
   const sour = settleServe(w, PEOPLE, "shen", bestShelf(p), 1, false, PUSH_QUESTION_MOOD);
   assert.equal(opinionOf(sour, "shen") - opinionOf(calm, "shen"), PUSH_QUESTION_MOOD);
+});
+
+test("客情笔记来自实际对话：离场、存读与换季后仍能用，不会补出没问过的需求", () => {
+  const p = who("shen"), w = atCounter([p.id]);
+  const opened = openConsult(w, p);
+  assert.equal(rememberConsult(w, p, opened), w, "只打开不能记新的笔记");
+  const q = questionsOf(p).find(q => q.kind === "line" && q.reveals?.includes("steady"))!;
+  const c = askHer(opened, p, q.key);
+  const learned = rememberConsult(beginServe(w, PEOPLE, p.id), p, c);
+  assert.ok(clientNotes(learned, p).known.includes("steady"));
+  assert.deepEqual(clientNotes(learned, p).known.sort(), [...c.known].sort());
+  assert.equal(clientNotes(learned, p).unitsKnown, false);
+  const loaded = parseWorld(serializeWorld(learned))!;
+  const next = nextSeason(loaded, PEOPLE);
+  assert.deepEqual(clientNotes(next, p), clientNotes(learned, p));
+  assert.ok(openConsult(next, p).known.includes("steady"));
+  assert.equal(clientNotes(w, p).known.length, 0, "原世界不可被修改");
+});
+
+test("付过精力的接待完整恢复：耐心、坏脸色、试用、件数和当前页面；跨时段与坏记录拒绝", () => {
+  const p = who("shen");
+  let w = beginServe(atCounter([p.id]), PEOPLE, p.id);
+  let c = askHer(openConsult(w, p), p, questionsOf(p).find(q => q.kind === "push")!.key);
+  c = { ...tryOn(c, p, "plain"), product: "plain", units: 2, stage: "offer" };
+  w = rememberConsult(w, p, c);
+  const data = JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: c })));
+  assert.deepEqual(restoreConsults(data, w, PEOPLE), { [p.id]: c });
+  assert.deepEqual(restoreConsults(data, { ...w, slot: 1 }, PEOPLE), {});
+  assert.deepEqual(restoreConsults(data, { ...w, season: 2 }, PEOPLE), {});
+  assert.deepEqual(restoreConsults(data, { ...w, touched: [] }, PEOPLE), {});
+  for (const bad of [undefined, [], { ...data, entries: { shen: { ...c, patience: 99 } } },
+    { ...data, entries: { shen: { ...c, product: "constructor" } } },
+    { ...data, entries: { shen: { ...c, known: ["made-up"] } } },
+    { ...data, entries: { shen: { ...c, tried: { plain: { positive: true } } } } }]) {
+    assert.deepEqual(restoreConsults(bad, w, PEOPLE), {});
+  }
+});
+
+test("售前提示只用已知信息：隐藏需求改变不会泄题；已问出的数量、底线与预算会提醒", () => {
+  const p = who("shen"), c = openConsult(atCounter([p.id]), p);
+  const changed: Person = { ...p, skin: { ...p.skin!, demands: p.skin!.demands.map(d => c.known.includes(d.trait) ? d : { ...d, weight: d.weight === 3 ? 1 : 3 }) } };
+  assert.deepEqual(offerEvidence(c, p, "glow", 4), offerEvidence(c, changed, "glow", 4));
+  assert.ok(offerEvidence(c, p, "glow", 4).some(x => x.includes("轻薄自然")));
+  assert.ok(!offerEvidence(c, p, "glow", 4).some(x => x.includes("只想带")));
+  const learned = askHer(c, p, questionsOf(p).find(q => q.kind === "units")!.key);
+  assert.ok(offerEvidence(learned, p, "glow", 4).some(x => x.includes("只想带")));
+  const lowBudget: Person = { ...p, skin: { ...p.skin!, budget: 100 } };
+  assert.ok(offerEvidence(c, lowBudget, "glow", 1).some(x => x.includes("一件就超预算")));
+});
+
+test("主动不卖不会退精力、刷好感或抹掉推销问话的代价", () => {
+  const w = beginServe(atCounter(["shen"]), PEOPLE, "shen");
+  const left = leaveServe(w, PEOPLE, "shen", PUSH_QUESTION_MOOD);
+  assert.equal(left.energy, w.energy);
+  assert.equal(left.money, w.money);
+  assert.equal(opinionOf(left, "shen"), opinionOf(w, "shen") + PUSH_QUESTION_MOOD);
+  assert.equal(opinionOf(leaveServe(w, PEOPLE, "shen"), "shen"), opinionOf(w, "shen"));
+  assert.equal(left.qualities["bought:shen"], undefined);
+});
+
+test("复盘来自实际结算：正常、超量、超预算与硬推分别解释，不提前揭晓退货", () => {
+  const p = who("mei"), w = atCounter([p.id]);
+  const id = bestShelf(p);
+  const sold = resolveServe(w, PEOPLE, p.id, id, 4);
+  const f = saleFeedback(w, sold, p, id, 4);
+  assert.equal(f.amount, sold.money - w.money);
+  assert.equal(f.units, p.skin!.maxUnits);
+  assert.equal(f.opinion, opinionOf(sold, p.id) - opinionOf(w, p.id));
+  assert.equal(f.title, "这单开口多了");
+  assert.match(f.explanation, /最多只想带/);
+  assert.ok(f.lines.some(x => x.includes("用不了那么多")));
+  const forced = resolveServe(w, PEOPLE, p.id, "plain", 2, true);
+  const hard = saleFeedback(w, forced, p, "plain");
+  assert.equal(hard.tone, "mixed");
+  assert.match(hard.explanation, /可能退/);
+  assert.deepEqual(hard, saleFeedback(w, { ...forced, appointments: [] }, p, "plain"));
+  const emptyLedger = { ...beginServe(w, PEOPLE, p.id), compliance: 0, standing: 0 };
+  const forcedAtFloor = settleServe(emptyLedger, PEOPLE, p.id, "plain", 2, true);
+  assert.equal(forcedAtFloor.compliance, 0);
+  assert.ok(forcedAtFloor.money > emptyLedger.money);
+  assert.match(saleFeedback(emptyLedger, forcedAtFloor, p, "plain").explanation, /可能退/,
+    "台账已经归零，硬推仍有真实的关系代价，不能被复盘当成普通成交");
+  const later = { ...w, memories: forced.memories };
+  const honestAfterForce = resolveServe(later, PEOPLE, p.id, id, 1);
+  assert.doesNotMatch(saleFeedback(later, honestAfterForce, p, id).explanation, /可能退/,
+    "旧硬推记录不能污染这一次正常成交");
+  const poor: Person = { ...p, skin: { ...p.skin!, budget: 1 } };
+  const missed = resolveServe(w, [poor], p.id, id, 1);
+  assert.match(saleFeedback(w, missed, poor, id).explanation, /预算/);
+  const recent = { ...w, day: 2, qualities: { ...w.qualities, [`bought:${p.id}`]: 1 } };
+  assert.match(saleFeedback(recent, resolveServe(recent, PEOPLE, p.id, id, 1), p, id).explanation, /没用完/);
+  const distrust = { ...w, opinion: { [p.id]: -100 } };
+  const refused = saleFeedback(distrust, resolveServe(distrust, PEOPLE, p.id, id, 1), p, id);
+  assert.match(refused.explanation, /信任/);
+  assert.match(refused.lesson, /修复关系/);
 });

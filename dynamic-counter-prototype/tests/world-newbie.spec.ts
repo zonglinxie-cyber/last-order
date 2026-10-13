@@ -67,6 +67,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page);
       await page.getByRole("button", { name: /查看梅女士/ }).first().click();
       await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       await expect(page.locator(".world-serve")).toBeVisible();
       const cells = page.locator(".serve-products button");
       expect(await cells.count()).toBe(SHELF_IDS.length);
@@ -88,6 +89,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page);
       await page.getByRole("button", { name: /查看梅女士/ }).first().click();
       await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       // 面敷那句 note 最长（两句 + 件数），选中它之后这一段最高 —— 量最坏的一屏。
       await page.locator(".serve-products button").nth(SHOWN_IDS.indexOf("mask")).click();
       const commit = page.locator(".serve-commit");
@@ -99,9 +101,9 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         [Math.round(b!.x + b!.width / 2), Math.round(b!.y + b!.height / 2)]);
       expect(hit).toBe("serve-commit");
       // 挑货时她还在屏上：名字那一行 + 她对你的看法，再矮就等于看不见她在跟谁说话
-      const card = await page.locator(".person-card").boundingBox();
-      expect(card!.height).toBeGreaterThanOrEqual(104);
-      await expect(page.locator(".person-card").first()).toBeVisible();
+      const heading = page.getByRole("heading", { name: "梅女士 · 柜台接待" });
+      await expect(heading).toBeVisible();
+      expect((await heading.boundingBox())!.y).toBeGreaterThanOrEqual(0);
     });
 
     test("劲用完了那句只说真正的原因，不再拿「或者」把两条推给玩家", async ({ page }) => {
@@ -120,6 +122,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page);
       await page.getByRole("button", { name: /查看梅女士/ }).first().click();
       await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       const note = page.locator(".serve-note");
       await expect(note).toContainText("第一单");
       await expect(note).toContainText("小字");
@@ -140,6 +143,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page, { money: 1680, qualities: { "bought:zhou": 1 } });
       await page.getByRole("button", { name: /查看梅女士/ }).first().click();
       await page.locator(".world-verbs button", { hasText: "接待" }).first().click();
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       const note = page.locator(".serve-note");
       await expect(note).toContainText("不止一支");
       expect(await note.textContent()).not.toContain("第一单");

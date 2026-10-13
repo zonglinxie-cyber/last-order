@@ -7,8 +7,8 @@ import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
-  beginServe, drawStorylet, endDay, hasOpenedSale, isReturningGuest, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
-  verbOptions, energyCeiling, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
+  verbOptions, verbEnergyNow, energyCeiling, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { seasonRecap } from "../recap.ts";
@@ -17,12 +17,13 @@ import { askedToday, dueToday, resolveRequestChoice } from "../requests.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
-import { unsaidWord } from "../serve-talk.ts";
 import { GoalStrip, LevelResult, SeasonLevels } from "./Levels.tsx";
 import { weekDaysLeft, weekGoalWord, weekLevelWord, weekMoneyOf, weekStarsKey, weekTargetOf } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
-import { TRIED_MARK, askHer, budgetWord, lookAt, openConsult, patienceWord, plateOf, priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult } from "../consult.ts";
-import { SHELF, SHELF_LINES, type ShelfId } from "../shelf.ts";
+import { openConsult, rememberConsult, restoreConsults, saveConsults, type Consult } from "../consult.ts";
+import type { ShelfId } from "../shelf.ts";
+import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
+import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -34,7 +35,7 @@ import {
   markCoachSeen, parseCoachSeen, serializeCoachSeen, skipCoachSeen,
   type CoachStep, type CoachTip, type CoachView,
 } from "./coach.ts";
-import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, servePickWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
+import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
 import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
@@ -110,6 +111,7 @@ type UiState = {
   dayBase?: DayBase;
   /** 哪天看过「今天的请求」卡：同一天刷新不重弹 */
   reqSeen?: number;
+  consults?: unknown;
 };
 
 const restore = (): { world: World; ui: UiState } | null => {
@@ -352,10 +354,9 @@ export default function WorldGame() {
   const [selected, setSelected] = useState<PersonId | null>(null);
   const [pick, setPick] = useState<{ verb: Verb; calls: VerbCall[] } | null>(null);
   const [serving, setServing] = useState(false);
-  const [serveProduct, setServeProduct] = useState<ShelfId | null>(null);
-  const [serveUnits, setServeUnits] = useState(1);
   // 这一时段柜上谈到一半的接待：关掉抽屉再点回来接着谈，翻时段清空（她走了，话也就断了）。
-  const [consults, setConsults] = useState<Record<PersonId, Consult>>({});
+  const [consults, setConsults] = useState<Record<PersonId, Consult>>(() => boot ? restoreConsults(boot.ui.consults, boot.world, PEOPLE) : {});
+  const [receipt, setReceipt] = useState<{ person: Person; product: ShelfId; feedback: SaleFeedback } | null>(null);
   const [webOpen, setWebOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -384,7 +385,6 @@ export default function WorldGame() {
   // 接待那一屏：看 / 问 / 试 的判定全在 consult.ts；没摸出来的诉求照样参与 fitScore。
   const consult = serving && person?.skin ? consults[person.id] ?? null : null;
   const midConsult = person ? consults[person.id]?.begun ?? false : false;
-  const plate = consult && person ? plateOf(person) : null;
   const pickTargets = useMemo(() => {
     if (!pick || !selected) return [] as PersonId[];
     return [...new Set(pick.calls.map(c => c.targets.find(t => t !== selected)!))];
@@ -408,8 +408,9 @@ export default function WorldGame() {
       report: report ?? undefined,
       dayBase: dayBase ?? undefined,
       reqSeen: reqSeenDay || undefined,
+      consults: saveConsults(world, consults),
     } satisfies UiState,
-  }), [phase, world, pending, report, dayBase, reqSeenDay]);
+  }), [phase, world, pending, report, dayBase, reqSeenDay, consults]);
   useEffect(() => {
     if (phase === "intro") return;
     try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
@@ -478,7 +479,7 @@ export default function WorldGame() {
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
     setReqSeenDay(ui.reqSeen ?? 0);
     setWorld(w);
-    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults({});
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults(restoreConsults(ui.consults, w, PEOPLE));
     if (ui.screen === "season") { setPhase("season"); return; }
     if (ui.screen === "report" && ui.report) { setReport(ui.report); setPhase("report"); return; }
     const card = ui.pending ? STORYLETS.find(s => s.id === ui.pending!.id) : undefined;
@@ -490,7 +491,8 @@ export default function WorldGame() {
   // —— 时段推进 ——
   const nextTurn = () => {
     setSelected(null); setPick(null); setServing(false); setResult(null); setConsults({});
-    const settled = ambient(world, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
+    const closed = Object.values(consults).filter(c => c.begun).reduce((w, c) => leaveServe(w, PEOPLE, c.person, c.mood), world);
+    const settled = ambient(closed, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
     // 客人被对面请走是这一档唯一要在这里补的一声：它不改钱也不改比分，世界那一侧的时刻判据认不出它。
     if (coachPoached(settled, PEOPLE) && !coachPoached(world, PEOPLE)) sfx("down");
     sfx("bell");
@@ -542,28 +544,27 @@ export default function WorldGame() {
       if (call) { apply(call); return; }
       setPick(null); // 点的不是目标：退出选人，照常开她的卡
     }
-    setSelected(id); setServing(false); setServeProduct(null); setServeUnits(1);
+    setSelected(id); setServing(false);
   };
   const openServe = () => {
     if (!person) return;
     if (!consults[person.id]) setConsults(m => ({ ...m, [person.id]: openConsult(world, person) }));
-    setServing(true); setServeProduct(null); setServeUnits(1);
+    setServing(true);
   };
   // 看 / 问 / 试的第一下才算正式接手：精力在这一刻花（beginServe），之后再点不重复扣。
   const consultAct = (step: (c: Consult) => Consult) => {
     if (!person || !consult) return;
     const next = step(consult);
     if (next === consult) return;
-    if (!consult.begun) {
-      const w = beginServe(world, PEOPLE, person.id);
-      if (w === world) return;
-      setWorld(w);
-    }
+    const w = consult.begun ? world : beginServe(world, PEOPLE, person.id);
+    if (!consult.begun && w === world) return;
+    setWorld(rememberConsult(w, person, next));
     sfx("tap");
     setConsults(m => ({ ...m, [person.id]: next }));
   };
   const doServe = (force: boolean) => {
-    if (!selected || !serveProduct) return;
+    if (!selected || !person || !consult?.product) return;
+    const serveProduct = consult.product, serveUnits = consult.units;
     const c = consults[selected];
     const next = c?.begun
       ? settleServe(world, PEOPLE, selected, serveProduct, serveUnits, force, c.mood)
@@ -572,6 +573,13 @@ export default function WorldGame() {
     setWorld(next); setServing(false);
     setConsults(m => { const { [selected]: _, ...rest } = m; return rest; });
     setResult(next.log.at(-1)?.text ?? null);
+    setReceipt({ person, product: serveProduct, feedback: saleFeedback(world, next, person, serveProduct, serveUnits, c?.mood ?? 0) });
+  };
+  const stopServe = () => {
+    if (!person || !consult) return;
+    if (consult.begun) setWorld(leaveServe(world, PEOPLE, person.id, consult.mood));
+    setConsults(m => { const { [person.id]: _, ...rest } = m; return rest; });
+    setSelected(null); setServing(false);
   };
   const chooseStory = (index: number) => {
     if (!pending) return;
@@ -909,7 +917,7 @@ export default function WorldGame() {
     {/* 抽屉盖住了「现场」栏，动作的结果才在这里说一遍；抽屉收起时就只在现场栏里念。 */}
     {result && person && <p className="world-toast" role="status">{result}</p>}
 
-    {person && <div className="world-drawer">
+    {person && !serving && !receipt && <div className="world-drawer">
       <PersonCard person={person} world={world} people={PEOPLE} onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
         <p>{pickHint(pick.verb, person)}</p>
@@ -917,54 +925,19 @@ export default function WorldGame() {
           {pickTargets.map(id => <button key={id} type="button" onClick={() => tapPerson(id)}>{nameOf(id)}{id in world.present ? "" : " · 不在场"}</button>)}
           <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
         </div>
-      </div> : serving && person.skin && consult ? <div className="world-serve">
-        <p className="serve-meta">{patienceWord(consult, person)} · {budgetWord(consult, person)}</p>
-        <div className="serve-lines" aria-live="polite">
-          {consult.lines.length ? consult.lines.map((line, i) => <p key={i} className={i === consult.lines.length - 1 && consult.begun ? "fresh" : ""}>{line}</p>)
-            : <p>「{person.voice.greet}」</p>}
-          {stillHolding(consult, person) && <p className="serve-hold">{unsaidWord(person.gender)}</p>}
-        </div>
-        {plate ? <div className="serve-face" role="group" aria-label="看"
-          style={{ backgroundImage: `url(${asset(plate.src)})`, backgroundPositionY: `${plate.cropY}%` }}>
-          {spotsOf(person).map(spot => <button key={spot.key} type="button" aria-label={`看${ta(person)}的${spot.label}`}
-            className={`face-spot${consult.looked.includes(spot.key) ? " found" : ""}`} style={{ left: `${spot.at!.x}%`, top: `${spot.at!.y}%` }}
-            disabled={consult.patience <= 0 || consult.looked.includes(spot.key)}
-            onClick={() => consultAct(c => lookAt(c, person, spot.key))}><i aria-hidden="true" /><span>{spot.label}</span></button>)}
-        </div> : <div className="serve-probe" aria-label="看">
-          <span>看</span>
-          {spotsOf(person).map(spot => <button key={spot.key} type="button" disabled={consult.patience <= 0 || consult.looked.includes(spot.key)}
-            onClick={() => consultAct(c => lookAt(c, person, spot.key))}>{spot.label}</button>)}
-        </div>}
-        <div className="serve-probe" aria-label="问">
-          <span>问</span>
-          {questionsOf(person).map(q => <button key={q.key} type="button" disabled={consult.patience <= 0 || consult.asked.includes(q.key)}
-            onClick={() => consultAct(c => askHer(c, person, q.key))}>{q.label}</button>)}
-        </div>
-        {SHELF_LINES.map(line => <div key={line.word} className="serve-line" role="group" aria-label={line.word}>
-          <span className="serve-line-word">{line.word}</span>
-          <div className="serve-products">{line.ids.map(pid => {
-            const tried = consult.tried[pid];
-            return <button key={pid} type="button" className={`${serveProduct === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => setServeProduct(pid)}>
-              <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
-          })}</div>
-        </div>)}
-        <p className="serve-note">{serveProduct ? priceWord(person, serveProduct) : servePickWord(ta(person), !hasOpenedSale(world))}</p>
-        <div className="serve-foot">
-          <div className="serve-units">{[1, 2, 3, 4].map(u => <button key={u} type="button" className={serveUnits === u ? "on" : ""} onClick={() => setServeUnits(u)}>{u} 件</button>)}</div>
-          <div className="serve-actions">
-            <button className="serve-try" type="button" disabled={!serveProduct || consult.patience <= 0 || !!consult.tried[serveProduct]}
-              onClick={() => serveProduct && consultAct(c => tryOn(c, person, serveProduct))}>试一下</button>
-            <button className="serve-commit" type="button" disabled={!serveProduct} onClick={() => doServe(false)}>开给{ta(person)}</button>
-            <button className="serve-force" type="button" disabled={!serveProduct} onClick={() => doServe(true)}>硬推</button>
-          </div>
-        </div>
       </div> : <div className="world-verbs">
         {midConsult && <button type="button" className="resume" onClick={openServe}><b>接着谈</b><small>这一单的劲已经花过</small></button>}
-        {verbs.filter(v => !(midConsult && v === "serve")).map(v => <button key={v} type="button" onClick={() => v === "serve" ? openServe() : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力</small></button>)}
-        {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{VERB_ENERGY[v]} 精力 · 再点一人</small></button>)}
+        {verbs.filter(v => !(midConsult && v === "serve")).map(v => <button key={v} type="button" onClick={() => v === "serve" ? openServe() : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力</small></button>)}
+        {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力 · 再点一人</small></button>)}
         {!midConsult && verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
       </div>}
     </div>}
+
+    {person && consult && <ConsultPanel world={world} person={person} consult={consult}
+      onAct={consultAct} onCommit={doServe} onLeave={stopServe}
+      onChange={patch => setConsults(m => ({ ...m, [person.id]: { ...m[person.id], ...patch } }))}
+      onClose={() => { setServing(false); setSelected(null); }} />}
+    {receipt && <SaleReceipt {...receipt} onClose={() => { setReceipt(null); setSelected(null); }} />}
 
     {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqSeenDay(world.day)} />}

@@ -14,7 +14,7 @@ import { WORLD_PROGRESS_KEY } from "../src/world/progress.ts";
 import { MAINLINE_ACTS, PEOPLE } from "../src/world/content/index.ts";
 import { ENDINGS, seasonEnding } from "../src/world/ending.ts";
 
-const AUDIT_DIR = "../audit/world-smoke";
+const AUDIT_DIR = process.env.WORLD_SMOKE_AUDIT_DIR ?? "../audit/world-smoke";
 const SEED = 20261009;
 const FIXED_NOW = 1_800_000_000_000;
 const STEP_MS = 5_000; // 单步超过 5 秒算卡死
@@ -369,6 +369,7 @@ async function doOneAction(page: Page, rnd: () => number, wantServe: boolean): P
   if (word === "接待") {
     const panel = page.locator(".world-serve");
     if (!(await visible(panel))) return { note: "", problem: `${actor.name}：点「接待」之后接待面板没出来` };
+    await page.getByRole("tab", { name: "挑货开单" }).click({ timeout: STEP_MS });
     const products = panel.locator(".serve-products button");
     if ((await products.count()) === 0) return { note: "", problem: `${actor.name}：接待面板里没有货可选` };
     await products.first().click({ timeout: STEP_MS });
@@ -376,6 +377,7 @@ async function doOneAction(page: Page, rnd: () => number, wantServe: boolean): P
     await commit.waitFor({ state: "visible", timeout: STEP_MS }).catch(() => undefined);
     if (await commit.isDisabled().catch(() => true)) return { note: "", problem: `${actor.name}：选完第一支货，「开给」还是按不动` };
     await commit.click({ timeout: STEP_MS });
+    await page.getByRole("button", { name: "回到楼层", exact: true }).click({ timeout: STEP_MS });
     return { note: `对${actor.name}接待 · 第一支货开给她` };
   }
 

@@ -96,10 +96,11 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".serve-hold")).toContainText("她像是还有顾虑，没说出来。");
       await expect(page.locator(".serve-lines")).not.toContainText("立竿见影");
       // 挑一支货，下面那行念它的性子，给玩家对照她自己那句话。
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       await page.getByRole("button", { name: /精华/ }).click();
       await expect(page.locator(".serve-note")).toContainText("舒缓干燥与泛红");
       await page.getByRole("button", { name: "开给她" }).click();
-      await expect(page.locator(".world-toast")).toContainText(/进账 ¥1,?680/);
+      await expect(page.locator(".receipt-amount")).toContainText("+¥1,680");
     });
 
     test("看法低时她只肯说一句", async ({ page }) => {
@@ -138,6 +139,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(meta).toContainText("上限 1 件");
       await expect(meta).not.toHaveText(before!);
       await expect.poll(saved).toBe(energy - 12);
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       await page.getByRole("button", { name: /精华/ }).click();
       await page.getByRole("button", { name: "试一下" }).click();
       await expect(page.locator(".serve-products button.on small")).toHaveText(/她(点头|犹豫|摇头)/);
@@ -147,9 +149,10 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接着谈/ }).click();
       await expect(page.locator(".serve-lines")).toContainText("一支就够");
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       await page.getByRole("button", { name: /精华/ }).click();
       await page.getByRole("button", { name: "开给她" }).click();
-      await expect(page.locator(".world-toast")).toContainText(/进账 ¥1,?680/);
+      await expect(page.locator(".receipt-amount")).toContainText("+¥1,680");
       await expect.poll(saved).toBe(energy - 12);
     });
 
@@ -322,6 +325,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       // 招呼过一次她就从"新客"翻成"回头客"，计数跟着掉一格。
       await page.getByRole("button", { name: /查看梅女士/ }).click();
       await page.getByRole("button", { name: /接待/ }).click();
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       await page.getByRole("button", { name: /精华/ }).click();
       await page.getByRole("button", { name: "开给她" }).click();
       await expect(page.locator('.wf-actor[data-pid="mei"] .wf-kind')).toHaveText("回头客");
@@ -428,11 +432,12 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       // 每格里还挂一个价签 <small>，字号和命中区最容易在这里先烂掉。
       await page.getByRole("button", { name: /接待/ }).click();
       await expect(page.locator(".world-serve")).toBeVisible();
+      await page.getByRole("tab", { name: "挑货开单" }).click();
       expect(await page.locator(".serve-products button").count()).toBe(12);
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow).toBeLessThanOrEqual(1);
-      const outside = await page.evaluate(() => [...document.querySelectorAll(".world-app *")]
+      const outside = await page.evaluate(() => [...document.querySelectorAll(".world-app *, .world-serve *")]
         .filter(el => el.getBoundingClientRect().width > 0)
         .filter(el => {
           const r = el.getBoundingClientRect();
@@ -448,7 +453,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         .map(el => `${el.tagName}.${el.className.toString()}`));
       expect(outside).toEqual([]);
 
-      const smallButtons = await page.evaluate(() => [...document.querySelectorAll(".world-app button")]
+      const smallButtons = await page.evaluate(() => [...document.querySelectorAll(".world-app button, .world-serve button")]
         .filter(el => {
           const r = el.getBoundingClientRect();
           return r.width > 0 && (r.width < 44 || r.height < 44);
@@ -456,7 +461,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         .map(el => el.textContent?.trim() ?? ""));
       expect(smallButtons).toEqual([]);
 
-      const smallText = await page.evaluate(() => [...document.querySelectorAll(".world-app *")]
+      const smallText = await page.evaluate(() => [...document.querySelectorAll(".world-app *, .world-serve *")]
         .filter(el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent?.trim()))
         .filter(el => parseFloat(getComputedStyle(el as HTMLElement).fontSize) < 12)
         .map(el => `${el.tagName}.${el.className.toString()} "${el.textContent?.trim().slice(0, 20)}" <${getComputedStyle(el).fontSize}>`));

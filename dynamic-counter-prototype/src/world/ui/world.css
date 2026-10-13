@@ -104,7 +104,7 @@
 /* min-height 是量出来的：名字那一行 + 她对你的看法 + 冷暖那半句。不设下限的话，
    320×568 那一档一开接待整张人物卡被面板顶成 1px —— 玩家挑货时看不见她是谁。 */
 .world-drawer .person-card { position:relative; inset:auto; flex:1 1 auto; min-height:104px; height:auto; max-height:none; border-radius:16px 16px 0 0; border-bottom:0; box-shadow:0 -14px 40px #000c; }
-.world-verbs,.world-pick,.world-serve { flex:0 0 auto; background:#241413; border-top:1px solid #f0cf9122; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+.world-verbs,.world-pick { flex:0 0 auto; background:#241413; border-top:1px solid #f0cf9122; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
 /* 动作摊成两行，不再横滑：横滑那版 390 上藏 2 个、320 上藏 3 个，scrollLeft 停在 0，
    新手的「介绍认识 / 托她照看」等于不存在。 */
 .world-verbs { display:flex; flex-wrap:wrap; gap:8px; }
@@ -120,59 +120,7 @@
 .pick-targets button { flex:0 0 auto; min-height:44px; padding:0 14px; border:1px solid #f0cf9155; border-radius:999px; background:#f0c97814; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
 .pick-targets .pick-cancel { border-color:#ffffff22; background:transparent; color:#a99689; }
 
-/* 接待：十二支货、件数、她自己说出口的需要。带子装不下时这一段自己滚，
-   件数与开单那一排（.serve-foot）钉在带子底 —— 关单按钮不许掉出屏幕。 */
-.world-serve { flex:0 0 auto; max-height:calc(100% - 104px); overflow-y:auto; }
-.world-serve .serve-said { margin:0 0 4px; color:#ffe8b6; font-size:12px; line-height:1.5; }
-.world-serve .serve-veto { margin:0 0 4px; color:#e8b6c0; font-size:12px; line-height:1.5; }
-.world-serve .serve-hold { margin:0 0 4px; color:#b99b7f; font-size:12px; line-height:1.5; }
-.world-serve .serve-meta { margin:0 0 8px; color:#a99689; font-size:12px; line-height:1.5; }
-.world-serve .serve-note { margin:8px 0 0; color:#b99b7f; font-size:12px; line-height:1.5; }
-/* 十二支货分底妆一排、护肤两排，每排四列（SHELF_LINES）。原来 flex 一行三支，八支就会挤成 40px 一格，
-   「¥2,280」在 320 宽那一档直接被 min-width:0 裁掉 —— 网格 + minmax(0,1fr) 才既等宽又不越界。 */
-.serve-products { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
-.serve-products button { min-width:0; min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:6px 2px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; }
-.serve-products button.on { border-color:#f0c978; background:#f0c9781c; }
-.serve-products button b { font:600 13px 'Noto Serif SC',serif; }
-.serve-products button small { color:#b99b7f; font-size:12px; }
-/* 短标签 = note 里"它管什么"那半句的压缩版，十二支不点也能扫完（出处 shelf.ts 的 tag）。 */
-.serve-products button em { color:#d5b994; font:600 12px 'Noto Serif SC',serif; font-style:normal; }
-.serve-foot { position:sticky; bottom:calc(8px + env(safe-area-inset-bottom)); margin-top:8px; background:#241413; }
-.serve-units { display:flex; gap:8px; }
-.serve-units button { flex:1 1 0; min-height:44px; border:1px solid #f0cf9133; border-radius:12px; background:#ffffff08; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; }
-.serve-units button.on { border-color:#f0c978; background:#f0c9781c; }
-.serve-actions { display:flex; gap:8px; margin-top:8px; }
-.serve-actions button { flex:1 1 0; min-height:48px; border-radius:12px; font:700 14px 'Noto Serif SC',serif; }
-.world-serve .serve-lines { margin:0 0 6px; padding:6px 8px; border-radius:10px; background:#ffffff06; }
-.world-serve .serve-lines p { margin:0 0 3px; color:#d9c2a4; font-size:12px; line-height:1.5; }
-.world-serve .serve-lines p:last-child { margin-bottom:0; }
-.world-serve .serve-lines p.fresh { color:#ffe8b6; }
-.serve-probe { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:0 0 6px; }
-.serve-probe > span { flex:none; width:22px; color:#f0c978; font:700 13px 'Noto Serif SC',serif; }
-.serve-probe button { min-height:44px; padding:4px 10px; border:1px solid #f0cf9133; border-radius:999px; background:#ffffff08; color:#ffe8b6; font-size:12px; }
-.serve-probe button:disabled { opacity:.4; }
-.serve-products button.tried-positive { border-color:#8fc59a88; }
-.serve-products button.tried-positive small { color:#a8dcb0; }
-.serve-products button.tried-mixed small { color:#e8cf8a; }
-.serve-products button.tried-negative { opacity:.6; }
-.serve-products button.tried-negative small { color:#e8a6a6; }
-.serve-face { position:relative; width:100%; aspect-ratio:853 / 340; margin:0 0 6px; border-radius:12px; background-size:100% auto; background-repeat:no-repeat; box-shadow:inset 0 0 0 1px #f0cf9133; }
-.serve-face .face-spot { position:absolute; width:44px; height:44px; margin:-22px 0 0 -22px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:#f5d08f18; box-shadow:0 0 0 1px #ffe2a9b8,0 0 20px #ffd77e66; animation:face-pulse 2s ease-in-out infinite; }
-.serve-face .face-spot i { width:7px; height:7px; border:1px solid #fff1cf; border-radius:50%; background:#e6b969; box-shadow:0 0 0 4px #e6b96930; }
-.serve-face .face-spot span { position:absolute; top:40px; left:50%; transform:translateX(-50%); padding:0 6px; border-radius:999px; background:#1a0f0ecc; color:#ffe8b6; font-size:12px; white-space:nowrap; }
-.serve-face .face-spot:disabled { animation:none; opacity:.45; }
-.serve-face .face-spot.found { opacity:.45; }
-@keyframes face-pulse { 0%,100% { box-shadow:0 0 0 1px #ffe2a9b8,0 0 12px #ffd77e44; } 50% { box-shadow:0 0 0 2px #ffe2a9,0 0 24px #ffd77e88; } }
-@media (prefers-reduced-motion: reduce) { .serve-face .face-spot { animation:none; } }
-.serve-line { margin:0 0 6px; }
-.serve-line-word { display:block; margin:0 0 3px; color:#a99689; font-size:12px; letter-spacing:.1em; }
-.serve-try { border:1px solid #f0cf9155; background:#ffffff0d; color:#ffe8b6; }
-.serve-try:disabled { opacity:.45; }
 .world-verbs .resume { border-color:#f0c97888; }
-.serve-commit { border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
-.serve-commit:disabled { opacity:.45; }
-.serve-force { border:1px solid #8a4a5a88; background:#8a4a5a26; color:#e8b6c0; }
-.serve-force:disabled { opacity:.45; }
 
 /* —— 每日委托：开门卡、进度卡、「现场」栏的小标记 —— */
 .world-scene h2 { display:flex; align-items:center; gap:8px; }
