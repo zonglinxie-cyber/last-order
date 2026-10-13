@@ -8,7 +8,7 @@ import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
   beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
-  verbOptions, verbEnergyNow, energyCeiling, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  verbOptions, verbEnergyNow, energyCeiling, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { seasonRecap } from "../recap.ts";
@@ -17,12 +17,13 @@ import { askedToday, dueToday, resolveRequestChoice } from "../requests.ts";
 import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../types.ts";
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
-import { GoalStrip, LevelResult, SeasonLevels } from "./Levels.tsx";
-import { weekDaysLeft, weekGoalWord, weekLevelWord, weekMoneyOf, weekStarsKey, weekTargetOf } from "../target.ts";
+import { GoalStrip, LevelResult, RoutesSheet, SeasonLevels, weekGapWord } from "./Levels.tsx";
+import { CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, WEEK_EXCEED_RATE, weekDaysLeft, weekGuardedPeople, weekGoalWord, weekLevelWord, weekResultOf, weekStarsKey } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
 import { openConsult, rememberConsult, restoreConsults, saveConsults, type Consult } from "../consult.ts";
 import type { ShelfId } from "../shelf.ts";
 import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
+import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
@@ -365,11 +366,13 @@ export default function WorldGame() {
   // 勾着开下一季：读盘里已经生效的那几条（继续玩时），没档就读上次勾选的。
   const [heat, setHeat] = useState<HeatId[]>(() => boot ? [...boot.world.heat ?? []] : readHeatPick());
   const [reqPanelOpen, setReqPanelOpen] = useState(false);
+  const [routesOpen, setRoutesOpen] = useState(false);
   // 收季那一刻之前的最好成绩：季末那排四关战绩拿它判"新纪录"（存档一并进档案以后就分不出来了）。
   const [prevBest, setPrevBest] = useState<number | null>(null);
   const bestStars = useMemo(() => readWorldProgress().bestSeasonStars, [phase]);
 
   const person = selected ? PEOPLE.find(p => p.id === selected) : undefined;
+  const salePerson = person ? visitPerson(world, person) : undefined;
   const spots = useMemo(() => layOut(world), [world]);
   // 正在拌嘴的人头顶冒火气；点其中一个，打圆场就在动作排里。
   const quarreling = useMemo(() => new Set(quarrelPairs(world).flat()), [world]);
@@ -425,6 +428,7 @@ export default function WorldGame() {
   // —— 一次状态变化就是"发生了一件事"：成交、回头客、比分反超都从这里出声音、亮一处动画、念一句牌。
   // 挂在这里而不是各动作函数里，是因为早晨老客自己回柜那一笔（beginSlot 里的赴约回流）不经过任何按钮。
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [bump, setBump] = useState<string | null>(null);
   const prevWorld = useRef<World | null>(null);
   useEffect(() => {
     const before = prevWorld.current;
@@ -436,7 +440,18 @@ export default function WorldGame() {
     // 看法那一动晚一拍：同一格里钱和脸一起变（硬推那一单）时两段音不叠成一团。
     cueOpinion(before, world, found.length ? 0.28 : 0);
     if (found.length) setMoments(found);
+    // 客情 / 守客涨了没有收银声，也要在页顶那条上冒一下，不然玩家不知道刚才那一下算数了。
+    if (weekNoOf(before.day) === weekNoOf(world.day)) {
+      const a = weekResultOf(before), b = weekResultOf(world);
+      const up = [b.care > a.care ? `客情 +${b.care - a.care}` : "", b.guard > a.guard ? `守客 +${b.guard - a.guard}` : ""].filter(Boolean).join(" ");
+      if (up) setBump(up);
+    }
   }, [world]);
+  useEffect(() => {
+    if (!bump) return;
+    const timer = window.setTimeout(() => setBump(null), 1900);
+    return () => window.clearTimeout(timer);
+  }, [bump]);
   useEffect(() => {
     if (!moments.length) return;
     const timer = window.setTimeout(() => setMoments([]), 1900);
@@ -547,13 +562,13 @@ export default function WorldGame() {
     setSelected(id); setServing(false);
   };
   const openServe = () => {
-    if (!person) return;
+    if (!person || !salePerson) return;
     if (!consults[person.id]) setConsults(m => ({ ...m, [person.id]: openConsult(world, person) }));
     setServing(true);
   };
   // 看 / 问 / 试的第一下才算正式接手：精力在这一刻花（beginServe），之后再点不重复扣。
   const consultAct = (step: (c: Consult) => Consult) => {
-    if (!person || !consult) return;
+    if (!person || !salePerson || !consult) return;
     const next = step(consult);
     if (next === consult) return;
     const w = consult.begun ? world : beginServe(world, PEOPLE, person.id);
@@ -563,7 +578,7 @@ export default function WorldGame() {
     setConsults(m => ({ ...m, [person.id]: next }));
   };
   const doServe = (force: boolean) => {
-    if (!selected || !person || !consult?.product) return;
+    if (!selected || !person || !salePerson || !consult?.product) return;
     const serveProduct = consult.product, serveUnits = consult.units;
     const c = consults[selected];
     const next = c?.begun
@@ -573,7 +588,7 @@ export default function WorldGame() {
     setWorld(next); setServing(false);
     setConsults(m => { const { [selected]: _, ...rest } = m; return rest; });
     setResult(next.log.at(-1)?.text ?? null);
-    setReceipt({ person, product: serveProduct, feedback: saleFeedback(world, next, person, serveProduct, serveUnits, c?.mood ?? 0) });
+    setReceipt({ person: salePerson, product: serveProduct, feedback: saleFeedback(world, next, salePerson, serveProduct, serveUnits, c?.mood ?? 0) });
   };
   const stopServe = () => {
     if (!person || !consult) return;
@@ -661,7 +676,7 @@ export default function WorldGame() {
       <section className="world-intro-card">
         <p className="world-intro-eyebrow">AURORA · 绮光</p>
         <h1>人情场</h1>
-        <p className="world-intro-copy">一季四关，一周一关。周一罗曼报这周的业绩数，周日打烊对账：过关拿星、柜位往前挪，没过罗曼记着。对面维珞的陆遥抢的是同一批客人 —— 每周比，季末总账也比。</p>
+        <p className="world-intro-copy">一季四关，一周一关，三条线任选一条过关：业绩到罗曼报的数；客情让 {CARE_STEPS[0]} 位不同客人真正信得过你；守客从对面陆遥手里接住 {GUARD_STEPS[0]} 位不同客人。客情到 {CARE_STEPS.slice(1).join(" / ")} 位加星；守客到 {GUARD_STEPS.slice(1).join(" / ")} 位、并挡住 {GUARD_RATE_STEPS.slice(1).map(x => `${Math.round(x * 100)}%`).join(" / ")} 的公开威胁加星；业绩赢对面、超额 {Math.round((WEEK_EXCEED_RATE - 1) * 100)}% 也加星。</p>
         <p className="world-intro-copy world-intro-sub">商场一层是一张人情网：你怎么待一个人，会顺着网传出去，没见过面的人进门时已经对你有了看法。</p>
         {bestStars > 0 && <p className="world-intro-best">最好的一季：{bestStars} / 12 颗星</p>}
         {stale && <p className="world-intro-stale">柜上留过一份记录，这一版读不出来了：存档格式换过，或是上一次存到一半被打断。开新一季，旧的那一份就接不回来了。</p>}
@@ -797,7 +812,7 @@ export default function WorldGame() {
           <span><small>今天进账</small><b>{report.moneyDelta === 0 ? "没开单" : `${report.moneyDelta > 0 ? "+" : "−"}${yuan(Math.abs(report.moneyDelta))}`}</b></span>
           {report.week
             ? <span><small>这一季累计</small><b>{yuan(world.money)}</b></span>
-            : <span><small>{weekLevelWord(world)}</small><b>{weekGoalWord(world)}</b><em>{weekMoneyOf(world) >= weekTargetOf(world.day) ? "这一关已经过了" : `还差 ${yuan(weekTargetOf(world.day) - weekMoneyOf(world))} · ${weekDaysLeft(world.day)} 天`}</em></span>}
+            : <span><small>{weekLevelWord(world)}</small><b>{weekGoalWord(world)}</b><em>{weekGapWord(world) ? `${weekGapWord(world)} · 还剩 ${weekDaysLeft(world.day)} 天，任一条到线就过` : `已凭${ROUTE_WORD[weekResultOf(world).route]}过关`}</em></span>}
           <span><small>对面这一季</small><b>{yuan(world.rivalMoney)}</b><em>{scoreWord(world.money, world.rivalMoney)}</em></span>
           <span><small>柜位 / 台账</small><b>{world.standing} / {world.compliance}</b></span>
         </div>
@@ -828,8 +843,13 @@ export default function WorldGame() {
     : [];
 
   // 开门那张「今天的请求」卡：第一个时段、没别的层压着、今天还没看过才弹。
-  const reqCardOpen = world.slot === 0 && !pending && !selected && !webOpen && !reqPanelOpen
+  const reqCardOpen = world.slot === 0 && !pending && !selected && !webOpen && !reqPanelOpen && !routesOpen
     && reqSeenDay !== world.day && askedToday(world).length > 0;
+  // 陆遥这一时段公开盯上的人：开场就亮出来，点一下直接开她的卡。挡没挡住、记不记分都按引擎的判据念。
+  const rivalWord = rivalPlanWord(world);
+  const rivalMark = rivalWord ? PEOPLE.find(p => p.id === world.rivalPlan?.person && p.id in world.present) : undefined;
+  const rivalHeld = rivalGuarded(world);
+  const rivalCounted = !!rivalMark && weekGuardedPeople(world).includes(rivalMark.id);
 
   return <div className="app-screen world-app">
     <header className="world-bar">
@@ -842,7 +862,12 @@ export default function WorldGame() {
       <button className="world-web-btn" type="button" aria-label="人情网" onClick={() => setWebOpen(true)}>人情网</button>
       <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
     </header>
-    <GoalStrip world={world} lit={lit.goal} />
+    <GoalStrip world={world} lit={lit.goal || !!bump} bump={bump} onOpen={() => { sfx("tap"); setRoutesOpen(true); }} />
+    {rivalWord && rivalMark && <button type="button" className={`world-rival-plan${rivalHeld ? " is-guarded" : ""}${world.rivalPlan?.tactic === "compare" ? " is-compare" : ""}`}
+      onClick={() => tapPerson(rivalMark.id)} aria-label={`${rivalWord.title}：${rivalMark.name}。${rivalHeld ? "已接住" : rivalWord.howTo}`}>
+      <b>{rivalHeld ? "✓ 已接住" : rivalWord.title} · {rivalMark.name}</b>
+      <span>{rivalHeld ? rivalCounted ? `本周已记过${ta(rivalMark)}，不重复加` : "时段结束守客 +1" : rivalWord.howTo.split("；")[0]}</span>
+    </button>}
 
     <div className="world-map-view" ref={viewRef}
       onPointerDown={onPanDown} onPointerMove={onPanMove} onPointerUp={onPanUp} onPointerCancel={onPanUp}
@@ -918,7 +943,9 @@ export default function WorldGame() {
     {result && person && <p className="world-toast" role="status">{result}</p>}
 
     {person && !serving && !receipt && <div className="world-drawer">
-      <PersonCard person={person} world={world} people={PEOPLE} onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
+      <PersonCard person={person} world={world} people={PEOPLE}
+        rival={rivalWord && rivalMark?.id === person.id ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalHeld } : undefined}
+        onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
         <p>{pickHint(pick.verb, person)}</p>
         <div className="pick-targets">
@@ -933,14 +960,15 @@ export default function WorldGame() {
       </div>}
     </div>}
 
-    {person && consult && <ConsultPanel world={world} person={person} consult={consult}
+    {salePerson && consult && <ConsultPanel world={world} person={salePerson} consult={consult}
       onAct={consultAct} onCommit={doServe} onLeave={stopServe}
-      onChange={patch => setConsults(m => ({ ...m, [person.id]: { ...m[person.id], ...patch } }))}
+      onChange={patch => setConsults(m => ({ ...m, [salePerson.id]: { ...m[salePerson.id], ...patch } }))}
       onClose={() => { setServing(false); setSelected(null); }} />}
     {receipt && <SaleReceipt {...receipt} onClose={() => { setReceipt(null); setSelected(null); }} />}
 
     {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqSeenDay(world.day)} />}
+    {routesOpen && <RoutesSheet world={world} onClose={() => setRoutesOpen(false)} />}
     {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqPanelOpen(false)} />}
 
@@ -961,6 +989,6 @@ export default function WorldGame() {
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
-    {!reqCardOpen && !reqPanelOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
+    {!reqCardOpen && !reqPanelOpen && !routesOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
   </div>;
 }

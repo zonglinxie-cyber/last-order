@@ -5,7 +5,8 @@ import { test } from "node:test";
 import { beginSlot, endDay, newWorld } from "../src/world/engine.ts";
 import {
   SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_ROMAN, WEEK_HIT_STANDING, WEEK_MISS_ROMAN, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS,
-  seasonStarsOf, weekMadeKey, weekMoneyOf, weekStarsKey, weekStarsOf, weekTargetOf,
+  markWeekCare, markWeekGuard, markWeekThreat, seasonStarsOf, weekCareOf, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekMoneyOf,
+  weekResultOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf,
 } from "../src/world/target.ts";
 import { worldMoments } from "../src/world/ui/cues.ts";
 import { emptyWorldProgress, observeWorldProgress, parseWorldProgress } from "../src/world/progress.ts";
@@ -19,6 +20,8 @@ const books = (day: number, money: number, rivalMoney: number, money0 = 0, rival
   return { ...w, day, slot: 3, money, rivalMoney, standing: 50,
     qualities: { ...w.qualities, [WEEK_START_MONEY]: money0, [WEEK_START_RIVAL]: rival0 } };
 };
+
+const careFor = (w: World, id: string): World => markWeekCare({ ...w, opinion: { ...w.opinion, [id]: 10 } }, id);
 
 test("一季四关，目标数与天数对得上", () => {
   assert.equal(SEASON_DAYS, SEASON_WEEKS * 7);
@@ -63,13 +66,78 @@ test("周日打烊对账：落三格、过关柜位与罗曼 +、没过柜位不
   assert.equal(fail.qualities[weekStarsKey(2)], 0);
   assert.equal(fail.standing, 50, "没过不扣柜位（这是卖货的关，不替人情那条路判死刑）");
   assert.equal(fail.opinion.roman - (books(14, 0, 0).opinion.roman ?? 0), WEEK_MISS_ROMAN);
-  assert.ok(fail.log.some(l => l.text.includes("第 2 关对账") && l.text.includes("差")));
+  assert.ok(fail.log.some(l => l.text.includes("第 2 关对账") && l.text.includes("都还没到线")));
   assert.deepEqual(seasonStarsOf(fail), [0]);
 
   // 不是周日不结账
   const wed = endDay(books(3, 99_999, 0), PEOPLE);
   assert.equal(wed.qualities[weekMadeKey(1)], undefined);
   assert.equal(wed.standing, 50);
+});
+
+test("客情、守客是独立的过关路线；同一人不能刷进度，只取最高星", () => {
+  let care = books(7, 500, 10_000);
+  for (const id of ["shen", "mei", "qiu", "peng"]) care = careFor(care, id);
+  care = careFor(care, "shen");
+  assert.equal(weekCareOf(care), 4);
+  assert.deepEqual([weekResultOf(care).route, weekResultOf(care).stars], ["care", 1]);
+  const settledCare = endDay(care, PEOPLE);
+  assert.equal(settledCare.qualities[weekRouteKey(1)], 2);
+  assert.equal(settledCare.qualities[weekStarsKey(1)], 1);
+  assert.equal(settledCare.standing, 52);
+  assert.ok(settledCare.log.some(l => l.text.includes("客情线") && l.text.includes("过关")));
+
+  let guard = books(7, 500, 10_000);
+  for (const [i, id] of ["shen", "mei", "zhao"].entries()) guard = markWeekGuard({ ...guard, day: i + 1, slot: 0 }, id);
+  guard = { ...guard, day: 3, slot: 0 };
+  guard = markWeekGuard({ ...guard, slot: 1 }, "shen");
+  assert.equal(weekGuardOf({ ...guard, day: 7 }), 3);
+  const settledGuard = endDay({ ...guard, day: 7 }, PEOPLE);
+  assert.equal(settledGuard.qualities[weekRouteKey(1)], 3);
+  assert.equal(settledGuard.qualities[weekStarsKey(1)], 1);
+
+  let better = books(7, 8_100, 500);
+  for (const id of ["shen", "mei", "qiu", "peng", "zhao", "he", "su", "lu"]) better = careFor(better, id);
+  assert.equal(weekResultOf(better).route, "care");
+  assert.equal(weekResultOf(better).stars, 3);
+});
+
+test("客情线跨过第一颗星时当场亮过关反馈", () => {
+  let before = books(3, 0, 0);
+  for (const id of ["shen", "mei", "qiu"]) before = careFor(before, id);
+  const after = careFor(before, "peng");
+  assert.ok(worldMoments(before, after).some(m => m.kind === "goal"));
+  assert.ok(!worldMoments(after, careFor(after, "zhao")).some(m => m.kind === "goal"));
+});
+
+test("客情星看当前信任，盖过章后伤了关系仍会掉出名单", () => {
+  let w = books(4, 0, 10_000);
+  for (const id of ["shen", "mei", "qiu", "peng"]) w = careFor(w, id);
+  assert.equal(weekResultOf(w).careStars, 1);
+  const hurt = { ...w, opinion: { ...w.opinion, shen: 9 } };
+  assert.equal(weekCareOf(hurt), 3);
+  assert.equal(weekResultOf(hurt).careStars, 0);
+});
+
+test("守客过关仍认人数，高星还要挡住公开威胁的一半/四分之三；无目标不扩大分母", () => {
+  let w = books(7, 0, 99_999);
+  for (let i = 0; i < 28; i++) w = markWeekThreat({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] });
+  for (let i = 0; i < 7; i++) w = markWeekGuard({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] }, `guest-${i}`);
+  w = { ...w, day: 7 };
+  assert.equal(weekGuardOf(w), 7);
+  assert.equal(weekGuardThreatsOf(w), 28);
+  assert.equal(weekGuardStopsOf(w), 7);
+  assert.equal(weekResultOf(w).guardStars, 1, "守很多不同人却漏掉多数威胁，只过关");
+  for (let i = 7; i < 21; i++) {
+    w = markWeekGuard({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] }, "guest-0");
+    if (i === 13) assert.equal(weekResultOf(w).guardStars, 2);
+  }
+  assert.equal(weekGuardRateOf(w), 0.75);
+  assert.equal(weekResultOf(w).guardStars, 3);
+  assert.equal(weekGuardOf(w), 7, "同客重复挡下只改善守住率，不刷人数");
+  const sameSlot = markWeekThreat(markWeekGuard(w, "guest-0"));
+  assert.equal(weekGuardRateOf(sameSlot), 0.75, "重复结算不刷分子分母");
+  assert.equal(weekGuardThreatsOf(books(3, 0, 0)), 0);
 });
 
 test("楼层上跨过这一关的数那一下，有「本周过关」那一声；周与周之间不误报", () => {

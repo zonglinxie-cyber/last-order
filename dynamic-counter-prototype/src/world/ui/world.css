@@ -279,19 +279,57 @@
 .world-week { border-color:#ffedca44; color:#ffedca; }
 
 /* —— 每周一关（target.ts / ui/Levels.tsx）—— */
-.world-goal { flex:0 0 auto; z-index:29; padding:6px 12px 7px; background:#160d0cf0; border-bottom:1px solid #f0cf9122; }
+.world-goal { flex:0 0 auto; z-index:29; display:block; width:100%; min-height:44px; padding:6px 12px 7px; border:0; border-bottom:1px solid #f0cf9122; border-radius:0; background:#160d0cf0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.world-goal:focus-visible { outline:2px solid #f0c978; outline-offset:-2px; }
 .world-goal .wg-row { display:flex; align-items:baseline; justify-content:space-between; gap:8px; white-space:nowrap; }
 .world-goal .wg-row b { color:#f0c978; font:700 13px 'Noto Serif SC',serif; overflow:hidden; text-overflow:ellipsis; }
 .world-goal .wg-tail { color:#b99b7f; font-size:12px; overflow:hidden; text-overflow:ellipsis; }
 .world-goal .wg-tail.is-lead { color:#a8dcb0; }
 .world-goal .wg-tail.is-trail { color:#e8a6a6; }
-.world-goal .wg-track { position:relative; height:6px; margin:5px 0 4px; border-radius:3px; background:#ffffff14; overflow:hidden; }
+.world-goal .wg-track { display:block; position:relative; height:6px; margin:5px 0 4px; border-radius:3px; background:#ffffff14; overflow:hidden; }
 .world-goal .wg-track i { position:absolute; inset:0 auto 0 0; border-radius:3px; background:linear-gradient(90deg,#c98d3e,#f0c978); transition:width .6s ease; }
 .world-goal .wg-track s { position:absolute; top:0; bottom:0; width:2px; margin-left:-1px; background:#ffedca; }
 .world-goal.is-passed .wg-track i { background:linear-gradient(90deg,#6fae7c,#b8e6a6); }
 .world-goal .wg-money { color:#ffedca; font:700 13px 'Noto Serif SC',serif; }
 .world-goal .wg-stars { color:#d5b994; font-size:12px; }
 .world-goal.is-passed .wg-stars { color:#f0c978; font-size:14px; letter-spacing:.08em; }
+.world-goal .wg-routes { display:flex; align-items:baseline; gap:8px; margin-top:4px; color:#b99b7f; font-size:12px; white-space:nowrap; }
+.world-goal .wg-routes span { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.world-goal .wg-routes .is-track { color:#ffedca; }
+.world-goal .wg-routes .done { color:#a8dcb0; }
+.world-goal .wg-routes .wg-more { flex:0 0 auto; margin-left:auto; color:#f0c978; font-size:14px; }
+.world-goal .wg-bump { margin-left:6px; padding:0 6px; border-radius:999px; background:#2f4a36; color:#c8f0cc; font:600 12px/1.5 system-ui,sans-serif; font-style:normal; }
+.bottom-sheet:has(.world-routes) { background:#241713; color:#f9e8cc; z-index:90; border:1px solid #bda16b66; border-bottom:0; }
+.bottom-sheet:has(.world-routes) .sheet-handle-zone { flex-shrink:0; height:18px; }
+.bottom-sheet:has(.world-routes) .sheet-header { padding:0 16px 6px; }
+.bottom-sheet:has(.world-routes) .sheet-title { font:700 18px 'Noto Serif SC',serif; }
+.bottom-sheet:has(.world-routes) .sheet-description { color:#c6af99; font-size:12px; }
+.bottom-sheet:has(.world-routes) .sheet-content { display:flex; flex:1; min-height:0; padding:0; overflow:hidden; }
+.world-routes { display:flex; flex:1; flex-direction:column; min-height:0; min-width:0; font:13px/1.55 'Noto Serif SC',serif; }
+.routes-scroll.mobile-page { position:relative; inset:auto; flex:1; min-height:0; height:auto; width:100%; }
+.routes-scroll .mobile-scroll-content { padding:4px 14px 10px; }
+.routes-list { display:flex; flex-direction:column; gap:8px; margin:0; padding:0; list-style:none; }
+.routes-list li { padding:9px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
+.routes-list li.done { border-color:#8fb98f66; }
+.routes-list h3 { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 3px; font-size:13px; }
+.routes-list h3 b { color:#f0c978; font:700 13px 'Noto Serif SC',serif; }
+.routes-list li.done h3 b { color:#a8dcb0; }
+.routes-list h3 span { color:#ffedca; font-size:12px; white-space:nowrap; }
+.routes-list p { margin:0 0 3px; color:#f2e6d8; font-size:13px; }
+.routes-list small { display:block; color:#a99689; font-size:12px; }
+.routes-list .routes-rate { color:#d5b994; }
+.routes-foot { margin:10px 0 0; color:#b99b7f; font-size:12px; }
+.routes-close { flex:0 0 auto; min-height:48px; margin:8px 14px calc(12px + env(safe-area-inset-bottom)); border:1px solid #f0cf9177; border-radius:12px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 14px 'Noto Serif SC',serif; }
+.routes-close:focus-visible { outline:2px solid #ffe2a9; outline-offset:2px; }
+.world-rival-plan { flex:0 0 auto; z-index:29; display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; padding:5px 12px; border:0; border-bottom:1px solid #f0cf9133; background:#442a24; color:#ffe8b6; text-align:left; }
+.world-rival-plan b { flex:0 0 auto; font:700 12px 'Noto Serif SC',serif; }
+.world-rival-plan span { overflow:hidden; color:#e8c8b6; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.world-rival-plan.is-guarded { background:#213a2d; }
+.world-rival-plan.is-compare:not(.is-guarded) { background:#4a2238; }
+.pc-section .pc-rival { color:#e8b6c0; }
+.pc-section .pc-rival.is-held { color:#a8dcb0; }
+.world-rival-plan.is-guarded span { color:#a8dcb0; }
+.report-level .rl-route { margin:4px 0 0; color:#a8dcb0; font-size:13px; }
 .world-goal.is-hit { animation:wg-hit 1.9s ease; }
 @keyframes wg-hit { 0% { background:#160d0cf0; } 18% { background:#5a4214; box-shadow:0 0 18px #f0c97888; } 100% { background:#160d0cf0; } }
 @media (prefers-reduced-motion: reduce) { .world-goal.is-hit { animation:none; } .world-goal .wg-track i { transition:none; } }

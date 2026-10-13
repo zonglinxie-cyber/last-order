@@ -12,6 +12,7 @@ import type { SaleFeedback } from "../sales-feedback.ts";
 import { ta } from "../pronoun.ts";
 import { unsaidWord } from "../serve-talk.ts";
 import { servePickWord } from "./words.ts";
+import { visitContext } from "../visits.ts";
 import "./consult.css";
 
 type Props = {
@@ -24,6 +25,7 @@ const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
 
 export function ConsultPanel({ world, person, consult: c, onChange, onAct, onCommit, onLeave, onClose }: Props) {
   const plate = plateOf(person), offer = c.stage === "offer", product = c.product;
+  const context = visitContext(world, person);
   const panelRef = useRef<HTMLDivElement>(null);
   const evidence = product ? offerEvidence(c, person, product, c.units) : [];
   // 最后一次探问后会追加「该开单了」，反应仍显示真正的回答。
@@ -43,7 +45,7 @@ export function ConsultPanel({ world, person, consult: c, onChange, onAct, onCom
         <div><strong>{c.patience > 0 ? `还可探 ${c.patience} 次` : "现在做决定"}</strong><span>{patienceWord(c, person)}</span></div>
         <button type="button" className="pc-close" aria-label="关闭人物卡" onClick={onClose}>×</button>
       </div>
-      <p className="serve-meta">{budgetWord(c, person)} · {c.begun ? "本单精力已付" : `第一次看 / 问 / 试才花 ${VERB_ENERGY.serve} 精力`}</p>
+      <p className="serve-meta">{context ? `${context.title} · ` : ""}{budgetWord(c, person)} · {c.begun ? "本单精力已付" : `第一次看 / 问 / 试才花 ${VERB_ENERGY.serve} 精力`}</p>
       <div className="consult-tabs" role="tablist" aria-label="接待步骤" onKeyDown={event => {
         if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
         event.preventDefault();
@@ -77,7 +79,7 @@ export function ConsultPanel({ world, person, consult: c, onChange, onAct, onCom
             {questionsOf(person).map(q => <button key={q.key} type="button" disabled={c.patience <= 0 || c.asked.includes(q.key)}
               onClick={() => onAct(v => askHer(v, person, q.key))}>{q.label}</button>)}
           </div>
-          {c.begun && <p className="consult-memory">已知需求已经记下，下次见面还在。</p>}
+          {c.begun && <p className="consult-memory">长期偏好已记下，下次见面还用得上{context ? "；今天的用途按这次来意判断" : ""}。</p>}
         </section> : <section id="consult-offer" role="tabpanel" aria-labelledby="consult-offer-tab">
           {c.begun && <p className="consult-reaction" aria-live="polite">{lastReply}</p>}
           {SHELF_LINES.map(line => <div key={line.word} className="serve-line" role="group" aria-label={line.word}>

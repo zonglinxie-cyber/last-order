@@ -1,15 +1,13 @@
 // 每周一关：人情场开局缺的那个"看得见的目标"，也是过关感和胜负欲落地的地方。
 // 旧五日版一进门就是「五日 ¥21,000」，玩家知道自己在追什么；人情场只说"看看谁会回来"，
 // 真人试玩第一句反馈就是"没有头绪"。这里补的是中间那一层：一季四周 = 四关，
-// 周一早会罗曼报这一关的数，周日打烊对账、盖星：
-//   ★ 过关：这周的钱到了罗曼要的数
-//   ★ 赢对面：这周比陆遥挣得多
-//   ★ 超额：到了目标的 1.3 倍
+// 周一早会罗曼报三条过关路线；周日只取表现最好的一条盖星。
 // 过关柜位涨、罗曼记你一笔好；没过罗曼记着；季末把四关的星加起来，档案记最好的一季。
 //
 // 纯数据纯函数，不 import 引擎（与 weeks.ts 同理，免得绕成环）。引擎在周一早会记下这周的起点、
 // 周日打烊结账；界面和模拟器只读这里。
 import { WEEK_RULES, weekNoOf, weekRuleOf } from "./weeks.ts";
+import type { PersonId } from "./types.ts";
 
 /** 一季四关各要多少：第一关是新手那七天，往后一关比一关高（同旧版按天抬的那条思路）。
  *  数值按模拟器「每周一关」那张表定，见 docs/人情场设计.md 同名一节。 */
@@ -18,10 +16,21 @@ export const SEASON_WEEKS = WEEK_TARGETS.length;
 /** 第三颗星：到目标的这个倍数。 */
 export const WEEK_EXCEED_RATE = 1.3;
 export const WEEK_STARS_MAX = 3;
+export const CARE_STEPS = [4, 6, 8] as const;
+export const GUARD_STEPS = [3, 5, 7] as const;
+/** 高星要持续守住公开威胁；无目标的时段不进分母。 */
+export const GUARD_RATE_STEPS = [0, 0.5, 0.75] as const;
+export const CARE_TRUST_MIN = 10;
+/** 本周至少两天亲自办过实事；同日多点几次不算回访。 */
+export const CARE_DAYS_MIN = 2;
+export type WeekRoute = "sales" | "care" | "guard";
+export const ROUTE_WORD: Record<WeekRoute, string> = { sales: "业绩", care: "客情", guard: "守客" };
+const ROUTE_CODE: Record<WeekRoute, number> = { sales: 1, care: 2, guard: 3 };
+export const routeFromCode = (code: number): WeekRoute => code === 2 ? "care" : code === 3 ? "guard" : "sales";
 /** 周日对账：过关柜位 +2、罗曼 +2；没过柜位不动，罗曼 −3。
  *  没过不扣柜位，是模拟器量出来的：扣柜位（−4 / −2 两版都试过）会把"经营人情、不靠自己开单"那一路
  *  （social）一季四关全没过的 −8 直接压过「谁也没交」那条 35 的线，结局一半掉进「镜子前空了」——
- *  这一层是卖货的关，不该替人情那条路判死刑。没过的代价落在排班的那个人身上：罗曼记着。 */
+ *  三条路线共享过关奖励，没过的代价落在排班的那个人身上：罗曼记着。 */
 export const WEEK_HIT_STANDING = 2;
 export const WEEK_HIT_ROMAN = 2;
 export const WEEK_MISS_ROMAN = -3;
@@ -34,13 +43,43 @@ export const WEEK_START_RIVAL = "week-start:rival";
 export const weekMadeKey = (n: number) => `week-made:${n}`;
 export const weekRivalKey = (n: number) => `week-rival:${n}`;
 export const weekStarsKey = (n: number) => `week-stars:${n}`;
+export const weekRouteKey = (n: number) => `week-route:${n}`;
+/** 周日冻结当时仍信任你的客情人数，历史回顾不拿季末信任倒算。 */
+export const weekCareCountKey = (n: number) => `week-care-count:${n}`;
+export const weekCareKey = (n: number, person: string) => `week-care:${n}:${person}`;
+export const weekGuardPersonKey = (n: number, person: string) => `week-guard-person:${n}:${person}`;
+export const weekGuardThreatKey = (n: number, day: number, slot: number) => `week-guard-threat:${n}:${day}:${slot}`;
+export const weekGuardStopKey = (n: number, day: number, slot: number) => `week-guard-stop:${n}:${day}:${slot}`;
+export const weekCareDayKey = (n: number, person: string, day: number) => `week-care-day:${n}:${person}:${day}`;
+export const guardCommitKey = (day: number, slot: number, person: string) => `guard-commit:${day}:${slot}:${person}`;
 
-type Books = { day: number; season?: number; money: number; rivalMoney: number; qualities: Record<string, number> };
+type Books = { day: number; season?: number; money: number; rivalMoney: number; qualities: Record<string, number>; opinion?: Record<string, number> };
 
 export const weekTargetOf = (day: number): number =>
   WEEK_TARGETS[Math.min(SEASON_WEEKS, weekNoOf(day)) - 1];
 export const weekMoneyOf = (w: Books): number => w.money - (w.qualities[WEEK_START_MONEY] ?? 0);
 export const weekRivalOf = (w: Books): number => w.rivalMoney - (w.qualities[WEEK_START_RIVAL] ?? 0);
+const peopleAt = (w: Books, prefix: string): PersonId[] => Object.entries(w.qualities)
+  .filter(([k, v]) => k.startsWith(prefix) && v === 1).map(([k]) => k.slice(prefix.length));
+export const weekCarePeople = (w: Books): PersonId[] => peopleAt(w, `week-care:${weekNoOf(w.day)}:`)
+  .filter(id => w.opinion === undefined || (w.opinion[id] ?? 0) >= CARE_TRUST_MIN);
+export const weekGuardedPeople = (w: Books): PersonId[] => peopleAt(w, `week-guard-person:${weekNoOf(w.day)}:`);
+export const weekCareOf = (w: Books): number => weekCarePeople(w).length;
+/** 本周挡下的不同顾客；重复照应同一人仍挡住对手，但不刷星。 */
+export const weekGuardOf = (w: Books): number => weekGuardedPeople(w).length;
+export const weekGuardThreatsOf = (w: Books): number => peopleAt(w, `week-guard-threat:${weekNoOf(w.day)}:`).length;
+export const weekGuardStopsOf = (w: Books): number => peopleAt(w, `week-guard-stop:${weekNoOf(w.day)}:`).length;
+export const weekGuardRateOf = (w: Books): number => weekGuardThreatsOf(w) ? weekGuardStopsOf(w) / weekGuardThreatsOf(w) : 0;
+export const weekCareDaysOf = (w: Books, person: string): number => peopleAt(w, `week-care-day:${weekNoOf(w.day)}:${person}:`).length;
+/** 同一顾客本周只算一次，打招呼和被动围观不算。 */
+export const markWeekCare = <W extends Books>(w: W, person: string): W =>
+  ({ ...w, qualities: { ...w.qualities, [weekCareKey(weekNoOf(w.day), person)]: 1 } });
+/** 一周同一人只算一次公开的反制；目标被照应后，不因重进结算多得分。 */
+export const markWeekGuard = <W extends Books & { slot: number }>(w: W, person: PersonId): W =>
+  ({ ...w, qualities: { ...w.qualities, [weekGuardPersonKey(weekNoOf(w.day), person)]: 1,
+    [weekGuardStopKey(weekNoOf(w.day), w.day, w.slot)]: 1 } });
+export const markWeekThreat = <W extends Books & { slot: number }>(w: W): W =>
+  ({ ...w, qualities: { ...w.qualities, [weekGuardThreatKey(weekNoOf(w.day), w.day, w.slot)]: 1 } });
 /** 这周还剩几天（含今天）。 */
 export const weekDaysLeft = (day: number): number => 7 - ((day - 1) % 7);
 
@@ -58,19 +97,39 @@ export function weekStarsOf(made: number, rival: number, target: number): WeekSt
   return { hit, beatRival, exceeded, stars: hit ? 1 + (beatRival ? 1 : 0) + (exceeded ? 1 : 0) : 0 };
 }
 
+export type WeekResult = { route: WeekRoute; stars: number; made: number; rival: number; target: number;
+  care: number; guard: number; guardThreats: number; guardStops: number; guardRate: number;
+  sales: WeekStars; careStars: number; guardStars: number };
+export function weekResultOf(w: Books): WeekResult {
+  const made = weekMoneyOf(w), rival = weekRivalOf(w), target = weekTargetOf(w.day);
+  const care = weekCareOf(w), guard = weekGuardOf(w);
+  const guardThreats = weekGuardThreatsOf(w), guardStops = weekGuardStopsOf(w), guardRate = weekGuardRateOf(w);
+  const sales = weekStarsOf(made, rival, target);
+  const careStars = CARE_STEPS.filter(n => care >= n).length;
+  const guardStars = GUARD_STEPS.filter((n, i) => guard >= n && guardRate >= GUARD_RATE_STEPS[i]).length;
+  // 同星优先展示原来的业绩线，再是客情、守客；但任一路达到门槛都能过关。
+  const best = Math.max(sales.stars, careStars, guardStars);
+  const route: WeekRoute = sales.stars === best ? "sales" : careStars === best ? "care" : "guard";
+  return { route, stars: best, made, rival, target, care, guard, guardThreats, guardStops, guardRate, sales, careStars, guardStars };
+}
+
 /** 周日打烊结账：落三格、动柜位、罗曼说一句。返回给引擎拼进日志的那句话。 */
 export function settleWeek<W extends Books & { standing: number; opinion: Record<string, number> }>(w: W): { world: W; line: string } {
   const n = weekNoOf(w.day);
-  const made = weekMoneyOf(w), rival = weekRivalOf(w), target = weekTargetOf(w.day);
-  const s = weekStarsOf(made, rival, target);
-  const standing = Math.max(0, Math.min(100, w.standing + (s.hit ? WEEK_HIT_STANDING : 0)));
-  const boss = Math.max(-100, Math.min(100, (w.opinion[WEEK_BOSS] ?? 0) + (s.hit ? WEEK_HIT_ROMAN : WEEK_MISS_ROMAN)));
+  const s = weekResultOf(w);
+  const { made, rival, target } = s;
+  const passed = s.stars > 0;
+  const standing = Math.max(0, Math.min(100, w.standing + (passed ? WEEK_HIT_STANDING : 0)));
+  const boss = Math.max(-100, Math.min(100, (w.opinion[WEEK_BOSS] ?? 0) + (passed ? WEEK_HIT_ROMAN : WEEK_MISS_ROMAN)));
   const world = { ...w, standing, opinion: { ...w.opinion, [WEEK_BOSS]: boss }, qualities: { ...w.qualities,
-    [weekMadeKey(n)]: made, [weekRivalKey(n)]: rival, [weekStarsKey(n)]: s.stars } };
+    [weekMadeKey(n)]: made, [weekRivalKey(n)]: rival, [weekStarsKey(n)]: s.stars,
+    [weekRouteKey(n)]: ROUTE_CODE[s.route], [weekCareCountKey(n)]: s.care } };
   const yuan = (x: number) => `¥${x.toLocaleString("zh-CN")}`;
-  const line = s.hit
-    ? `第 ${n} 关对账：这周 ${yuan(made)}，罗曼要的是 ${yuan(target)} —— 过关，${"★".repeat(s.stars)}${"☆".repeat(WEEK_STARS_MAX - s.stars)}。她在排班表上你那一栏打了个勾。`
-    : `第 ${n} 关对账：这周 ${yuan(made)}，差 ${yuan(target - made)} 没到 ${yuan(target)}。罗曼没说话，把你的名字往后挪了一格。`;
+  const achievement = s.route === "sales" ? `${yuan(made)} / ${yuan(target)}`
+    : s.route === "care" ? `跨天照应 ${s.care} 位不同客人` : `从陆遥手里守住 ${s.guard} 位不同客人`;
+  const line = passed
+    ? `第 ${n} 关对账：${ROUTE_WORD[s.route]}线 ${achievement}，过关，${"★".repeat(s.stars)}${"☆".repeat(WEEK_STARS_MAX - s.stars)}。她在排班表上你那一栏打了个勾。`
+    : `第 ${n} 关对账：业绩 ${yuan(made)} / ${yuan(target)}、客情 ${s.care} / ${CARE_STEPS[0]}、守客 ${s.guard} / ${GUARD_STEPS[0]}，都还没到线。罗曼没说话，把你的名字往后挪了一格。`;
   return { world, line };
 }
 

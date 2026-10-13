@@ -9,6 +9,7 @@ export type Trait = "natural" | "correct" | "soothe" | "steady" | "wear";
 export type Demand = { trait: Trait; want: 1 | 2; weight: 1 | 2 | 3 };
 
 export type PersonId = string;
+export type RivalTactic = "invite" | "compare";
 /** 玩家自己在关系网上的节点 id。 */
 export const PLAYER: PersonId = "player";
 
@@ -183,8 +184,10 @@ export type World = {
   qualities: Record<string, number>;
   /** 本时段在场的人和所在区域 */
   present: Record<PersonId, Zone>;
-  /** 本时段玩家已经招呼过的人：陆遥只挑没被招呼过的顾客下手 */
+  /** 本时段玩家已经接触过的人；公开抢客意图另外按 rivalPlan 与守客承诺结算。 */
   touched: PersonId[];
+  /** 陆遥开时段锁定的目标；null 表示这时段没有目标，结算时不临时换人。旧档可缺。 */
+  rivalPlan?: { day: number; slot: Slot; person: PersonId | null; tactic?: RivalTactic };
   /** 当前节日 id（节日表由内容侧维护）；Visits.festivals 和 Cond {festival} 都读它 */
   festival?: string;
   /** 已消耗的抽数：每个随机决定都从 seed+rngCalls 推导，存档往返后确定性不断 */

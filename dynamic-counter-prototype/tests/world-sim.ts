@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
-  HARD_SELL_COMPLIANCE, resolveServe,
-  newWorld, nextSeason, qualityOf, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
+  BUY_INTERVAL_DAYS, HARD_SELL_COMPLIANCE, SERVE_REFUSE_OPINION, resolveServe,
+  newWorld, nextSeason, qualityOf, rivalGuarded, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
@@ -17,10 +17,11 @@ import { EXCHANGE_ACTS, exchangeTally } from "../src/world/exchanges.ts";
 import { HEAT_IDS, HEAT_MAX, HEAT_RULES } from "../src/world/heat.ts";
 import { INSTANT_KINDS, QUOTA_MIN, QUOTA_STEP_DAYS, QUOTA_TOP, resolveRequestChoice, soldUnitsKey } from "../src/world/requests.ts";
 import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } from "../src/world/types.ts";
-import { SHELF_IDS } from "../src/world/shelf.ts";
-import { WEEK_IDS, isMonday, isSunday, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
+import { POSITIVE_FIT, SHELF, SHELF_IDS, fitOfPerson, shelfUnits } from "../src/world/shelf.ts";
+import { WEEK_IDS, isMonday, isSunday, weekNoOf, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
 import { batchStats, wordsOf } from "../src/world/content/batches.ts";
-import { SEASON_WEEKS, WEEK_STARS_MAX, WEEK_TARGETS, weekMadeKey, weekRivalKey, weekStarsKey } from "../src/world/target.ts";
+import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, WEEK_TARGETS, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
+import { visitPerson } from "../src/world/visits.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -49,11 +50,17 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
   const untouched = (c: VerbCall) => !w.touched.includes(c.targets[0]);
   switch (style) {
     case "honest": {
-      const serve = first("serve", untouched);
-      if (serve) {
-        const p = personOf(people, serve.targets[0]);
-        return [{ call: serve, args: { product: bestFit(p), units: p.skin!.maxUnits } }, w];
-      }
+      // 认真卖货会挑当前能开的对症单，不把刚买过、今天不买的人反复接一遍。
+      const offers = options.filter(c => c.verb === "serve" && untouched(c)).flatMap(call => {
+        const id = call.targets[0], bought = qualityOf(w, `bought:${id}`);
+        if ((bought > 0 && w.day - bought < BUY_INTERVAL_DAYS) || (w.opinion[id] ?? 0) <= SERVE_REFUSE_OPINION) return [];
+        const p = visitPerson(w, personOf(people, id));
+        return SHELF_IDS.filter(product => fitOfPerson(p, product) >= POSITIVE_FIT).map(product => {
+          const units = shelfUnits(p, product, "positive", p.skin!.maxUnits);
+          return { call, args: { product, units }, amount: units * SHELF[product].price, fit: fitOfPerson(p, product) };
+        }).filter(offer => offer.amount > 0);
+      }).sort((a, b) => b.amount - a.amount || b.fit - a.fit);
+      if (offers[0]) return [offers[0], w];
       // 柜位的一天一次人情（engine 的 standing:social-day 门）只有 help/mediate/introduce 会给，
       // keep/greet/wechat/sample 都不给。按格发精力之后一格只够一单接待，把这些排在前面就等于
       // 一笔人情永远轮不到 —— 会算的人这一刻做的是"没有客可开单时，先把那 +1/+2 拿到手"。
@@ -69,18 +76,43 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
       const serve = first("serve", untouched);
       if (serve) {
         const p = personOf(people, serve.targets[0]);
-        return [{ call: serve, args: { product: bestFit(p), units: p.skin!.maxUnits, force: true } }, w];
+        const profile = visitPerson(w, p);
+        return [{ call: serve, args: { product: bestFit(profile), units: profile.skin!.maxUnits, force: true } }, w];
       }
       return [null, w];
     }
     case "social": {
-      // 先经营关系网（劝和、帮同事、牵线），再把客人托给肯开单的同事。
-      // 托单放在前面的话，客人一多五次动作全花在托单上，人情动作一次都轮不到。
-      for (const verb of ["mediate", "help", "introduce"] as const) {
-        const c = first(verb, untouched);
-        if (c) return [{ call: c }, w];
+      // 这一路知道周目标：陆遥公开盯人时先托给同事；平日先办一件能涨柜位的人情，
+      // 再把有限小样给本周还没赢得信任的不同客人。模拟的是会主动经营客情的人。
+      const plan = w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot ? w.rivalPlan.person : null;
+      if (plan && !rivalGuarded(w)) {
+        if (w.rivalPlan?.tactic !== "compare") {
+          const handoff = options.find(c => c.verb === "handoff" && c.targets[1] === plan);
+          if (handoff) return [{ call: handoff }, w];
+        }
+        const serve = first("serve", c => c.targets[0] === plan && untouched(c));
+        if (serve) {
+          const profile = visitPerson(w, personOf(people, plan));
+          return [{ call: serve, args: { product: bestFit(profile), units: profile.skin!.maxUnits } }, w];
+        }
       }
-      const sale = options.find(c => c.verb === "handoff" && personOf(people, c.targets[1]).skin);
+      if (w.qualities["standing:social-day"] !== w.day) {
+        for (const verb of ["mediate", "help", "introduce"] as const) {
+          const c = first(verb, untouched);
+          if (c) return [{ call: c }, w];
+        }
+      }
+      if (weekCareOf(w) < CARE_STEPS[2]) {
+        const samples = options.filter(c => c.verb === "sample"
+          && !w.qualities[weekCareKey(weekNoOf(w.day), c.targets[0])]);
+        // 跨天回访优先，第一天还没照应过的人再按信任排；不靠反复托单记客情。
+        samples.sort((a, b) => weekCareDaysOf(w, b.targets[0]) - weekCareDaysOf(w, a.targets[0])
+          || (w.opinion[b.targets[0]] ?? 0) - (w.opinion[a.targets[0]] ?? 0));
+        if (samples[0]) return [{ call: samples[0] }, w];
+      }
+      const sale = options.find(c => c.verb === "handoff" && personOf(people, c.targets[1]).skin
+        && !w.qualities[weekCareKey(weekNoOf(w.day), c.targets[1])])
+        ?? options.find(c => c.verb === "handoff" && personOf(people, c.targets[1]).skin);
       if (sale) return [{ call: sale }, w];
       for (const verb of ["keep", "tell", "wechat", "sample", "greet"] as const) {
         const c = first(verb, untouched);
@@ -393,10 +425,14 @@ const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 const weekRows: Array<{ style: Style; seed: string; season: number; rule: WeekId; my: number; rival: number }> = [];
 const dayUnits: Array<{ style: Style; season: number; day: number; units: number }> = [];
 /** 每周一关（target.ts）：每季结束时从盘上读四关的钱、对面、星。 */
-const levelRows: Array<{ style: Style; season: number; week: number; made: number; rival: number; stars: number }> = [];
+const levelRows: Array<{ style: Style; season: number; week: number; made: number; rival: number; stars: number; route: string; care: number; guard: number; guardStops: number; guardThreats: number }> = [];
 const pushLevels = (style: Style, season: number, w: World) => {
   for (let n = 1; n <= SEASON_WEEKS; n++) levelRows.push({ style, season, week: n,
-    made: w.qualities[weekMadeKey(n)] ?? 0, rival: w.qualities[weekRivalKey(n)] ?? 0, stars: w.qualities[weekStarsKey(n)] ?? 0 });
+    made: w.qualities[weekMadeKey(n)] ?? 0, rival: w.qualities[weekRivalKey(n)] ?? 0,
+    stars: w.qualities[weekStarsKey(n)] ?? 0, route: ROUTE_WORD[routeFromCode(w.qualities[weekRouteKey(n)] ?? 1)],
+    care: w.qualities[weekCareCountKey(n)] ?? 0,
+    guard: Object.entries(w.qualities).filter(([k, v]) => k.startsWith(`week-guard-person:${n}:`) && v === 1).length,
+    guardStops: weekGuardStopsOf({ ...w, day: n * 7 }), guardThreats: weekGuardThreatsOf({ ...w, day: n * 7 }) });
 };
 const pushDayUnits = (style: Style, season: number, w: World) => {
   for (let d = 1; d <= DAYS; d++) dayUnits.push({ style, season, day: d, units: w.qualities[soldUnitsKey(d)] ?? 0 });
@@ -547,6 +583,11 @@ for (const [style, season] of STYLES.flatMap(st => Array.from({ length: SEASON_C
     const beat = levelRows.filter(r => r.style === style && r.made > r.rival).length;
     const all = levelRows.filter(r => r.style === style).length;
     console.log(`  ${style.padEnd(8)} 一季星数 min ${totals[0]} / 中位 ${totals[Math.floor(totals.length / 2)]} / max ${totals[totals.length - 1]}（满 ${SEASON_WEEKS * WEEK_STARS_MAX}）· 周赢对面 ${Math.round(beat * 100 / Math.max(1, all))}%`);
+    const routes = ["业绩", "客情", "守客"].map(name => `${name} ${levelRows.filter(r => r.style === style && r.stars > 0 && r.route === name).length}`).join(" / ");
+    console.log(`  ${style.padEnd(8)} 过关路线：${routes}`);
+    const rows = levelRows.filter(r => r.style === style);
+    const q50 = (values: number[]) => values.sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
+    console.log(`  ${style.padEnd(8)} 每周客情/守客人数中位：${q50(rows.map(r => r.care))} / ${q50(rows.map(r => r.guard))} · 挡住率中位 ${Math.round(q50(rows.map(r => r.guardStops / Math.max(1, r.guardThreats))) * 100)}%`);
   }
 }
 

@@ -11,7 +11,7 @@ import {
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { isHeatId, type HeatId } from "./heat.ts";
-import { markWeekStart, settleWeek } from "./target.ts";
+import { CARE_DAYS_MIN, CARE_TRUST_MIN, guardCommitKey, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf } from "./target.ts";
 import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
@@ -20,6 +20,7 @@ import type {
 } from "./types.ts";
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
+import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
 
@@ -194,6 +195,26 @@ export const hasTemper = (person: Person | undefined, t: Person["tempers"][numbe
   !!person && person.tempers.includes(t);
 
 export const opinionOf = (world: World, id: PersonId) => world.opinion[id] ?? 0;
+/** 客情关认真实建立的信任：一次白送小样或随机牵线，没到这道门槛只涨关系，不算过关人数。 */
+const trustedCare = (world: World, people: Person[], id: PersonId): World => {
+  if (personOf(people, id)?.role !== "customer") return world;
+  const w = setQuality(world, weekCareDayKey(Math.ceil(world.day / 7), id, world.day), 1);
+  return opinionOf(w, id) >= CARE_TRUST_MIN && weekCareDaysOf(w, id) >= CARE_DAYS_MIN ? markWeekCare(w, id) : w;
+};
+const sampleDayKey = (day: number, id: PersonId) => `sample-given:${day}:${id}`;
+const handoffDayKey = (day: number, staff: PersonId) => `handoff-duty:${day}:${staff}`;
+const handoffSaleDayKey = (day: number) => `handoff-sale-day:${day}`;
+const RIVAL_COMPARE_NEXT = "rival:compare-next";
+/** 招揽时接手即可；比货时要亲自开出正向成交。旧档未写 tactic 视为招揽。 */
+export const rivalGuarded = (world: World): boolean => !!world.rivalPlan?.person
+  && world.rivalPlan.day === world.day && world.rivalPlan.slot === world.slot
+  && qualityOf(world, guardCommitKey(world.day, world.slot, world.rivalPlan.person)) > 0;
+export function rivalPlanWord(world: World): { title: string; howTo: string } | null {
+  if (!world.rivalPlan?.person || world.rivalPlan.day !== world.day || world.rivalPlan.slot !== world.slot) return null;
+  return world.rivalPlan.tactic === "compare"
+    ? { title: "陆遥拿货来比", howTo: "本时段亲自对症成交才挡得住；托单或只聊聊不够" }
+    : { title: "陆遥邀客去对面", howTo: "本时段接待或托同事照看；用托单守住后，下时段陆遥会比货" };
+}
 
 /** a 对 b 的冷暖：运行时改过的取 World.bonds，否则取 Person.bonds 的初始值，都没有是 0。 */
 export function warmthOf(world: World, people: Person[], a: PersonId, b: PersonId): number {
@@ -255,7 +276,8 @@ export const qualityOf = (w: World, key: string) => w.qualities[key] ?? 0;
  *  bought: 由成交、赴约回流和托单记，wechat: 由加微信记；换季时前两条清零。
  *  楼层名牌上「新客 / 回头客」只读这一个判据，界面不许自己再拼一遍。 */
 export const isReturningGuest = (w: World, id: PersonId) =>
-  qualityOf(w, `served:${id}`) > 0 || qualityOf(w, `bought:${id}`) > 0 || qualityOf(w, `wechat:${id}`) > 0;
+  qualityOf(w, `served:${id}`) > 0 || qualityOf(w, `bought:${id}`) > 0
+  || qualityOf(w, `wechat:${id}`) > 0 || qualityOf(w, LAST_MET(id)) > 0;
 
 /** 这一季开过单没有：bought:<谁> 是成交那一刻盖的当天章（换季清零），一个都没有就是第一单。
  *  新手那句教挑货的话只在这一单说（界面读它，别自己数钱）。 */
@@ -497,6 +519,18 @@ export const hardSellComplianceNow = (world: World): number => hardSellComplianc
 export const poachChanceNow = (world: World): number => poachChanceOf(world.heat);
 /** 这一刻她请走"看法低于多少"的人（对面休假周收到 20）。 */
 export const poachMaxOpinionNow = (world: World): number => poachMaxOpinionOf(world.qualities, POACH_MAX_OPINION);
+/** 这格的抢客意图在开场时公开；同分按人物表顺序，存档往返也不变。 */
+export function rivalTarget(world: World, people: Person[]): Person | undefined {
+  if (!people.some(p => p.role === "rival" && p.id in world.present)) return undefined;
+  // 比货必须留有正常成交的窗口；刚买过的人不会接受再买，不能公开要求玩家硬推。
+  const comparing = qualityOf(world, RIVAL_COMPARE_NEXT) > 0;
+  return people.filter(p => p.role === "customer" && POACH_ZONES.includes(world.present[p.id])
+    && !world.touched.includes(p.id) && opinionOf(world, p.id) < poachMaxOpinionNow(world)
+    && (!comparing || (opinionOf(world, p.id) > SERVE_REFUSE_OPINION
+      && (qualityOf(world, `bought:${p.id}`) <= 0
+        || world.day - qualityOf(world, `bought:${p.id}`) >= BUY_INTERVAL_DAYS))))
+    .reduce<Person | undefined>((lo, p) => !lo || opinionOf(world, p.id) < opinionOf(world, lo.id) ? p : lo, undefined);
+}
 /** 这一下动作要花几格精力（会员日周「加微信」不要）。 */
 export const verbEnergyNow = (world: World, verb: Verb): number =>
   verb === "wechat" ? wechatEnergyOf(world.qualities, VERB_ENERGY[verb]) : VERB_ENERGY[verb];
@@ -551,6 +585,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     if (!person || person.role !== "customer") continue;
     if (customerCount >= MAX_PRESENT_CUSTOMERS) continue;
     placeCustomer(ap.person, "counter"); customerCount++;
+    w = assignVisitContexts({ ...w, present }, people);
     w = say(w, `${person.name}如约来了。`, [ap.person]);
     if (ap.reason === "refund" && ap.amount) {
       w = { ...w, money: w.money - ap.amount };
@@ -560,10 +595,11 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     } else if ((ap.reason === "wechat" || ap.reason === "visit") && person.skin
       && opinionOf(w, ap.person) >= RETURN_BUY_MIN_OPINION) {
       // 为你回来的人：看法够高、你有她的正解，她顺手带一支 —— 关系是真金白银。
-      const product = bestFit(person);
+      const profile = visitPerson(w, person);
+      const product = bestFit(profile);
       const boughtDay = qualityOf(w, `bought:${ap.person}`);
       if (!(boughtDay > 0 && w.day - boughtDay < BUY_INTERVAL_DAYS)
-        && shelfFitTier(fitFor(person, product)) === "positive") {
+        && shelfFitTier(fitFor(profile, product)) === "positive") {
         const amount = SHELF[product].price;
         w = { ...w, money: w.money + amount };
         w = setQuality(w, `bought:${ap.person}`, w.day);
@@ -622,7 +658,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     placeCustomer(pool[i].id, drawGuestZone()); customerCount++;
   }
 
-  w = { ...w, present };
+  w = assignVisitContexts({ ...w, present }, people);
 
   // 在场的人盖"今天来过"的章：委托判定（她来没来）与别的按天算的事都读它。
   for (const person of people)
@@ -639,7 +675,10 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   // 开门第一件事：今天谁托你做什么（每天一次，slot 0 落定之后）。
   if (w.slot === 0) w = openDay(w, people);
-  return w;
+  const target = rivalTarget(w, people)?.id ?? null;
+  if (target) w = markWeekThreat(w);
+  return { ...w, rivalPlan: { day: w.day, slot: w.slot, person: target,
+    tactic: qualityOf(w, RIVAL_COMPARE_NEXT) ? "compare" : "invite" } };
 }
 
 /** 一天四个时段走完了就这样推进一格；界面在每个时段开头调 beginSlot。 */
@@ -683,15 +722,20 @@ export function ambient(world: World, people: Person[]): World {
   for (const a of here) for (const b of here) if (a.id !== b.id) pairs.push([a, b]);
   w = gossipRound(w, people, pairs, GOSSIP_BASE, GOSSIP_TEMPER_BONUS, w.memories);
 
-  // 陆遥抢客（时段末结算）：挑一位走到我柜台上、这个时段玩家没顾上、对玩家看法最低的顾客带去维珞，她当天不再回来。
+  // 陆遥开时段就盯准一人，玩家照应她便能挡住这次机会；旧存档没有预告时沿用原选择。
   // 只从柜台和收银两个区里挑：在中庭闲逛、在休息区坐着的人本来就不是来买东西的，
   // 把她算成"你漏掉的一单"既说不通，也会让场上客人一多比分就必然输（名额是 7 位，精力只够接四五位）。
   const rival = here.find(p => p.role === "rival");
   if (rival) {
-    const marks = here.filter(p => p.role === "customer" && w.present[p.id] !== "rival"
-      && POACH_ZONES.includes(w.present[p.id]) && !w.touched.includes(p.id));
-    if (marks.length) {
-      const mark = marks.reduce((lo, p) => (opinionOf(w, p.id) < opinionOf(w, lo.id) ? p : lo));
+    const locked = w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot ? w.rivalPlan : undefined;
+    const planned = locked?.person ? personOf(people, locked.person) : undefined;
+    // 读回上一版已有公开意图的存档时，也补齐本格分母；正常开场已盖过同一枚章。
+    if (planned) w = markWeekThreat(w);
+    const guarded = planned && rivalGuarded(w);
+    if (guarded) w = markWeekGuard(w, planned.id);
+    const mark = locked ? planned : rivalTarget(w, people);
+    if (mark && (locked ? !guarded : !w.touched.includes(mark.id)) && w.present[mark.id] !== "rival"
+      && POACH_ZONES.includes(w.present[mark.id])) {
       if (opinionOf(w, mark.id) < poachMaxOpinionNow(w)) {
         let r: number; [r, w] = roll(w);
         if (r < poachChanceNow(w)) {
@@ -701,9 +745,10 @@ export function ambient(world: World, people: Person[]): World {
           w = setQuality(w, `away:${mark.id}`, w.day);
           // 被截走不是"今天她没来"那么轻：对面货全、不限精力，她在那边把单开满了。
           // 比分要有得输，玩家才知道自己漏掉的是钱，不是人次。
-          const sale = poachSale(mark);
+          const sale = poachSale(visitPerson(w, mark));
           if (sale.units) w = { ...w, rivalMoney: w.rivalMoney + sale.amount, rivalWins: w.rivalWins + 1 };
-          w = say(w, `你没顾上${mark.name}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
+          const missed = locked?.tactic === "compare" ? "这次比货没给出对症成交" : `你没顾上${mark.name}`;
+          w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
         }
       }
     }
@@ -920,7 +965,7 @@ export function availableVerbs(world: World, people: Person[], targets: PersonId
 
   if (a.role === "customer" && reachable(world, a.id)) {
     if (ok("greet")) out.push("greet");
-    if (ok("sample") && world.samples > 0) out.push("sample");
+    if (ok("sample") && world.samples > 0 && !qualityOf(world, sampleDayKey(world.day, a.id))) out.push("sample");
     if (ok("serve") && a.skin && world.compliance > SERVE_STAT_FLOOR && world.standing > SERVE_STAT_FLOOR) out.push("serve");
     if (ok("wechat") && wechatAllowed(world.heat) && opinionOf(world, a.id) >= WECHAT_MIN_OPINION && !qualityOf(world, `wechat:${a.id}`)) out.push("wechat");
   }
@@ -931,7 +976,8 @@ export function availableVerbs(world: World, people: Person[], targets: PersonId
     if (reachable(world, b.id)) {
       if (ok("introduce") && !related(world, people, a.id, b.id)) out.push("introduce");
       if (ok("mediate") && Math.min(warmthOf(world, people, a.id, b.id), warmthOf(world, people, b.id, a.id)) < MEDIATE_COLD_LIMIT) out.push("mediate");
-      if (ok("handoff") && a.role === "staff" && b.role === "customer") out.push("handoff");
+      if (ok("handoff") && a.role === "staff" && b.role === "customer"
+        && !qualityOf(world, handoffDayKey(world.day, a.id))) out.push("handoff");
     }
     // 把话传出去：听众要在场，事主人不在场也能说 —— 本来就是在背后讲。
     if (ok("tell") && qualityOf(world, `secret-known:${b.id}`) && !qualityOf(world, `secret-out:${b.id}`)
@@ -989,8 +1035,9 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
   const a = personOf(people, aId)!;
   const b = bId ? personOf(people, bId) : undefined;
   if (verb === "serve") {
-    const product = args.product ?? bestFit(a);
-    return resolveServe(world, people, aId, product, args.units ?? a.skin?.maxUnits ?? 1, args.force ?? false);
+    const profile = visitPerson(world, a);
+    const product = args.product ?? bestFit(profile);
+    return resolveServe(world, people, aId, product, args.units ?? profile.skin?.maxUnits ?? 1, args.force ?? false);
   }
   let w: World = { ...world,
     energy: world.energy - verbEnergyNow(world, verb),
@@ -1016,9 +1063,12 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
     case "sample": {
       const bonus = hasTemper(a, "thrifty") ? SAMPLE_THRIFTY_OPINION : SAMPLE_OPINION;
       w = { ...w, samples: w.samples - 1 };
+      w = setQuality(w, sampleDayKey(w.day, aId), 1);
       w = addOpinion(w, aId, bonus);
       w = remember(w, aId, "got-sample", 1);
       w = say(w, `你塞给${a.name}一支小样${hasTemper(a, "thrifty") ? `，${ta(a)}拿得很仔细` : ""}。`, [aId]);
+      w = markMet(w, aId);
+      w = trustedCare(w, people, aId);
       return witnessed(w, people, targets, "got-sample", 1);
     }
     case "introduce": {
@@ -1040,6 +1090,10 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
         }
         w = addOpinion(w, aId, INTRODUCE_OPINION);
         w = addOpinion(w, bId!, INTRODUCE_OPINION);
+        if (!(hasTemper(a, "proud") && hasTemper(b!, "proud"))) {
+          w = trustedCare(markMet(w, aId), people, aId);
+          w = trustedCare(markMet(w, bId!), people, bId!);
+        }
       } else {
         w = addOpinion(w, aId, INTRODUCE_FAIL_OPINION);
         w = addOpinion(w, bId!, INTRODUCE_FAIL_OPINION);
@@ -1062,6 +1116,8 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
         w = remember(w, aId, "mediated", 2);
         w = remember(w, bId!, "mediated", 2);
         w = say(w, `你在${a.name}和${b!.name}之间打了圆场，两个人脸色都缓下来。`, targets);
+        if (a.role === "customer") w = trustedCare(markMet(w, aId), people, aId);
+        if (b?.role === "customer") w = trustedCare(markMet(w, bId!), people, bId!);
       } else {
         w = addOpinion(w, aId, MEDIATE_FAIL_OPINION);
         w = addOpinion(w, bId!, MEDIATE_FAIL_OPINION);
@@ -1072,15 +1128,28 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       return w;
     }
     case "handoff": {
+      w = setQuality(w, handoffDayKey(w.day, aId), 1);
       w = addOpinion(w, aId, HANDOFF_STAFF_OPINION);
       w = addOpinion(w, bId!, HANDOFF_CUSTOMER_OPINION);
       w = remember(w, bId!, "looked-after", 1);
-      // 同事对你够熟、客人又有正解的货，她替你开一单：一天最多一单，保守开一件。
-      const gate = `handoff-sale:${aId}:${w.day}`;
+      w = markMet(w, bId!);
+      if (w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot && w.rivalPlan.person === bId
+        && w.rivalPlan.tactic !== "compare" && !rivalGuarded(w)) {
+        w = setQuality(w, guardCommitKey(w.day, w.slot, bId!), 1);
+        w = setQuality(w, RIVAL_COMPARE_NEXT, 1);
+        w = say(w, "陆遥看你托了单：下一时段会拿货来比，得亲自对症成交才能守住客人。", [bId!]);
+      }
+      // 托单先是照看；只有你此前问出过她的需求或卖过给她，同事才有足够信息替你开单。
+      // 全柜一天最多一单，保守开一件，避免把陌生人随手交出去就自动得到正解。
+      const gate = handoffSaleDayKey(w.day);
+      const knowsNeed = !!b?.skin && (b.skin.demands.some(d => qualityOf(w, `client-note:${b.id}:${d.trait}`) === 1)
+        || qualityOf(w, `bought:${b.id}`) > 0);
       if (b?.skin && opinionOf(w, aId) >= HANDOFF_SALE_MIN_OPINION && !qualityOf(w, gate)
+        && knowsNeed
         && !(qualityOf(w, `bought:${b.id}`) > 0 && w.day - qualityOf(w, `bought:${b.id}`) < BUY_INTERVAL_DAYS)) {
-        const product = bestFit(b);
-        if (shelfFitTier(fitFor(b, product)) === "positive") {
+        const profile = visitPerson(w, b);
+        const product = bestFit(profile);
+        if (shelfFitTier(fitFor(profile, product)) === "positive") {
           const amount = SHELF[product].price;
           w = { ...w, money: w.money + amount };
           w = setQuality(w, gate, 1);
@@ -1106,6 +1175,8 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       w = addOpinion(w, aId, WECHAT_OPINION);
       w = remember(w, aId, "added-wechat", 1);
       w = say(w, `${a.name}加了你微信。`, [aId]);
+      w = markMet(w, aId);
+      w = trustedCare(w, people, aId);
       return w;
     }
     case "keep": {
@@ -1113,6 +1184,8 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       w = addOpinion(w, aId, KEEP_OPINION);
       w = remember(w, aId, "kept-secret", 2);
       w = say(w, `你跟${a.name}说：那件事到我为止。`, [aId]);
+      w = markMet(w, aId);
+      w = trustedCare(w, people, aId);
       return w;
     }
     case "tell": {
@@ -1153,15 +1226,18 @@ export function resolveServe(world: World, people: Person[], personId: PersonId,
   return begun === world ? world : settleServe(begun, people, personId, productId, units, force);
 }
 
-/** 接待开头那一下：花掉接待的精力、把她记成"你接过手的"（陆遥不再对她下手）。
+/** 接待开头那一下：花掉接待的精力、把她记成"你接过手的"；邀客时能挡住陆遥，比货时还须对症成交。
  *  柜上的看 / 问 / 试（consult.ts）在第一下动作时走这一步，开单时不再扣第二遍。 */
 export function beginServe(world: World, people: Person[], personId: PersonId): World {
   const person = personOf(people, personId);
   if (!person?.skin || !reachable(world, personId) || world.energy < VERB_ENERGY.serve) return world;
   // 台账或柜位见底，开不了单。
   if (world.compliance <= SERVE_STAT_FLOOR || world.standing <= SERVE_STAT_FLOOR) return world;
-  return { ...world,
-    energy: world.energy - VERB_ENERGY.serve,
+  let committed = markMet(world, personId);
+  if (world.rivalPlan?.day === world.day && world.rivalPlan.slot === world.slot && world.rivalPlan.person === personId
+    && world.rivalPlan.tactic !== "compare")
+    committed = setQuality(committed, guardCommitKey(world.day, world.slot, personId), 1);
+  return { ...committed, energy: world.energy - VERB_ENERGY.serve,
     touched: [...new Set([...world.touched, personId])] };
 }
 
@@ -1175,7 +1251,8 @@ export function leaveServe(world: World, people: Person[], personId: PersonId, m
 
 /** 接待的结账：精力已经由 beginServe 花过。mood 是看 / 问 / 试那几句攒下的看法增减，开单这一刻一起结。 */
 export function settleServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false, mood = 0): World {
-  const person = personOf(people, personId);
+  const original = personOf(people, personId);
+  const person = original && visitPerson(world, original);
   if (!person?.skin) return world;
   let w: World = mood ? addOpinion(world, personId, mood) : world;
   const score = fitFor(person, productId);
@@ -1257,6 +1334,12 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
     // 她才会觉得你懂她 —— 多给的这一笔看法决定她下次肯多说几条（serve-talk.ts 的两条门槛）。
     const perfect = score >= PERFECT_MATCH;
     w = addOpinion(w, personId, SERVE_GOOD_OPINION + (perfect ? PERFECT_MATCH_OPINION : 0));
+    w = trustedCare(w, people, personId);
+    if (w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot && w.rivalPlan.person === personId
+      && w.rivalPlan.tactic === "compare") {
+      w = setQuality(w, guardCommitKey(w.day, w.slot, personId), 1);
+      w = setQuality(w, RIVAL_COMPARE_NEXT, 0);
+    }
     w = remember(w, personId, "honest-advice", 2);
     w = say(w, `${person.name}试了${SHELF[productId].name}，${perfect ? `${ta(person)}要的每条都被接住了，` : ""}带走 ${wanted} 件，进账 ¥${amount}。`, [personId]);
     return witnessed(w, people, [personId], "honest-advice", 2);
@@ -1359,7 +1442,7 @@ export function endDay(world: World, people: Person[]): World {
  * 它说的是这句话在哪一季说完的，换季不该把它换成新的季号。
  * 「人生一步」那一批同样靠跨季：life:<id> 是她走到第几步、life:<id>:how 是上一步怎么落的，
  * 今年的那一步要认去年的那一步，清零就等于每年把她重置成刚认识的人。 */
-const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:", "client-note:"] as const;
+const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:", "client-note:", "last-met:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。
@@ -1458,6 +1541,11 @@ export function parseWorld(data: unknown): World | null {
   if (w.bondKinds !== undefined && !(isRecord(w.bondKinds) && Object.values(w.bondKinds).every(v => isStr(v) && KINDS.includes(v as BondKind)))) return null;
   if (w.festival !== undefined && !isStr(w.festival)) return null;
   if (!isStrArray(w.touched)) return null;
+  if (w.rivalPlan !== undefined && !(isRecord(w.rivalPlan)
+    && isInt(w.rivalPlan.day) && w.rivalPlan.day >= 1
+    && isInt(w.rivalPlan.slot) && w.rivalPlan.slot >= 0 && w.rivalPlan.slot <= 3
+    && (w.rivalPlan.person === null || isStr(w.rivalPlan.person))
+    && (w.rivalPlan.tactic === undefined || w.rivalPlan.tactic === "invite" || w.rivalPlan.tactic === "compare"))) return null;
   if (!isRecord(w.present) || !Object.values(w.present).every(v => isStr(v) && ZONES.includes(v as Zone))) return null;
   if (!Array.isArray(w.memories) || !w.memories.every((m: unknown) => isRecord(m)
     && isInt((m as Memory).day) && isStr((m as Memory).holder) && isStr((m as Memory).subject) && isStr((m as Memory).act)
@@ -1488,6 +1576,21 @@ export function parseWorld(data: unknown): World | null {
   if (w.statsAtSeasonStart !== undefined && !(isRecord(w.statsAtSeasonStart)
     && isNum(w.statsAtSeasonStart.standing) && isNum(w.statsAtSeasonStart.compliance))) return null;
   const world = w as unknown as World;
+  // 旧档的「每位同事一天一单」记号迁到新的全柜日上限；读一次后不再写旧键。
+  for (const [key, value] of Object.entries(world.qualities)) {
+    const handoff = /^handoff-done:(\d+):([^:]+):[^:]+$/.exec(key);
+    if (handoff) {
+      if (value > 0) world.qualities[handoffDayKey(Number(handoff[1]), handoff[2])] = 1;
+      delete world.qualities[key];
+    }
+    const match = /^handoff-sale:([^:]+):(\d+)$/.exec(key);
+    if (!match) continue;
+    if (value > 0) {
+      world.qualities[handoffSaleDayKey(Number(match[2]))] = 1;
+      world.qualities[handoffDayKey(Number(match[2]), match[1])] = 1;
+    }
+    delete world.qualities[key];
+  }
   world.bondKinds ??= {};
   world.requests ??= []; // 旧存档没有委托：按今天没人提读
   world.season ??= 1; // 旧存档没有这个字段：那是第一季写的

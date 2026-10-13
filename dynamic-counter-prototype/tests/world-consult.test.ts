@@ -16,6 +16,7 @@ import { SHELF, SHELF_IDS, bestShelf, fitOfPerson, shelfFitTier } from "../src/w
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { Person, World } from "../src/world/types.ts";
 import { saleFeedback } from "../src/world/sales-feedback.ts";
+import { visitPerson } from "../src/world/visits.ts";
 
 const skinned = PEOPLE.filter(p => p.skin);
 const who = (id: string) => PEOPLE.find(p => p.id === id)!;
@@ -23,6 +24,22 @@ const atCounter = (ids: string[]): World => {
   const w = newWorld("consult-seed", PEOPLE);
   return { ...w, present: Object.fromEntries(ids.map(id => [id, "counter"])), energy: ENERGY_PER_DAY };
 };
+
+test("熟客公开的当日用途进入选货提示，口头预算只加成一次且临时诉求不写成永久偏好", () => {
+  const p = who("shen");
+  const w: World = { ...atCounter([p.id]), day: 2, opinion: { [p.id]: -10 },
+    qualities: { "last-met:shen": 1, "visit-context-day:shen": 2, "visit-context-code:shen": 2 } };
+  const live = visitPerson(w, p), c = openConsult(w, p);
+  assert.match(c.lines[0], new RegExp(`¥${live.skin!.budget.toLocaleString("zh-CN")}`));
+  assert.ok(c.known.includes("wear"), "公开说今天要持妆，就是玩家已经知道的事实");
+  assert.ok(offerEvidence(c, live, "plain", 1).some(s => s.includes("长效持妆")), "漏掉今天用途的货要说明已知缺口");
+  const begun = beginServe(w, PEOPLE, p.id);
+  const learned = askHer(c, live, "ask-units");
+  const saved = rememberConsult(begun, p, learned);
+  assert.equal(saved.qualities["client-note:shen:wear"], undefined, "沈薇今天赶场不等于永远要求持妆");
+  assert.deepEqual(restoreConsults(saveConsults(saved, { [p.id]: learned }), saved, PEOPLE), { [p.id]: learned },
+    "当日新增诉求在同一时段刷新后能恢复");
+});
 
 test("每一位有诉求表的客人都接得了：三处可看；按诉求生成的五句可问，手写的那几位照手写的问", () => {
   assert.ok(skinned.length >= 30);

@@ -1,7 +1,7 @@
 // 复盘只解释已经发生的结算，不查看预约队列中的未来退货结果。
 import { BUY_INTERVAL_DAYS, SERVE_REFUSE_OPINION } from "./engine.ts";
 import { PERFECT_MATCH, SHELF, fitOfPerson, shelfFitTier, type ShelfId } from "./shelf.ts";
-import { weekMoneyOf, weekTargetOf } from "./target.ts";
+import { ROUTE_WORD, weekMoneyOf, weekResultOf, weekTargetOf } from "./target.ts";
 import { PLAYER, type Person, type World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 
@@ -35,11 +35,12 @@ export function saleFeedback(before: World, after: World, person: Person, produc
     : amount <= 0 ? "把已知需求与货架标签对照，再用试用验证不确定的那支。"
     : "记住今天问出的需求，下一次把有限的耐心用在新的判断上。";
   const made = weekMoneyOf(after), target = weekTargetOf(after.day);
+  const result = weekResultOf(after);
   return { title: title.replaceAll("她", ta(person)), tone: amount <= 0 ? "bad" : hard || overAsk || tier === "mixed" ? "mixed" : "good", amount,
     units: amount / SHELF[product].price, opinion: (after.opinion[person.id] ?? 0) - (before.opinion[person.id] ?? 0),
     compliance: after.compliance - before.compliance, standing: after.standing - before.standing,
-    explanation: explanation.replaceAll("她", ta(person)), lesson, goal: made >= target ? `本周已过线 · ¥${made.toLocaleString("zh-CN")} / ¥${target.toLocaleString("zh-CN")}`
-      : `本周还差 ¥${(target - made).toLocaleString("zh-CN")} 过关`,
+    explanation: explanation.replaceAll("她", ta(person)), lesson, goal: result.stars ? `本周${ROUTE_WORD[result.route]}线已过关 · ${result.stars} 颗星`
+      : `业绩线还差 ¥${(target - made).toLocaleString("zh-CN")}；也可以走客情或守客线`,
     lines: after.log.slice(before.log.length).map(l => l.text),
   };
 }

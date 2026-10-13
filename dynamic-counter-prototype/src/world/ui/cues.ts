@@ -1,4 +1,4 @@
-// 三个"该被听见"的时刻：成交、回头客、你超过对面（以及反过来那一下）。
+// 该被听见的时刻：成交、回头客、本周过关、你超过对面（以及反过来那一下）。
 //
 // 为什么单独立一个文件：上一版这些反馈散在 WorldGame.tsx 的一条 if 链里（看法跌 ≥5 先响 down，
 // 否则进账才响 register），于是**硬推那一单玩家听不见成交的声音**，而早晨老客自己回柜那笔账
@@ -9,7 +9,7 @@
 import type { SfxKind } from "../../sfx.ts";
 import { qualityOf } from "../engine.ts";
 import type { PersonId, World } from "../types.ts";
-import { weekMoneyOf, weekTargetOf } from "../target.ts";
+import { weekResultOf } from "../target.ts";
 import { weekNoOf } from "../weeks.ts";
 
 export type MomentKind = "goal" | "sale" | "regular" | "lead" | "trail";
@@ -49,13 +49,11 @@ export function worldMoments(before: World, after: World): Moment[] {
     const who = buyerOf(before, after);
     out.push({ kind: who && cameBackBefore(before, who) ? "regular" : "sale", who });
   }
+  // 业绩、客情、守客任一条第一次过线，当场给过关反馈，不等周日。
+  if (weekNoOf(before.day) === weekNoOf(after.day)
+    && !weekResultOf(before).stars && weekResultOf(after).stars) out.push({ kind: "goal", who: null });
   // 反超要真的从落后翻上来：0:0 那一拍你先开张， headline 该是「成交」，不是「超过对面了」。
   // 反过来那一下不留这个口子 —— 对面先开张是要紧的警讯，哪怕当时还打平。
-  // 这一关的数在这一下被跨过去：过关感就该落在这一拍，不等周日对账。
-  if (weekNoOf(before.day) === weekNoOf(after.day) && after.money > before.money) {
-    const target = weekTargetOf(after.day);
-    if (weekMoneyOf(before) < target && weekMoneyOf(after) >= target) out.push({ kind: "goal", who: null });
-  }
   if (margin(before) < 0 && margin(after) > 0) out.push({ kind: "lead", who: null });
   if (margin(before) >= 0 && margin(after) < 0) out.push({ kind: "trail", who: null });
   return out;

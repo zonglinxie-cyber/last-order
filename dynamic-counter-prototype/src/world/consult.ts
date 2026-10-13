@@ -10,6 +10,7 @@ import { SHELF, PERFECT_MATCH, fitOfPerson, shelfFitTier, type FitTier, type She
 import type { Person, PersonId, Trait, World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { HAND_CONSULT, PLATE_CROP, PLATE_POINTS, PLATE_SIZE } from "./content/consult-lines.ts";
+import { visitContext, visitPerson } from "./visits.ts";
 
 /** 她肯听你说几句。每看一处、问一句、试一支都花一句；花完了只剩开单。 */
 export const CONSULT_PATIENCE = 4;
@@ -142,13 +143,16 @@ export function plateOf(person: Person): { src: string; cropY: number } | null {
   return { src: hand.plate, cropY: (PLATE_CROP.top / (PLATE_SIZE.h - visible)) * 100 };
 }
 
-/** 她一开口就肯说的那几条（看法越高越多），回头客的件数你心里有数。 */
+/** 传原始人物；眼下的用途只在这里换算一次。公开说出的新诉求也属于已知线索。 */
 export function openConsult(world: World, person: Person): Consult {
+  const context = visitContext(world, person);
+  person = visitPerson(world, person);
   const opinion = world.opinion[person.id] ?? 0;
   const talk = person.skin
     ? serveTalk(person.skin.demands, opinion, !!world.qualities[SECRET_KNOWN_KEY(person.id)], person.skin.veto)
     : { said: [], unsaid: 0, vetoNote: null };
   const lines = talk.said.map(d => `「${demandWords(person.id, d)}」`);
+  if (context) lines.unshift(context.line);
   if (talk.vetoNote) lines.push(`「${talk.vetoNote}」`);
   const notes = clientNotes(world, person);
   return {
@@ -157,7 +161,7 @@ export function openConsult(world: World, person: Person): Consult {
     patience: consultPatience(person, opinion),
     begun: false,
     looked: [], asked: [],
-    known: [...new Set([...notes.known, ...talk.said.map(d => d.trait)])],
+    known: [...new Set([...notes.known, ...talk.said.map(d => d.trait), ...(context ? [context.focus] : [])])],
     vetoKnown: notes.vetoKnown || !!talk.vetoNote,
     unitsKnown: notes.unitsKnown || (world.qualities[`bought:${person.id}`] ?? 0) > 0,
     tried: {},
@@ -321,13 +325,14 @@ export function restoreConsults(data: unknown, world: World, people: Person[]): 
   for (const [id, value] of Object.entries(data.entries)) {
     const p = people.find(x => x.id === id);
     if (!p?.skin || !world.present[id] || !record(value) || value.person !== id) continue;
+    const live = visitPerson(world, p);
     const v = value;
     const strList = (x: unknown): x is string[] => Array.isArray(x) && x.length <= 64 && x.every(y => typeof y === "string" && y.length < 2000);
     if (v.stage !== "listen" && v.stage !== "offer" || v.product !== null && (typeof v.product !== "string" || !Object.hasOwn(SHELF, v.product))) continue;
     if (!Number.isInteger(v.units) || Number(v.units) < 1 || Number(v.units) > 4 || !Number.isInteger(v.patience) || Number(v.patience) < 0 || Number(v.patience) > CONSULT_PATIENCE + 1) continue;
     if (typeof v.begun !== "boolean" || v.begun && !world.touched.includes(id)) continue;
     if (![v.vetoKnown, v.unitsKnown, v.matched].every(x => typeof x === "boolean") || !strList(v.looked) || !strList(v.asked) || !strList(v.known) || !strList(v.lines)) continue;
-    if (!v.looked.every(k => spotsOf(p).some(s => s.key === k)) || !v.asked.every(k => questionsOf(p).some(q => q.key === k)) || !v.known.every(t => p.skin!.demands.some(d => d.trait === t))) continue;
+    if (!v.looked.every(k => spotsOf(live).some(s => s.key === k)) || !v.asked.every(k => questionsOf(live).some(q => q.key === k)) || !v.known.every(t => live.skin!.demands.some(d => d.trait === t))) continue;
     if (!record(v.tried) || !Object.entries(v.tried).every(([k, tier]) => Object.hasOwn(SHELF, k) && ["positive", "mixed", "negative"].includes(String(tier)))) continue;
     if (typeof v.mood !== "number" || !Number.isFinite(v.mood) || v.mood > 0 || v.mood < -30) continue;
     out[id] = v as Consult;
