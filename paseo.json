@@ -1,0 +1,34 @@
+{
+  "worktree": {
+    "setup": "npm --prefix dynamic-counter-prototype ci"
+  },
+  "scripts": {
+    "test": {
+      "command": "npm run test:rules"
+    },
+    "build": {
+      "command": "npm run build"
+    },
+    "test:full": {
+      "command": "npm test"
+    },
+    "web": {
+      "type": "service",
+      "command": "npm run dev -- --host 127.0.0.1 --port \"$PASEO_PORT\" --strictPort"
+    }
+  },
+  "metadataGeneration": {
+    "title": {
+      "instructions": "使用简体中文概括当前任务，简短、具体，不加引号，不输出英文标题。"
+    },
+    "branchName": {
+      "instructions": "使用简短英文小写 Git 分支名，按 chore/、fix/ 或 feat/ 前缀概括任务。"
+    },
+    "commitMessage": {
+      "instructions": "使用 Conventional Commits，中文说明实际改动。末尾单独一行写 Agent: <实际角色与工具/模型>，不要编造验证结果。"
+    },
+    "pullRequest": {
+      "instructions": "用简体中文描述具体问题、最终行为、实际运行的验证及未解决事项；不要声称未运行的测试通过。"
+    }
+  }
+}
