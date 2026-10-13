@@ -14,7 +14,7 @@
     },
     "web": {
       "type": "service",
-      "command": "npm run dev -- --host 127.0.0.1 --port \"$PASEO_PORT\" --strictPort"
+      "command": "npm --prefix dynamic-counter-prototype run dev -- --host 127.0.0.1 --port \"$PASEO_PORT\" --strictPort"
     }
   },
   "metadataGeneration": {
