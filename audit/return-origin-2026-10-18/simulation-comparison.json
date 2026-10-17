@@ -1,0 +1,16 @@
+{
+  "identical": true,
+  "beforeBytes": 27160,
+  "afterBytes": 27160,
+  "signatures": [
+    "honest      20/20    min 145840 / med 156540 / max 161280 min 98 / med 100 / max 100 min 61 / med 74 / max 98",
+    "pushy       20/20    min 26880 / med 54240 / max 74720 min 8 / med 22 / max 46 min 0 / med 0 / max 3",
+    "social      20/20    min 77060 / med 90260 / max 103720 min 97 / med 100 / max 100 min 31 / med 74 / max 100",
+    "random      20/20    min 13620 / med 33350 / max 48360 min 33 / med 52 / max 74 min 0 / med 2 / max 41",
+    "honest      20/20    min 140920 / med 149780 / max 157320 min 99 / med 100 / max 100 min 46 / med 77 / max 95",
+    "pushy       20/20    min 31360 / med 47600 / max 78420 min 0 / med 24 / max 51 min 0 / med 0 / max 8",
+    "social      20/20    min 85820 / med 97700 / max 115020 min 99 / med 100 / max 100 min 41 / med 76 / max 97",
+    "random      20/20    min 14000 / med 28520 / max 59410 min 19 / med 45 / max 71 min 0 / med 2 / max 14"
+  ],
+  "noUniversalBest": true
+}

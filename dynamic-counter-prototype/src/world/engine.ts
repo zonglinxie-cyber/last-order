@@ -15,12 +15,13 @@ import { CARE_DAYS_MIN, CARE_TRUST_MIN, guardCommitKey, markWeekCare, markWeekGu
 import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
-  BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
+  Arrival, BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
   Storylet, Verb, Visits, World, WorldRequest, Zone,
 } from "./types.ts";
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
+import { arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
 
@@ -258,8 +259,8 @@ const setBond = (w: World, a: PersonId, b: PersonId, kind: BondKind, warmth: num
 export const remember = (w: World, holder: PersonId, act: string, valence: Memory["valence"], subject: PersonId = PLAYER, heardFrom?: PersonId): World =>
   ({ ...w, memories: [...w.memories, { day: w.day, holder, subject, act, valence, ...(heardFrom ? { heardFrom } : {}) }] });
 
-export const say = (w: World, text: string, who?: PersonId[]): World =>
-  ({ ...w, log: [...w.log, { day: w.day, slot: w.slot, text, ...(who?.length ? { who } : {}) }] });
+export const say = (w: World, text: string, who?: PersonId[], arrival?: Arrival): World =>
+  ({ ...w, log: [...w.log, { day: w.day, slot: w.slot, text, ...(who?.length ? { who } : {}), ...(arrival ? { arrival } : {}) }] });
 
 /** 写一格进度：换季、剧情效果、引擎自己盖的章都只走这一个入口。
  *  一处例外要在这里说明：落点（thread:<id>）的值每变一次，顺手把「这一季变的」钉进
@@ -590,7 +591,8 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     if (customerCount >= MAX_PRESENT_CUSTOMERS) continue;
     placeCustomer(ap.person, "counter"); customerCount++;
     w = assignVisitContexts({ ...w, present }, people);
-    w = say(w, `${person.name}如约来了。`, [ap.person]);
+    const arrival = arrivalFromAppointment(ap);
+    w = say(w, describeArrival(arrival, people)!.scene, [ap.person], arrival);
     if (ap.reason === "refund" && ap.amount) {
       w = { ...w, money: w.money - ap.amount };
       w = addOpinion(w, ap.person, REFUND_OPINION);
@@ -616,7 +618,8 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       const bp = personOf(people, bid);
       if (bp && bp.role === "customer" && !(bid in present) && customerCount < MAX_PRESENT_CUSTOMERS) {
         placeCustomer(bid, "counter"); customerCount++;
-        w = say(w, `${bp.name}跟着${person.name}一起来了。`, [bid]);
+        const arrival: Arrival = { person: bid, kind: "companion", source: person.id };
+        w = say(w, describeArrival(arrival, people)!.scene, [bid], arrival);
       }
     }
   }
@@ -1423,7 +1426,7 @@ export function endDay(world: World, people: Person[]): World {
     const slots = friend.visits.slots.length ? friend.visits.slots : [1 as Slot];
     let si: number; [si, w] = [drawIndex(w.seed, w.rngCalls, slots.length), { ...w, rngCalls: w.rngCalls + 1 }];
     w = { ...w, appointments: [...w.appointments,
-      { day: w.day + 1, slot: slots[si], person: friend.id, reason: "visit" }] };
+      { day: w.day + 1, slot: slots[si], person: friend.id, reason: "visit", referredBy: person.id }] };
     w = say(w, `${person.name}跟朋友说这层有个靠谱的人，${friend.name}明天会来。`, [person.id, friend.id]);
   }
 
@@ -1582,6 +1585,17 @@ export function parseWorld(data: unknown): World | null {
   if (!Array.isArray(w.log) || !w.log.every((l: unknown) => isRecord(l)
     && isInt((l as LogEntry).day) && isInt((l as LogEntry).slot) && isStr((l as LogEntry).text)
     && ((l as LogEntry).who === undefined || isStrArray((l as LogEntry).who)))) return null;
+  // 来路只作已发生事实的说明：旧档没有就不猜，坏说明也不丢掉主体存档。
+  w.appointments = w.appointments.map(a => {
+    if (a.referredBy === undefined || a.reason === "visit" && isStr(a.referredBy) && a.referredBy.length > 0 && a.referredBy !== a.person) return a;
+    const { referredBy: _discarded, ...rest } = a;
+    return rest;
+  });
+  w.log = w.log.map(l => {
+    if (l.arrival === undefined || isArrival(l.arrival)) return l;
+    const { arrival: _discarded, ...rest } = l;
+    return rest;
+  });
   if (w.opinionAtSeasonStart !== undefined && !isNumRecord(w.opinionAtSeasonStart)) return null;
   for (const k of ["rivalMoney", "rivalWins"] as const)
     if (w[k] !== undefined && !isNum(w[k])) return null;

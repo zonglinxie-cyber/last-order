@@ -1,0 +1,7 @@
+{
+  "baselineCommit": "ae910c3713cc4d354c9571372e599e1f1f937814",
+  "baselineSourceMatchesCommit": true,
+  "mismatches": [],
+  "command": "node --experimental-strip-types tests/world-sim.ts 20 2",
+  "currentEngineSha256": "422b728063ff26e7a4afb66a530e32bb456cda04f79e972524c0952d97471cf9"
+}

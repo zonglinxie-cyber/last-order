@@ -1,0 +1,109 @@
+[WebServer] (node:26054) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:26661) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 28 tests using 1 worker
+
+(node:26803) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-opening.spec.ts:40:3 › 真实开场 320×568 › 标题与开局完整可见，展开全部规则后仍可滚动并直接开局 (524ms)
+  ✓   2 tests/world-opening.spec.ts:59:3 › 真实开场 320×568 › 引导直接接客，探问中断可续谈，真实成交复盘后首张剧情只出现一次 (4.3s)
+  ✓   3 tests/world-opening.spec.ts:121:3 › 真实开场 320×568 › 随时退出查看不扣精力；探问后不卖也能自然接上剧情 (2.4s)
+  ✓   4 tests/world-opening.spec.ts:143:3 › 真实开场 320×568 › 跳过引导可直接推进：先讲完上午的故事，然后只推进一次 (455ms)
+  ✓   5 tests/world-opening.spec.ts:40:3 › 真实开场 390×844 › 标题与开局完整可见，展开全部规则后仍可滚动并直接开局 (504ms)
+  ✓   6 tests/world-opening.spec.ts:59:3 › 真实开场 390×844 › 引导直接接客，探问中断可续谈，真实成交复盘后首张剧情只出现一次 (4.2s)
+  ✓   7 tests/world-opening.spec.ts:121:3 › 真实开场 390×844 › 随时退出查看不扣精力；探问后不卖也能自然接上剧情 (2.4s)
+  ✓   8 tests/world-opening.spec.ts:143:3 › 真实开场 390×844 › 跳过引导可直接推进：先讲完上午的故事，然后只推进一次 (456ms)
+  ✓   9 tests/world-opening.spec.ts:160:1 › 旧档首日上午的剧情与绑定照常恢复，不重新抽首张卡 (378ms)
+  ✓  10 tests/world-return-origin.spec.ts:42:3 › 来访来路 320×568 › 打烊引荐经过真实时间推进，在场、接待及刷新仍认得介绍人 (3.0s)
+  ✓  11 tests/world-return-origin.spec.ts:80:3 › 来访来路 320×568 › 微信带朋友，主客与同行客的来路分得清 (1.4s)
+  ✓  12 tests/world-return-origin.spec.ts:94:3 › 来访来路 320×568 › 旧预约没有介绍人仍能接待；旧打烊记录可继续 (1.5s)
+  ✓  13 tests/world-return-origin.spec.ts:109:3 › 来访来路 320×568 › 打烊页不把尚未发生的退货说成客人约好了 (334ms)
+  ✓  14 tests/world-return-origin.spec.ts:42:3 › 来访来路 390×844 › 打烊引荐经过真实时间推进，在场、接待及刷新仍认得介绍人 (3.1s)
+  ✓  15 tests/world-return-origin.spec.ts:80:3 › 来访来路 390×844 › 微信带朋友，主客与同行客的来路分得清 (1.4s)
+  ✓  16 tests/world-return-origin.spec.ts:94:3 › 来访来路 390×844 › 旧预约没有介绍人仍能接待；旧打烊记录可继续 (1.5s)
+  ✓  17 tests/world-return-origin.spec.ts:109:3 › 来访来路 390×844 › 打烊页不把尚未发生的退货说成客人约好了 (334ms)
+〔知道了〕开局世界种子：world-mywpiww0-6620
+〔知道了〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔知道了〕整季用时 202.1s，走了 141 步，记下 298 行流水、0 条问题
+〔知道了〕逐时段明细与问题清单：../audit/return-origin-2026-10-18/season/report-know.json
+〔知道了〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔知道了〕第 2 季前 3 天开出来的跨季卡：arc-tangke-sheet、arc-fangmin-line、arc-qiaowan-parrot、arc-fangmin-name、arc-fangmin-who、arc-roman-columns、arc-tangke-stock、arc-fangmin-end、arc-roman-quota、arc-qiaowan-face、arc-roman-late、arc-roman-end
+  ✓  18 tests/world-season-smoke.spec.ts:600:5 › 人情场整季冒烟 · 全程点知道了 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (3.7m)
+〔跳过引导〕开局世界种子：world-mywpiww0-6620
+〔跳过引导〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔跳过引导〕整季用时 273.6s，走了 140 步，记下 299 行流水、0 条问题
+〔跳过引导〕逐时段明细与问题清单：../audit/return-origin-2026-10-18/season/report-skip.json
+〔跳过引导〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔跳过引导〕第 2 季前 3 天开出来的跨季卡：arc-fangmin-line、arc-qiaowan-parrot、arc-fangmin-name、arc-qiaowan-face、arc-tangke-sheet、arc-roman-columns、arc-qiaowan-unload、arc-roman-quota、arc-tangke-stock、arc-roman-late、arc-roman-end、arc-tangke-seat
+  ✓  19 tests/world-season-smoke.spec.ts:600:5 › 人情场整季冒烟 · 开局跳过引导 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (4.9m)
+  ✓  20 tests/world-season-smoke.spec.ts:738:3 › 季末回顾页 › 结局当标题，高光、三本账与三颗按钮都在 (323ms)
+  ✓  21 tests/world-season-smoke.spec.ts:752:3 › 季末回顾页 › 走完的线按落点标题念，不许把内部字段名摊给玩家 (267ms)
+  ✓  22 tests/world-season-smoke.spec.ts:771:3 › 季末回顾页 › 本子翻过面了，但不许看着像讲完：第 2 幕那一档留一句钩子 (219ms)
+  ✓  23 tests/world-season-smoke.spec.ts:781:3 › 季末回顾页 › 倒数第二幕翻过面：钩子不许跟着幕号一起被写死掉 (213ms)
+  ✓  24 tests/world-season-smoke.spec.ts:790:3 › 季末回顾页 › 内容讲到最晚的那一季末：钩子要收回去，不许年年都喊下一季 (213ms)
+  ✓  25 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (317ms)
+  ✓  26 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (337ms)
+  ✓  27 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (340ms)
+  ✓  28 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (395ms)
+
+  Slow test file: tests/world-season-smoke.spec.ts (8.6m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  28 passed (9.2m)

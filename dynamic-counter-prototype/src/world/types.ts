@@ -108,7 +108,19 @@ export type Memory = {
   heardFrom?: PersonId;
 };
 
-export type LogEntry = { day: number; slot: Slot; text: string; who?: PersonId[] };
+/** 已经发生的来访。只记录真实来路，不从好感或旧对话猜介绍人。 */
+export type Arrival = {
+  person: PersonId;
+  kind: "visit" | "wechat" | "referral" | "companion" | "refund";
+  source?: PersonId;
+};
+export type LogEntry = { day: number; slot: Slot; text: string; who?: PersonId[]; arrival?: Arrival };
+export type Appointment = {
+  day: number; slot: Slot; person: PersonId; bring?: PersonId[];
+  reason?: "visit" | "refund" | "wechat"; amount?: number;
+  /** 熟客替你约来的人；旧档缺失时不倒推来源。 */
+  referredBy?: PersonId;
+};
 
 // —— 每日委托 ——
 
@@ -197,7 +209,7 @@ export type World = {
   /** 季初快照：开季那一刻的柜位与台账。季末"比开季"从这里读；旧存档没有就只念季末数。 */
   statsAtSeasonStart?: { standing: number; compliance: number };
   /** 被效果排定的来访："第几天 第几时段 谁来，带谁"；reason 记她为什么来（退货要退款） */
-  appointments: Array<{ day: number; slot: Slot; person: PersonId; bring?: PersonId[]; reason?: "visit" | "refund" | "wechat"; amount?: number }>;
+  appointments: Appointment[];
   /** 每日委托：开门那阵在场或熟悉的人提的请求；旧存档缺字段按空读 */
   requests: WorldRequest[];
   /** 故事碎片的使用记录：id -> 最近一次触发的天 */

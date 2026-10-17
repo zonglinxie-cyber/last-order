@@ -1,0 +1,88 @@
+{
+  "pixel": [
+    255,
+    255,
+    255,
+    255
+  ],
+  "layers": [
+    {
+      "tag": "MAIN",
+      "cls": "world-report",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "mobile-scroll-content",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "mobile-scroll",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "mobile-page world-report-scroll",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "app-screen world-app world-report-page",
+      "bg": "rgb(255, 255, 255)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "mobile-app-viewport",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "device-screen",
+      "bg": "rgb(255, 255, 255)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "phone-device",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "phone-scale-box",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "phone-stage",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "DIV",
+      "cls": "",
+      "bg": "rgba(0, 0, 0, 0)",
+      "opacity": "1"
+    },
+    {
+      "tag": "BODY",
+      "cls": "",
+      "bg": "rgb(23, 16, 15)",
+      "opacity": "1"
+    },
+    {
+      "tag": "HTML",
+      "cls": "",
+      "bg": "rgb(255, 255, 255)",
+      "opacity": "1"
+    }
+  ]
+}

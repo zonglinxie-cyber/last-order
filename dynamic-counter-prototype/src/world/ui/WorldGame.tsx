@@ -25,6 +25,7 @@ import type { ShelfId } from "../shelf.ts";
 import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
 import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
+import { currentArrival, publicAppointments } from "../arrivals.ts";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -67,7 +68,7 @@ type DayReport = {
   day: number;
   moneyDelta: number;
   movers: Array<{ id: PersonId; delta: number; now: number }>;
-  tomorrow: Array<{ name: string; slot: Slot }>;
+  tomorrow: Array<{ name: string; slot: Slot; detail?: string }>;
   week: boolean;
 };
 /** 「自选加难」的勾选：存在自己的钥匙里（与 COACH_KEY 同类），刷新与重开一季都记得。
@@ -236,9 +237,7 @@ function buildReport(before: World, after: World, base: DayBase): DayReport {
     .filter(m => m.delta !== 0)
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
     .slice(0, 3);
-  const tomorrow = after.appointments
-    .filter(a => a.day === after.day)
-    .map(a => ({ name: nameOf(a.person), slot: a.slot }));
+  const tomorrow = publicAppointments(after, PEOPLE, after.day);
   return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0 };
 }
 
@@ -872,7 +871,9 @@ export default function WorldGame() {
         <section className="report-block">
           <h2>明天约好了的</h2>
           {report.tomorrow.length
-            ? <p>{report.tomorrow.map(t => `${t.name}（${SLOT_WORD[t.slot]}）`).join("、")}说来</p>
+            ? report.tomorrow.map((t, i) => <p className="report-appointment" key={`${t.name}-${t.slot}-${i}`}>
+              <strong>{t.name} · {SLOT_WORD[t.slot]}</strong><span>{typeof t.detail === "string" && t.detail ? t.detail : "说好了来看看"}</span>
+            </p>)
             : <p>明天没人约好。谁肯替你约人，得看今晚这张网。</p>}
         </section>
         {report.week && <section className="report-block">
@@ -1013,6 +1014,7 @@ export default function WorldGame() {
     </div>}
 
     {salePerson && consult && <ConsultPanel world={world} person={salePerson} consult={consult}
+      arrival={currentArrival(world, salePerson.id, PEOPLE)}
       onAct={consultAct} onCommit={doServe} onLeave={stopServe}
       onChange={patch => setConsults(m => ({ ...m, [salePerson.id]: { ...m[salePerson.id], ...patch } }))}
       onClose={() => { setServing(false); setSelected(null); }} />}

@@ -1,0 +1,45 @@
+人情场：回访看得见来路 — 2026-10-18
+
+结果
+- 打烊预告、到场日志、人物卡和了解客人页使用同一真实预约来源。
+- 微信本人和同行朋友分别说明来路；旧档缺字段不猜来源，坏说明不丢主体存档。
+- 未来退货不作为公开预约预告；实际退款沿用原有结算。
+- 修复通用手机 .app-screen 白底覆盖游戏底色的问题，只提高游戏背景的样式优先级。
+
+检查（在 dynamic-counter-prototype 下，另注明的命令除外）
+1. npm run test:rules
+   PASS 281/281，新增 world-arrivals.test.ts 8 条；见 rules.log。
+2. npm run build
+   PASS，含 28 个受保护运行时文件一致性检查；见 build-final.log。
+   仍有原有包体超过 500 kB 的提示。没有修改移动端运行时。
+3. 项目根目录 ./node_modules/.bin/tsc --project /tmp/renqing-return-20261018/tsconfig.json
+   PASS（exit 0），独立检查 world-return-origin.spec.ts、world-arrivals.test.ts 与相关导入。
+   临时配置继承 prototype/tsconfig.json，补 src/vite-env.d.ts 和根 node_modules/@types。
+4. MOBILE_RUNTIME_TEST_PORT=4187 npx playwright test tests/world-return-origin.spec.ts tests/world-floor.spec.ts tests/world-consult.spec.ts --workers=1
+   PASS 54/54；见 browser-related.log。
+5. 最终底色修复仅保留背景属性的优先级，并补损坏打烊说明的降级后：
+   MOBILE_RUNTIME_TEST_PORT=4187 WORLD_SMOKE_AUDIT_DIR=../audit/return-origin-2026-10-18/season npx playwright test tests/world-return-origin.spec.ts tests/world-opening.spec.ts tests/world-season-smoke.spec.ts --workers=1
+   PASS 28/28；见 browser-final.log。
+   两批共 74 条不同用例：40 floor + 6 consult + 8 return-origin + 9 opening + 11 season-smoke。
+   两条完整路径都走完 28 天、进入第二季继续 3 天，notes/errors/rawFields 均为 0。
+   手机视口 320×568、390×844，触控按钮可点击，来路说明可见，未横向溢出。
+6. node --experimental-strip-types tests/world-sim.ts 20 2
+   改前源码快照与 ae910c3 一致；改前/改后都完整退出 0。
+   两份 27,160 字节报告逐字节一致，八组签名均 20/20，无一种打法在所有种子最优。
+   见 sim-before.log、sim-after.log、simulation-comparison.json、simulation-provenance.json。
+7. git diff --check
+   PASS。
+
+诊断证据
+- before-origin.json：固定种子的真实引荐及原本丢失来源的到场记录。
+- before-report-390.png、before-arrival-390.png：改前体验。
+- report-background-before.json/png：最小打烊存档复现白底，实际像素为 255/255/255。
+- background-red.log：修复前浏览器断言实际失败，收到 rgb(255,255,255)，期望游戏深底。
+- report/person/consult 的 320、390 截图：最终来访呈现和深底可读性。
+- season/：完整浏览器冒烟及季末、换季截图。
+
+边界
+- 同条件模拟只证明其覆盖的玩法统计不变，不宣称所有世界状态字节相同。
+- 未进行实体手机或真人留存验收；没有新增保证回头客的奖励机制。
+- 测试覆盖的 14 份旧 audit 文件已恢复至本轮开始前内容。
+- 本机预览 http://127.0.0.1:4188/，未发布公网。

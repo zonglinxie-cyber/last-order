@@ -13,17 +13,19 @@ import { ta } from "../pronoun.ts";
 import { unsaidWord } from "../serve-talk.ts";
 import { servePickWord } from "./words.ts";
 import { visitContext } from "../visits.ts";
+import type { ArrivalNote } from "../arrivals.ts";
 import "./consult.css";
 
 type Props = {
   world: World; person: Person; consult: Consult;
+  arrival?: ArrivalNote | null;
   onChange: (patch: Partial<Pick<Consult, "stage" | "product" | "units">>) => void;
   onAct: (step: (c: Consult) => Consult) => void;
   onCommit: (force: boolean) => void; onLeave: () => void; onClose: () => void;
 };
 const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
 
-export function ConsultPanel({ world, person, consult: c, onChange, onAct, onCommit, onLeave, onClose }: Props) {
+export function ConsultPanel({ world, person, consult: c, arrival, onChange, onAct, onCommit, onLeave, onClose }: Props) {
   const plate = plateOf(person), offer = c.stage === "offer", product = c.product;
   const context = visitContext(world, person);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,9 @@ export function ConsultPanel({ world, person, consult: c, onChange, onAct, onCom
         <button type="button" role="tab" tabIndex={offer ? 0 : -1} aria-selected={offer} aria-controls="consult-offer" id="consult-offer-tab" onClick={() => onChange({ stage: "offer" })}>挑货开单</button>
       </div>
       <MobileScroll key={c.stage} className="consult-scroll">
+        {arrival && !offer && <section className="arrival-note" aria-label="来访缘由">
+          <h3>{arrival.title}</h3><p>{arrival.line}</p>
+        </section>}
         <div className="consult-notes" aria-label="已知需求">
           <span>已知</span>{c.known.map(t => <b key={t}>{TRAIT_LABEL[t]}</b>)}
           {!c.known.length && <span>还没问到具体需求</span>}

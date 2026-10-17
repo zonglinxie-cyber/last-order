@@ -1,7 +1,9 @@
 /* 人情场楼层：配色沿用 --gold/--cream/深褐那套（见 web.css / prototype.css）。
    尺寸契约与人情网相同：正文 ≥12px、可点的都 ≥44px、除地图容器外不横向溢出。
    大地图是 1280×720 横图，竖屏按可视区高度铺满、左右拖；人站在 zones.ts 量的落点上。 */
-.world-app { position:absolute; inset:0; display:flex; flex-direction:column; background:#17100f; overflow:hidden; }
+.world-app { position:absolute; inset:0; display:flex; flex-direction:column; overflow:hidden; }
+/* 只提高底色优先级，不影响各屏的布局覆盖；打烊与季末也须保持正文对比度。 */
+.app-screen.world-app { background:#17100f; }
 
 /* —— 顶栏：一条细栏，第 N 天 · 时段 · 钱 · 精力 · 小样 —— */
 .world-bar { flex:0 0 auto; z-index:30; display:flex; align-items:center; gap:8px; padding:var(--top-inset) 10px 8px; background:linear-gradient(#120a0af5,#140c0cd8); border-bottom:1px solid #f0cf9122; }
@@ -160,6 +162,11 @@
 .world-report { padding:var(--top-inset) 18px 20px; }
 .world-report .report-eyebrow { margin:0 0 6px; color:#c7a993; font-size:12px; letter-spacing:.08em; }
 .world-report h1 { margin:0 0 16px; color:#ffe8b6; font:700 26px 'Noto Serif SC',serif; }
+.report-appointment strong, .report-appointment span { display:block; }
+.report-appointment strong { font-weight:500; color:#ffe8b6; }
+.arrival-note { margin:2px 0 12px; padding:10px 12px; border-left:2px solid #d8ad70; background:#d8ad7010; border-radius:0 8px 8px 0; }
+.arrival-note h3 { margin:0 0 4px; color:#edcf9e; font-size:12px; font-weight:500; }
+.arrival-note p { margin:0; color:#f2dfc8; font-size:13px; line-height:1.65; }
 .report-numbers { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
 .report-numbers span { flex:1 1 calc(50% - 5px); min-width:0; display:flex; flex-direction:column; gap:3px; padding:10px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
 .report-numbers small { color:#a99689; font-size:12px; }

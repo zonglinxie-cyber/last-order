@@ -3,6 +3,7 @@
 import { ta } from "../pronoun.ts";
 import { clientNotes, TRAIT_LABEL } from "../consult.ts";
 import { visitContext } from "../visits.ts";
+import { currentArrival } from "../arrivals.ts";
 import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCarePeople, weekGuardedPeople } from "../target.ts";
 import { ageAtSeason } from "../content/people.ts";
 import { useEffect, useMemo, useRef } from "react";
@@ -29,6 +30,7 @@ export function PersonCard({ person, world, people, rival, feedback, onClose }: 
   }, [feedback]);
   const notes = clientNotes(world, person);
   const today = visitContext(world, person);
+  const arrival = currentArrival(world, person.id, people);
   const customer = person.role === "customer";
   const cared = customer && weekCarePeople(world).includes(person.id);
   const careDays = customer ? Math.min(CARE_DAYS_MIN, weekCareDaysOf(world, person.id)) : 0;
@@ -57,6 +59,9 @@ export function PersonCard({ person, world, people, rival, feedback, onClose }: 
     </header>
     <MobileScroll className="pc-scroll">
       {feedback && <p className="world-toast" role="status">{feedback}</p>}
+      {arrival && <section className="pc-section arrival-note" aria-label="来访缘由">
+        <h3>{arrival.title}</h3><p>{arrival.line}</p>
+      </section>}
       <p className="pc-opinion">{ta(person)}看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
       <p className="pc-tempers">{person.tempers.map(t => TEMPER_WORD[t]).join(" · ")}</p>
       {today && <section className="pc-section" aria-label="今天的来意">

@@ -1,0 +1,41 @@
+[WebServer] (node:10169) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:10236) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:10249) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-return-origin.spec.ts:42:3 › 来访来路 320×568 › 打烊引荐经过真实时间推进，在场、接待及刷新仍认得介绍人 (5.4s)
+
+
+  1) tests/world-return-origin.spec.ts:42:3 › 来访来路 320×568 › 打烊引荐经过真实时间推进，在场、接待及刷新仍认得介绍人 ───────────
+
+    Error: expect(locator).toHaveCSS(expected) failed
+
+    Locator:  locator('.world-report-page')
+    Expected: "rgb(23, 16, 15)"
+    Received: "rgb(255, 255, 255)"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCSS" with timeout 5000ms
+      - waiting for locator('.world-report-page')
+        14 × locator resolved to <div class="app-screen world-app world-report-page">…</div>
+           - unexpected value "rgb(255, 255, 255)"
+
+
+      48 |     await expect(appointment).toContainText("傍晚");
+      49 |     // 通用手机外框曾把打烊页刷成白底，导致浅金正文几乎不可读。
+    > 50 |     await expect(page.locator(".world-report-page")).toHaveCSS("background-color", "rgb(23, 16, 15)");
+         |                                                      ^
+      51 |     await page.getByRole("button", { name: "进入第 5 天" }).click({ trial: true });
+      52 |     await appointment.scrollIntoViewIfNeeded();
+      53 |     await page.screenshot({ path: `${audit}/report-${width}.png` });
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-return-origin.spec.ts:50:54
+
+    Error Context: test-results/world-return-origin-来访来路-320×568-打烊引荐经过真实时间推进，在场、接待及刷新仍认得介绍人/error-context.md
+
+  1 failed
+    tests/world-return-origin.spec.ts:42:3 › 来访来路 320×568 › 打烊引荐经过真实时间推进，在场、接待及刷新仍认得介绍人 ────────────

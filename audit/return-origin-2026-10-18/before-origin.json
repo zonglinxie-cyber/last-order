@@ -1,0 +1,231 @@
+{
+  "before": {
+    "seed": "origin-4",
+    "season": 1,
+    "day": 4,
+    "slot": 3,
+    "money": 0,
+    "rivalMoney": 0,
+    "rivalWins": 0,
+    "standing": 50,
+    "compliance": 55,
+    "energy": 0,
+    "samples": 8,
+    "opinion": {
+      "mei": 50
+    },
+    "bonds": {},
+    "bondKinds": {},
+    "memories": [],
+    "qualities": {},
+    "present": {},
+    "touched": [],
+    "rngCalls": 0,
+    "appointments": [],
+    "requests": [],
+    "fired": {},
+    "log": [],
+    "opinionAtSeasonStart": {},
+    "statsAtSeasonStart": {
+      "standing": 50,
+      "compliance": 55
+    },
+    "heat": []
+  },
+  "night": {
+    "seed": "origin-4",
+    "season": 1,
+    "day": 5,
+    "slot": 0,
+    "money": 0,
+    "rivalMoney": 0,
+    "rivalWins": 0,
+    "standing": 50,
+    "compliance": 55,
+    "energy": 0,
+    "samples": 8,
+    "opinion": {
+      "mei": 50
+    },
+    "bonds": {},
+    "bondKinds": {},
+    "memories": [],
+    "qualities": {},
+    "present": {},
+    "touched": [],
+    "rngCalls": 3,
+    "appointments": [
+      {
+        "day": 5,
+        "slot": 2,
+        "person": "zhou",
+        "reason": "visit"
+      }
+    ],
+    "requests": [],
+    "fired": {},
+    "log": [
+      {
+        "day": 4,
+        "slot": 3,
+        "text": "梅女士跟朋友说这层有个靠谱的人，周姐明天会来。",
+        "who": [
+          "mei",
+          "zhou"
+        ]
+      },
+      {
+        "day": 5,
+        "slot": 0,
+        "text": "—— 第 5 天 ——"
+      }
+    ],
+    "opinionAtSeasonStart": {},
+    "statsAtSeasonStart": {
+      "standing": 50,
+      "compliance": 55
+    },
+    "heat": []
+  },
+  "arrival": {
+    "seed": "origin-4",
+    "season": 1,
+    "day": 5,
+    "slot": 2,
+    "money": 0,
+    "rivalMoney": 0,
+    "rivalWins": 0,
+    "standing": 50,
+    "compliance": 55,
+    "energy": 20,
+    "samples": 8,
+    "opinion": {
+      "mei": 50
+    },
+    "bonds": {},
+    "bondKinds": {},
+    "memories": [],
+    "qualities": {
+      "visit-context-day:zhou": 5,
+      "visit-context-code:zhou": 0,
+      "visit-context-day:shen": 5,
+      "visit-context-code:shen": 0,
+      "visit-context-day:mei": 5,
+      "visit-context-code:mei": 0,
+      "visit-context-day:duan": 5,
+      "visit-context-code:duan": 0,
+      "visit-context-day:heqing": 5,
+      "visit-context-code:heqing": 0,
+      "visit-context-day:ruanxiaoman": 5,
+      "visit-context-code:ruanxiaoman": 0,
+      "visit-context-day:cenning": 5,
+      "visit-context-code:cenning": 0,
+      "seen:shen": 5,
+      "seen:mei": 5,
+      "seen:zhou": 5,
+      "seen:duan": 5,
+      "seen:heqing": 5,
+      "seen:ruanxiaoman": 5,
+      "seen:cenning": 5,
+      "secret-known:mei": 1,
+      "week-guard-threat:1:5:2:zhou": 1
+    },
+    "present": {
+      "roman": "backroom",
+      "suman": "backroom",
+      "tangke": "counter",
+      "fangmin": "counter",
+      "luyao": "rival",
+      "qiaowan": "backroom",
+      "peilan": "backroom",
+      "ligui": "atrium",
+      "laokang": "atrium",
+      "huojie": "atrium",
+      "zhou": "counter",
+      "shen": "lounge",
+      "heqing": "counter",
+      "cenning": "atrium",
+      "ruanxiaoman": "atrium",
+      "mei": "lounge",
+      "duan": "counter"
+    },
+    "touched": [],
+    "rngCalls": 27,
+    "appointments": [],
+    "requests": [],
+    "fired": {},
+    "log": [
+      {
+        "day": 4,
+        "slot": 3,
+        "text": "梅女士跟朋友说这层有个靠谱的人，周姐明天会来。",
+        "who": [
+          "mei",
+          "zhou"
+        ]
+      },
+      {
+        "day": 5,
+        "slot": 0,
+        "text": "—— 第 5 天 ——"
+      },
+      {
+        "day": 5,
+        "slot": 2,
+        "text": "周姐如约来了。",
+        "who": [
+          "zhou"
+        ]
+      },
+      {
+        "day": 5,
+        "slot": 2,
+        "text": "你听说了梅女士的事：柜上那一支是给她自己的，「明早要见客户」是她给那十分钟找的台阶。",
+        "who": [
+          "mei"
+        ]
+      }
+    ],
+    "opinionAtSeasonStart": {},
+    "statsAtSeasonStart": {
+      "standing": 50,
+      "compliance": 55
+    },
+    "heat": [],
+    "rivalPlan": {
+      "day": 5,
+      "slot": 2,
+      "targets": [
+        "zhou"
+      ],
+      "tactic": "invite"
+    }
+  },
+  "nightLines": [
+    {
+      "day": 4,
+      "slot": 3,
+      "text": "梅女士跟朋友说这层有个靠谱的人，周姐明天会来。",
+      "who": [
+        "mei",
+        "zhou"
+      ]
+    }
+  ],
+  "appointment": {
+    "day": 5,
+    "slot": 2,
+    "person": "zhou",
+    "reason": "visit"
+  },
+  "arrivalLines": [
+    {
+      "day": 5,
+      "slot": 2,
+      "text": "周姐如约来了。",
+      "who": [
+        "zhou"
+      ]
+    }
+  ]
+}
