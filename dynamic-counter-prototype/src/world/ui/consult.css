@@ -33,6 +33,11 @@
 .serve-probe > span { width:100%; color:#d8ad5d; font-size:12px; }
 .serve-probe button { min-height:44px; border:1px solid #bda16b55; border-radius:10px; padding:8px 10px; background:#ffffff06; color:#f3dfc1; font-size:13px; }
 .serve-probe button:disabled { opacity:.45; }
+.serve-probe button.probe-active:disabled { opacity:1; color:#eed3a9; border-color:#bda16b88; }
+.probe-reply { flex:0 0 100%; box-sizing:border-box; min-width:0; padding:9px 11px; margin:2px 0 6px; scroll-margin-block:8px; border-left:2px solid #d8ad5d; border-radius:10px; background:#f0c97812; }
+.probe-reply b { display:block; color:#c9b49a; font-size:11px; font-weight:500; margin-bottom:3px; }
+.probe-reply p { margin:0; color:#ffe1a3; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+.probe-reply small { display:block; margin-top:4px; color:#c6af99; font-size:12px; }
 .serve-face { position:relative; width:100%; aspect-ratio:853 / 340; margin:8px 0 18px; border-radius:12px; background-size:100% auto; background-repeat:no-repeat; }
 .serve-face .face-spot { position:absolute; width:44px; height:44px; margin:-22px 0 0 -22px; display:grid; place-items:center; padding:0; border:1px solid #ffe2a9; border-radius:50%; background:#f5d08f18; box-shadow:0 0 16px #ffd77e55; }
 .serve-face .face-spot i { width:7px; height:7px; border:1px solid #fff1cf; border-radius:50%; background:#e6b969; }

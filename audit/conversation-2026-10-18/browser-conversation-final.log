@@ -1,0 +1,17 @@
+[WebServer] (node:70544) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:70562) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:70576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-conversation.spec.ts:26:3 › 连续接待 320×568 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 (1.5s)
+  ✓  2 tests/world-conversation.spec.ts:51:3 › 连续接待 320×568 › 观察后就地读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本 (1.5s)
+  ✓  3 tests/world-conversation.spec.ts:72:3 › 连续接待 320×568 › 最后一次试用后切回问话不冒认旧问题，耐心用完仍可读取反应并开单 (1.6s)
+  ✓  4 tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 (1.4s)
+  ✓  5 tests/world-conversation.spec.ts:51:3 › 连续接待 390×844 › 观察后就地读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本 (1.6s)
+  ✓  6 tests/world-conversation.spec.ts:72:3 › 连续接待 390×844 › 最后一次试用后切回问话不冒认旧问题，耐心用完仍可读取反应并开单 (1.6s)
+
+  6 passed (12.7s)

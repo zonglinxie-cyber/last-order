@@ -1,0 +1,110 @@
+[WebServer] (node:67313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:67330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 77 tests using 1 worker
+
+(node:67460) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-consult.spec.ts:47:3 › 接待决策 320×568 › 探问、报价、放弃各有明确成本；不卖也留下真实笔记 (1.7s)
+  ✓   2 tests/world-consult.spec.ts:73:3 › 接待决策 320×568 › 最后一次试用仍显示真实反应，开单复盘与实际账本一致 (2.1s)
+  ✓   3 tests/world-consult.spec.ts:101:3 › 接待决策 320×568 › 按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开 (1.2s)
+  ✓   4 tests/world-consult.spec.ts:47:3 › 接待决策 390×844 › 探问、报价、放弃各有明确成本；不卖也留下真实笔记 (1.6s)
+  ✓   5 tests/world-consult.spec.ts:73:3 › 接待决策 390×844 › 最后一次试用仍显示真实反应，开单复盘与实际账本一致 (2.1s)
+  ✓   6 tests/world-consult.spec.ts:101:3 › 接待决策 390×844 › 按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开 (1.2s)
+  ✓   7 tests/world-conversation.spec.ts:26:3 › 连续接待 320×568 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 (1.4s)
+  ✘   8 tests/world-conversation.spec.ts:50:3 › 连续接待 320×568 › 观察后就地读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本 (6.2s)
+(node:68763) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 tests/world-conversation.spec.ts:71:3 › 连续接待 320×568 › 最后一次试用后切回问话不冒认旧问题，耐心用完仍可读取反应并开单 (1.8s)
+  ✘  10 tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 (6.3s)
+(node:69354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 tests/world-conversation.spec.ts:50:3 › 连续接待 390×844 › 观察后就地读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本 (1.7s)
+  ✓  12 tests/world-conversation.spec.ts:71:3 › 连续接待 390×844 › 最后一次试用后切回问话不冒认旧问题，耐心用完仍可读取反应并开单 (1.7s)
+  ✓  13 tests/world-floor.spec.ts:74:5 › 人情场 390×844 › 开局能看到地图上有人，点人能开抽屉并完成一次招呼 (1.2s)
+  ✓  14 tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.3s)
+  ✓  15 tests/world-floor.spec.ts:108:5 › 人情场 390×844 › 完成一次接待：选货、件数、开给她 (2.3s)
+  ✓  16 tests/world-floor.spec.ts:128:5 › 人情场 390×844 › 看法低时她只肯说一句 (1.2s)
+  ✘  17 tests/world-floor.spec.ts:137:5 › 人情场 390×844 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 (579ms)
+
+
+  1) tests/world-conversation.spec.ts:50:3 › 连续接待 320×568 › 观察后就地读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本 ───────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.probe-reply')
+    Expected: in viewport
+    Received: viewport ratio 0.9981659650802612
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeInViewport" with timeout 5000ms
+      - waiting for locator('.probe-reply')
+        13 × locator resolved to <div role="status" class="probe-reply">…</div>
+           - unexpected value "viewport ratio 0.9981659650802612"
+
+
+      52 |     await page.getByRole("button", { name: "看她的鼻翼", exact: true }).click();
+      53 |     await expect(page.locator(".probe-reply")).toContainText("局部微红出油");
+    > 54 |     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
+         |                                                ^
+      55 |     await page.screenshot({ path: `${audit}/look-${width}.png` });
+      56 |     const before = await saved(page);
+      57 |     const history = page.locator(".consult-listen-history");
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-conversation.spec.ts:54:48
+
+    Error Context: test-results/world-conversation-连续接待-32-e0a2e-读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本/error-context.md
+
+  2) tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 ────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.probe-reply')
+    Expected: in viewport
+    Received: viewport ratio 0.9938603043556213
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeInViewport" with timeout 5000ms
+      - waiting for locator('.probe-reply')
+        13 × locator resolved to <div role="status" class="probe-reply">…</div>
+           - unexpected value "viewport ratio 0.9938603043556213"
+
+
+      39 |     await expect(page.locator(".probe-reply")).toContainText("最多 3 支");
+      40 |     await expect(page.locator(".probe-reply")).toContainText("还有顾虑");
+    > 41 |     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
+         |                                                ^
+      42 |     expect((await saved(page)).world.energy).toBe(8);
+      43 |     await page.getByRole("button", { name: "带妆久了会不会闷痘？", exact: true }).click();
+      44 |     await expect(page.locator(".probe-reply")).toContainText("T区到下午就闷");
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-conversation.spec.ts:41:48
+
+    Error Context: test-results/world-conversation-连续接待-39-ce939-这段谈话，回应与刚问的问题同时可读，继续问不重新找位置/error-context.md
+
+  3) tests/world-floor.spec.ts:137:5 › 人情场 390×844 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 ──────────
+
+    Test was interrupted.
+
+    Error: locator.click: Target page, context or browser has been closed
+
+      137 |     test("旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句", async ({ page }) => {
+      138 |       await enter(page, envelope());
+    > 139 |       await page.getByRole("button", { name: /查看梅女士/ }).click();
+          |                                                         ^
+      140 |       await page.getByRole("button", { name: /接待/ }).click();
+      141 |       const face = page.locator(".serve-face");
+      142 |       await expect(face).toBeVisible();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-floor.spec.ts:139:57
+
+    Error Context: test-results/world-floor-人情场-390×844-旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句/error-context.md
+
+  2 failed
+    tests/world-conversation.spec.ts:50:3 › 连续接待 320×568 › 观察后就地读线索，旧谈话免费回看；刷新后继续谈保留最后回应与成本 ────────
+    tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 ─────────
+  1 interrupted
+    tests/world-floor.spec.ts:137:5 › 人情场 390×844 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 ───────────
+  60 did not run
+  14 passed (41.2s)

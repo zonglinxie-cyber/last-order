@@ -1,0 +1,135 @@
+[
+  {
+    "path": "audit/design-2026-10-13/notebook-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/design-2026-10-13/notebook-320.png",
+    "restoredSha256": "83e477b98b30905c889cb7f296e283dd57d46e4078b1b987f57ba3128c474f08",
+    "currentRunSha256": "2721c35bdb9b5479917e30b496bf7145ebe220a71040ed5dd5e90d2a99e8d5a1"
+  },
+  {
+    "path": "audit/design-2026-10-13/notebook-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/design-2026-10-13/notebook-390.png",
+    "restoredSha256": "446476731a6a834fdacf8ea845fe3fe63950177b1fbf63adc729f0901678dcfd",
+    "currentRunSha256": "c198152e21d5fe5016ef6c60f6da441dc61f190ce613ff52de5a714593538d74"
+  },
+  {
+    "path": "audit/design-2026-10-13/offer-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/design-2026-10-13/offer-320.png",
+    "restoredSha256": "83b83901b57f41449043eb7ba86dd9ea9e2fc2ad5fd6990410ad9bf6a8272cb0",
+    "currentRunSha256": "9e8d014696b42f5607bfed6c79034d92dab8e93a44095c067c4d6f9d3dc68575"
+  },
+  {
+    "path": "audit/design-2026-10-13/offer-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/design-2026-10-13/offer-390.png",
+    "restoredSha256": "b5d8eebf90e79d3e2ef85e39b5d94796f097094733bd373e3151da4abbf01476",
+    "currentRunSha256": "6bb8873f18765ffca61f178d08b9d99885044a67d51a15ad1b343e95d183d539"
+  },
+  {
+    "path": "audit/design-2026-10-13/receipt-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/design-2026-10-13/receipt-320.png",
+    "restoredSha256": "c27ed70c9ef67ca2fa1540243b85539b816da36d7d5e1112b3a4c11ece990a82",
+    "currentRunSha256": "5c8eef0ff023df4da255c2843ffa1509e79e6a025c4855edafc4a1b7f77cf487"
+  },
+  {
+    "path": "audit/design-2026-10-13/receipt-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/design-2026-10-13/receipt-390.png",
+    "restoredSha256": "b318395960a34f34befbc466d056b3f84ba2682a66d79e3e60ffd4c2c87719ff",
+    "currentRunSha256": "e707ef5779f8d004ec15dd261952ceb7b6b402891e376d3a842c36cfd0f5f347"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/after-consult-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/after-consult-320.png",
+    "restoredSha256": "a3a0ef737c41196442f113d9b9398f36f55bea1e8c70e8f90d738ed764314c53",
+    "currentRunSha256": "5cf580fbc84123e5729eb151b528eab319ed53cccdd713fd00fefba58a4c1dc1"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/after-consult-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/after-consult-390.png",
+    "restoredSha256": "563a7fe730ae40878b1f46bca247a6d676bc293a3dc8314bdcbe74ca6b99ccfc",
+    "currentRunSha256": "4c9f9074f6b467ecae576ad4ccd81d7ff9058c552dfc15147cc99eaff309d037"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/first-receipt-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/first-receipt-320.png",
+    "restoredSha256": "16b4acd5c885370ec99c339498cdd35fdb3e2e31b77480d12d9e65e493f6b249",
+    "currentRunSha256": "0be1cd6e58295b4af588868f0a045cb5c9929cf3a018b9add703e475cc49ba2e"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/first-receipt-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/first-receipt-390.png",
+    "restoredSha256": "eca3780503627590f0029a6a05aeec08cf45adb36818e58a6e3bbcfd9783c95c",
+    "currentRunSha256": "3f75ca911a57ae5f38bc59b619ee37f4569dd0c618ff5b0817fd10f3329a923d"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/opening-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/opening-320.png",
+    "restoredSha256": "81aec1c819951ac7ef383a28e5ea789d9862ca50981ce85c9d4fbb30da848c54",
+    "currentRunSha256": "9a09a2b86ecc3228bb4aeba9614017784d7e60ea1bc337288ac114836b87d569"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/opening-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/opening-390.png",
+    "restoredSha256": "fd3b56ad679079422f388477aa40e07b9427a43d2933767765757f391ff2881d",
+    "currentRunSha256": "ddcc5c9ca35e651c412c69ca65c2f7d1f3f1a3d091aa470da270ed262986cca6"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/toast-after-320.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/toast-after-320.png",
+    "restoredSha256": "4f202940838a20d953d778b5b9262f3ddc2a80a63f4fedc71bb4795423f24f42",
+    "currentRunSha256": "93069c998e69c5f61cb3145dadbe1cf46b68b566155c8d9a4dd2d159d71318c0"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/toast-after-390.png",
+    "source": "captured pre-task bytes",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/first-sale-2026-10-18/toast-after-390.png",
+    "restoredSha256": "d116292601b5d688a04f03e87cffdc0716323f09bd90f6790e56fcab6fed7e15",
+    "currentRunSha256": "2c5a0dbe07ce856381f0b2598ef84163343fd589d914a96012208f9c3f0f46d8"
+  },
+  {
+    "path": "audit/return-origin-2026-10-18/person-320.png",
+    "source": "HEAD originally clean",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/return-origin-2026-10-18/person-320.png",
+    "restoredSha256": "152076fa9e6b4a8709b287b0759efb3fbe2647a7b6845e9fc804b276420b2abe",
+    "currentRunSha256": "145d962dbd70eb9e09339c0f0cb03cac48bcfd39438d9be75e6524aaf2e2e0a9"
+  },
+  {
+    "path": "audit/return-origin-2026-10-18/person-390.png",
+    "source": "HEAD originally clean",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/return-origin-2026-10-18/person-390.png",
+    "restoredSha256": "bd8eab2551c3bdbff148587c75fdec880721b95ffb3451f7672956b835e45036",
+    "currentRunSha256": "d1d2a8e9223de73e0eed5f2b385d53e4adcdcb1c15757edca968a3e74bd0f264"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/last-order-320.png",
+    "source": "HEAD originally clean",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/weekend-order-2026-10-18/last-order-320.png",
+    "restoredSha256": "fca5ac74c7920325767b7d9ba7cefe329af9de439a5f7cc1a79dee37fd2159df",
+    "currentRunSha256": "5ca5ee8100bc985502c02ba039c7e96974d86a71c863ac0c2b72dc8a621f88d8"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/return-320.png",
+    "source": "HEAD originally clean",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/weekend-order-2026-10-18/return-320.png",
+    "restoredSha256": "b315e174b845121351478a801f6c26ec4ba8c16d501e3385cf8461ac149d155b",
+    "currentRunSha256": "617deef1904f85cdac0d341bfc152c46b754b7618d3905b61d53dfb17ef9eb77"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/return-390.png",
+    "source": "HEAD originally clean",
+    "currentRunArtifact": "audit/conversation-2026-10-18/related/weekend-order-2026-10-18/return-390.png",
+    "restoredSha256": "1ed37a15a475b3ddfd896864e98e90cf93d3c97359691cd60c6c218ceea8c823",
+    "currentRunSha256": "d1384fb5d0409ee1fb207d3ef5e5f77f1f2d18f9a67ead1526eedda881f88831"
+  }
+]

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { BottomSheet, MobileScroll } from "../../mobile";
 import { asset } from "../../base.ts";
 import { hasOpenedSale, VERB_ENERGY } from "../engine.ts";
@@ -29,13 +29,28 @@ export function ConsultPanel({ world, person, consult: c, arrival, onChange, onA
   const plate = plateOf(person), offer = c.stage === "offer", product = c.product;
   const context = visitContext(world, person);
   const panelRef = useRef<HTMLDivElement>(null);
+  const replyRef = useRef<HTMLDivElement>(null);
+  const [probe, setProbe] = useState<{ kind: "look" | "ask"; key: string; lines: number } | null>(null);
+  // 只定位这一次动作的回应；翻页试货、恢复接待后不把旧提问冒认成最新动作。
+  const liveProbe = probe?.lines === c.lines.length ? probe : null;
+  const probeAct = (kind: "look" | "ask", key: string, step: (v: Consult) => Consult) => onAct(v => {
+    const next = step(v);
+    if (next !== v) setProbe({ kind, key, lines: next.lines.length });
+    return next;
+  });
   const evidence = product ? offerEvidence(c, person, product, c.units) : [];
   // 最后一次探问后会追加「该开单了」，反应仍显示真正的回答。
   const lastReply = c.lines.at(c.patience === 0 && c.begun ? -2 : -1);
   useEffect(() => {
-    panelRef.current?.querySelector(".consult-scroll .mobile-scroll")?.scrollTo({ top: 0 });
-  }, [c.lines.length]);
-  const said = <div className="serve-lines" aria-live="polite">
+    if (c.stage === "offer") panelRef.current?.querySelector(".consult-scroll .mobile-scroll")?.scrollTo({ top: 0 });
+    else replyRef.current?.scrollIntoView({ block: "nearest" });
+  }, [c.lines.length, c.stage, liveProbe?.key, liveProbe?.kind]);
+  const reply = c.begun && <div className="probe-reply" ref={replyRef} role="status">
+    <b>{liveProbe?.kind === "look" ? "你看到的" : "刚刚的回应"}</b><p>{lastReply}</p>
+    {stillHolding(c, person) && <small>{unsaidWord(person.gender)}</small>}
+    {c.patience === 0 && <small>{c.lines.at(-1)}</small>}
+  </div>;
+  const said = <div className="serve-lines">
     {c.lines.length ? c.lines.map((line, i) => <p key={i} className={i === c.lines.length - 1 && c.begun ? "fresh" : ""}>{line}</p>)
       : <p>「{person.voice.greet}」</p>}
     {stillHolding(c, person) && <p className="serve-hold">{unsaidWord(person.gender)}</p>}
@@ -71,22 +86,31 @@ export function ConsultPanel({ world, person, consult: c, arrival, onChange, onA
           {c.vetoKnown && person.skin?.veto && <p className="serve-veto">底线：{person.skin.veto.note}</p>}
         </div>
         {!offer ? <section id="consult-listen" role="tabpanel" aria-labelledby="consult-listen-tab">
-          {said}
+          {!c.begun && said}
+          {c.begun && !liveProbe && reply}
           <p className="consult-cost">看一处、问一句或试一支，各花 1 次耐心。留一次给试用也可以。</p>
           {plate ? <div className="serve-face" role="group" aria-label="看"
             style={{ backgroundImage: `url(${asset(plate.src)})`, backgroundPositionY: `${plate.cropY}%` }}>
             {spotsOf(person).map(spot => <button key={spot.key} type="button" aria-label={`看${ta(person)}的${spot.label}`}
               className={`face-spot${c.looked.includes(spot.key) ? " found" : ""}`} style={{ left: `${spot.at!.x}%`, top: `${spot.at!.y}%` }}
               disabled={c.patience <= 0 || c.looked.includes(spot.key)}
-              onClick={() => onAct(v => lookAt(v, person, spot.key))}><i aria-hidden="true" /><span>{spot.label}</span></button>)}
+              onClick={() => probeAct("look", spot.key, v => lookAt(v, person, spot.key))}><i aria-hidden="true" /><span>{spot.label}</span></button>)}
           </div> : <div className="serve-probe" aria-label="看"><span>看</span>
             {spotsOf(person).map(spot => <button key={spot.key} type="button" disabled={c.patience <= 0 || c.looked.includes(spot.key)}
-              onClick={() => onAct(v => lookAt(v, person, spot.key))}>{spot.label}</button>)}
+              onClick={() => probeAct("look", spot.key, v => lookAt(v, person, spot.key))}>{spot.label}</button>)}
           </div>}
+          {liveProbe?.kind === "look" && reply}
           <div className="serve-probe" aria-label="问"><span>问</span>
-            {questionsOf(person).map(q => <button key={q.key} type="button" disabled={c.patience <= 0 || c.asked.includes(q.key)}
-              onClick={() => onAct(v => askHer(v, person, q.key))}>{q.label}</button>)}
+            {questionsOf(person).map(q => <Fragment key={q.key}>
+              <button type="button" className={liveProbe?.kind === "ask" && liveProbe.key === q.key ? "probe-active" : undefined}
+                disabled={c.patience <= 0 || c.asked.includes(q.key)}
+                onClick={() => probeAct("ask", q.key, v => askHer(v, person, q.key))}>{q.label}</button>
+              {liveProbe?.kind === "ask" && liveProbe.key === q.key && reply}
+            </Fragment>)}
           </div>
+          {c.begun && <details className="consult-history consult-listen-history">
+            <summary>回看这次谈话</summary>{said}
+          </details>}
           {c.begun && <p className="consult-memory">长期偏好已记下，下次见面还用得上{context ? "；今天的用途按这次来意判断" : ""}。</p>}
         </section> : <section id="consult-offer" role="tabpanel" aria-labelledby="consult-offer-tab">
           {c.begun && <p className="consult-reaction" aria-live="polite">{lastReply}</p>}

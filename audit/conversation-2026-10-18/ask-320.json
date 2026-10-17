@@ -1,0 +1,41 @@
+{
+  "question": {
+    "x": 15,
+    "y": 315.75,
+    "width": 152,
+    "height": 44
+  },
+  "reply": {
+    "x": 15,
+    "y": 369.75,
+    "width": 290,
+    "height": 81.4375
+  },
+  "scrollTop": 318,
+  "saved": {
+    "person": "shen",
+    "stage": "listen",
+    "product": null,
+    "units": 1,
+    "patience": 3,
+    "begun": true,
+    "looked": [],
+    "asked": [
+      "ask-units"
+    ],
+    "known": [
+      "natural"
+    ],
+    "focus": null,
+    "focusKnown": false,
+    "vetoKnown": false,
+    "unitsKnown": true,
+    "tried": {},
+    "matched": false,
+    "lines": [
+      "「一厚就假，我要看不出来化过」",
+      "「最多 3 支，再多就用不完了。」"
+    ],
+    "mood": 0
+  }
+}

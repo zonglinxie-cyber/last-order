@@ -1,0 +1,114 @@
+[WebServer] (node:54807) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:54835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:54866) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-conversation.spec.ts:26:3 › 连续接待 320×568 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 (11.5s)
+(node:55504) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 (11.5s)
+
+
+  1) tests/world-conversation.spec.ts:26:3 › 连续接待 320×568 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 ────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  getByRole('button', { name: '这一次大概想带几支？', exact: true })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 5000ms
+      - waiting for getByRole('button', { name: '这一次大概想带几支？', exact: true })
+        13 × locator resolved to <button disabled type="button">这一次大概想带几支？</button>
+           - unexpected value "viewport ratio 0"
+
+
+      36 |       saved: (await saved(page)).ui.consults.entries.shen,
+      37 |     }, null, 2));
+    > 38 |     await expect.soft(question).toBeInViewport({ ratio: 1 });
+         |                                 ^
+      39 |     await expect(page.locator(".probe-reply")).toContainText("最多 3 支");
+      40 |     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
+      41 |     expect((await saved(page)).world.energy).toBe(8);
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-conversation.spec.ts:38:33
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.probe-reply')
+    Expected substring: "最多 3 支"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" with timeout 5000ms
+      - waiting for locator('.probe-reply')
+
+
+      37 |     }, null, 2));
+      38 |     await expect.soft(question).toBeInViewport({ ratio: 1 });
+    > 39 |     await expect(page.locator(".probe-reply")).toContainText("最多 3 支");
+         |                                                ^
+      40 |     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
+      41 |     expect((await saved(page)).world.energy).toBe(8);
+      42 |     await page.getByRole("button", { name: "带妆久了会不会闷痘？", exact: true }).click();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-conversation.spec.ts:39:48
+
+    Error Context: test-results/world-conversation-连续接待-32-90f15-这段谈话，回应与刚问的问题同时可读，继续问不重新找位置/error-context.md
+
+  2) tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 ────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  getByRole('button', { name: '这一次大概想带几支？', exact: true })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 5000ms
+      - waiting for getByRole('button', { name: '这一次大概想带几支？', exact: true })
+        13 × locator resolved to <button disabled type="button">这一次大概想带几支？</button>
+           - unexpected value "viewport ratio 0"
+
+
+      36 |       saved: (await saved(page)).ui.consults.entries.shen,
+      37 |     }, null, 2));
+    > 38 |     await expect.soft(question).toBeInViewport({ ratio: 1 });
+         |                                 ^
+      39 |     await expect(page.locator(".probe-reply")).toContainText("最多 3 支");
+      40 |     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
+      41 |     expect((await saved(page)).world.energy).toBe(8);
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-conversation.spec.ts:38:33
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.probe-reply')
+    Expected substring: "最多 3 支"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" with timeout 5000ms
+      - waiting for locator('.probe-reply')
+
+
+      37 |     }, null, 2));
+      38 |     await expect.soft(question).toBeInViewport({ ratio: 1 });
+    > 39 |     await expect(page.locator(".probe-reply")).toContainText("最多 3 支");
+         |                                                ^
+      40 |     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
+      41 |     expect((await saved(page)).world.energy).toBe(8);
+      42 |     await page.getByRole("button", { name: "带妆久了会不会闷痘？", exact: true }).click();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-conversation.spec.ts:39:48
+
+    Error Context: test-results/world-conversation-连续接待-39-ce939-这段谈话，回应与刚问的问题同时可读，继续问不重新找位置/error-context.md
+
+  2 failed
+    tests/world-conversation.spec.ts:26:3 › 连续接待 320×568 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 ─────────
+    tests/world-conversation.spec.ts:26:3 › 连续接待 390×844 › 问完留在这段谈话，回应与刚问的问题同时可读，继续问不重新找位置 ─────────
