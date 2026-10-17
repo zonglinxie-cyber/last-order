@@ -29,6 +29,7 @@ import { currentArrival, publicAppointments } from "../arrivals.ts";
 import { rivalBookingNow } from "../rival-business.ts";
 import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
 import { WeekendOrderSheet } from "./WeekendOrder.tsx";
+import { returnPoint } from "./return-context.ts";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -117,6 +118,8 @@ type UiState = {
   /** 哪天看过「今天的请求」卡：同一天刷新不重弹 */
   reqSeen?: number;
   consults?: unknown;
+  /** 只记真正开着且已经开始的接待；主动关掉后清除，不把旧谈话强行重开。 */
+  resumeConsult?: PersonId;
   /** 首日上午先接触客人；第一段柜上故事等接待收尾或主动推进时才抽。 */
   openingPending?: boolean;
 };
@@ -431,9 +434,10 @@ export default function WorldGame() {
       dayBase: dayBase ?? undefined,
       reqSeen: reqSeenDay || undefined,
       consults: saveConsults(world, consults),
+      resumeConsult: consult?.begun ? consult.person : undefined,
       openingPending: openingPending || undefined,
     } satisfies UiState,
-  }), [phase, world, pending, report, dayBase, reqSeenDay, consults, openingPending]);
+  }), [phase, world, pending, report, dayBase, reqSeenDay, consults, consult, openingPending]);
   useEffect(() => {
     if (phase === "intro") return;
     try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
@@ -516,10 +520,13 @@ export default function WorldGame() {
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
     setReqSeenDay(ui.reqSeen ?? 0);
     setWorld(w);
-    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults(restoreConsults(ui.consults, w, PEOPLE));
+    const restored = restoreConsults(ui.consults, w, PEOPLE);
+    setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults(restored);
     if (ui.screen === "season") { setPhase("season"); return; }
     if (ui.screen === "report" && ui.report) { setReport(ui.report); setPhase("report"); return; }
     const card = ui.pending ? STORYLETS.find(s => s.id === ui.pending!.id) : undefined;
+    const point = returnPoint(w, { screen: ui.screen, hasStory: !!card, consults: restored, focusedConsult: ui.resumeConsult }, PEOPLE);
+    if (point.kind === "consult" && point.person) { setSelected(point.person); setServing(true); }
     setPending(card ? { storylet: card, binding: ui.pending!.binding } : null);
     setReport(null);
     setPhase("play");
@@ -710,6 +717,11 @@ export default function WorldGame() {
 
   // —— 屏 ——
   if (phase === "intro") {
+    const point = boot ? returnPoint(boot.world, {
+      screen: boot.ui.screen, reportDay: boot.ui.report?.day,
+      hasStory: !!boot.ui.pending && STORYLETS.some(s => s.id === boot.ui.pending!.id),
+      focusedConsult: boot.ui.resumeConsult, consults: restoreConsults(boot.ui.consults, boot.world, PEOPLE),
+    }, PEOPLE) : null;
     return <div className="app-screen world-app world-intro-screen">
       <img className="world-intro-bg" src={asset("/assets/game/mall-floor.jpg")} alt="" aria-hidden="true" />
       <div className="world-intro-shade" />
@@ -717,9 +729,12 @@ export default function WorldGame() {
         <MobileScroll className="world-intro-scroll">
           <p className="world-intro-eyebrow">AURORA · 绮光</p>
           <h1>人情场</h1>
-          <p className="world-intro-hook">这一单怎么卖，整层楼都会记得。</p>
+          {point ? <section className="world-return-context" aria-label="上次停在这里">
+            <p className="world-return-eyebrow">上次停在这里</p>
+            <h2>{point.title}</h2><p>{point.detail}</p>
+          </section> : <><p className="world-intro-hook">这一单怎么卖，整层楼都会记得。</p>
           <p className="world-intro-copy">看懂客人的心事，接住对手抢的人。周末算业绩，也算谁还愿意回来。</p>
-          <p className="world-intro-copy world-intro-sub">一季四关，一周一关。做业绩、养熟客、守住客人，三条路任选。</p>
+          <p className="world-intro-copy world-intro-sub">一季四关，一周一关。做业绩、养熟客、守住客人，三条路任选。</p></>}
           {bestStars > 0 && <p className="world-intro-best">最好的一季：{bestStars} / 12 颗星</p>}
           {stale && <p className="world-intro-stale">柜上留过一份记录，这一版读不出来了：存档格式换过，或是上一次存到一半被打断。开新一季，旧的那一份就接不回来了。</p>}
           <details className="world-intro-details">
@@ -734,7 +749,7 @@ export default function WorldGame() {
         </MobileScroll>
         <div className="world-intro-foot">
           <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
-            {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
+            {point?.button ?? "开这一季"}
           </button>
           {!boot && <p className="world-intro-entry-note">先接一位客人，边做边学。</p>}
           {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}

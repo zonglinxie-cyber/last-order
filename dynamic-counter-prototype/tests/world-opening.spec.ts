@@ -74,10 +74,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     expect(probing.ui.consults.entries.shen.known).toContain("steady");
     await continueSave(page);
     await expect(page.locator(".story-card")).toHaveCount(0);
-    await dismissCoach(page);
-    await page.getByRole("button", { name: /查看沈薇/ }).first().click();
-    await dismissCoach(page);
-    await page.getByRole("button", { name: /接着谈/ }).click();
+    await expect(page.locator(".world-serve")).toBeVisible();
     await expect(page.getByLabel("已知需求")).toContainText("温和不闷");
     await expect(page.getByRole("button", { name: "带妆久了会不会闷痘？", exact: true })).toBeDisabled();
     expect((await saved(page)).world.energy).toBe(probing.world.energy);

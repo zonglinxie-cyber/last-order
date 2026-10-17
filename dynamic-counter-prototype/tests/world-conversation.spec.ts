@@ -62,8 +62,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     expect(await saved(page)).toEqual(before);
     await history.locator("summary").click();
     await page.reload(); await page.getByRole("button", { name: /^继续/ }).click();
-    await page.getByRole("button", { name: /查看沈薇/ }).click();
-    await page.getByRole("button", { name: /接着谈/ }).click();
+    await expect(page.locator(".world-serve")).toBeVisible();
     await expect(page.locator(".probe-reply")).toContainText("局部微红出油");
     await expect(page.locator(".probe-reply")).toBeInViewport({ ratio: 1 });
     expect((await saved(page)).world.energy).toBe(before.world.energy);

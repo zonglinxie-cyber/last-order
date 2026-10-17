@@ -1,0 +1,3 @@
+Independent test TypeScript check: exit 0.
+Mobile runtime integrity: 28 protected files passed.
+Preview 127.0.0.1:4188/src/world/ui/WorldGame.tsx contains resumeConsult and world-return-context.

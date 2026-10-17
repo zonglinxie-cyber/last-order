@@ -1,0 +1,45 @@
+{
+  "initial_files_preserved": 102,
+  "restored_test_outputs": [
+    {
+      "path": "audit/first-sale-2026-10-18/after-consult-320.png",
+      "test_sha256": "5cf580fbc84123e5729eb151b528eab319ed53cccdd713fd00fefba58a4c1dc1",
+      "restored_sha256": "a3a0ef737c41196442f113d9b9398f36f55bea1e8c70e8f90d738ed764314c53"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/after-consult-390.png",
+      "test_sha256": "4c9f9074f6b467ecae576ad4ccd81d7ff9058c552dfc15147cc99eaff309d037",
+      "restored_sha256": "563a7fe730ae40878b1f46bca247a6d676bc293a3dc8314bdcbe74ca6b99ccfc"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/first-receipt-320.png",
+      "test_sha256": "0be1cd6e58295b4af588868f0a045cb5c9929cf3a018b9add703e475cc49ba2e",
+      "restored_sha256": "16b4acd5c885370ec99c339498cdd35fdb3e2e31b77480d12d9e65e493f6b249"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/opening-320.png",
+      "test_sha256": "9a09a2b86ecc3228bb4aeba9614017784d7e60ea1bc337288ac114836b87d569",
+      "restored_sha256": "81aec1c819951ac7ef383a28e5ea789d9862ca50981ce85c9d4fbb30da848c54"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/toast-after-320.png",
+      "test_sha256": "4ef31a16355e6a0302c76cbf8a94c6330fe7fa67aa7746b1d900c74b206efa6b",
+      "restored_sha256": "4f202940838a20d953d778b5b9262f3ddc2a80a63f4fedc71bb4795423f24f42"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/toast-after-390.png",
+      "test_sha256": "a897a1488cc8b1514f3ae5dec776a2ac7a0b7bb3a4f2dcb06b352debb9c13347",
+      "restored_sha256": "d116292601b5d688a04f03e87cffdc0716323f09bd90f6790e56fcab6fed7e15"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/opening-390.png",
+      "test_sha256": "ddcc5c9ca35e651c412c69ca65c2f7d1f3f1a3d091aa470da270ed262986cca6",
+      "restored_sha256": "fd3b56ad679079422f388477aa40e07b9427a43d2933767765757f391ff2881d"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/first-receipt-390.png",
+      "test_sha256": "3f75ca911a57ae5f38bc59b619ee37f4569dd0c618ff5b0817fd10f3329a923d",
+      "restored_sha256": "eca3780503627590f0029a6a05aeec08cf45adb36818e58a6e3bbcfd9783c95c"
+    }
+  ]
+}
