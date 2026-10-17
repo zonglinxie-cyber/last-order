@@ -21,9 +21,9 @@ import type {
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
-import { arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
+import { appointmentTime, arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
 import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, validRivalBooking } from "./rival-business.ts";
-import { recentlyPurchased } from "./purchases.ts";
+import { BUY_INTERVAL_DAYS, lastPurchaseDay, recentlyPurchased } from "./purchases.ts";
 import { currentWeekendOrder, planWeekendOrder, recordWeekendOutcome, validWeekendOrder,
   WEEKEND_OUTCOMES, WEEKEND_PREP_ENERGY, WEEKEND_PREP_SAMPLES, WEEKEND_RESPONSE, WEEKEND_RESULT,
   WEEKEND_SPONSOR_RESPONSE, WEEKEND_SPONSOR_TRUST, WEEKEND_SPONSOR_WARMTH } from "./weekend-orders.ts";
@@ -542,6 +542,53 @@ export function rivalCandidates(world: World, people: Person[]): Person[] {
 /** 这一下动作要花几格精力（会员日周「加微信」不要）。 */
 export const verbEnergyNow = (world: World, verb: Verb): number =>
   verb === "wechat" ? wechatEnergyOf(world.qualities, VERB_ENERGY[verb]) : VERB_ENERGY[verb];
+
+/** 主动约见花的是安排时间的精力；会员周免加好友，不免这次联系。 */
+export const CONTACT_INVITE_ENERGY = 4;
+const futureAppointment = (world: World, a: Appointment) => a.day > world.day || a.day === world.day && a.slot > world.slot;
+export const contactAppointment = (world: World, id: PersonId): Appointment | undefined => world.appointments
+  .filter(a => futureAppointment(world, a) && (a.person === id || a.bring?.includes(id)))
+  .sort((a, b) => a.day - b.day || a.slot - b.slot)[0];
+
+/** 两家买过的都等用完再约；只占真实预约客位，不改她已有的安排。 */
+export function planContactInvite(world: World, person: Person): Appointment | undefined {
+  const bought = lastPurchaseDay(world, person.id);
+  const day = Math.max(world.day + 1, bought > 0 ? bought + BUY_INTERVAL_DAYS : 0);
+  const slots = person.visits.slots.length ? person.visits.slots : [1 as Slot];
+  for (const slot of slots) {
+    const guests = new Set(world.appointments.filter(a => a.day === day && a.slot === slot)
+      .flatMap(a => [a.person, ...a.bring ?? []]));
+    if (world.weekendOrder?.due === day && slot === 3 && !world.weekendOrder.outcome) guests.add(world.weekendOrder.person);
+    if (guests.size < MAX_PRESENT_CUSTOMERS) return { person: person.id, day, slot, reason: "invited" };
+  }
+  return undefined;
+}
+
+export function contactInviteBlock(world: World, people: Person[], id: PersonId): string | null {
+  const person = personOf(people, id);
+  if (!person || person.role !== "customer" || !person.skin) return "只能约有接待需求的客人";
+  if (world.day > SEASON_DAYS) return "这一季已经收工";
+  if (!qualityOf(world, `wechat:${id}`)) return "先当面加过微信，再约下次见面";
+  if (!wechatAllowed(world.heat)) return "本季约定不用微信经营";
+  const existing = contactAppointment(world, id);
+  if (existing?.reason === "refund") return "暂时约不了新的时间，过几天再问问";
+  if (existing) return `已有安排：${appointmentTime(world, existing)}，先把这次见面接住`;
+  const weekend = currentWeekendOrder(world);
+  if (weekend?.person === id && !weekend.outcome) return "周末那单已有安排，先接住这次见面";
+  if (opinionOf(world, id) <= SERVE_REFUSE_OPINION) return "现在还不愿来你的柜前，先缓一缓关系";
+  if (world.standing <= SERVE_STAT_FLOOR || world.compliance <= SERVE_STAT_FLOOR) return "先把柜台恢复营业";
+  if (world.energy < CONTACT_INVITE_ENERGY) return `还需要 ${CONTACT_INVITE_ENERGY} 精力`;
+  if (!planContactInvite(world, person)) return "这天方便来的时段都约满了，先照应已经约好的人";
+  return null;
+}
+
+export function inviteContact(world: World, people: Person[], id: PersonId): World {
+  if (contactInviteBlock(world, people, id)) return world;
+  const person = personOf(people, id)!;
+  const ap = planContactInvite(world, person)!;
+  return say({ ...world, energy: world.energy - CONTACT_INVITE_ENERGY, appointments: [...world.appointments, ap] },
+    `${person.name}在微信里答应了你的邀请：${appointmentTime(world, ap)}来柜前。到时先聊需要，买不买另说。`, [id]);
+}
 
 /** 开一个时段。festivals 给了就按当天日期设置 World.festival —— Visits.festivals 与 {festival} 条件都读它。 */
 export function beginSlot(world: World, people: Person[], festivals?: Festival[]): World {
@@ -1646,8 +1693,10 @@ export function nextSeason(world: World, people: Person[], heat?: readonly HeatI
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
     qualities, present: {}, touched: [], rngCalls: world.rngCalls,
-    appointments: world.appointments.filter(a => a.weekendOutcome !== undefined && a.day === SEASON_DAYS + 1 && roster.has(a.person))
-      .map(({ amount: _oldAmount, ...a }) => ({ ...a, reason: "weekend" as const, day: 1 })), requests: [], fired: {},
+    appointments: world.appointments.filter(a => roster.has(a.person) && (a.reason === "invited" && a.day > SEASON_DAYS
+      || a.weekendOutcome !== undefined && a.day === SEASON_DAYS + 1))
+      .map(({ amount: _oldAmount, ...a }) => ({ ...a, reason: a.reason === "invited" ? "invited" as const : "weekend" as const,
+        day: a.reason === "invited" ? a.day - SEASON_DAYS : 1 })), requests: [], fired: {},
     log: [{ day: 1, slot: 0, text: `第 ${season} 季开始。` }],
     // 季初快照记的是新季开局那一刻：看法收过一半之后的样子。
     opinionAtSeasonStart: { ...opinion },
@@ -1740,7 +1789,7 @@ export function parseWorld(data: unknown): World | null {
     && isInt((a as { day: number }).day) && isInt((a as { slot: number }).slot) && (a as { slot: number }).slot >= 0 && (a as { slot: number }).slot <= 3
     && isStr((a as { person: string }).person)
     && ((a as { bring?: string[] }).bring === undefined || isStrArray((a as { bring?: string[] }).bring))
-    && ((a as { reason?: string }).reason === undefined || ["visit", "refund", "wechat", "weekend"].includes((a as { reason?: string }).reason!))
+    && ((a as { reason?: string }).reason === undefined || ["visit", "refund", "wechat", "weekend", "invited"].includes((a as { reason?: string }).reason!))
     && ((a as Appointment).weekendOutcome === undefined || WEEKEND_OUTCOMES.includes((a as Appointment).weekendOutcome!))
     && ((a as { amount?: number }).amount === undefined || isNum((a as { amount?: number }).amount)))) return null;
   if (w.requests !== undefined && !(Array.isArray(w.requests) && w.requests.every((r: unknown) => isRecord(r)

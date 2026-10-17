@@ -1,0 +1,65 @@
+[WebServer] (node:25972) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:25998) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:26010) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-invite.spec.ts:39:3 › 主动邀约 320×568 › 从人情网约不在场的熟人，刷新保留，隔日真实到店后再接待开单 (2.5s)
+  ✓  2 tests/world-invite.spec.ts:71:3 › 主动邀约 320×568 › 现场先加微信才出现邀约入口，缺精力时保留解释且不扣款 (400ms)
+  ✘  3 tests/world-invite.spec.ts:80:3 › 主动邀约 320×568 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 (20.0s)
+(node:27901) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 tests/world-invite.spec.ts:39:3 › 主动邀约 390×844 › 从人情网约不在场的熟人，刷新保留，隔日真实到店后再接待开单 (2.2s)
+  ✓  5 tests/world-invite.spec.ts:71:3 › 主动邀约 390×844 › 现场先加微信才出现邀约入口，缺精力时保留解释且不扣款 (349ms)
+  ✘  6 tests/world-invite.spec.ts:80:3 › 主动邀约 390×844 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 (20.0s)
+
+
+  1) tests/world-invite.spec.ts:80:3 › 主动邀约 320×568 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 ────────────────────
+
+    Test timeout of 20000ms exceeded.
+
+    Error: locator.click: Test timeout of 20000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: /^继续/ })
+
+
+      16 |     localStorage.setItem(coach, JSON.stringify(steps));
+      17 |   }, { world, key: SAVE_KEY, version: WORLD_SAVE_VERSION, coach: COACH_KEY, steps: COACH_STEPS });
+    > 18 |   await page.reload(); await page.getByRole("button", { name: /^继续/ }).click();
+         |                                                                        ^
+      19 | }
+      20 | async function contact(page: Page) {
+      21 |   await page.getByRole("button", { name: "人情网", exact: true }).click();
+        at enter (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-invite.spec.ts:18:72)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-invite.spec.ts:84:38
+
+    Error Context: test-results/world-invite-主动邀约-320×568-普通争单输了仍可主动约回来，等待十天并显示跨季日期/error-context.md
+
+  2) tests/world-invite.spec.ts:80:3 › 主动邀约 390×844 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 ────────────────────
+
+    Test timeout of 20000ms exceeded.
+
+    Error: locator.click: Test timeout of 20000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: /^继续/ })
+
+
+      16 |     localStorage.setItem(coach, JSON.stringify(steps));
+      17 |   }, { world, key: SAVE_KEY, version: WORLD_SAVE_VERSION, coach: COACH_KEY, steps: COACH_STEPS });
+    > 18 |   await page.reload(); await page.getByRole("button", { name: /^继续/ }).click();
+         |                                                                        ^
+      19 | }
+      20 | async function contact(page: Page) {
+      21 |   await page.getByRole("button", { name: "人情网", exact: true }).click();
+        at enter (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-invite.spec.ts:18:72)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-invite.spec.ts:84:38
+
+    Error Context: test-results/world-invite-主动邀约-390×844-普通争单输了仍可主动约回来，等待十天并显示跨季日期/error-context.md
+
+  2 failed
+    tests/world-invite.spec.ts:80:3 › 主动邀约 320×568 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 ─────────────────────
+    tests/world-invite.spec.ts:80:3 › 主动邀约 390×844 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 ─────────────────────
+  4 passed (50.2s)

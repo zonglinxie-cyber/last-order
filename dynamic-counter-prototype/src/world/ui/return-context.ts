@@ -1,7 +1,7 @@
 // 继续游戏前，只从已落盘的停点与公开安排找回上下文；不推进世界、不补抽剧情。
 import type { Consult } from "../consult.ts";
 import type { Person, PersonId, World } from "../types.ts";
-import { publicAppointments } from "../arrivals.ts";
+import { appointmentTime, publicAppointments } from "../arrivals.ts";
 import { rivalBookingNow } from "../rival-business.ts";
 import { currentWeekendOrder, WEEKEND_RESULT } from "../weekend-orders.ts";
 import { weekGoalWord } from "../target.ts";
@@ -61,7 +61,7 @@ export function returnPoint(world: World, state: ReturnState, people: Person[]):
   const days = [...new Set(world.appointments.filter(a => a.day >= world.day).map(a => a.day))].sort((a, b) => a - b);
   for (const day of days) {
     const next = publicAppointments(world, people, day).find(a => day > world.day || a.slot > world.slot);
-    if (next) return { ...floor, title: `${next.name}约好了要来`, detail: `第 ${day} 天${SLOT_WORD[next.slot]} · ${next.detail}。` };
+    if (next) return { ...floor, title: `${next.name}约好了要来`, detail: `${appointmentTime(world, { day, slot: next.slot })} · ${next.detail}。` };
   }
   const paused = Object.values(state.consults).filter(c => c.begun && name(c.person) && world.present[c.person] && world.present[c.person] !== "rival");
   if (paused.length) return { ...floor, title: `${name(paused[0].person)}的谈话还留着`,

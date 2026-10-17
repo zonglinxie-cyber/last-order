@@ -1,0 +1,51 @@
+{
+  "referral": {
+    "median_season_money": 80800,
+    "stars": 201,
+    "full_star_weeks": 47,
+    "passed_weeks": 78,
+    "weeks": 80,
+    "invites": 0,
+    "arrivals": 0
+  },
+  "rebook": {
+    "median_season_money": 83520,
+    "stars": 204,
+    "full_star_weeks": 49,
+    "passed_weeks": 80,
+    "weeks": 80,
+    "invites": 308,
+    "arrivals": 308
+  },
+  "delta": {
+    "median_season_money": 2720,
+    "spent_energy": 1232
+  },
+  "paired_money": {
+    "higher": 11,
+    "equal": 0,
+    "lower": 9,
+    "delta_by_seed": {
+      "sim-0": -18220,
+      "sim-1": -2600,
+      "sim-2": 1200,
+      "sim-3": 16580,
+      "sim-4": -2140,
+      "sim-5": 6780,
+      "sim-6": -14340,
+      "sim-7": 6080,
+      "sim-8": 9700,
+      "sim-9": 1900,
+      "sim-10": 5620,
+      "sim-11": 6000,
+      "sim-12": -2220,
+      "sim-13": -3400,
+      "sim-14": 12020,
+      "sim-15": -2320,
+      "sim-16": 6260,
+      "sim-17": 5960,
+      "sim-18": -7840,
+      "sim-19": -8920
+    }
+  }
+}

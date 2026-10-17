@@ -1,0 +1,2 @@
+127.0.0.1:4188 actual WorldGame and PersonCard modules contain inviteContact, appointment action and separate 12-energy consult cost.
+No public deployment.

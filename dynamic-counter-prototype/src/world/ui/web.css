@@ -39,6 +39,9 @@
 .pc-tempers { margin:6px 14px 0; color:#c08a6a; font-size:12px; }
 .pc-section { margin:13px 14px 0; padding-bottom:14px; }
 .pc-section h3 { margin:0 0 4px; color:#f4dfbd; font:600 13px 'Noto Serif SC',serif,serif; letter-spacing:.04em; }
+.pc-invitation p { color:#ddd0c2; font-size:12px; line-height:1.6; margin:6px 0; }
+.pc-invitation button { width:100%; min-height:44px; margin:6px 0 8px; border:1px solid #e8bb6c88; border-radius:10px; background:#5b3b29; color:#ffe5b5; font:600 13px/1.5 'Noto Serif SC',serif; scroll-margin-block:8px; }
+.pc-invitation button:disabled { opacity:.5; }
 .pc-empty { margin:6px 0 0; color:#8d7a6d; font-size:12px; }
 .pc-known { margin:0; padding:0; list-style:none; }
 .pc-known li { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:7px 0; border-top:1px solid #ffffff0c; }

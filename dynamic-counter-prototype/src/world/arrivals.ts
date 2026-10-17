@@ -1,11 +1,18 @@
 // 预约的公开预告与已经发生的来访。这里只读事实，不改变来访概率、信任或成交。
 import type { Appointment, Arrival, Person, PersonId, Slot, WeekendOutcome, World } from "./types.ts";
 import { WEEKEND_OUTCOMES, WEEKEND_RESPONSE } from "./weekend-orders.ts";
+import { SEASON_DAYS } from "./types.ts";
+
+export function appointmentTime(world: World, ap: Pick<Appointment, "day" | "slot">): string {
+  const ahead = Math.floor((ap.day - 1) / SEASON_DAYS);
+  return `${ahead ? `第 ${world.season + ahead} 季 · ` : ""}第 ${(ap.day - 1) % SEASON_DAYS + 1} 天${["上午", "午后", "傍晚", "晚高峰"][ap.slot]}`;
+}
 
 export type ArrivalNote = { title: string; line: string; scene: string };
 const customer = (people: Person[], id: PersonId | undefined) => people.find(p => p.id === id && p.role === "customer");
 
 export function arrivalFromAppointment(ap: Appointment): Arrival {
+  if (ap.reason === "invited") return { person: ap.person, kind: "invited" };
   if (ap.reason === "refund") return { person: ap.person, kind: "refund" };
   if (ap.reason === "weekend") return { person: ap.person, kind: "weekend", weekendOutcome: ap.weekendOutcome };
   if (ap.reason === "wechat") return { person: ap.person, kind: "wechat" };
@@ -18,6 +25,10 @@ export function describeArrival(arrival: Arrival, people: Person[]): ArrivalNote
   const person = customer(people, arrival.person);
   if (!person) return null;
   const source = arrival.source !== arrival.person ? customer(people, arrival.source) : undefined;
+  if (arrival.kind === "invited") return {
+    title: "你主动约来的", line: "「你约的时间，我记着呢。今天先帮我看看，不急着开单。」",
+    scene: `${person.name}应你的邀请来了，等你亲自接待。`,
+  };
   if (arrival.kind === "weekend") {
     const line = arrival.weekendOutcome ? WEEKEND_RESPONSE[arrival.weekendOutcome] : "「那次周末的事，我还记着。」";
     return { title: "周末那单，后来呢", line, scene: `${person.name}回来聊周末那单：${line}` };
@@ -62,7 +73,7 @@ export function publicAppointments(world: World, people: Person[], day: number):
       const source = ap.referredBy !== ap.person ? customer(people, ap.referredBy) : undefined;
       const companions = [...new Set(ap.bring ?? [])].filter(id => id !== ap.person)
         .flatMap(id => { const p = customer(people, id); return p ? [p.name] : []; });
-      const route = ap.reason === "weekend" ? "回来聊周末那单，不是再买一单" : ap.reason === "wechat" ? "微信里约好" : source ? `${source.name}替你约来的` : "按约来访";
+      const route = ap.reason === "invited" ? "你主动约来的，到店再接待" : ap.reason === "weekend" ? "回来聊周末那单，不是再买一单" : ap.reason === "wechat" ? "微信里约好" : source ? `${source.name}替你约来的` : "按约来访";
       return [{ name: person.name, slot: ap.slot, detail: route + (companions.length ? `，会和${companions.join("、")}一起来` : "") }];
     });
 }
@@ -71,7 +82,7 @@ export function publicAppointments(world: World, people: Person[], day: number):
 export function isArrival(value: unknown): value is Arrival {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
-  if (typeof v.person !== "string" || !v.person || typeof v.kind !== "string" || !["visit", "wechat", "referral", "companion", "refund", "weekend"].includes(v.kind)) return false;
+  if (typeof v.person !== "string" || !v.person || typeof v.kind !== "string" || !["visit", "wechat", "referral", "companion", "refund", "weekend", "invited"].includes(v.kind)) return false;
   if (v.kind === "weekend") return v.source === undefined && (v.weekendOutcome === undefined || WEEKEND_OUTCOMES.includes(v.weekendOutcome as WeekendOutcome));
   return v.kind === "referral" || v.kind === "companion"
     ? typeof v.source === "string" && !!v.source && v.source !== v.person

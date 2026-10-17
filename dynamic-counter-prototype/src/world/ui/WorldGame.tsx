@@ -25,13 +25,14 @@ import type { ShelfId } from "../shelf.ts";
 import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
 import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
-import { currentArrival, publicAppointments } from "../arrivals.ts";
+import { appointmentTime, currentArrival, publicAppointments } from "../arrivals.ts";
+import { CONTACT_INVITE_ENERGY, contactInviteBlock, inviteContact, planContactInvite } from "../engine.ts";
 import { rivalBookingNow } from "../rival-business.ts";
 import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
 import { WeekendOrderSheet } from "./WeekendOrder.tsx";
 import { returnPoint } from "./return-context.ts";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
-import { PersonCard } from "./PersonCard.tsx";
+import { PersonCard, type ContactInvitation } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
 import { WebView } from "./WebView.tsx";
 import { WorldArchive } from "./WorldArchive.tsx";
@@ -410,6 +411,12 @@ export default function WorldGame() {
   // 接待那一屏：看 / 问 / 试 的判定全在 consult.ts；没摸出来的诉求照样参与 fitScore。
   const consult = serving && person?.skin ? consults[person.id] ?? null : null;
   const midConsult = person ? consults[person.id]?.begun ?? false : false;
+  const invitationFor = (p: Person): ContactInvitation | undefined => {
+    if (p.role !== "customer" || !p.skin || !world.qualities[`wechat:${p.id}`]) return undefined;
+    const next = planContactInvite(world, p);
+    return { when: next ? appointmentTime(world, next) : undefined, cost: CONTACT_INVITE_ENERGY,
+      blocked: contactInviteBlock(world, PEOPLE, p.id), onInvite: () => setWorld(w => inviteContact(w, PEOPLE, p.id)) };
+  };
   const pickTargets = useMemo(() => {
     if (!pick || !selected) return [] as PersonId[];
     return [...new Set(pick.calls.map(c => c.targets.find(t => t !== selected)!))];
@@ -1050,6 +1057,7 @@ export default function WorldGame() {
     {person && !serving && !receipt && <div className="world-drawer">
       {/* 抽屉盖住「现场」时在人物卡正文念结果，不遮住动作按钮。 */}
       <PersonCard person={person} world={world} people={PEOPLE} feedback={result}
+        invitation={invitationFor(person)}
         booking={booking && bookingPerson?.id === person.id ? { amount: booking.amount, invited: booking.invited, won: bookingWon, blocked: bookingBlock, weekend: booking.weekend } : undefined}
         rival={rivalWord && rivalTargets(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
         onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
@@ -1101,7 +1109,7 @@ export default function WorldGame() {
 
     {webOpen && <div className="world-web">
       <div className="world-web-bar"><button type="button" onClick={() => setWebOpen(false)}>‹ 返回楼层</button></div>
-      <div className="world-web-body"><WebView world={world} people={PEOPLE} /></div>
+      <div className="world-web-body"><WebView world={world} people={PEOPLE} invitationFor={invitationFor} /></div>
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}

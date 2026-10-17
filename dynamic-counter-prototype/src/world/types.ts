@@ -118,14 +118,15 @@ export type Memory = {
 /** 已经发生的来访。只记录真实来路，不从好感或旧对话猜介绍人。 */
 export type Arrival = {
   person: PersonId;
-  kind: "visit" | "wechat" | "referral" | "companion" | "refund" | "weekend";
+  kind: "visit" | "wechat" | "referral" | "companion" | "refund" | "weekend" | "invited";
   source?: PersonId;
   weekendOutcome?: WeekendOutcome;
 };
 export type LogEntry = { day: number; slot: Slot; text: string; who?: PersonId[]; arrival?: Arrival };
 export type Appointment = {
   day: number; slot: Slot; person: PersonId; bring?: PersonId[];
-  reason?: "visit" | "refund" | "wechat" | "weekend"; amount?: number;
+  /** invited 是玩家主动约见，到店只接待，不走熟客自动购买。 */
+  reason?: "visit" | "refund" | "wechat" | "weekend" | "invited"; amount?: number;
   weekendOutcome?: WeekendOutcome;
   /** 熟客替你约来的人；旧档缺失时不倒推来源。 */
   referredBy?: PersonId;

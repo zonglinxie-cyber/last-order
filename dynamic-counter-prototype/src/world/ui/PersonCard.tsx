@@ -12,6 +12,7 @@ import { PLAYER, type Person, type PersonId, type World } from "../types.ts";
 import { bondKind, bondWarmth, neighborsOf } from "./bonds.ts";
 import { BOND_KIND_WORD, PLAYER_NAME, TEMPER_WORD, actWord, bondWarmWord, opinionWord } from "./words.ts";
 
+export type ContactInvitation = { when?: string; cost: number; blocked: string | null; onInvite: () => void };
 type PersonCardProps = {
   person: Person;
   world: World;
@@ -21,10 +22,11 @@ type PersonCardProps = {
   /** 最近动作的原话放进正文，不盖住下一步按钮。 */
   feedback?: string | null;
   booking?: { amount: number; invited: boolean; won: boolean; blocked: string | null; weekend?: boolean };
+  invitation?: ContactInvitation;
   onClose: () => void;
 };
 
-export function PersonCard({ person, world, people, rival, feedback, booking, onClose }: PersonCardProps) {
+export function PersonCard({ person, world, people, rival, feedback, booking, invitation, onClose }: PersonCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (feedback) cardRef.current?.querySelector(".pc-scroll .mobile-scroll")?.scrollTo({ top: 0 });
@@ -70,6 +72,13 @@ export function PersonCard({ person, world, people, rival, feedback, booking, on
       </section>}
       {arrival && <section className="pc-section arrival-note" aria-label="来访缘由">
         <h3>{arrival.title}</h3><p>{arrival.line}</p>
+      </section>}
+      {invitation && <section className="pc-section pc-invitation" aria-label="约下次见面">
+        <h3>微信里约下次见面</h3>
+        {invitation.blocked ? <p role="status">{invitation.blocked}。</p> : <>
+          <p>{invitation.when}有空来。刚买过的会等用完再约；到店接待另花 12 精力，买不买另说。</p>
+        </>}
+        <button type="button" disabled={!!invitation.blocked} onClick={invitation.onInvite}>约下次见面 · {invitation.cost} 精力</button>
       </section>}
       <p className="pc-opinion">{ta(person)}看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
       <p className="pc-tempers">{person.tempers.map(t => TEMPER_WORD[t]).join(" · ")}</p>

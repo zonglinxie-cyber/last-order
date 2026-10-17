@@ -1,0 +1,19 @@
+[WebServer] (node:7638) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:7664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:7728) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-invite.spec.ts:40:3 › 主动邀约 320×568 › 从人情网约不在场的熟人，刷新保留，隔日真实到店后再接待开单 (2.3s)
+  ✓  2 tests/world-invite.spec.ts:72:3 › 主动邀约 320×568 › 现场先加微信才出现邀约入口，缺精力时保留解释且不扣款 (403ms)
+  ✓  3 tests/world-invite.spec.ts:81:3 › 主动邀约 320×568 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 (617ms)
+  ✓  4 tests/world-invite.spec.ts:94:3 › 主动邀约 320×568 › 季末约好的时间经过真实换季保留，到新季第四天如约出现 (2.3s)
+  ✓  5 tests/world-invite.spec.ts:40:3 › 主动邀约 390×844 › 从人情网约不在场的熟人，刷新保留，隔日真实到店后再接待开单 (2.1s)
+  ✓  6 tests/world-invite.spec.ts:72:3 › 主动邀约 390×844 › 现场先加微信才出现邀约入口，缺精力时保留解释且不扣款 (338ms)
+  ✓  7 tests/world-invite.spec.ts:81:3 › 主动邀约 390×844 › 普通争单输了仍可主动约回来，等待十天并显示跨季日期 (544ms)
+  ✓  8 tests/world-invite.spec.ts:94:3 › 主动邀约 390×844 › 季末约好的时间经过真实换季保留，到新季第四天如约出现 (2.1s)
+
+  8 passed (15.2s)

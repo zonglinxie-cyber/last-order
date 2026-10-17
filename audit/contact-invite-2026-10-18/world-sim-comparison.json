@@ -1,0 +1,14 @@
+{
+  "baseline": "audit/weekend-referral-2026-10-18/world-sim-after.log",
+  "same_report_after_warning_and_whitespace_normalization": true,
+  "signature_rows": [
+    "honest      20/20    min 109680 / med 124380 / max 145540 min 97 / med 100 / max 100 min 55 / med 72 / max 100",
+    "pushy       20/20    min 22900 / med 37140 / max 52800 min 0 / med 14 / max 33 min 0 / med 0 / max 2",
+    "social      20/20    min 55060 / med 67840 / max 75640 min 85 / med 99 / max 100 min 41 / med 68 / max 84",
+    "random      20/20    min 10210 / med 19690 / max 38710 min 21 / med 37 / max 60 min 0 / med 2 / max 37",
+    "honest      20/20    min 95800 / med 111620 / max 124460 min 97 / med 100 / max 100 min 56 / med 84 / max 98",
+    "pushy       20/20    min 9260 / med 24400 / max 44000 min 0 / med 0 / max 17 min 0 / med 4 / max 13",
+    "social      20/20    min 52300 / med 71000 / max 85340 min 93 / med 100 / max 100 min 44 / med 70 / max 98",
+    "random      20/20    min 4000 / med 18060 / max 31180 min 12 / med 40 / max 52 min 0 / med 2 / max 11"
+  ]
+}

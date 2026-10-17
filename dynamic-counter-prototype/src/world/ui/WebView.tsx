@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { asset } from "../../base.ts";
 import { PLAYER, type Person, type PersonId, type World } from "../types.ts";
 import { bondWarmth, neighborsOf } from "./bonds.ts";
-import { PersonCard } from "./PersonCard.tsx";
+import { PersonCard, type ContactInvitation } from "./PersonCard.tsx";
 import { PLAYER_NAME, SLOT_WORD } from "./words.ts";
 import "./web.css";
 
@@ -20,7 +20,7 @@ type EdgePos = { key: string; ax: number; ay: number; bx: number; by: number; wa
 /** 玩家契约里没有自己的 Person 条目，中心节点用工位立绘合成。 */
 const PLAYER_NODE = { name: "你", portrait: asset("/assets/game/staff-portraits/xuyuan.png") };
 
-export function WebView({ world, people }: { world: World; people: Person[] }) {
+export function WebView({ world, people, invitationFor }: { world: World; people: Person[]; invitationFor?: (p: Person) => ContactInvitation | undefined }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [focus, setFocus] = useState<PersonId | null>(null);
@@ -103,6 +103,7 @@ export function WebView({ world, people }: { world: World; people: Person[] }) {
       <div className="web-head-title">
         <b>{focusPerson ? `${focusPerson.name} 的关系网` : "人情网"}</b>
         <small>{focusPerson ? `只画${ta(focusPerson)}的一度、二度 · 点中心回全网` : `第${world.day}天 ${SLOT_WORD[world.slot]} · 点一个人看关系和连线`}</small>
+        {invitationFor && !focusPerson && <small>点已加微信的客人，可以约下次见面。</small>}
       </div>
       {focus !== null && <button className="web-all" type="button" onClick={() => setFocus(null)}>全网</button>}
     </header>
@@ -148,6 +149,6 @@ export function WebView({ world, people }: { world: World; people: Person[] }) {
         </g>
       </svg>}
     </div>
-    {focusPerson && <PersonCard person={focusPerson} world={world} people={people} onClose={() => setFocus(null)} />}
+    {focusPerson && <PersonCard person={focusPerson} world={world} people={people} invitation={invitationFor?.(focusPerson)} onClose={() => setFocus(null)} />}
   </div>;
 }

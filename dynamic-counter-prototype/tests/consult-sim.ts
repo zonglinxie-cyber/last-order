@@ -14,7 +14,7 @@ import {
   ambient, beginServe, beginSlot, doVerb, endDay, leaveServe, newWorld,
   nextSeason, qualityOf, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
   VERB_ENERGY,
-  inviteRivalGuest, prepareWeekendOrder, weekendSponsors,
+  inviteRivalGuest, prepareWeekendOrder, weekendSponsors, contactInviteBlock, inviteContact, planContactInvite,
 } from "../src/world/engine.ts";
 import {
   askHer, lookAt, openConsult, PUSH_QUESTION, questionsOf, rememberConsult, spotsOf, tryOn,
@@ -40,7 +40,9 @@ const N = Math.max(1, Number(process.argv[2]) || 20);
 const SEASONS = Math.max(1, Number(process.argv[3]) || 1);
 // 可选第四参数 compete：争取公开预约；referral：同样争取，公开有熟客愿意牵线时优先请人帮忙。
 // 两者接待仍用同一套有限信息策略，不读取隐藏需求。
-const USE_REFERRAL = process.argv[4] === "referral";
+// rebook 在 referral 基础上每天收工前最多主动约一位，并优先接待自己约来的客人。
+const REBOOK = process.argv[4] === "rebook";
+const USE_REFERRAL = process.argv[4] === "referral" || REBOOK;
 const COMPETE_BOOKINGS = process.argv[4] === "compete" || USE_REFERRAL;
 
 const yuan = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
@@ -480,6 +482,9 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
     for (let slot = 0; slot < 4; slot++) {
       w = { ...w, slot: slot as 0 | 1 | 2 | 3 };
       w = beginSlot(w, people, festivals);
+      const ownArrivals = REBOOK ? people.filter(p => w.log.some(l => l.day === w.day && l.slot === w.slot
+        && l.arrival?.kind === "invited" && l.arrival.person === p.id)) : [];
+      social["contact-arrived"] = (social["contact-arrived"] ?? 0) + ownArrivals.length;
       if (COMPETE_BOOKINGS && w.energy >= WEEKEND_PREP_ENERGY + VERB_ENERGY.serve) {
         const sponsor = USE_REFERRAL ? weekendSponsors(w, people)[0] : undefined;
         const prepared = prepareWeekendOrder(w, people, sponsor?.id);
@@ -497,7 +502,8 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
           if (next !== w) { invited = people.find(p => p.id === booking.person); w = next; social["invite-booking"] = (social["invite-booking"] ?? 0) + 1; }
         }
       }
-      const person = invited ?? choseCustomer(w, people, failed);
+      const ownGuest = ownArrivals.find(p => p.id in w.present && !recentlyPurchased(w, p.id) && !failed.has(p.id));
+      const person = invited ?? ownGuest ?? choseCustomer(w, people, failed);
       let attempted = false;
       if (person) {
         const run = attempt(w, people, person, seed, season);
@@ -514,6 +520,11 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
         if (turn.world === w) break;
         w = turn.world;
         social[turn.verb] = (social[turn.verb] ?? 0) + 1;
+      }
+      if (REBOOK && slot === 3) {
+        const contact = people.filter(p => !contactInviteBlock(w, people, p.id) && planContactInvite(w, p)!.day <= DAYS)
+          .sort((a, b) => (w.opinion[b.id] ?? 0) - (w.opinion[a.id] ?? 0) || a.id.localeCompare(b.id))[0];
+        if (contact) { w = inviteContact(w, people, contact.id); social["invite-contact"] = (social["invite-contact"] ?? 0) + 1; }
       }
       w = ambient(w, people);
     }

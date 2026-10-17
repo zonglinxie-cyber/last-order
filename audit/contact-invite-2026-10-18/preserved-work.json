@@ -1,0 +1,95 @@
+{
+  "initial_files_preserved": 102,
+  "restored_test_outputs": [
+    {
+      "path": "audit/first-sale-2026-10-18/after-consult-320.png",
+      "test_sha256": "5cf580fbc84123e5729eb151b528eab319ed53cccdd713fd00fefba58a4c1dc1",
+      "restored_sha256": "a3a0ef737c41196442f113d9b9398f36f55bea1e8c70e8f90d738ed764314c53"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/after-consult-390.png",
+      "test_sha256": "4c9f9074f6b467ecae576ad4ccd81d7ff9058c552dfc15147cc99eaff309d037",
+      "restored_sha256": "563a7fe730ae40878b1f46bca247a6d676bc293a3dc8314bdcbe74ca6b99ccfc"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/first-receipt-320.png",
+      "test_sha256": "0be1cd6e58295b4af588868f0a045cb5c9929cf3a018b9add703e475cc49ba2e",
+      "restored_sha256": "16b4acd5c885370ec99c339498cdd35fdb3e2e31b77480d12d9e65e493f6b249"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/opening-320.png",
+      "test_sha256": "9a09a2b86ecc3228bb4aeba9614017784d7e60ea1bc337288ac114836b87d569",
+      "restored_sha256": "81aec1c819951ac7ef383a28e5ea789d9862ca50981ce85c9d4fbb30da848c54"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/toast-after-320.png",
+      "test_sha256": "4ef31a16355e6a0302c76cbf8a94c6330fe7fa67aa7746b1d900c74b206efa6b",
+      "restored_sha256": "4f202940838a20d953d778b5b9262f3ddc2a80a63f4fedc71bb4795423f24f42"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/toast-after-390.png",
+      "test_sha256": "16e9d63b4c626c4b4577af6fea2b4f269908f95bad0727e7567f61bba40a6e1e",
+      "restored_sha256": "d116292601b5d688a04f03e87cffdc0716323f09bd90f6790e56fcab6fed7e15"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/opening-390.png",
+      "test_sha256": "ddcc5c9ca35e651c412c69ca65c2f7d1f3f1a3d091aa470da270ed262986cca6",
+      "restored_sha256": "fd3b56ad679079422f388477aa40e07b9427a43d2933767765757f391ff2881d"
+    },
+    {
+      "path": "audit/first-sale-2026-10-18/first-receipt-390.png",
+      "test_sha256": "57a9a94efe7660531f41e867da5efa023a47242581e42fb817ec441e9cdf5053",
+      "restored_sha256": "eca3780503627590f0029a6a05aeec08cf45adb36818e58a6e3bbcfd9783c95c"
+    },
+    {
+      "path": "audit/return-origin-2026-10-18/person-390.png",
+      "test_sha256": "d1d2a8e9223de73e0eed5f2b385d53e4adcdcb1c15757edca968a3e74bd0f264",
+      "restored_sha256": "bd8eab2551c3bdbff148587c75fdec880721b95ffb3451f7672956b835e45036"
+    },
+    {
+      "path": "audit/return-origin-2026-10-18/person-320.png",
+      "test_sha256": "466eb358db69331ed3d8dfb1f80ac5fdff572c4b7831255d22f9d42e44d5c0b4",
+      "restored_sha256": "152076fa9e6b4a8709b287b0759efb3fbe2647a7b6845e9fc804b276420b2abe"
+    },
+    {
+      "path": "audit/return-context-2026-10-18/consult-entry-320.png",
+      "test_sha256": "3463a259e25316a9f745b550aab8eba591c688dc584a1c0750678b2f26bfbb69",
+      "restored_sha256": "f60c4e5b3feddf67c3872d6fac711abf6b0ea06174f4588dfddacc8542968a1a"
+    },
+    {
+      "path": "audit/weekend-order-2026-10-18/both-orders-320.png",
+      "test_sha256": "82c4cf09b7a4e16b2efd8647be60d05e16977a62170f037e5cdcec49987aade0",
+      "restored_sha256": "7c61294af43206066dd715c16bcdde0781654064ab9f17235fbe6e1da39dd969"
+    },
+    {
+      "path": "audit/weekend-order-2026-10-18/last-order-320.png",
+      "test_sha256": "27bccd4e4864be224e60f693460f553f39b6cfe8c256c113c14a5c3637f73775",
+      "restored_sha256": "fca5ac74c7920325767b7d9ba7cefe329af9de439a5f7cc1a79dee37fd2159df"
+    },
+    {
+      "path": "audit/weekend-order-2026-10-18/return-390.png",
+      "test_sha256": "d1384fb5d0409ee1fb207d3ef5e5f77f1f2d18f9a67ead1526eedda881f88831",
+      "restored_sha256": "1ed37a15a475b3ddfd896864e98e90cf93d3c97359691cd60c6c218ceea8c823"
+    },
+    {
+      "path": "audit/weekend-order-2026-10-18/return-320.png",
+      "test_sha256": "d2390ec39f6d3736f79917b5f2ac2f2ff24c75482da7b07a3a9b4f03d49c6612",
+      "restored_sha256": "b315e174b845121351478a801f6c26ec4ba8c16d501e3385cf8461ac149d155b"
+    },
+    {
+      "path": "audit/rival-booking-2026-10-18/won-320.png",
+      "test_sha256": "2b7af48891a7ba6c0e9117566aebe0cf453c1f9ec181dd9a9b82b5252fcc0815",
+      "restored_sha256": "78b988178cdda71d0dc75132c6107d7c8d3a1b3e9b924d6ce07402718cd88eec"
+    },
+    {
+      "path": "audit/rival-booking-2026-10-18/won-390.png",
+      "test_sha256": "25362aa336579954a0deb3cb30b0bccbdc2f3c870a9f7c040ee89397825e9b1f",
+      "restored_sha256": "e827f8b3f84fc7a320938bbd18e1db0143088f15e2872207ffe3508f4874431b"
+    },
+    {
+      "path": "audit/rival-booking-2026-10-18/floor-320.png",
+      "test_sha256": "e2553a28b8cc6af54d2065a38e64df33203aab8bfc23831bda447da725eebbbc",
+      "restored_sha256": "5d9af5a2cc2ac7f6f98c9d76f4b5da3fbedb4037ca6f389fad3e117c13b80d12"
+    }
+  ]
+}
