@@ -1,12 +1,97 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BUY_INTERVAL_DAYS, ambient, availableVerbs, beginServe, beginSlot, doVerb, newWorld, nextSeason, parseWorld, resolveServe, rivalGuarded, rivalPlanWord, rivalTarget, serializeWorld } from "../src/world/engine.ts";
+import { BUY_INTERVAL_DAYS, ambient, availableVerbs, beginServe, beginSlot, doVerb, newWorld, nextSeason, parseWorld, resolveServe, rivalGuarded, rivalPlanWord, rivalTargets, rivalCandidates, serializeWorld } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { POSITIVE_FIT, SHELF, bestShelf, fitOfPerson } from "../src/world/shelf.ts";
-import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCareOf, weekCarePeople, weekGuardOf, weekGuardedPeople } from "../src/world/target.ts";
+import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCareOf, weekCarePeople, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekGuardedPeople } from "../src/world/target.ts";
 import { assignVisitContexts, LAST_MET, visitContext, visitPerson } from "../src/world/visits.ts";
 
 const customer = (id: string) => PEOPLE.find(p => p.id === id)!;
+
+const doubleThreat = () => ({ ...newWorld("double-threat", PEOPLE), day: 8, slot: 0 as const, energy: 20,
+  present: { shen: "counter" as const, mei: "cashier" as const, zhao: "counter" as const, luyao: "rival" as const },
+  opinion: { shen: -10, mei: -5, zhao: -20 },
+  rivalPlan: { day: 8, slot: 0 as const, targets: ["shen", "mei"], tactic: "invite" as const } });
+
+test("双目标逐人反制：守住谁就记谁，精力不够时不能顺便保住另一人，也不会改抢第三人", () => {
+  for (const kept of ["shen", "mei"]) {
+    let missed = 0;
+    const other = kept === "shen" ? "mei" : "shen";
+    for (let i = 0; i < 40; i++) {
+      const started = beginServe({ ...doubleThreat(), seed: `double-${i}` }, PEOPLE, kept);
+      assert.ok(rivalGuarded(started, kept));
+      assert.ok(!rivalGuarded(started, other));
+      assert.equal(beginServe(started, PEOPLE, other), started, "20 点精力不能同时开两单");
+      const end = ambient(started, PEOPLE);
+      assert.equal(weekGuardThreatsOf(end), 2);
+      assert.equal(weekGuardStopsOf(end), 1);
+      assert.equal(weekGuardRateOf(end), 0.5);
+      assert.deepEqual(weekGuardedPeople(end), [kept]);
+      assert.notEqual(end.present[kept], "rival");
+      assert.notEqual(end.present.zhao, "rival", "更容易抢的第三人没有预告也不能临时改抢");
+      if (end.present[other] === "rival") missed++;
+      const again = ambient(parseWorld(serializeWorld(end))!, PEOPLE);
+      assert.equal(again.rivalMoney, end.rivalMoney, "结算后读档不能重掷抢客");
+      assert.equal(weekGuardRateOf(again), 0.5);
+    }
+    assert.ok(missed > 0 && missed < 40, "没守住是有风险，不是暗中必败");
+  }
+});
+
+test("攒精力可同时守住两人，比货时每位都要对症成交", () => {
+  const base = { ...doubleThreat(), energy: 40, rivalPlan: { ...doubleThreat().rivalPlan, tactic: "compare" as const } };
+  const one = resolveServe(base, PEOPLE, "shen", bestShelf(customer("shen")), 1);
+  assert.ok(rivalGuarded(one, "shen"));
+  assert.ok(!rivalGuarded(one, "mei"));
+  const two = resolveServe(one, PEOPLE, "mei", bestShelf(customer("mei")), 1);
+  assert.ok(rivalGuarded(two, "mei"));
+  const end = ambient(two, PEOPLE);
+  assert.equal(weekGuardOf(end), 2);
+  assert.equal(weekGuardRateOf(end), 1);
+  assert.equal(end.rivalMoney, 0);
+});
+
+test("首季首周保留单目标，第二周及下一季可公开两个不同目标；存档不重抽", () => {
+  let doubled = 0;
+  for (let i = 0; i < 20; i++) {
+    const base = newWorld(`opening-${i}`, PEOPLE);
+    const first = beginSlot(base, PEOPLE);
+    assert.ok(rivalTargets(first).length <= 1);
+    for (const [day, season] of [[8, 1], [1, 2]]) {
+      const later = beginSlot({ ...base, day, season, appointments: [
+        { day, slot: 0, person: "shen", reason: "visit" },
+        { day, slot: 0, person: "mei", reason: "visit" },
+      ] }, PEOPLE);
+      const targets = rivalTargets(later);
+      if (targets.length === 2) doubled++;
+      assert.ok(targets.length <= 2);
+      assert.equal(new Set(targets).size, targets.length);
+      assert.equal(weekGuardThreatsOf(later), targets.length);
+      assert.deepEqual(rivalTargets(parseWorld(serializeWorld(later))!), targets);
+    }
+  }
+  assert.ok(doubled > 0, "真实来访必须能产生双目标");
+});
+
+test("旧单目标与旧守客账原样接续；坏的双目标存档拒收，无预告不偷抢", () => {
+  const old = JSON.parse(serializeWorld(doubleThreat()));
+  old.world.rivalPlan = { day: 8, slot: 0, person: "shen" };
+  old.world.qualities = { "week-guard-threat:2:8:0": 1, "week-guard-stop:2:8:0": 1,
+    "week-guard-threat:1:7:3": 1, "guard-commit:8:0:shen": 1 };
+  assert.equal(parseWorld({ ...old, world: { ...old.world, rivalPlan: { ...old.world.rivalPlan, tactic: null } } }), null);
+  const restored = parseWorld(old)!;
+  assert.deepEqual(restored.rivalPlan, { day: 8, slot: 0, targets: ["shen"], tactic: "invite" });
+  assert.equal(weekGuardThreatsOf(ambient(restored, PEOPLE)), 1);
+  assert.equal(weekGuardRateOf(ambient(restored, PEOPLE)), 1);
+  assert.equal(restored.qualities["week-guard-threat:1:7:3:legacy"], 1);
+  assert.equal(restored.qualities["week-guard-threat:2:8:0"], undefined);
+  assert.deepEqual(parseWorld(serializeWorld(restored)), restored);
+  for (const targets of [["shen", "shen"], ["shen", "mei", "zhao"], [""], [42], null]) {
+    assert.equal(parseWorld(serializeWorld({ ...doubleThreat(), rivalPlan: { ...doubleThreat().rivalPlan, targets } } as never)), null);
+  }
+  const noPlan = { ...doubleThreat(), rivalPlan: undefined };
+  for (let i = 0; i < 20; i++) assert.equal(ambient({ ...noPlan, seed: `no-plan-${i}` }, PEOPLE).rivalMoney, 0);
+});
 
 test("熟客当天的用途在开场锁定；选货与预算读同一张临时诉求表，换季仍认得这人", () => {
   const originalDemands = structuredClone(customer("shen").skin!.demands);
@@ -46,8 +131,8 @@ test("陆遥锁定最低看法的柜前人；玩家照应目标后她不会临�
   const bare = { ...newWorld("rival-plan", PEOPLE), day: 3, slot: 1 as const, energy: 20,
     present: { shen: "counter" as const, mei: "cashier" as const, luyao: "rival" as const },
     opinion: { shen: -20, mei: -10 } };
-  assert.equal(rivalTarget(bare, PEOPLE)?.id, "shen");
-  const planned = { ...bare, rivalPlan: { day: 3, slot: 1 as const, person: "shen" } };
+  assert.equal(rivalCandidates(bare, PEOPLE)[0]?.id, "shen");
+  const planned = { ...bare, rivalPlan: { day: 3, slot: 1 as const, targets: ["shen"], tactic: "invite" as const } };
   const restored = parseWorld(serializeWorld(planned))!;
   assert.deepEqual(restored.rivalPlan, planned.rivalPlan);
   const justGreeted = ambient({ ...restored, touched: ["shen"] }, PEOPLE);
@@ -106,23 +191,23 @@ test("托单成交后的公开比货避开购买冷却期，没有可成交目�
     present: { shen: "counter" as const, mei: "cashier" as const, suman: "counter" as const, luyao: "rival" as const },
     opinion: { shen: -10, mei: 0, suman: 30 },
     qualities: { "client-note:shen:natural": 1 },
-    rivalPlan: { day: 3, slot: 1 as const, person: "shen", tactic: "invite" as const } };
+    rivalPlan: { day: 3, slot: 1 as const, targets: ["shen"], tactic: "invite" as const } };
   const handed = doVerb(base, PEOPLE, "handoff", ["suman", "shen"]);
   assert.ok(handed.money > base.money);
   const next = { ...handed, touched: [], slot: 2 as const };
-  assert.equal(rivalTarget(next, PEOPLE)?.id, "mei", "比货应选还有正常成交窗口的顾客");
+  assert.equal(rivalCandidates(next, PEOPLE)[0]?.id, "mei", "比货应选还有正常成交窗口的顾客");
   const onlyRecent = { ...next, present: { shen: "counter" as const, luyao: "rival" as const } };
-  assert.equal(rivalTarget(onlyRecent, PEOPLE), undefined, "唯一顾客刚买过时不亮出无解目标");
-  assert.equal(rivalTarget({ ...onlyRecent, day: 3 + BUY_INTERVAL_DAYS - 1 }, PEOPLE), undefined);
-  assert.equal(rivalTarget({ ...onlyRecent, day: 3 + BUY_INTERVAL_DAYS }, PEOPLE)?.id, "shen", "冷却结束即可再次比货");
-  assert.equal(rivalTarget({ ...onlyRecent, day: 3 + BUY_INTERVAL_DAYS, opinion: { shen: -100 } }, PEOPLE), undefined,
+  assert.equal(rivalCandidates(onlyRecent, PEOPLE)[0], undefined, "唯一顾客刚买过时不亮出无解目标");
+  assert.equal(rivalCandidates({ ...onlyRecent, day: 3 + BUY_INTERVAL_DAYS - 1 }, PEOPLE)[0], undefined);
+  assert.equal(rivalCandidates({ ...onlyRecent, day: 3 + BUY_INTERVAL_DAYS }, PEOPLE)[0]?.id, "shen", "冷却结束即可再次比货");
+  assert.equal(rivalCandidates({ ...onlyRecent, day: 3 + BUY_INTERVAL_DAYS, opinion: { shen: -100 } }, PEOPLE)[0], undefined,
     "已拒绝正常接待的顾客也不能被指定成必须成交的比货目标");
   const opening = beginSlot({ ...next, appointments: [
     { day: 3, slot: 2 as const, person: "shen", reason: "visit" as const },
     { day: 3, slot: 2 as const, person: "mei", reason: "visit" as const },
   ] }, PEOPLE);
   assert.equal(opening.rivalPlan?.tactic, "compare");
-  assert.notEqual(opening.rivalPlan?.person, "shen", "实际开时段也不能锁刚刚代售过的客人");
+  assert.notEqual(opening.rivalPlan?.targets[0], "shen", "实际开时段也不能锁刚刚代售过的客人");
 });
 
 test("客情要本周两天实事：同日送样加微信不重复计数，托单和同事不计人数", () => {
@@ -160,24 +245,24 @@ test("托单引出公开比货；比货只认亲自对症成交，打招呼、�
   const base = { ...newWorld("counter-plan", PEOPLE), day: 3, slot: 1 as const, energy: 80,
     present: { shen: "counter" as const, mei: "cashier" as const, suman: "counter" as const, luyao: "rival" as const },
     opinion: { shen: 0, mei: 0, suman: 20 },
-    rivalPlan: { day: 3, slot: 1 as const, person: "shen", tactic: "invite" as const } };
+    rivalPlan: { day: 3, slot: 1 as const, targets: ["shen"], tactic: "invite" as const } };
   const handed = doVerb(base, PEOPLE, "handoff", ["suman", "shen"]);
-  assert.ok(rivalGuarded(handed));
+  assert.ok(rivalGuarded(handed, "shen"));
   assert.deepEqual(weekGuardedPeople(ambient(handed, PEOPLE)), ["shen"]);
   const next = beginSlot({ ...handed, slot: 2 }, PEOPLE);
   assert.equal(next.rivalPlan?.tactic, "compare");
   const compare = { ...base, rivalPlan: { ...base.rivalPlan, tactic: "compare" as const } };
   assert.match(rivalPlanWord(compare)!.howTo, /亲自对症成交/);
-  assert.ok(!rivalGuarded(doVerb(compare, PEOPLE, "greet", ["shen"])));
-  assert.ok(!rivalGuarded(beginServe(compare, PEOPLE, "shen")));
-  assert.ok(!rivalGuarded(doVerb(compare, PEOPLE, "handoff", ["suman", "shen"])));
+  assert.ok(!rivalGuarded(doVerb(compare, PEOPLE, "greet", ["shen"]), "shen"));
+  assert.ok(!rivalGuarded(beginServe(compare, PEOPLE, "shen"), "shen"));
+  assert.ok(!rivalGuarded(doVerb(compare, PEOPLE, "handoff", ["suman", "shen"]), "shen"));
   const wrongProduct = (Object.keys(SHELF) as Array<keyof typeof SHELF>)
     .sort((a, b) => fitOfPerson(customer("shen"), a) - fitOfPerson(customer("shen"), b))[0];
   const wrong = resolveServe(compare, PEOPLE, "shen", wrongProduct, 1);
-  assert.ok(!rivalGuarded(wrong), "错误选货不能挡比货");
+  assert.ok(!rivalGuarded(wrong, "shen"), "错误选货不能挡比货");
   const sold = resolveServe(compare, PEOPLE, "shen", bestShelf(customer("shen")), 1);
   assert.ok(sold.money > base.money);
-  assert.ok(rivalGuarded(sold));
+  assert.ok(rivalGuarded(sold, "shen"));
   assert.equal(beginSlot({ ...sold, slot: 2 }, PEOPLE).rivalPlan?.tactic, "invite");
   assert.equal(weekGuardOf(ambient({ ...sold, qualities: { ...sold.qualities,
     "week-guard-person:1:shen": 1 } }, PEOPLE)), 1, "跨时段守同一人不刷次数");

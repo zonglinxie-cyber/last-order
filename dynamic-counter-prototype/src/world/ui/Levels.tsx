@@ -101,9 +101,9 @@ export function RoutesSheet({ world, onClose }: { world: World; onClose: () => v
             <p>本周在 {CARE_DAYS_MIN} 个不同的日子亲自为同一位客人办过实事（送小样、介绍熟人、打圆场、加微信、替人保密或对症成交），而且到对账时仍信得过你，就记一位。关系掉回去会被划掉；托同事照看不算；同一人一周只算一次。</p>
             <small>{CARE_STEPS.join(" / ")} 位各一颗星{cared.length ? ` · 已记：${cared.join("、")}` : ""}</small></li>
           <li className={guard.stars ? "done" : ""}>{head(guard)}
-            <p>{RIVAL_NAME}每个时段开场公开盯上一位客人，页顶亮出名字和手法。招揽：本时段接待或托同事照看就接住；比货：要亲自对症成交。时段结束记一位，同一人一周只算一次。</p>
+            <p>{RIVAL_NAME}每个时段开场公开目标，页顶亮出名字和手法。首季第一周只盯一位，此后最多同时盯两位，先顾谁由你决定。招揽：本时段接待或托同事照看就接住；比货：要亲自对症成交。时段结束逐人结算，同一人一周只算一次。</p>
             <small>{guardStepWords.join("；")}</small>
-            <small className="routes-rate">本周公开威胁 {live.guardThreats} 次，挡住 {live.guardStops} 次{live.guardThreats ? `（${pct(live.guardRate)}）` : ""}{guarded.length ? ` · 已记：${guarded.join("、")}` : ""}</small></li>
+            <small className="routes-rate">按客人逐个计，本周公开威胁 {live.guardThreats} 人次，挡住 {live.guardStops} 人次{live.guardThreats ? `（${pct(live.guardRate)}）` : ""}{guarded.length ? ` · 已记：${guarded.join("、")}` : ""}</small></li>
         </ul>
         <p className="routes-foot">周日打烊只取星最多的一条：过关柜位 +{WEEK_HIT_STANDING}。</p>
       </MobileScroll>

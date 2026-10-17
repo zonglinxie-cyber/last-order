@@ -1,0 +1,92 @@
+[WebServer] (node:42201) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:42255) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 11 tests using 1 worker
+
+(node:42261) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+〔知道了〕开局世界种子：world-mywpiww0-6620
+〔知道了〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔知道了〕整季用时 256.3s，走了 140 步，记下 298 行流水、0 条问题
+〔知道了〕逐时段明细与问题清单：../audit/world-smoke/report-know.json
+〔知道了〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔知道了〕第 2 季前 3 天开出来的跨季卡：arc-tangke-sheet、arc-qiaowan-parrot、arc-tangke-stock、arc-qiaowan-face、arc-tangke-seat、arc-fangmin-line、arc-tangke-end、arc-qiaowan-unload、arc-roman-columns、arc-qiaowan-end、arc-fangmin-name
+  ✓   1 tests/world-season-smoke.spec.ts:597:5 › 人情场整季冒烟 · 全程点知道了 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (4.6m)
+〔跳过引导〕开局世界种子：world-mywpiww0-6620
+〔跳过引导〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔跳过引导〕整季用时 293.0s，走了 140 步，记下 299 行流水、0 条问题
+〔跳过引导〕逐时段明细与问题清单：../audit/world-smoke/report-skip.json
+〔跳过引导〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔跳过引导〕第 2 季前 3 天开出来的跨季卡：arc-fangmin-line、arc-qiaowan-parrot、arc-fangmin-name、arc-qiaowan-face、arc-tangke-sheet、arc-roman-columns、arc-qiaowan-unload、arc-roman-quota、arc-tangke-stock、arc-roman-late、arc-roman-end、arc-tangke-seat
+  ✓   2 tests/world-season-smoke.spec.ts:597:5 › 人情场整季冒烟 · 开局跳过引导 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (5.3m)
+  ✓   3 tests/world-season-smoke.spec.ts:735:3 › 季末回顾页 › 结局当标题，高光、三本账与三颗按钮都在 (310ms)
+  ✓   4 tests/world-season-smoke.spec.ts:749:3 › 季末回顾页 › 走完的线按落点标题念，不许把内部字段名摊给玩家 (277ms)
+  ✓   5 tests/world-season-smoke.spec.ts:768:3 › 季末回顾页 › 本子翻过面了，但不许看着像讲完：第 2 幕那一档留一句钩子 (244ms)
+  ✓   6 tests/world-season-smoke.spec.ts:778:3 › 季末回顾页 › 倒数第二幕翻过面：钩子不许跟着幕号一起被写死掉 (247ms)
+  ✓   7 tests/world-season-smoke.spec.ts:787:3 › 季末回顾页 › 内容讲到最晚的那一季末：钩子要收回去，不许年年都喊下一季 (227ms)
+  ✓   8 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (344ms)
+  ✓   9 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (344ms)
+  ✓  10 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (334ms)
+  ✓  11 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (331ms)
+
+  Slow test file: tests/world-season-smoke.spec.ts (9.9m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  11 passed (10.0m)

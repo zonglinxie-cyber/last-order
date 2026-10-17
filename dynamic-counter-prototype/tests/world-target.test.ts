@@ -122,21 +122,21 @@ test("客情星看当前信任，盖过章后伤了关系仍会掉出名单", ()
 
 test("守客过关仍认人数，高星还要挡住公开威胁的一半/四分之三；无目标不扩大分母", () => {
   let w = books(7, 0, 99_999);
-  for (let i = 0; i < 28; i++) w = markWeekThreat({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] });
+  for (let i = 0; i < 28; i++) w = markWeekThreat({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] }, i < GUARD_STEPS[2] ? `guest-${i}` : "guest-0");
   for (let i = 0; i < GUARD_STEPS[2]; i++) w = markWeekGuard({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] }, `guest-${i}`);
   w = { ...w, day: 7 };
   assert.equal(weekGuardOf(w), GUARD_STEPS[2]);
   assert.equal(weekGuardThreatsOf(w), 28);
   assert.equal(weekGuardStopsOf(w), GUARD_STEPS[2]);
   assert.equal(weekResultOf(w).guardStars, 1, "守很多不同人却漏掉多数威胁，只过关");
-  for (let i = GUARD_STEPS[2]; i < 21; i++) {
+  for (let i: number = GUARD_STEPS[2]; i < 21; i++) {
     w = markWeekGuard({ ...w, day: 1 + Math.floor(i / 4), slot: (i % 4) as World["slot"] }, "guest-0");
     if (i === 13) assert.equal(weekResultOf(w).guardStars, 2);
   }
   assert.equal(weekGuardRateOf(w), 0.75);
   assert.equal(weekResultOf(w).guardStars, 3);
   assert.equal(weekGuardOf(w), GUARD_STEPS[2], "同客重复挡下只改善守住率，不刷人数");
-  const sameSlot = markWeekThreat(markWeekGuard({ ...w, day: 1, slot: 0 }, "guest-0"));
+  const sameSlot = markWeekThreat(markWeekGuard({ ...w, day: 1, slot: 0 }, "guest-0"), "guest-0");
   assert.equal(weekGuardRateOf(sameSlot), 0.75, "重复结算不刷分子分母");
   assert.equal(weekGuardThreatsOf(books(3, 0, 0)), 0);
 });

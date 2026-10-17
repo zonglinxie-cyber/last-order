@@ -186,8 +186,8 @@ export type World = {
   present: Record<PersonId, Zone>;
   /** 本时段玩家已经接触过的人；公开抢客意图另外按 rivalPlan 与守客承诺结算。 */
   touched: PersonId[];
-  /** 陆遥开时段锁定的目标；null 表示这时段没有目标，结算时不临时换人。旧档可缺。 */
-  rivalPlan?: { day: number; slot: Slot; person: PersonId | null; tactic?: RivalTactic };
+  /** 陆遥开时段锁定的目标；空数组表示这时段没有目标，结算时不临时换人。旧档可缺。 */
+  rivalPlan?: { day: number; slot: Slot; targets: PersonId[]; tactic: RivalTactic };
   /** 当前节日 id（节日表由内容侧维护）；Visits.festivals 和 Cond {festival} 都读它 */
   festival?: string;
   /** 已消耗的抽数：每个随机决定都从 seed+rngCalls 推导，存档往返后确定性不断 */

@@ -8,7 +8,7 @@ import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
   BUY_INTERVAL_DAYS, HARD_SELL_COMPLIANCE, SERVE_REFUSE_OPINION, resolveServe,
-  newWorld, nextSeason, qualityOf, rivalGuarded, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
+  newWorld, nextSeason, qualityOf, rivalTargets, rivalGuarded, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
@@ -84,8 +84,8 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
     case "social": {
       // 这一路知道周目标：陆遥公开盯人时先托给同事；平日先办一件能涨柜位的人情，
       // 再把有限小样给本周还没赢得信任的不同客人。模拟的是会主动经营客情的人。
-      const plan = w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot ? w.rivalPlan.person : null;
-      if (plan && !rivalGuarded(w)) {
+      const plan = rivalTargets(w).find(id => !rivalGuarded(w, id));
+      if (plan && !rivalGuarded(w, plan)) {
         if (w.rivalPlan?.tactic !== "compare") {
           const handoff = options.find(c => c.verb === "handoff" && c.targets[1] === plan);
           if (handoff) return [{ call: handoff }, w];

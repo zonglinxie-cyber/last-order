@@ -845,6 +845,7 @@ test("陆遥只截走到我柜台上却没被招呼的人：在中庭闲逛的�
   const poached = (zone: Zone) => {
     for (let i = 1; i <= 40; i++) {
       const w = ambient({ ...newWorld(`poach-zone-${i}`, CONTENT_PEOPLE),
+        rivalPlan: { day: 1, slot: 0, targets: ["shen"], tactic: "invite" },
         present: { shen: zone, luyao: "rival" }, opinion: { shen: -10 } }, CONTENT_PEOPLE);
       if (w.present.shen === "rival") return true;
     }
@@ -865,6 +866,7 @@ test("比分：被截走的那位在那边把单开了，对面这一季多一�
   let hit: World | null = null;
   for (let i = 1; i <= 40 && !hit; i++) {
     const w = ambient({ ...newWorld(`score-${i}`, CONTENT_PEOPLE),
+      rivalPlan: { day: 1, slot: 0, targets: ["shen"], tactic: "invite" },
       present: { shen: "counter", luyao: "rival" }, opinion: { shen: -10 } }, CONTENT_PEOPLE);
     if (w.present.shen === "rival") hit = w;
   }

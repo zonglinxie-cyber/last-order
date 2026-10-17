@@ -11,7 +11,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   ambient, beginServe, beginSlot, BUY_INTERVAL_DAYS, doVerb, endDay, leaveServe, newWorld,
-  nextSeason, qualityOf, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
+  nextSeason, qualityOf, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
   VERB_ENERGY,
 } from "../src/world/engine.ts";
 import {
@@ -390,8 +390,7 @@ function choseCustomer(w: World, people: Person[], failed: Set<PersonId>): Perso
     const live = visitPerson(w, p);
     return SHELF_IDS.some(id => SHELF[id].price <= (live.skin?.budget ?? 0));
   });
-  const plan = w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot ? w.rivalPlan.person : null;
-  const target = plan ? candidates.find(p => p.id === plan) : undefined;
+  const target = candidates.find(p => rivalTargets(w).includes(p.id) && !rivalGuarded(w, p.id));
   if (target) return target;
   candidates.sort((a, b) => (w.opinion[b.id] ?? 0) - (w.opinion[a.id] ?? 0) || a.id.localeCompare(b.id));
   return candidates[0] ?? null;
@@ -400,8 +399,8 @@ function choseCustomer(w: World, people: Person[], failed: Set<PersonId>): Perso
 /** 接完一单剩下的劲：先办柜位的人情，再把小样给本周还没照应过的人，其次微信/保密/招呼。 */
 function socialTurn(w: World, people: Person[]): { world: World; verb: string } {
   const options = verbOptions(w, people);
-  const plan = w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot ? w.rivalPlan.person : null;
-  if (plan && !rivalGuarded(w) && w.rivalPlan?.tactic !== "compare") {
+  const plan = rivalTargets(w).find(id => !rivalGuarded(w, id));
+  if (plan && !rivalGuarded(w, plan) && w.rivalPlan?.tactic !== "compare") {
     const handoff = options.find(c => c.verb === "handoff" && c.targets[1] === plan);
     if (handoff) {
       const next = doVerb(w, people, "handoff", handoff.targets);

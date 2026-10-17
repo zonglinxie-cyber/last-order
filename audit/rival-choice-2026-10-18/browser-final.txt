@@ -1,0 +1,35 @@
+[WebServer] (node:37510) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:37541) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 24 tests using 1 worker
+
+(node:37556) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-dynamics.spec.ts:31:5 › 熟客、反制与三条过关线 390×844 › 今天的需求进入接待，招揽目标被接住后计入守客 (1.5s)
+  ✓   2 tests/world-dynamics.spec.ts:57:5 › 熟客、反制与三条过关线 390×844 › 比货：只开始接待挡不住，提示写明要亲自对症成交 (1.3s)
+  ✓   3 tests/world-dynamics.spec.ts:72:5 › 熟客、反制与三条过关线 390×844 › 双目标在小屏完整显示，点第二位只守第二位；读档保留选择 (1.5s)
+  ✓   4 tests/world-dynamics.spec.ts:106:5 › 熟客、反制与三条过关线 390×844 › 点页顶那条看三条线的算法；人物卡写本周照应了几天 (2.2s)
+  ✓   5 tests/world-dynamics.spec.ts:137:5 › 熟客、反制与三条过关线 390×844 › 页顶目标与陆遥预告：可点 44px、字不小于 12px、地图还看得见、不撑横 (235ms)
+  ✓   6 tests/world-dynamics.spec.ts:31:5 › 熟客、反制与三条过关线 320×568 › 今天的需求进入接待，招揽目标被接住后计入守客 (1.4s)
+  ✓   7 tests/world-dynamics.spec.ts:57:5 › 熟客、反制与三条过关线 320×568 › 比货：只开始接待挡不住，提示写明要亲自对症成交 (1.3s)
+  ✓   8 tests/world-dynamics.spec.ts:72:5 › 熟客、反制与三条过关线 320×568 › 双目标在小屏完整显示，点第二位只守第二位；读档保留选择 (1.5s)
+  ✓   9 tests/world-dynamics.spec.ts:106:5 › 熟客、反制与三条过关线 320×568 › 点页顶那条看三条线的算法；人物卡写本周照应了几天 (2.2s)
+  ✓  10 tests/world-dynamics.spec.ts:137:5 › 熟客、反制与三条过关线 320×568 › 页顶目标与陆遥预告：可点 44px、字不小于 12px、地图还看得见、不撑横 (282ms)
+  ✓  11 tests/world-levels.spec.ts:30:5 › 每周一关 390×844 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (240ms)
+  ✓  12 tests/world-levels.spec.ts:43:5 › 每周一关 390×844 › 过了这一关，页顶那条变色并亮星 (223ms)
+  ✓  13 tests/world-levels.spec.ts:50:5 › 每周一关 390×844 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (254ms)
+  ✓  14 tests/world-levels.spec.ts:62:5 › 每周一关 390×844 › 钱没达标也能凭客情过关，结算写明获胜路线 (259ms)
+  ✓  15 tests/world-levels.spec.ts:80:5 › 每周一关 390×844 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓  16 tests/world-levels.spec.ts:108:5 › 每周一关 390×844 › 没到数：结算屏盖「没过」，零颗星 (266ms)
+  ✓  17 tests/world-levels.spec.ts:120:5 › 每周一关 390×844 › 季末那排四关战绩：每关几颗星、一共几颗 (218ms)
+  ✓  18 tests/world-levels.spec.ts:30:5 › 每周一关 320×568 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (218ms)
+  ✓  19 tests/world-levels.spec.ts:43:5 › 每周一关 320×568 › 过了这一关，页顶那条变色并亮星 (215ms)
+  ✓  20 tests/world-levels.spec.ts:50:5 › 每周一关 320×568 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (270ms)
+  ✓  21 tests/world-levels.spec.ts:62:5 › 每周一关 320×568 › 钱没达标也能凭客情过关，结算写明获胜路线 (260ms)
+  ✓  22 tests/world-levels.spec.ts:80:5 › 每周一关 320×568 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓  23 tests/world-levels.spec.ts:108:5 › 每周一关 320×568 › 没到数：结算屏盖「没过」，零颗星 (265ms)
+  ✓  24 tests/world-levels.spec.ts:120:5 › 每周一关 320×568 › 季末那排四关战绩：每关几颗星、一共几颗 (218ms)
+
+  24 passed (23.1s)

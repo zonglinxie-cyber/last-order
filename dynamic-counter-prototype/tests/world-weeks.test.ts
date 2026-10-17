@@ -126,7 +126,7 @@ test("对面休假周：她只带走本来就不想待着的那几位，门槛�
   const poached = (id: string | null, opinion: number, heat: string[] = []): number => {
     let n = 0;
     for (let i = 0; i < 60; i++) {
-      const w = ambient(withWeek({ ...newWorld(`poach-${i}`, PEOPLE), day: 3, present: { shen: "counter", luyao: "rival" }, opinion: { shen: opinion }, heat }, id), PEOPLE);
+      const w = ambient(withWeek({ ...newWorld(`poach-${i}`, PEOPLE), day: 3, rivalPlan: { day: 3, slot: 0, targets: ["shen"], tactic: "invite" }, present: { shen: "counter", luyao: "rival" }, opinion: { shen: opinion }, heat }, id), PEOPLE);
       if (w.present.shen === "rival") n++;
     }
     return n;

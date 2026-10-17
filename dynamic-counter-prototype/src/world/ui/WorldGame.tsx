@@ -8,7 +8,7 @@ import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
   beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
-  verbOptions, verbEnergyNow, energyCeiling, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  verbOptions, verbEnergyNow, energyCeiling, rivalTargets, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { seasonRecap } from "../recap.ts";
@@ -846,11 +846,12 @@ export default function WorldGame() {
     && reqSeenDay !== world.day && askedToday(world).length > 0;
   // 陆遥这一时段公开盯上的人：开场就亮出来，点一下直接开她的卡。挡没挡住、记不记分都按引擎的判据念。
   const rivalWord = rivalPlanWord(world);
-  const rivalMark = rivalWord ? PEOPLE.find(p => p.id === world.rivalPlan?.person && p.id in world.present) : undefined;
-  const rivalHeld = rivalGuarded(world);
-  const rivalCounted = !!rivalMark && weekGuardedPeople(world).includes(rivalMark.id);
+  const rivalMarks = rivalTargets(world).flatMap(id => {
+    const person = PEOPLE.find(p => p.id === id && p.id in world.present);
+    return person ? [person] : [];
+  });
 
-  return <div className="app-screen world-app">
+  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}`}>
     <header className="world-bar">
       <div className="world-bar-info">
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
@@ -862,11 +863,18 @@ export default function WorldGame() {
       <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
     </header>
     <GoalStrip world={world} lit={lit.goal || !!bump} bump={bump} onOpen={() => { sfx("tap"); setRoutesOpen(true); }} />
-    {rivalWord && rivalMark && <button type="button" className={`world-rival-plan${rivalHeld ? " is-guarded" : ""}${world.rivalPlan?.tactic === "compare" ? " is-compare" : ""}`}
-      onClick={() => tapPerson(rivalMark.id)} aria-label={`${rivalWord.title}：${rivalMark.name}。${rivalHeld ? "已接住" : rivalWord.howTo}`}>
-      <b>{rivalHeld ? "✓ 已接住" : rivalWord.title} · {rivalMark.name}</b>
-      <span>{rivalHeld ? rivalCounted ? `本周已记过${ta(rivalMark)}，不重复加` : "时段结束守客 +1" : rivalWord.howTo.split("；")[0]}</span>
-    </button>}
+    {rivalWord && rivalMarks.length > 0 && <section className="world-rival-plans" aria-label="陆遥的公开动作">
+      {rivalMarks.length > 1 && <p className="world-rival-choice">同时盯上两位 · 精力 {Math.round(world.energy)} · 先顾谁？</p>}
+      {rivalMarks.map(mark => {
+        const held = rivalGuarded(world, mark.id);
+        const counted = weekGuardedPeople(world).includes(mark.id);
+        return <button key={mark.id} type="button" className={`world-rival-plan${held ? " is-guarded" : ""}${world.rivalPlan?.tactic === "compare" ? " is-compare" : ""}`}
+          onClick={() => tapPerson(mark.id)} aria-label={`${rivalWord.title}：${mark.name}。${held ? "已接住" : rivalWord.howTo}`}>
+          <b>{held ? "✓ 已接住" : rivalMarks.length > 1 ? world.rivalPlan?.tactic === "compare" ? "比货" : "邀客" : rivalWord.title} · {mark.name}</b>
+          <span>{held ? counted ? `本周已记过${ta(mark)}，不重复加` : "时段结束守客 +1" : rivalMarks.length > 1 ? world.rivalPlan?.tactic === "compare" ? "亲自对症成交" : "接待或托同事照看" : rivalWord.howTo.split("；")[0]}</span>
+        </button>;
+      })}
+    </section>}
 
     <div className="world-map-view" ref={viewRef}
       onPointerDown={onPanDown} onPointerMove={onPanMove} onPointerUp={onPanUp} onPointerCancel={onPanUp}
@@ -942,7 +950,7 @@ export default function WorldGame() {
 
     {person && !serving && !receipt && <div className="world-drawer">
       <PersonCard person={person} world={world} people={PEOPLE}
-        rival={rivalWord && rivalMark?.id === person.id ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalHeld } : undefined}
+        rival={rivalWord && rivalTargets(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
         onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
         <p>{pickHint(pick.verb, person)}</p>

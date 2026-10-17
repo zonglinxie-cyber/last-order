@@ -49,8 +49,8 @@ export const weekRouteKey = (n: number) => `week-route:${n}`;
 export const weekCareCountKey = (n: number) => `week-care-count:${n}`;
 export const weekCareKey = (n: number, person: string) => `week-care:${n}:${person}`;
 export const weekGuardPersonKey = (n: number, person: string) => `week-guard-person:${n}:${person}`;
-export const weekGuardThreatKey = (n: number, day: number, slot: number) => `week-guard-threat:${n}:${day}:${slot}`;
-export const weekGuardStopKey = (n: number, day: number, slot: number) => `week-guard-stop:${n}:${day}:${slot}`;
+export const weekGuardThreatKey = (n: number, day: number, slot: number, person: string) => `week-guard-threat:${n}:${day}:${slot}:${person}`;
+export const weekGuardStopKey = (n: number, day: number, slot: number, person: string) => `week-guard-stop:${n}:${day}:${slot}:${person}`;
 export const weekCareDayKey = (n: number, person: string, day: number) => `week-care-day:${n}:${person}:${day}`;
 export const guardCommitKey = (day: number, slot: number, person: string) => `guard-commit:${day}:${slot}:${person}`;
 
@@ -78,9 +78,9 @@ export const markWeekCare = <W extends Books>(w: W, person: string): W =>
 /** 一周同一人只算一次公开的反制；目标被照应后，不因重进结算多得分。 */
 export const markWeekGuard = <W extends Books & { slot: number }>(w: W, person: PersonId): W =>
   ({ ...w, qualities: { ...w.qualities, [weekGuardPersonKey(weekNoOf(w.day), person)]: 1,
-    [weekGuardStopKey(weekNoOf(w.day), w.day, w.slot)]: 1 } });
-export const markWeekThreat = <W extends Books & { slot: number }>(w: W): W =>
-  ({ ...w, qualities: { ...w.qualities, [weekGuardThreatKey(weekNoOf(w.day), w.day, w.slot)]: 1 } });
+    [weekGuardStopKey(weekNoOf(w.day), w.day, w.slot, person)]: 1 } });
+export const markWeekThreat = <W extends Books & { slot: number }>(w: W, person: PersonId): W =>
+  ({ ...w, qualities: { ...w.qualities, [weekGuardThreatKey(weekNoOf(w.day), w.day, w.slot, person)]: 1 } });
 /** 这周还剩几天（含今天）。 */
 export const weekDaysLeft = (day: number): number => 7 - ((day - 1) % 7);
 

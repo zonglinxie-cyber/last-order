@@ -86,8 +86,8 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       // 公开威胁按不同时段记：挡住的比例比第二颗星要的低一档。
       const slots = Array.from({ length: 7 * 4 }, (_, i) => [Math.floor(i / 4) + 1, i % 4] as const);
       const threats = Math.ceil(GUARD_STEPS[1] / GUARD_RATE_STEPS[1]) + 2;
-      slots.slice(0, threats).forEach(([d, s]) => { qualities[weekGuardThreatKey(1, d, s)] = 1; });
-      slots.slice(0, GUARD_STEPS[1]).forEach(([d, s]) => { qualities[weekGuardStopKey(1, d, s)] = 1; });
+      slots.slice(0, threats).forEach(([d, s]) => { qualities[weekGuardThreatKey(1, d, s, "shen")] = 1; });
+      slots.slice(0, GUARD_STEPS[1]).forEach(([d, s]) => { qualities[weekGuardStopKey(1, d, s, "shen")] = 1; });
       expect(GUARD_STEPS[1] / threats).toBeLessThan(GUARD_RATE_STEPS[1]);
       await open(page, { ...w, qualities });
       await expect(page.locator(".world-goal .wg-stars")).toHaveText("守客 ★☆☆");
@@ -96,7 +96,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         `守客 ${GUARD_STEPS[1]}/${GUARD_STEPS[1]}位 挡${Math.round(GUARD_STEPS[1] / threats * 100)}%/${Math.round(GUARD_RATE_STEPS[1] * 100)}%`);
       await page.locator(".world-goal").click();
       const sheet = page.getByRole("dialog", { name: "三条过关线" });
-      await expect(sheet.locator(".routes-rate")).toContainText(`本周公开威胁 ${threats} 次，挡住 ${GUARD_STEPS[1]} 次`);
+      await expect(sheet.locator(".routes-rate")).toContainText(`本周公开威胁 ${threats} 人次，挡住 ${GUARD_STEPS[1]} 人次`);
       await sheet.getByRole("button", { name: "知道了" }).click();
       await page.locator(".world-next").click();
       const level = page.locator(".report-level");

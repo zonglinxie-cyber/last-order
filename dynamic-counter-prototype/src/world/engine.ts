@@ -207,13 +207,15 @@ const sampleDayKey = (day: number, id: PersonId) => `sample-given:${day}:${id}`;
 const handoffDayKey = (day: number, staff: PersonId) => `handoff-duty:${day}:${staff}`;
 const handoffSaleDayKey = (day: number) => `handoff-sale-day:${day}`;
 const RIVAL_COMPARE_NEXT = "rival:compare-next";
-/** 招揽时接手即可；比货时要亲自开出正向成交。旧档未写 tactic 视为招揽。 */
-export const rivalGuarded = (world: World): boolean => !!world.rivalPlan?.person
-  && world.rivalPlan.day === world.day && world.rivalPlan.slot === world.slot
-  && qualityOf(world, guardCommitKey(world.day, world.slot, world.rivalPlan.person)) > 0;
+/** 只读本时段开场公开的目标，行动后不会临时补人或换人。 */
+export const rivalTargets = (world: World): PersonId[] =>
+  world.rivalPlan?.day === world.day && world.rivalPlan.slot === world.slot ? world.rivalPlan.targets : [];
+/** 招揽时接手即可；比货时要亲自开出正向成交，每位客人单独记。 */
+export const rivalGuarded = (world: World, person: PersonId): boolean => rivalTargets(world).includes(person)
+  && qualityOf(world, guardCommitKey(world.day, world.slot, person)) > 0;
 export function rivalPlanWord(world: World): { title: string; howTo: string } | null {
-  if (!world.rivalPlan?.person || world.rivalPlan.day !== world.day || world.rivalPlan.slot !== world.slot) return null;
-  return world.rivalPlan.tactic === "compare"
+  if (!rivalTargets(world).length) return null;
+  return world.rivalPlan?.tactic === "compare"
     ? { title: "陆遥拿货来比", howTo: "本时段亲自对症成交才挡得住；托单或只聊聊不够" }
     : { title: "陆遥邀客去对面", howTo: "本时段接待或托同事照看；用托单守住后，下时段陆遥会比货" };
 }
@@ -522,8 +524,8 @@ export const poachChanceNow = (world: World): number => poachChanceOf(world.heat
 /** 这一刻她请走"看法低于多少"的人（对面休假周收到 20）。 */
 export const poachMaxOpinionNow = (world: World): number => poachMaxOpinionOf(world.qualities, POACH_MAX_OPINION);
 /** 这格的抢客意图在开场时公开；同分按人物表顺序，存档往返也不变。 */
-export function rivalTarget(world: World, people: Person[]): Person | undefined {
-  if (!people.some(p => p.role === "rival" && p.id in world.present)) return undefined;
+export function rivalCandidates(world: World, people: Person[]): Person[] {
+  if (!people.some(p => p.role === "rival" && p.id in world.present)) return [];
   // 比货必须留有正常成交的窗口；刚买过的人不会接受再买，不能公开要求玩家硬推。
   const comparing = qualityOf(world, RIVAL_COMPARE_NEXT) > 0;
   return people.filter(p => p.role === "customer" && POACH_ZONES.includes(world.present[p.id])
@@ -531,7 +533,7 @@ export function rivalTarget(world: World, people: Person[]): Person | undefined 
     && (!comparing || (opinionOf(world, p.id) > SERVE_REFUSE_OPINION
       && (qualityOf(world, `bought:${p.id}`) <= 0
         || world.day - qualityOf(world, `bought:${p.id}`) >= BUY_INTERVAL_DAYS))))
-    .reduce<Person | undefined>((lo, p) => !lo || opinionOf(world, p.id) < opinionOf(world, lo.id) ? p : lo, undefined);
+    .sort((a, b) => opinionOf(world, a.id) - opinionOf(world, b.id));
 }
 /** 这一下动作要花几格精力（会员日周「加微信」不要）。 */
 export const verbEnergyNow = (world: World, verb: Verb): number =>
@@ -677,9 +679,10 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   // 开门第一件事：今天谁托你做什么（每天一次，slot 0 落定之后）。
   if (w.slot === 0) w = openDay(w, people);
-  const target = rivalTarget(w, people)?.id ?? null;
-  if (target) w = markWeekThreat(w);
-  return { ...w, rivalPlan: { day: w.day, slot: w.slot, person: target,
+  // 首季第一周只盯一人；此后最多两人，同样公开、同时结算，让精力与托单名额产生取舍。
+  const targets = rivalCandidates(w, people).slice(0, w.season === 1 && w.day <= 7 ? 1 : 2).map(p => p.id);
+  for (const id of targets) w = markWeekThreat(w, id);
+  return { ...w, rivalPlan: { day: w.day, slot: w.slot, targets,
     tactic: qualityOf(w, RIVAL_COMPARE_NEXT) ? "compare" : "invite" } };
 }
 
@@ -724,33 +727,36 @@ export function ambient(world: World, people: Person[]): World {
   for (const a of here) for (const b of here) if (a.id !== b.id) pairs.push([a, b]);
   w = gossipRound(w, people, pairs, GOSSIP_BASE, GOSSIP_TEMPER_BONUS, w.memories);
 
-  // 陆遥开时段就盯准一人，玩家照应她便能挡住这次机会；旧存档没有预告时沿用原选择。
+  // 只结算开场公开的目标；没有预告的旧档等下一时段，不能突然抢走未公开的人。
   // 只从柜台和收银两个区里挑：在中庭闲逛、在休息区坐着的人本来就不是来买东西的，
   // 把她算成"你漏掉的一单"既说不通，也会让场上客人一多比分就必然输（名额是 7 位，精力只够接四五位）。
   const rival = here.find(p => p.role === "rival");
   if (rival) {
-    const locked = w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot ? w.rivalPlan : undefined;
-    const planned = locked?.person ? personOf(people, locked.person) : undefined;
-    // 读回上一版已有公开意图的存档时，也补齐本格分母；正常开场已盖过同一枚章。
-    if (planned) w = markWeekThreat(w);
-    const guarded = planned && rivalGuarded(w);
-    if (guarded) w = markWeekGuard(w, planned.id);
-    const mark = locked ? planned : rivalTarget(w, people);
-    if (mark && (locked ? !guarded : !w.touched.includes(mark.id)) && w.present[mark.id] !== "rival"
-      && POACH_ZONES.includes(w.present[mark.id])) {
-      if (opinionOf(w, mark.id) < poachMaxOpinionNow(w)) {
-        let r: number; [r, w] = roll(w);
-        if (r < poachChanceNow(w)) {
-          w = { ...w, present: { ...w.present, [mark.id]: "rival" } };
-          w = addOpinion(w, mark.id, POACH_OPINION);
-          w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
-          w = setQuality(w, `away:${mark.id}`, w.day);
-          // 被截走不是"今天她没来"那么轻：对面货全、不限精力，她在那边把单开满了。
-          // 比分要有得输，玩家才知道自己漏掉的是钱，不是人次。
-          const sale = poachSale(visitPerson(w, mark));
-          if (sale.units) w = { ...w, rivalMoney: w.rivalMoney + sale.amount, rivalWins: w.rivalWins + 1 };
-          const missed = locked?.tactic === "compare" ? "这次比货没给出对症成交" : `你没顾上${mark.name}`;
-          w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
+    for (const id of rivalTargets(w)) {
+      const mark = personOf(people, id);
+      if (!mark) continue;
+      const resolved = `rival-resolved:${w.day}:${w.slot}:${id}`;
+      if (qualityOf(w, resolved)) continue;
+      w = setQuality(w, resolved, 1);
+      w = markWeekThreat(w, id);
+      const guarded = rivalGuarded(w, id);
+      if (guarded) w = markWeekGuard(w, id);
+      if (!guarded && w.present[mark.id] !== "rival"
+        && POACH_ZONES.includes(w.present[mark.id])) {
+        if (opinionOf(w, mark.id) < poachMaxOpinionNow(w)) {
+          let r: number; [r, w] = roll(w);
+          if (r < poachChanceNow(w)) {
+            w = { ...w, present: { ...w.present, [mark.id]: "rival" } };
+            w = addOpinion(w, mark.id, POACH_OPINION);
+            w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
+            w = setQuality(w, `away:${mark.id}`, w.day);
+            // 被截走不是"今天她没来"那么轻：对面货全、不限精力，她在那边把单开满了。
+            // 比分要有得输，玩家才知道自己漏掉的是钱，不是人次。
+            const sale = poachSale(visitPerson(w, mark));
+            if (sale.units) w = { ...w, rivalMoney: w.rivalMoney + sale.amount, rivalWins: w.rivalWins + 1 };
+            const missed = w.rivalPlan?.tactic === "compare" ? `这次没给${mark.name}对症成交` : `你没顾上${mark.name}`;
+            w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
+          }
         }
       }
     }
@@ -1135,8 +1141,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       w = addOpinion(w, bId!, HANDOFF_CUSTOMER_OPINION);
       w = remember(w, bId!, "looked-after", 1);
       w = markMet(w, bId!);
-      if (w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot && w.rivalPlan.person === bId
-        && w.rivalPlan.tactic !== "compare" && !rivalGuarded(w)) {
+      if (rivalTargets(w).includes(bId!) && w.rivalPlan?.tactic !== "compare" && !rivalGuarded(w, bId!)) {
         w = setQuality(w, guardCommitKey(w.day, w.slot, bId!), 1);
         w = setQuality(w, RIVAL_COMPARE_NEXT, 1);
         w = say(w, "陆遥看你托了单：下一时段会拿货来比，得亲自对症成交才能守住客人。", [bId!]);
@@ -1236,8 +1241,7 @@ export function beginServe(world: World, people: Person[], personId: PersonId): 
   // 台账或柜位见底，开不了单。
   if (world.compliance <= SERVE_STAT_FLOOR || world.standing <= SERVE_STAT_FLOOR) return world;
   let committed = markMet(world, personId);
-  if (world.rivalPlan?.day === world.day && world.rivalPlan.slot === world.slot && world.rivalPlan.person === personId
-    && world.rivalPlan.tactic !== "compare")
+  if (rivalTargets(world).includes(personId) && world.rivalPlan?.tactic !== "compare")
     committed = setQuality(committed, guardCommitKey(world.day, world.slot, personId), 1);
   return { ...committed, energy: world.energy - VERB_ENERGY.serve,
     touched: [...new Set([...world.touched, personId])] };
@@ -1337,8 +1341,7 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
     const perfect = score >= PERFECT_MATCH;
     w = addOpinion(w, personId, SERVE_GOOD_OPINION + (perfect ? PERFECT_MATCH_OPINION : 0));
     w = trustedCare(w, people, personId);
-    if (w.rivalPlan?.day === w.day && w.rivalPlan.slot === w.slot && w.rivalPlan.person === personId
-      && w.rivalPlan.tactic === "compare") {
+    if (rivalTargets(w).includes(personId) && w.rivalPlan?.tactic === "compare") {
       w = setQuality(w, guardCommitKey(w.day, w.slot, personId), 1);
       w = setQuality(w, RIVAL_COMPARE_NEXT, 0);
     }
@@ -1532,7 +1535,7 @@ export function parseWorld(data: unknown): World | null {
   let raw: unknown = data;
   if (typeof data === "string") { try { raw = JSON.parse(data); } catch { return null; } }
   if (!isRecord(raw) || raw.version !== WORLD_SAVE_VERSION || !isRecord(raw.world)) return null;
-  const w = raw.world;
+  const w = { ...raw.world };
   if (!isStr(w.seed) || !isInt(w.day) || w.day < 1) return null;
   if (w.season !== undefined && (!isInt(w.season) || w.season < 1)) return null;
   if (!isInt(w.slot) || w.slot < 0 || w.slot > 3) return null;
@@ -1543,11 +1546,19 @@ export function parseWorld(data: unknown): World | null {
   if (w.bondKinds !== undefined && !(isRecord(w.bondKinds) && Object.values(w.bondKinds).every(v => isStr(v) && KINDS.includes(v as BondKind)))) return null;
   if (w.festival !== undefined && !isStr(w.festival)) return null;
   if (!isStrArray(w.touched)) return null;
+  // 兼容已发布的单目标存档，只在读档边界转换；运行时和新存档一律写 targets。
+  if (isRecord(w.rivalPlan) && w.rivalPlan.targets === undefined
+    && (w.rivalPlan.person === null || isStr(w.rivalPlan.person))) {
+    const { person, ...plan } = w.rivalPlan;
+    w.rivalPlan = { ...plan, targets: person === null ? [] : [person], tactic: plan.tactic === undefined ? "invite" : plan.tactic };
+  }
   if (w.rivalPlan !== undefined && !(isRecord(w.rivalPlan)
     && isInt(w.rivalPlan.day) && w.rivalPlan.day >= 1
     && isInt(w.rivalPlan.slot) && w.rivalPlan.slot >= 0 && w.rivalPlan.slot <= 3
-    && (w.rivalPlan.person === null || isStr(w.rivalPlan.person))
-    && (w.rivalPlan.tactic === undefined || w.rivalPlan.tactic === "invite" || w.rivalPlan.tactic === "compare"))) return null;
+    && isStrArray(w.rivalPlan.targets) && w.rivalPlan.targets.length <= 2
+    && new Set(w.rivalPlan.targets).size === w.rivalPlan.targets.length
+    && w.rivalPlan.targets.every(id => id.length > 0)
+    && (w.rivalPlan.tactic === "invite" || w.rivalPlan.tactic === "compare"))) return null;
   if (!isRecord(w.present) || !Object.values(w.present).every(v => isStr(v) && ZONES.includes(v as Zone))) return null;
   if (!Array.isArray(w.memories) || !w.memories.every((m: unknown) => isRecord(m)
     && isInt((m as Memory).day) && isStr((m as Memory).holder) && isStr((m as Memory).subject) && isStr((m as Memory).act)
@@ -1578,6 +1589,16 @@ export function parseWorld(data: unknown): World | null {
   if (w.statsAtSeasonStart !== undefined && !(isRecord(w.statsAtSeasonStart)
     && isNum(w.statsAtSeasonStart.standing) && isNum(w.statsAtSeasonStart.compliance))) return null;
   const world = w as unknown as World;
+  world.qualities = { ...world.qualities };
+  // 旧版一时段一枚威胁/守住章。保留过去的分子分母；本时段接上原目标，避免读档重算两次。
+  for (const [key, value] of Object.entries(world.qualities)) {
+    const old = /^(week-guard-(?:threat|stop)):(\d+):(\d+):(\d+)$/.exec(key);
+    if (!old) continue;
+    const person = Number(old[3]) === world.day && Number(old[4]) === world.slot
+      ? rivalTargets(world)[0] ?? "legacy" : "legacy";
+    world.qualities[`${key}:${person}`] = value;
+    delete world.qualities[key];
+  }
   // 旧档的「每位同事一天一单」记号迁到新的全柜日上限；读一次后不再写旧键。
   for (const [key, value] of Object.entries(world.qualities)) {
     const handoff = /^handoff-done:(\d+):([^:]+):[^:]+$/.exec(key);

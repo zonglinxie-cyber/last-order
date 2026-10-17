@@ -85,7 +85,7 @@ test("陆遥更狠：同一批种子里勾过的截走得多，没勾的仍照�
   const poached = (heat: HeatId[]): number => {
     let n = 0;
     for (let i = 1; i <= 60; i++) {
-      const w = ambient({ ...newWorld(`h-poach-${i}`, PEOPLE), present: { shen: "counter", luyao: "rival" }, opinion: { shen: -10 }, heat }, PEOPLE);
+      const w = ambient({ ...newWorld(`h-poach-${i}`, PEOPLE), rivalPlan: { day: 1, slot: 0, targets: ["shen"], tactic: "invite" }, present: { shen: "counter", luyao: "rival" }, opinion: { shen: -10 }, heat }, PEOPLE);
       if (w.present.shen === "rival") n++;
     }
     return n;

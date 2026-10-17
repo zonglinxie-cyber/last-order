@@ -321,6 +321,8 @@
 .routes-foot { margin:10px 0 0; color:#b99b7f; font-size:12px; }
 .routes-close { flex:0 0 auto; min-height:48px; margin:8px 14px calc(12px + env(safe-area-inset-bottom)); border:1px solid #f0cf9177; border-radius:12px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 14px 'Noto Serif SC',serif; }
 .routes-close:focus-visible { outline:2px solid #ffe2a9; outline-offset:2px; }
+.world-rival-plans { flex:0 0 auto; z-index:29; }
+.world-rival-choice { margin:0; padding:3px 12px; background:#34211e; color:#ffe8b6; font-size:12px; }
 .world-rival-plan { flex:0 0 auto; z-index:29; display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; padding:5px 12px; border:0; border-bottom:1px solid #f0cf9133; background:#442a24; color:#ffe8b6; text-align:left; }
 .world-rival-plan b { flex:0 0 auto; font:700 12px 'Noto Serif SC',serif; }
 .world-rival-plan span { overflow:hidden; color:#e8c8b6; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
@@ -379,3 +381,12 @@
 .wf-backroom-list { position:absolute; top:calc(100% + 4px); left:0; display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid #f0cf9155; border-radius:12px; background:#1a0f0ef2; box-shadow:0 8px 18px #000a; }
 .wf-backroom-list button { min-width:88px; min-height:44px; padding:0 12px; border:1px solid #f0cf9133; border-radius:10px; background:#ffffff08; color:#ffe8b6; font:600 13px 'Noto Serif SC',serif; text-align:left; }
 .wf-backroom-list button.is-target { background:#f0c978; color:#2a1713; }
+
+/* 双目标并排放，给小屏的现场反馈留位置；每个目标仍有独立的 44px 以上点击区域。 */
+.has-double-rival .world-rival-plans { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.has-double-rival .world-rival-choice { grid-column:1 / -1; }
+.has-double-rival .world-rival-plan { flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; min-height:52px; padding:5px 10px; }
+.has-double-rival .world-rival-plan + .world-rival-plan { border-left:1px solid #f0cf9133; }
+.has-double-rival .world-rival-plan span { max-width:100%; }
+.has-double-rival .world-map-view { flex-shrink:1; min-height:150px; }
+.has-double-rival .world-scene { min-height:96px; flex-shrink:0; }

@@ -21,7 +21,7 @@ const marked = (tactic?: RivalTactic, qualities: Record<string, number> = {}): W
   energy: 40, present: { shen: "counter", mei: "cashier", luyao: "rival" },
   opinion: { shen: -10, mei: -8 },
   qualities: { "last-met:shen": 1, "visit-context-day:shen": 2, "visit-context-code:shen": 1, ...qualities },
-  rivalPlan: { day: 2, slot: 1, person: "shen", ...(tactic ? { tactic } : {}) },
+  rivalPlan: { day: 2, slot: 1, targets: ["shen"], tactic: tactic ?? "invite" },
 });
 
 for (const [width, height] of [[390, 844], [320, 568]] as const) {
@@ -67,6 +67,40 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.locator(".world-serve").getByRole("button", { name: "关闭人物卡" }).click();
       await expect(warning).not.toContainText("已接住");
       await expect(warning).toContainText(plan.title);
+    });
+
+    test("双目标在小屏完整显示，点第二位只守第二位；读档保留选择", async ({ page }) => {
+      const w = marked();
+      await open(page, { ...w, day: 8, slot: 0, energy: 20,
+        rivalPlan: { day: 8, slot: 0, targets: ["shen", "mei"], tactic: "invite" } });
+      await expect(page.getByText("同时盯上两位 · 精力 20 · 先顾谁？")).toBeVisible();
+      const warnings = page.locator(".world-rival-plan");
+      await expect(warnings).toHaveCount(2);
+      for (const warning of await warnings.all()) {
+        await expect(warning).toBeInViewport();
+        expect((await warning.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+      const map = (await page.locator(".world-map-view").boundingBox())!;
+      expect(map.height).toBeGreaterThanOrEqual(height >= 800 ? 300 : 150);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+      const feed = (await page.locator(".world-scene").boundingBox())!;
+      expect(feed.height).toBeGreaterThanOrEqual(96);
+      expect(feed.y + feed.height).toBeLessThanOrEqual(height + 1);
+      await page.screenshot({ path: `../audit/rival-choice-2026-10-18/double-${width}.png` });
+      await warnings.nth(1).click();
+      await expect(page.getByRole("region", { name: "这一关" })).toContainText("陆遥邀客去对面");
+      await page.getByRole("button", { name: /^接待/ }).click();
+      await page.locator(".world-serve").getByRole("button", { name: /^看她的/ }).first().click();
+      await page.locator(".world-serve").getByRole("button", { name: "关闭人物卡" }).click();
+      await expect(warnings.nth(0)).not.toContainText("已接住");
+      await expect(warnings.nth(1)).toContainText("✓ 已接住 · 梅女士");
+      // 读当前实际写出的存档再启动，避免 initScript 重新注入测试起点。
+      const saved = await page.evaluate(key => localStorage.getItem(key)!, SAVE_KEY);
+      await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [SAVE_KEY, saved]);
+      await page.reload();
+      await page.getByRole("button", { name: /继续/ }).click();
+      await expect(warnings.nth(0)).not.toContainText("已接住");
+      await expect(warnings.nth(1)).toContainText("✓ 已接住 · 梅女士");
     });
 
     test("点页顶那条看三条线的算法；人物卡写本周照应了几天", async ({ page }) => {

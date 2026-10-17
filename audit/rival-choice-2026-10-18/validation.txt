@@ -1,0 +1,25 @@
+2026-10-18 人情场双目标抢客验证
+基线提交：989d9b0
+
+npm run test:rules: 273/273 passed
+parseWorld 旧档损坏字段收紧后，world-dynamics + world-target: 23/23 passed
+npm run build: passed; 28 protected runtime files unchanged; existing bundle-size warning
+TypeScript: src, affected browser specs (dynamics/floor/levels/season-smoke), dynamics/target rules, both simulators passed
+额外对全套部分规则夹具作严格类型检查时，engine/weeks 的未改处仍有宽类型推导诊断；未把此扩展检查计作通过，规则运行结果见上。
+
+Playwright, serial workers=1, local port 4187:
+world-floor: 38/38 passed
+world-dynamics + world-levels, final rerun: 24/24 passed
+world-season-smoke: 11/11 passed
+Distinct related browser cases: 73
+Both season paths: day 1 -> day 28 -> season 2 day 3 completed; errors/notes/rawFields empty
+
+node --experimental-strip-types tests/world-sim.ts 20 2:
+before + after complete; 8 style/season signature rows each remain 20/20
+Existing ending-rank check: no style best in every seed
+node --experimental-strip-types tests/consult-sim.ts 20 1:
+first week unchanged in sample; full-star weeks 65 -> 57 of 80; all 80 weeks pass
+Second-week rival revenue median 3390 -> 6670 game yuan
+
+Limits: finite scripted strategies and touch browser emulation; no physical-phone or human retention test.
+Late-season rival remains weak. No public deployment.
