@@ -284,8 +284,11 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
 
     test("季末能进第 2 季：天数回到 1、看法收一半还在", async ({ page }) => {
-      // 同事不是顾客，时段末没人把她带走 —— 用苏蔓和唐可的看法钉换季。
-      await enter(page, envelope({ day: 28, slot: 3, opinion: { suman: 40, tangke: -30 } }));
+      // 同事不是顾客，时段末没人把她带走；场上只留她一个人，免得闲聊改掉换季前那一刻的看法。
+      await enter(page, envelope({ day: 28, slot: 3, present: { tangke: "counter" }, opinion: { suman: 40, tangke: -30 } }));
+      // 时段末的闲聊也可能改看法，所以先读换季前那一刻的数，再按 Math.trunc(v / 2) 对。
+      const before = await page.evaluate(([key]) =>
+        (JSON.parse(window.localStorage.getItem(key)!) as { world: World }).world.opinion, [SAVE_KEY]);
       await page.getByRole("button", { name: /下一时段/ }).click();
       await expect(page.locator(".world-report")).toBeVisible();
       await expect(page.locator(".report-eyebrow")).toContainText("第 1 季");
@@ -301,8 +304,8 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         (JSON.parse(window.localStorage.getItem(key)!) as { world: World }).world, [SAVE_KEY]);
       expect(saved.season).toBe(2);
       expect(saved.day).toBe(1);
-      expect(saved.opinion.suman).toBe(20);   // 40 往 0 收一半
-      expect(saved.opinion.tangke).toBe(-15); // -30 → -15
+      expect(saved.opinion.suman).toBe(Math.trunc((before.suman ?? 0) / 2));   // 往 0 收一半
+      expect(saved.opinion.tangke).toBe(Math.trunc((before.tangke ?? 0) / 2)); // 往 0 收一半
       expect(saved.log.some(l => l.text.includes("第 2 季开始"))).toBe(true);
     });
 

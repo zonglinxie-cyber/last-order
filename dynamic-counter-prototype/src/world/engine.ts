@@ -59,8 +59,10 @@ export const WARY_HEARSAY_MULT = 0.5;
 export const NIGHT_GOSSIP_BASE = 0.1;
 export const NIGHT_GOSSIP_TEMPER_BONUS = 0.2;
 
-/** 陆遥抢客：每时段一次，挑走到我柜台上、没被玩家招呼过、对玩家看法最低的顾客。 */
-export const POACH_CHANCE = 0.4;
+/** 陆遥抢客：每时段一次，挑走到我柜台上、没被玩家招呼过、对玩家看法最低的顾客。
+ *  2026-10-17 从四成提到五成：盲策仍能把每个公开威胁守住，所以这一刀只惩罚漏掉的人，
+ *  没有改变"一个时段只公开一个目标"的结构 —— 见 docs/人情场设计.md「有限信息接待模拟」。 */
+export const POACH_CHANCE = 0.5;
 /** 漏单的口子只在柜台和收银这两个区：在中庭闲逛、在休息区坐着的人不算你错过的生意。 */
 export const POACH_ZONES: Zone[] = ["counter", "cashier"];
 /** 看法高过这条线的顾客请不动。 */

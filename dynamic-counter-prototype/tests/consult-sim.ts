@@ -43,6 +43,12 @@ const median = (xs: number[]) => {
   const mid = Math.floor(s.length / 2);
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
+/** 最近秩分位数：给调目标线用，不插值，读数就是某个种子真打出来的数。 */
+const quantile = (xs: number[], q: number) => {
+  if (!xs.length) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.min(s.length - 1, Math.floor((s.length - 1) * q))];
+};
 
 // —— 盲策能读的公开信息 ——
 
@@ -79,9 +85,14 @@ const spotTraitOf = (s: { label: string; finding: string; at?: unknown }): Trait
   return s.at ? fromFinding : SPOT_LABEL_TRAIT[s.label] ?? fromFinding;
 };
 
-/** 只看能问出「还不知道」的那一处；问不出新诉求的部位不去花耐心。 */
+/** 只看能问出「还不知道」的那一处；问不出新诉求的部位不去花耐心。
+ *  今天的重点还没摸清时，先看一处非空白的部位 —— 不读它到底露哪条，只读界面上的部位名与描述。 */
 function pickSpot(person: Person, c: Consult) {
   const left = spotsOf(person).filter(s => !c.looked.includes(s.key));
+  if (!c.focusKnown && c.focus) {
+    const possible = left.filter(s => spotTraitOf(s) !== undefined);
+    if (possible.length) return [...possible].sort((a, b) => spotRank(a.label) - spotRank(b.label))[0];
+  }
   const unknown = left.filter(s => {
     const trait = spotTraitOf(s);
     return !!trait && !c.known.includes(trait);
@@ -103,6 +114,7 @@ const hintOf = (label: string): Trait | undefined =>
   ASK_HINTS.find(([, re]) => re.test(label))?.[0];
 
 /** 从问句里挑一句：还没问过、又能指向未知诉求的问句先问；已知诉求的问句不再花耐心。
+ *  今天的重点还没摸清时，允许问一句标签已经对上的话 —— 它可能就是今天的重点。
  *  问句池里本来就混着一条她不在意的陪跑项，没有公开线索能把它提前认出来。 */
 function pickQuestion(person: Person, c: Consult) {
   const options = questionsOf(person).filter(q =>
@@ -110,17 +122,19 @@ function pickQuestion(person: Person, c: Consult) {
     && !c.asked.includes(q.key));
   const mapped = options.filter(q => {
     const trait = hintOf(q.label);
-    return !!trait && !c.known.includes(trait);
+    return !!trait && (!c.known.includes(trait) || !c.focusKnown);
   });
   if (mapped.length) return mapped[0]!;
   // 手写客人的问句未必带那五个关键词；没有可映射的新诉求时，留一句原话问法兜底。
   return options.find(q => !hintOf(q.label)) ?? null;
 }
 
-/** 公开信息下的候选排序。已知底线时只读它管哪条诉求，不读 below 那个阈值。 */
+/** 公开信息下的候选排序。已知底线时只读它管哪条诉求，不读 below 那个阈值。
+ *  今天的重点摸清以后，覆盖它的货往前排；它只是玩家听到的一句话，不是隐藏权重。 */
 function rankProducts(live: Person, c: Consult): ShelfId[] {
   const budget = live.skin?.budget ?? 0;
   const veto = c.vetoKnown ? live.skin?.veto?.trait : undefined;
+  const focus = c.focusKnown ? c.focus : null;
   return SHELF_IDS
     .filter(id => SHELF[id].price <= budget)
     .map(id => {
@@ -129,6 +143,7 @@ function rankProducts(live: Person, c: Consult): ShelfId[] {
       let score = cover * 100;
       if (c.known.length && cover === 0) score -= 40;
       if (veto && !tags.has(veto)) score -= 200;
+      if (focus) score += tags.has(focus) ? 50 : -80;
       const tier = c.tried[id];
       if (tier === "positive") score += 1000;
       else if (tier === "mixed") score += 50;
@@ -203,7 +218,7 @@ const emptyActions = (): ActionStats => ({
   try: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0,
   startPatience: 0,
 });
-const infoKey = (c: Consult) => `${[...c.known].sort().join(",")}|${c.unitsKnown}|${c.vetoKnown}|${c.mood}`;
+const infoKey = (c: Consult) => `${[...c.known].sort().join(",")}|${c.focusKnown ? c.focus : "-"}|${c.unitsKnown}|${c.vetoKnown}|${c.mood}`;
 
 /** 看 / 问 / 试的顺序：先确认件数；再看一处、问一句；剩下的耐心必须留给试。
  *  和柜台一致：看/问/试用当天来访的那位（熟客的诉求和预算会变），不拿原始人物硬套。 */
@@ -239,22 +254,28 @@ function runConsult(w: World, person: Person, stats: ActionStats): { world: Worl
   }
 
   let looked = false;
-  if (c.patience > 1) {
+  const doLook = () => {
     const spot = pickSpot(live, c);
-    if (spot) {
-      const before = c.known.length;
-      const next = lookAt(c, live, spot.key);
-      if (next !== c) {
-        apply(next); stats.look++; looked = true;
-        if (c.known.length === before) stats.blankLook++;
-      }
-    } else {
-      const q = pickQuestion(live, c);
-      if (q) ask(q);
-    }
+    if (!spot) return false;
+    const before = infoKey(c);
+    const next = lookAt(c, live, spot.key);
+    if (next === c) return false;
+    apply(next); stats.look++;
+    if (infoKey(c) === before) stats.blankLook++;
+    return true;
+  };
+  if (c.patience > 1) looked = doLook();
+
+  // 没有可看的部位（替别人买的那几位），把这一下换成问一句。
+  if (!looked) {
+    const q = pickQuestion(live, c);
+    if (q) ask(q);
   }
 
-  // 看了一处之后，还有余量再问一句；这一句通常是她的另一条诉求，也可能是那条陪跑项。
+  // 今天的重点还没摸清：再看一处。两处都看不对，才把剩下那一句留给问。
+  if (looked && c.focus && !c.focusKnown && c.patience > 1) doLook();
+
+  // 看了一处之后，还有余量再问一句；这一句可能是她的另一条诉求、今天的重点，也可能是那条陪跑项。
   if (looked && c.patience > 1) {
     const q = pickQuestion(live, c);
     if (q) ask(q);
@@ -292,6 +313,7 @@ type Attempt = {
   freeKnown: number; paidKnown: number;
   freeUnitsKnown: boolean; paidUnitsKnown: boolean;
   freeVetoKnown: boolean; paidVetoKnown: boolean;
+  hasFocus: boolean; focusKnownAtStart: boolean; focusKnownAtEnd: boolean;
   log?: string;
 };
 
@@ -309,13 +331,14 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
     oracle: oracle.amount, oracleProduct: oracle.product, oracleUnits: oracle.units,
     freePerfect: !!freeFit && freeFit.amount > 0 && freeFit.score >= PERFECT_MATCH,
     freeKnown: free.known.length, freeUnitsKnown: free.unitsKnown, freeVetoKnown: free.vetoKnown,
+    hasFocus: free.focus !== null, focusKnownAtStart: free.focusKnown,
   };
 
   let cw = beginServe(w, people, person.id);
   if (cw === w) {
     return { world: w, rec: { ...base, actual: 0, actualUnits: 0, product: null, actualPerfect: false,
       actualScore: 0, outcome: "blocked", actions: emptyActions(), paidKnown: free.known.length,
-      paidUnitsKnown: free.unitsKnown, paidVetoKnown: free.vetoKnown, log: "没能接手" } };
+      paidUnitsKnown: free.unitsKnown, paidVetoKnown: free.vetoKnown, focusKnownAtEnd: free.focusKnown, log: "没能接手" } };
   }
 
   const stats = emptyActions();
@@ -349,6 +372,7 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
     actualScore: actualFit?.score ?? 0,
     outcome, actions: stats,
     paidKnown: c.known.length, paidUnitsKnown: c.unitsKnown, paidVetoKnown: c.vetoKnown,
+    focusKnownAtEnd: c.focusKnown,
     log: after.log.at(-1)?.text,
   } };
 }
@@ -538,6 +562,10 @@ const medianCapture = median(runs.map(captureOf));
 const nonServe = runs.map(r => r.money - sum(r.attempts.map(a => a.actual)));
 const zeroTryOffers = attempts.filter(a => a.actions.startPatience > 0 && a.actions.try === 0 && a.product).length;
 const positiveUnsold = attempts.filter(a => a.actions.tryPositive > 0 && a.actual === 0).length;
+const focusAttempts = attempts.filter(a => a.hasFocus);
+const focusAtStart = focusAttempts.filter(a => a.focusKnownAtStart).length;
+const focusDiscovered = focusAttempts.filter(a => !a.focusKnownAtStart && a.focusKnownAtEnd).length;
+const focusMissed = focusAttempts.filter(a => !a.focusKnownAtEnd).length;
 const weeksByNo = [1, 2, 3, 4].map(n => weeks.filter(x => x.week === n)).filter(xs => xs.length);
 const routes = (xs: WeekRow[]) => {
   const out: Record<WeekRoute, number> = { sales: 0, care: 0, guard: 0 };
@@ -560,8 +588,8 @@ const productRows = SHELF_IDS.map(id => ({
 
 console.log(`== 人情场 · 有限信息接待模拟 · 内容来源 ${source} · ${people.length} 人 ==`);
 console.log(`== ${N} 个种子 × ${SEASONS} 季 · 每格最多接待 1 位 · 不抽剧情卡 / 不接委托 / 无自选加难 ==`);
-console.log("盲策只读：openConsult 的 known 与台词、试穿反应、货架 tag / note / 价、预算、件数问答。");
-console.log("不读：fitOfPerson、bestFit、隐藏诉求、maxUnits（除非已经问出）。影子账只用于测量，不参与决策。\n");
+console.log("盲策只读：openConsult 的 known / focusKnown 与台词、试穿反应、货架 tag / note / 价、预算、件数问答。");
+console.log("不读：fitOfPerson、bestFit、隐藏诉求、未揭开的今天的重点、maxUnits（除非已经问出）。影子账只用于测量，不参与决策。\n");
 
 console.log("一、每季（接待销售 = 种子里的接待单；影子猜 / 全知顶 是同一批接待机会的对照）");
 console.log("种子      总收入     接待销售    影子猜      全知顶     捕获率   成交  完美  星  过关周  对面");
@@ -579,16 +607,19 @@ console.log(`中位       ${yuan(median(seasonMoney)).padStart(9)} ${yuan(median
 console.log("\n二、接待与信息");
 console.log(`接待机会 ${attempts.length} 次：卖成 ${outcomeCount("sold")} / 试过全摇头不卖 ${outcomeCount("declined")} / 推错货 ${outcomeCount("wrong")} / 超预算 ${outcomeCount("price")} / 被挡 ${outcomeCount("blocked")} / 其它 ${outcomeCount("no-sale")}`);
 console.log(`每单开局已知 ${avg(attempts.map(a => a.freeKnown)).toFixed(2)} 条诉求，谈完 ${avg(attempts.map(a => a.paidKnown)).toFixed(2)} 条 · 问出件数 ${stats.unitsAsk} 次`);
-console.log(`看 ${stats.look} 次（${stats.blankLook} 次没长出新诉求） · 问 ${stats.ask} 次（${stats.shrug} 次没问出新诉求）`);
+console.log(`看 ${stats.look} 次（${stats.blankLook} 次没带来新信息） · 问 ${stats.ask} 次（${stats.shrug} 次没问出新信息）`);
 console.log(`试 ${stats.try} 支（点头 ${stats.tryPositive} / 犹豫 ${stats.tryMixed} / 摇头 ${stats.tryNegative}） · 每单平均花 ${(stats.patience / Math.max(1, attempts.length)).toFixed(2)} 次耐心`);
+console.log(`今天的重点：${focusAttempts.length} 次有 · 开局已知 ${focusAtStart}（手写线索覆盖不到的老写法） · 谈完知道 ${focusAttempts.length - focusMissed}（新揭开 ${focusDiscovered}） · 没摸清 ${focusMissed}`);
 console.log(`完美命中：实卖 ${perfect} 单 / 影子猜 ${freePerfect} 单；实际成交率 ${pct(sold.length, attempts.length)}`);
-console.log("关系        单数  开局已知  谈完已知  看/问/试        成交率  捕获");
+console.log("关系        单数  开局已知  谈完已知  看/问/试        成交率  捕获   重点摸清");
 for (const b of buckets) {
   const xs = attempts.filter(b.test);
   if (!xs.length) continue;
   const a = sum(xs.map(x => x.actual));
   const o = sum(xs.map(x => x.oracle));
-  console.log(`${b.label.padEnd(9)} ${String(xs.length).padStart(4)} ${avg(xs.map(x => x.freeKnown)).toFixed(2).padStart(8)} ${avg(xs.map(x => x.paidKnown)).toFixed(2).padStart(8)} ${`${avg(xs.map(x => x.actions.look)).toFixed(1)}/${avg(xs.map(x => x.actions.ask)).toFixed(1)}/${avg(xs.map(x => x.actions.try)).toFixed(1)}`.padStart(14)} ${pct(xs.filter(x => x.actual > 0).length, xs.length).padStart(6)} ${pct(a, o).padStart(6)}`);
+  const focused = xs.filter(x => x.hasFocus);
+  const focusRate = focused.length ? pct(focused.filter(x => x.focusKnownAtEnd).length, focused.length) : "—";
+  console.log(`${b.label.padEnd(9)} ${String(xs.length).padStart(4)} ${avg(xs.map(x => x.freeKnown)).toFixed(2).padStart(8)} ${avg(xs.map(x => x.paidKnown)).toFixed(2).padStart(8)} ${`${avg(xs.map(x => x.actions.look)).toFixed(1)}/${avg(xs.map(x => x.actions.ask)).toFixed(1)}/${avg(xs.map(x => x.actions.try)).toFixed(1)}`.padStart(14)} ${pct(xs.filter(x => x.actual > 0).length, xs.length).padStart(6)} ${pct(a, o).padStart(6)} ${focusRate.padStart(8)}`);
 }
 
 console.log("\n三、同一批机会上的信息差");
@@ -611,6 +642,39 @@ for (const list of weeksByNo) {
 console.log(`合计星 ${sum(weeks.map(x => x.stars))} / 满星 ${weeks.filter(x => x.stars === 3).length} / 过关 ${weeks.filter(x => x.stars > 0).length}（共 ${weeks.length} 周）`);
 console.log(`比分：领先 ${runs.filter(r => r.money > r.rival).length} / 打平 ${runs.filter(r => r.money === r.rival).length} / 落后 ${runs.filter(r => r.money < r.rival).length}；对面每季成交中位 ${median(runs.map(r => r.rivalWins))} 单`);
 console.log(`社交动作：${Object.entries(runs.reduce((m, r) => { for (const [k, v] of Object.entries(r.social)) m[k] = (m[k] ?? 0) + v; return m; }, {} as Record<string, number>)).map(([k, v]) => `${k} ${v}`).join(" / ") || "无"}`);
+
+console.log("\n四之二、每周分位数（盲策真打出来的数，给调目标线用）");
+console.log("周   总进账 P25 / 中位 / P75          对面 P25 / 中位 / P75          接待 P25 / 中位 / P75");
+for (const list of weeksByNo) {
+  const n = list[0]?.week ?? 0;
+  const band = (xs: number[]) => `${yuan(quantile(xs, 0.25)).padStart(7)} / ${yuan(median(xs)).padStart(7)} / ${yuan(quantile(xs, 0.75)).padStart(7)}`;
+  console.log(`${n}   ${band(list.map(x => x.made))}   ${band(list.map(x => x.rival))}   ${band(list.map(x => x.serve))}`);
+}
+
+console.log("\n四之三、目标候选（这份盲策的周进账；每档写「过关/三星」的种子数，三星还要求赢对面）");
+{
+  const candidates = [13_000, 14_000, 16_000, 18_000, 21_000, 24_000, 26_000];
+  console.log(`周   ${candidates.map(t => `${Math.round(t / 1000)}k`).join("      ")}`);
+  for (const list of weeksByNo) {
+    const n = list[0]?.week ?? 0;
+    const made = list.map(x => x.made), rival = list.map(x => x.rival);
+    const row = candidates.map(t => {
+      const hit = made.filter(x => x >= t).length;
+      const three = made.filter((x, i) => x >= Math.ceil(t * 1.3) && x > rival[i]!).length;
+      return `${String(hit).padStart(2)}/${String(three).padStart(2)}`;
+    }).join("   ");
+    console.log(`${n}   ${row}`);
+  }
+}
+
+console.log("\n四之四、三条路线（每周结束时的实际人数；守客率 = 挡住的公开威胁 / 公开威胁）");
+console.log("周   客情 P25 / 中位 / P75      守客 P25 / 中位 / P75      威胁中位   守客率中位");
+for (const list of weeksByNo) {
+  const n = list[0]?.week ?? 0;
+  const band = (xs: number[]) => `${String(quantile(xs, 0.25)).padStart(3)} / ${String(median(xs)).padStart(3)} / ${String(quantile(xs, 0.75)).padStart(3)}`;
+  const rates = list.filter(x => x.threats > 0).map(x => x.stops / x.threats);
+  console.log(`${n}   ${band(list.map(x => x.care))}          ${band(list.map(x => x.guard))}          ${String(median(list.map(x => x.threats))).padStart(5)}      ${rates.length ? pct(median(rates), 1) : "—"}`);
+}
 
 console.log("\n五、货架（同一批机会里谁被报、谁真卖出去；后两列是次数，不是钱）");
 console.log("货      价     tag        报出  成交  完美  影子猜  全知首选");

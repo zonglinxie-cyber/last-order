@@ -9,15 +9,16 @@
 import { WEEK_RULES, weekNoOf, weekRuleOf } from "./weeks.ts";
 import type { PersonId } from "./types.ts";
 
-/** 一季四关各要多少：第一关是新手那七天，往后一关比一关高（同旧版按天抬的那条思路）。
- *  数值按模拟器「每周一关」那张表定，见 docs/人情场设计.md 同名一节。 */
-export const WEEK_TARGETS = [8_000, 9_000, 10_000, 11_000] as const;
+/** 一季四关各要多少：第一关是新手那七天，往后一关比一关高。
+ *  数值按 2026-10-17 的有限信息盲策重定：旧 8k/9k/10k/11k 对会接待的玩家是 80/80 周三星，
+ *  现在取盲策周进账分位数之间，见 docs/人情场设计.md「按盲策重定周目标、把今天的重点藏起来」。 */
+export const WEEK_TARGETS = [13_000, 16_000, 19_000, 22_000] as const;
 export const SEASON_WEEKS = WEEK_TARGETS.length;
 /** 第三颗星：到目标的这个倍数。 */
 export const WEEK_EXCEED_RATE = 1.3;
 export const WEEK_STARS_MAX = 3;
-export const CARE_STEPS = [4, 6, 8] as const;
-export const GUARD_STEPS = [3, 5, 7] as const;
+export const CARE_STEPS = [9, 12, 15] as const;
+export const GUARD_STEPS = [3, 5, 8] as const;
 /** 高星要持续守住公开威胁；无目标的时段不进分母。 */
 export const GUARD_RATE_STEPS = [0, 0.5, 0.75] as const;
 export const CARE_TRUST_MIN = 10;

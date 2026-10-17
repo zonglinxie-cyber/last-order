@@ -60,6 +60,9 @@ export function ConsultPanel({ world, person, consult: c, onChange, onAct, onCom
         <div className="consult-notes" aria-label="已知需求">
           <span>已知</span>{c.known.map(t => <b key={t}>{TRAIT_LABEL[t]}</b>)}
           {!c.known.length && <span>还没问到具体需求</span>}
+          {c.focus && <p className={`serve-focus${c.focusKnown ? "" : " is-unknown"}`}>
+            {c.focusKnown ? `今天的重点：${TRAIT_LABEL[c.focus]}` : "今天的重点还没摸清 —— 看一处或问一句。"}
+          </p>}
           {c.vetoKnown && person.skin?.veto && <p className="serve-veto">底线：{person.skin.veto.note}</p>}
         </div>
         {!offer ? <section id="consult-listen" role="tabpanel" aria-labelledby="consult-listen-tab">

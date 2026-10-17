@@ -3,7 +3,7 @@
 import { POSITIVE_FIT, SHELF, bestShelf, fitOfPerson } from "./shelf.ts";
 import { SEASON_DAYS, type Demand, type Person, type PersonId, type Trait, type World } from "./types.ts";
 
-export type VisitContext = { kind: "event" | "recovery"; focus: Trait; title: string; line: string };
+export type VisitContext = { kind: "event" | "recovery"; focus: Trait; title: string; word: string; line: string; focusLine: string };
 
 const CONTEXT_DAY = (id: PersonId) => `visit-context-day:${id}`;
 const CONTEXT_CODE = (id: PersonId) => `visit-context-code:${id}`;
@@ -11,10 +11,10 @@ export const LAST_MET = (id: PersonId) => `last-met:${id}`;
 export const absoluteDay = (world: Pick<World, "season" | "day">) => (world.season - 1) * SEASON_DAYS + world.day;
 
 const VARIANTS = [
-  { kind: "event", focus: "correct", title: "赶场 · 当天见效" },
-  { kind: "event", focus: "wear", title: "赶场 · 长效持妆" },
-  { kind: "recovery", focus: "soothe", title: "修护 · 舒缓泛红" },
-  { kind: "recovery", focus: "steady", title: "修护 · 温和不闷" },
+  { kind: "event", focus: "correct", title: "赶场", word: "当天见效" },
+  { kind: "event", focus: "wear", title: "赶场", word: "长效持妆" },
+  { kind: "recovery", focus: "soothe", title: "修护", word: "舒缓泛红" },
+  { kind: "recovery", focus: "steady", title: "修护", word: "温和不闷" },
 ] as const;
 
 const hash = (id: string) => [...id].reduce((n, ch) => n * 31 + ch.codePointAt(0)!, 0) >>> 0;
@@ -73,9 +73,14 @@ export function visitContext(world: World, person: Person): VisitContext | null 
   const code = world.qualities[CONTEXT_CODE(person.id)] ?? 0;
   const variant = VARIANTS[code - 1];
   if (!variant) return null;
-  return { ...variant, line: variant.kind === "event"
-    ? `今天要赶一个场合，预算是 ¥${budgetOf(person, variant.kind).toLocaleString("zh-CN")}；这次最在意${variant.title.split(" · ")[1]}。以前的偏好还在，先按今天的事挑货。`
-    : `今天想先把状态稳住；这次最在意${variant.title.split(" · ")[1]}。以前的偏好还在，先按今天的事挑货。` };
+  const budget = budgetOf(person, variant.kind).toLocaleString("zh-CN");
+  return { ...variant,
+    line: variant.kind === "event"
+      ? `今天要赶一个场合，预算是 ¥${budget}；有件最要紧的事，你帮我看看先顾哪一头。`
+      : "今天想先把状态稳住；有件最要紧的事，你帮我看看先顾哪一头。",
+    focusLine: variant.kind === "event"
+      ? `今天要赶一个场合，预算是 ¥${budget}；这次最在意${variant.word}。以前的偏好还在，先按今天的事挑货。`
+      : `今天想先把状态稳住；这次最在意${variant.word}。以前的偏好还在，先按今天的事挑货。` };
 }
 
 export const visitPerson = (world: World, person: Person): Person => {

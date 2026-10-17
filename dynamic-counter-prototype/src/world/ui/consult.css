@@ -20,6 +20,8 @@
 .consult-notes > span { color:#c6af99; margin-right:3px; }
 .consult-notes b { font-weight:500; padding:3px 8px; border:1px solid #7fa99555; color:#b9ddc7; border-radius:6px; }
 .serve-veto { flex-basis:100%; margin:2px 0; color:#ecc1b7; }
+.serve-focus { flex-basis:100%; margin:2px 0; color:#f0cf8b; }
+.serve-focus.is-unknown { color:#c0a590; }
 .serve-lines { margin:0 0 8px; padding:10px 12px; border-radius:12px; background:#ffffff08; border-left:2px solid #c2a275; }
 .serve-lines p { margin:0 0 5px; color:#d8c6af; font-size:13px; line-height:1.6; }
 .serve-lines p:last-child { margin-bottom:0; }

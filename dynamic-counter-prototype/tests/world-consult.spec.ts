@@ -2,19 +2,31 @@ import { expect, test, type Page, type Locator } from "@playwright/test";
 import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
+import { WEEK_TARGETS } from "../src/world/target.ts";
+import { TRAIT_LABEL, spotsOf } from "../src/world/consult.ts";
+import { visitPerson } from "../src/world/visits.ts";
+import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
+import { ta } from "../src/world/pronoun.ts";
+import type { World } from "../src/world/types.ts";
 
 const saved = (page: Page) => page.evaluate(key => JSON.parse(localStorage.getItem(key)!).world, SAVE_KEY);
-const enter = async (page: Page) => {
-  const world = { ...newWorld("consult-ui", PEOPLE), day: 2, slot: 1, energy: 20, opinion: { shen: 0 },
-    present: { shen: "counter", luyao: "rival" } };
+const openPerson = async (page: Page, world: World, name: string) => {
   await page.addInitScript(({ world, save, coach, steps, version }) => {
     if (!localStorage.getItem(save)) localStorage.setItem(save, JSON.stringify({ version, world, ui: { screen: "play", reqSeen: 2 } }));
     localStorage.setItem(coach, JSON.stringify(steps));
   }, { world, save: SAVE_KEY, coach: COACH_KEY, steps: COACH_STEPS, version: WORLD_SAVE_VERSION });
   await page.goto("/?chrome=app");
   await page.getByRole("button", { name: /继续/ }).click();
-  await page.getByRole("button", { name: /查看沈薇/ }).click();
+  await page.getByRole("button", { name: new RegExp(`查看${name}`) }).click();
+};
+const enterPerson = async (page: Page, world: World, name: string) => {
+  await openPerson(page, world, name);
   await page.getByRole("button", { name: "接待 12 精力", exact: true }).click();
+};
+const enter = async (page: Page) => {
+  const world: World = { ...newWorld("consult-ui", PEOPLE), day: 2, slot: 1, energy: 20, opinion: { shen: 0 },
+    present: { shen: "counter", luyao: "rival" } };
+  await enterPerson(page, world, "沈薇");
 };
 const hittable = async (page: Page, locator: Locator) => {
   await expect(locator).toBeInViewport({ ratio: 1 });
@@ -28,6 +40,7 @@ const hittable = async (page: Page, locator: Locator) => {
     return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
   })).toBe(true);
 };
+const generatedGuest = PEOPLE.find(p => p.skin && !p.skin.buysFor && !HAND_CONSULT[p.id])!;
 
 for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`接待决策 ${width}×${height}`, () => {
   test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
@@ -74,7 +87,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await expect(page.locator(".sale-receipt")).toBeVisible();
     await expect(page.locator(".receipt-amount")).toContainText("+¥2,940");
     await expect(page.locator(".receipt-amount")).toContainText("实际带走 3 件");
-    await expect(page.locator(".receipt-goal")).toContainText("还差 ¥5,060");
+    await expect(page.locator(".receipt-goal")).toContainText(`还差 ¥${(WEEK_TARGETS[0] - 2_940).toLocaleString("zh-CN")}`);
     const after = await saved(page);
     expect(after.money - before.money).toBe(2940);
     expect(after.energy).toBe(before.energy);
@@ -83,5 +96,23 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await page.getByRole("button", { name: "回到楼层", exact: true }).click();
     await expect(page.locator(".sale-receipt")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /查看沈薇 回头客/ })).toBeVisible();
+  });
+
+  test("按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开", async ({ page }) => {
+    const world: World = { ...newWorld("consult-focus-ui", PEOPLE), day: 2, slot: 1, energy: 20,
+      opinion: { [generatedGuest.id]: 40 }, present: { [generatedGuest.id]: "counter", luyao: "rival" },
+      qualities: { [`visit-context-day:${generatedGuest.id}`]: 2, [`visit-context-code:${generatedGuest.id}`]: 1 } };
+    const live = visitPerson(world, generatedGuest);
+    const spot = spotsOf(live).find(s => s.reveals.includes("correct"))!;
+    await openPerson(page, world, generatedGuest.name);
+    await expect(page.getByRole("region", { name: "今天的来意" })).toContainText("赶场");
+    await expect(page.getByRole("region", { name: "今天的来意" })).not.toContainText("当天见效");
+    await page.getByRole("button", { name: "接待 12 精力", exact: true }).click();
+    await expect(page.locator(".serve-meta")).toContainText("赶场");
+    await expect(page.locator(".serve-lines")).toContainText("有件最要紧的事");
+    await expect(page.locator(".serve-focus")).toContainText("今天的重点还没摸清");
+    await page.locator('.serve-probe[aria-label="看"] button', { hasText: spot.label }).click();
+    await expect(page.locator(".serve-focus")).toContainText(`今天的重点：${TRAIT_LABEL.correct}`);
+    await expect(page.getByLabel("已知需求")).toContainText("当天见效");
   });
 });

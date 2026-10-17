@@ -41,6 +41,59 @@ test("熟客公开的当日用途进入选货提示，口头预算只加成一�
     "当日新增诉求在同一时段刷新后能恢复");
 });
 
+test("按诉求生成的老客：今天的重点开场不白送，看到那一处才揭开", () => {
+  const p = PEOPLE.find(x => x.skin && !x.skin.buysFor && !HAND_CONSULT[x.id])!;
+  const w: World = { ...atCounter([p.id]), day: 2, opinion: { [p.id]: 40 },
+    qualities: { [`visit-context-day:${p.id}`]: 2, [`visit-context-code:${p.id}`]: 1 } };
+  const live = visitPerson(w, p), c = openConsult(w, p);
+  assert.equal(c.focus, "correct");
+  assert.equal(c.focusKnown, false, "开场只说有件要紧事，不把重点白送");
+  assert.ok(!c.known.includes("correct"), "今天的重点在揭开前不算已知");
+  assert.match(c.lines[0]!, /有件最要紧的事/);
+  assert.doesNotMatch(c.lines[0]!, /当天见效|长效持妆|舒缓泛红|温和不闷/);
+  assert.ok(stillHolding(c, live), "重点没摸清，她仍像是有话没说");
+  assert.ok(offerEvidence(c, live, "soft", 1).some(x => x.includes("今天的重点还没摸清")));
+  const spot = spotsOf(live).find(s => s.reveals.includes("correct"))!;
+  const looked = lookAt(c, live, spot.key);
+  assert.equal(looked.focusKnown, true, "看到重点那一处就该知道今天最在意什么");
+  assert.ok(looked.known.includes("correct"));
+  assert.ok(!offerEvidence(looked, live, "soft", 1).some(x => x.includes("今天的重点还没摸清")));
+});
+
+test("手写客人盖得到的重点也要问出来；盖不到的仍按旧版直接说，并补一句问法", () => {
+  const p = who("shen");
+  const covered: World = { ...atCounter([p.id]), day: 2, opinion: { [p.id]: 40 },
+    qualities: { [`visit-context-day:${p.id}`]: 2, [`visit-context-code:${p.id}`]: 4 } };
+  const liveCovered = visitPerson(covered, p), cCovered = openConsult(covered, p);
+  assert.equal(cCovered.focus, "steady");
+  assert.equal(cCovered.focusKnown, false, "手写问话里有这条，仍要从她嘴里问出来");
+  assert.ok(!cCovered.known.includes("steady"));
+  const q = questionsOf(liveCovered).find(x => x.kind === "line" && x.reveals?.includes("steady"))!;
+  const asked = askHer(cCovered, liveCovered, q.key);
+  assert.equal(asked.focusKnown, true);
+  assert.ok(asked.known.includes("steady"));
+
+  const uncovered: World = { ...covered, qualities: { [`visit-context-day:${p.id}`]: 2, [`visit-context-code:${p.id}`]: 1 } };
+  const liveUncovered = visitPerson(uncovered, p), cUncovered = openConsult(uncovered, p);
+  assert.equal(cUncovered.focus, "correct");
+  assert.equal(cUncovered.focusKnown, true, "手写线索盖不到的重点不能变成死胡同");
+  assert.match(cUncovered.lines[0]!, /这次最在意当天见效/);
+  assert.ok(questionsOf(liveUncovered).some(x => x.kind === "trait" && x.trait === "correct"),
+    "盖不到的重点要补一句能问出来的话");
+});
+
+test("底线正好是今天的重点：高关系时她自己说破，面板就不再装没摸清", () => {
+  const p = PEOPLE.find(x => x.skin?.veto?.trait === "steady" && !x.skin.buysFor && !HAND_CONSULT[x.id]);
+  assert.ok(p, "需要一位有 steady 底线、按诉求生成、不替人买的客人");
+  const w: World = { ...atCounter([p.id]), day: 2, opinion: { [p.id]: 40 },
+    qualities: { [`visit-context-day:${p.id}`]: 2, [`visit-context-code:${p.id}`]: 4 } };
+  const c = openConsult(w, p);
+  assert.equal(c.focus, "steady");
+  assert.equal(c.focusKnown, true, "底线那句已经把重点说破，不能再说还没摸清");
+  assert.match(c.lines[0]!, /这次最在意温和不闷/);
+  assert.ok(c.known.includes("steady"));
+});
+
 test("每一位有诉求表的客人都接得了：三处可看；按诉求生成的五句可问，手写的那几位照手写的问", () => {
   assert.ok(skinned.length >= 30);
   for (const p of skinned) {
@@ -201,12 +254,22 @@ test("付过精力的接待完整恢复：耐心、坏脸色、试用、件数�
   w = rememberConsult(w, p, c);
   const data = JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: c })));
   assert.deepEqual(restoreConsults(data, w, PEOPLE), { [p.id]: c });
+  const focused = { ...c, focus: c.known[0]!, focusKnown: true };
+  assert.deepEqual(restoreConsults(JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: focused }))), w, PEOPLE),
+    { [p.id]: focused }, "今天的重点与是否揭开都要跟着存档回来");
+  const legacy = { ...c } as Partial<typeof c>;
+  delete legacy.focus;
+  delete legacy.focusKnown;
+  assert.deepEqual(restoreConsults(JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: legacy as typeof c }))), w, PEOPLE),
+    { [p.id]: { ...c, focus: null, focusKnown: false } }, "旧存档没有重点字段也要接得上");
   assert.deepEqual(restoreConsults(data, { ...w, slot: 1 }, PEOPLE), {});
   assert.deepEqual(restoreConsults(data, { ...w, season: 2 }, PEOPLE), {});
   assert.deepEqual(restoreConsults(data, { ...w, touched: [] }, PEOPLE), {});
   for (const bad of [undefined, [], { ...data, entries: { shen: { ...c, patience: 99 } } },
     { ...data, entries: { shen: { ...c, product: "constructor" } } },
     { ...data, entries: { shen: { ...c, known: ["made-up"] } } },
+    { ...data, entries: { shen: { ...c, focus: "wear" } } },
+    { ...data, entries: { shen: { ...c, focusKnown: "yes" } } },
     { ...data, entries: { shen: { ...c, tried: { plain: { positive: true } } } } }]) {
     assert.deepEqual(restoreConsults(bad, w, PEOPLE), {});
   }
