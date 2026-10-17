@@ -1,0 +1,876 @@
+{
+  "root": "/tmp/renqing-weekend-20261018/baseline",
+  "threeOrMore": 9,
+  "rows": [
+    {
+      "seed": 0,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang",
+        "main-slip-song",
+        "main-slip-yin"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 9,
+          "main-slip-fang": 8,
+          "main-slip-song": 3,
+          "main-slip-yin": 3
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 5,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 12,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 14,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 16,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-yin",
+          "season": 1,
+          "day": 17,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 20,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 20,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 7,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 13,
+          "slot": 0
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang",
+        "main-slip-song",
+        "main-slip-yin"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 14,
+          "main-slip-yin": 2,
+          "main-slip-fang": 2,
+          "main-slip-song": 1
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 4,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 17,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 17,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 18,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-yin",
+          "season": 1,
+          "day": 20,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 21,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 21,
+          "slot": 1
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 12,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 13,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 27,
+          "slot": 1
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 7,
+          "main-slip-fang": 10,
+          "main-slip-song": 4,
+          "main-slip-yin": 3
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 9,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 13,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 15,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-turn-desk",
+          "season": 1,
+          "day": 19,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 19,
+          "slot": 1
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 4,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 12,
+          "slot": 1
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 15,
+          "slot": 2
+        }
+      ]
+    },
+    {
+      "seed": 3,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-song",
+        "main-slip-fang",
+        "main-slip-yin"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 2,
+          "main-slip-fang": 6,
+          "main-slip-yin": 2,
+          "main-slip-song": 1
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 4,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 14,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 15,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 16,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-yin",
+          "season": 1,
+          "day": 17,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-filed",
+          "season": 1,
+          "day": 25,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-quiet",
+          "season": 1,
+          "day": 27,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 7,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 9,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 24,
+          "slot": 1
+        }
+      ]
+    },
+    {
+      "seed": 4,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 1,
+          "main-slip-fang": 2,
+          "main-slip-yin": 5,
+          "main-slip-song": 11
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 6,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 7,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 7,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-turn-desk",
+          "season": 1,
+          "day": 18,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 19,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 1,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 10,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 12,
+          "slot": 1
+        }
+      ]
+    },
+    {
+      "seed": 5,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang",
+        "main-slip-yin"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 2,
+          "main-slip-fang": 1,
+          "main-slip-song": 9,
+          "main-slip-yin": 4
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 7,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 7,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 7,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-yin",
+          "season": 1,
+          "day": 13,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 17,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 17,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 4,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 6,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 20,
+          "slot": 2
+        }
+      ]
+    },
+    {
+      "seed": 6,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang",
+        "main-slip-song"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 1,
+          "main-slip-yin": 6,
+          "main-slip-fang": 3,
+          "main-slip-song": 6
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 4,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 6,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 6,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 12,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 14,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 15,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 12,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 13,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 22,
+          "slot": 2
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang",
+        "main-slip-song"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 9,
+          "main-slip-song": 3,
+          "main-slip-fang": 2,
+          "main-slip-yin": 1
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 6,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 13,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 13,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 15,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 15,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 16,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 4,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 8,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 22,
+          "slot": 2
+        }
+      ]
+    },
+    {
+      "seed": 8,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 6,
+          "main-slip-song": 7,
+          "main-slip-yin": 7,
+          "main-slip-fang": 3
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 4,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 8,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 8,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-turn-desk",
+          "season": 1,
+          "day": 18,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 18,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 9,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 11,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 12,
+          "slot": 1
+        }
+      ]
+    },
+    {
+      "seed": 9,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-song",
+        "main-slip-fang"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 1,
+          "main-slip-fang": 9,
+          "main-slip-song": 2,
+          "main-slip-yin": 2
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 5,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 8,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 9,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 11,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 13,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 13,
+          "slot": 1
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 6,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 7,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 11,
+          "slot": 1
+        }
+      ]
+    },
+    {
+      "seed": 10,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-song",
+        "main-slip-fang"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 14,
+          "main-slip-song": 1,
+          "main-slip-fang": 7,
+          "main-slip-yin": 1
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 4,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 15,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 15,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 16,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 17,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 17,
+          "slot": 1
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 1,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 7,
+          "slot": 0
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 17,
+          "slot": 2
+        }
+      ]
+    },
+    {
+      "seed": 11,
+      "seen": [
+        "main-slip-shen",
+        "main-slip-fang",
+        "main-slip-song"
+      ],
+      "windows": [
+        {
+          "main-slip-shen": 4,
+          "main-slip-fang": 5,
+          "main-slip-song": 5,
+          "main-slip-yin": 3
+        },
+        {}
+      ],
+      "drawn": [
+        {
+          "id": "main-slip-open",
+          "season": 1,
+          "day": 4,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-shen",
+          "season": 1,
+          "day": 7,
+          "slot": 2
+        },
+        {
+          "id": "main-slip-fang",
+          "season": 1,
+          "day": 8,
+          "slot": 3
+        },
+        {
+          "id": "main-slip-song",
+          "season": 1,
+          "day": 10,
+          "slot": 1
+        },
+        {
+          "id": "main-slip-turn",
+          "season": 1,
+          "day": 15,
+          "slot": 0
+        },
+        {
+          "id": "main-slip-after-own",
+          "season": 1,
+          "day": 15,
+          "slot": 1
+        },
+        {
+          "id": "main-a2-mirror",
+          "season": 2,
+          "day": 5,
+          "slot": 3
+        },
+        {
+          "id": "main-a2-tape",
+          "season": 2,
+          "day": 9,
+          "slot": 2
+        },
+        {
+          "id": "main-a2-audit",
+          "season": 2,
+          "day": 13,
+          "slot": 1
+        }
+      ]
+    }
+  ]
+}

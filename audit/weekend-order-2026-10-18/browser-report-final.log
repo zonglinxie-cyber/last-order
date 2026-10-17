@@ -1,0 +1,13 @@
+[WebServer] (node:34186) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:34230) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:34251) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-weekend.spec.ts:51:3 › 周末最后一单 320×568 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (6.4s)
+  ✓  2 tests/world-weekend.spec.ts:51:3 › 周末最后一单 390×844 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (6.2s)
+
+  2 passed (17.0s)

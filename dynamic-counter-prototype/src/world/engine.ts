@@ -15,7 +15,7 @@ import { CARE_DAYS_MIN, CARE_TRUST_MIN, guardCommitKey, markWeekCare, markWeekGu
 import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
-  Arrival, BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
+  Appointment, Arrival, BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
   Storylet, Verb, Visits, World, WorldRequest, Zone,
 } from "./types.ts";
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
@@ -24,6 +24,8 @@ import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts
 import { arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
 import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, validRivalBooking } from "./rival-business.ts";
 import { recentlyPurchased } from "./purchases.ts";
+import { currentWeekendOrder, planWeekendOrder, recordWeekendOutcome, validWeekendOrder,
+  WEEKEND_OUTCOMES, WEEKEND_PREP_ENERGY, WEEKEND_PREP_SAMPLES, WEEKEND_RESPONSE, WEEKEND_RESULT } from "./weekend-orders.ts";
 export { BUY_INTERVAL_DAYS } from "./purchases.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
@@ -556,6 +558,9 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   const placeCustomer = (id: PersonId, zone: Zone) => { present[id] = zone; };
   let customerCount = 0;
+  const appointmentZone = (id: PersonId): Zone | undefined =>
+    (["counter", "cashier", "atrium", "lounge", "entrance"] as Zone[]).find(z =>
+      people.filter(p => p.role === "customer" && present[p.id] === z && p.id !== id).length < ZONE_GUEST_CAPACITY[z]);
 
   // 客人落在哪一区：按权重抽，但只往还站得下的区派 —— 一个坐标站一个人，
   // 站满了还往里塞，界面上就是两个人叠在同一个点上，看不出是两个人。
@@ -588,8 +593,11 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   for (const ap of due) {
     const person = personOf(people, ap.person);
     if (!person || person.role !== "customer") continue;
-    if (customerCount >= MAX_PRESENT_CUSTOMERS) continue;
-    placeCustomer(ap.person, "counter"); customerCount++;
+    if (customerCount >= MAX_PRESENT_CUSTOMERS && !(ap.person in present)) continue;
+    if (!(ap.person in present)) {
+      const zone = appointmentZone(ap.person); if (!zone) continue;
+      placeCustomer(ap.person, zone); customerCount++;
+    }
     w = assignVisitContexts({ ...w, present }, people);
     const arrival = arrivalFromAppointment(ap);
     w = say(w, describeArrival(arrival, people)!.scene, [ap.person], arrival);
@@ -608,21 +616,50 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
         const amount = SHELF[product].price;
         w = { ...w, money: w.money + amount };
         w = setQuality(w, `bought:${ap.person}`, w.day);
+        w = recordWeekendOutcome(w, ap.person, "good");
         w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
         w = remember(w, ap.person, "came-back-bought", 1);
         w = say(w, `${person.name}回来又带了一支${SHELF[product].name}，进账 ¥${amount}。`, [ap.person]);
       }
     }
+    if (ap.reason === "refund" && ap.weekendOutcome) w = say(w, `${person.name}聊起周末那单：${WEEKEND_RESPONSE[ap.weekendOutcome]}`, [person.id]);
     for (const bid of ap.bring ?? []) {
       const bp = personOf(people, bid);
       if (bp && bp.role === "customer" && !(bid in present) && customerCount < MAX_PRESENT_CUSTOMERS) {
-        placeCustomer(bid, "counter"); customerCount++;
+        const zone = appointmentZone(bid); if (!zone) continue;
+        placeCustomer(bid, zone); customerCount++;
         const arrival: Arrival = { person: bid, kind: "companion", source: person.id };
         w = say(w, describeArrival(arrival, people)!.scene, [bid], arrival);
       }
     }
   }
 
+  // 两类预约共用实际客位、报价和结账；周末提前联系只把邀请成本挪到前几天。
+  const startBooking = (guest: Person, weekend = false): boolean => {
+    if (!(guest.id in present) && customerCount >= MAX_PRESENT_CUSTOMERS) return false;
+    const prepared = weekend && !!w.weekendOrder?.prepared;
+    const zone = prepared ? appointmentZone(guest.id) : "rival";
+    if (!zone) return false;
+    if (!(guest.id in present)) customerCount++;
+    placeCustomer(guest.id, zone);
+    w = assignVisitContexts({ ...w, present }, people);
+    const quote = poachSale(visitPerson(w, guest));
+    if (!quote.units) return false;
+    w = { ...w, rivalBooking: { day: w.day, slot: w.slot, person: guest.id,
+      product: quote.product, units: quote.units, amount: quote.amount, invited: prepared, ...(weekend ? { weekend: true } : {}) } };
+    w = say(w, weekend
+      ? `周末最后一单：${guest.name}到了${prepared ? "你的柜前，提前确认的时间派上了用场" : "对面，还能邀来比货"}。对面预计这单 ¥${quote.amount}，收工前才结账。`
+      : `陆遥约了${guest.name}午后来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
+    return true;
+  };
+  const weekend = currentWeekendOrder(w);
+  if (weekend && !weekend.outcome && w.day === weekend.due && w.slot === 3 && !rivalBookingNow(w)) {
+    const guest = personOf(people, weekend.person);
+    if (!guest || recentlyPurchased(w, guest.id) || !startBooking(guest, true)) {
+      w = recordWeekendOutcome(w, weekend.person, "missed");
+      w = say(w, "周末那单这次没约成；不再另开一笔账，明天再聊。", [weekend.person]);
+    }
+  }
   // 午后的一位是陆遥自己的预约，先留真实客位，报价随后在玩家行动前公开。
   // 不占用玩家约好的人，不让十天内买过货的人重复掏钱；首季第一周保持原体验。
   if (w.slot === 1 && (w.season > 1 || w.day > 7) && !rivalBookingNow(w)
@@ -632,18 +669,12 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       && (!p.visits.festivals || !!w.festival && p.visits.festivals.includes(w.festival))
       && !w.appointments.some(a => a.day === w.day && (a.person === p.id || a.bring?.includes(p.id)))
       && !recentlyPurchased(w, p.id)
+      && !(weekend && !weekend.outcome && weekend.person === p.id)
       && poachSale(p).units > 0);
     if (pool.length) {
       // 独立确定性抽签，不挪动既有抽数流；场上多一位仍会自然参与后续互动。
       const guest = pool[drawIndex(`${w.seed}:booking:${w.season}:${w.day}`, 0, pool.length)];
-      placeCustomer(guest.id, "rival"); customerCount++;
-      w = assignVisitContexts({ ...w, present }, people);
-      const quote = poachSale(visitPerson(w, guest));
-      if (quote.units > 0) {
-        w = { ...w, rivalBooking: { day: w.day, slot: w.slot, person: guest.id,
-          product: quote.product, units: quote.units, amount: quote.amount, invited: false } };
-        w = say(w, `陆遥约了${guest.name}午后来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
-      }
+      startBooking(guest);
     }
   }
 
@@ -705,6 +736,11 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   // 开门第一件事：今天谁托你做什么（每天一次，slot 0 落定之后）。
   if (w.slot === 0) w = openDay(w, people);
+  const planned = planWeekendOrder(w, people);
+  if (planned) {
+    w = { ...w, weekendOrder: planned };
+    w = say(w, `柜上收到${personOf(people, planned.person)!.name}的周末约单：第 ${planned.due} 天晚高峰来选货，要赶在收工前办好。可以提前联系确认；没有提前约，到时也能去对面争取。`, [planned.person]);
+  }
   // 首季第一周只盯一人；此后最多两人，同样公开、同时结算，让精力与托单名额产生取舍。
   const targets = rivalCandidates(w, people).slice(0, w.season === 1 && w.day <= 7 ? 1 : 2).map(p => p.id);
   for (const id of targets) w = markWeekThreat(w, id);
@@ -781,6 +817,7 @@ export function ambient(world: World, people: Person[]): World {
             const sale = poachSale(visitPerson(w, mark));
             if (sale.units) w = setQuality({ ...w, rivalMoney: w.rivalMoney + sale.amount,
               rivalWins: w.rivalWins + 1 }, `rival-bought:${mark.id}`, w.day);
+            if (sale.units) w = recordWeekendOutcome(w, mark.id, "rival");
             const missed = w.rivalPlan?.tactic === "compare" ? `这次没给${mark.name}对症成交` : `你没顾上${mark.name}`;
             w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
           }
@@ -832,19 +869,41 @@ export function inviteRivalGuest(world: World, people: Person[]): World {
     `你拿一份小样邀${guest.name}来比货。「可以看看，但我还没决定买哪边的。」这时段结束前，要靠实际成交留住这单。`, [guest.id]);
 }
 
+export function weekendPrepareBlock(world: World): string | null {
+  const order = currentWeekendOrder(world);
+  if (!order || order.outcome) return "这一单已经有了结果";
+  if (order.prepared) return "已经确认过时间";
+  if (world.day === order.due && world.slot === 3) return "客人已经到场，现在直接接待或邀来比货";
+  if (world.energy < WEEKEND_PREP_ENERGY) return `还需要 ${WEEKEND_PREP_ENERGY} 精力`;
+  if (world.samples < WEEKEND_PREP_SAMPLES) return "需要留一份小样";
+  if (world.standing <= SERVE_STAT_FLOOR || world.compliance <= SERVE_STAT_FLOOR) return "先把柜台恢复营业";
+  if (opinionOf(world, order.person) <= SERVE_REFUSE_OPINION) return "她现在不愿约到你的柜前";
+  return null;
+}
+
+export function prepareWeekendOrder(world: World, people: Person[]): World {
+  const order = currentWeekendOrder(world);
+  if (!order || weekendPrepareBlock(world)) return world;
+  const guest = personOf(people, order.person);
+  if (!guest || guest.role !== "customer") return world;
+  return say({ ...world, energy: world.energy - WEEKEND_PREP_ENERGY, samples: world.samples - WEEKEND_PREP_SAMPLES,
+    weekendOrder: { ...order, prepared: true } },
+    `你拿一份小样联系${guest.name}，确认了第 ${order.due} 天晚高峰的时间。到时${ta(guest)}直接来你的柜前；接待仍花 12 精力，买不买要看真实推荐。`, [guest.id]);
+}
+
 function settleRivalBooking(world: World, people: Person[]): World {
   const b = rivalBookingNow(world);
   if (!b || b.outcome) return world;
   const guest = personOf(people, b.person);
-  if (!guest || !(guest.id in world.present)) return { ...world, rivalBooking: { ...b, outcome: "missed" } };
+  if (!guest || !(guest.id in world.present)) return recordWeekendOutcome({ ...world, rivalBooking: { ...b, outcome: "missed" } }, b.person, "missed");
   if (qualityOf(world, `bought:${guest.id}`) === world.day)
     return say({ ...world, rivalBooking: { ...b, outcome: "player" } },
       `${guest.name}最终在你这里买了，这笔对面的预约由你接下。`, [guest.id]);
   const w = setQuality({ ...world, rivalBooking: { ...b, outcome: "rival" },
     rivalMoney: world.rivalMoney + b.amount, rivalWins: world.rivalWins + 1,
     present: { ...world.present, [guest.id]: "rival" } }, `rival-bought:${guest.id}`, world.day);
-  return say(setQuality(w, `away:${guest.id}`, w.day),
-    `${b.invited ? `${guest.name}比较后仍回到对面，` : ""}陆遥接完自己的预约：${guest.name}带走 ${b.units} 件${SHELF[b.product].name}，对面进账 ¥${b.amount}。`, [guest.id]);
+  return say(recordWeekendOutcome(setQuality(w, `away:${guest.id}`, w.day), guest.id, "rival"),
+    `${b.invited ? `${guest.name}比较后仍回到对面，` : ""}陆遥接完${b.weekend ? "周末那一单" : "自己的预约"}：${guest.name}带走 ${b.units} 件${SHELF[b.product].name}，对面进账 ¥${b.amount}。`, [guest.id]);
 }
 
 // —— 说书人 ——
@@ -991,7 +1050,9 @@ export function drawStorylet(world: World, people: Person[], storylets: Storylet
   // 热度先衰减，再用它调权。
   const cooled = setQuality(world, "storyteller:heat", qualityOf(world, "storyteller:heat") * STORY_HEAT_DECAY);
   const deck = storyDeck(cooled, people, storylets, qualityOf(cooled, "storyteller:heat"));
-  const eligible = deck.eligible;
+  // 同场还有未听的证词时，不先抽走会关闭它的收束卡。已经讲过或当前不合法的卡不挡路。
+  const available = new Set(deck.eligible.map(e => e.storylet.id));
+  const eligible = deck.eligible.filter(e => !e.storylet.deferWhileAvailable?.some(id => available.has(id)));
   let w = deck.cursor;
   // 有人如约站到柜前 —— 这一柜先从这些里挑（一天最多 ARC_CHAPTERS_PER_DAY 章，见 pickDue）。
   const toldToday = storylets.reduce((n, s) => n + (s.kind === "arc" && w.fired[s.id] === w.day ? 1 : 0), 0);
@@ -1226,6 +1287,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
           w = { ...w, money: w.money + amount };
           w = setQuality(w, gate, 1);
           w = setQuality(w, `bought:${b.id}`, w.day);
+          w = recordWeekendOutcome(w, b.id, "good");
           w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
           w = say(w, `你请${a.name}照看${b.name}，${ta(a)}替你开出了一支${SHELF[product].name}，进账 ¥${amount}。`, targets);
           return w;
@@ -1371,6 +1433,7 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
       w = say(w, `你硬是把${SHELF[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，${ta(person)}认了。`, [personId]);
     }
     w = setQuality(w, `bought:${personId}`, w.day);
+    w = recordWeekendOutcome(w, personId, "hard");
     w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + sold);
     return witnessed(w, people, [personId], "hard-sell", -2);
   }
@@ -1395,6 +1458,7 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
   w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + wanted);
   // 开口比她说过的上限多：她只拿她要的，多出来那几件记在脸上。
   const overAsk = Math.max(0, units - person.skin.maxUnits);
+  w = recordWeekendOutcome(w, personId, tier === "positive" && !overAsk ? "good" : "mixed");
   if (overAsk) {
     w = addOpinion(w, personId, OVER_ASK_OPINION * overAsk);
     w = say(w, `你开口要 ${units} 件，${person.name}皱了下眉：「用不了那么多。」`, [personId]);
@@ -1438,6 +1502,17 @@ export function endDay(world: World, people: Person[]): World {
     const settled = settleWeek(w);
     w = say(settled.world, settled.line, ["roman"]);
     w = clearWeekRule(w);
+  }
+  if (w.weekendOrder?.due === w.day && !w.weekendOrder.echoQueued) {
+    const order = w.weekendOrder;
+    w = recordWeekendOutcome(w, order.person, "missed");
+    const outcome = w.weekendOrder!.outcome!;
+    const existing = w.appointments.find(a => a.person === order.person && a.day === w.day + 1);
+    const appointments = existing ? w.appointments.map(a => a === existing
+      ? { ...a, reason: a.reason === "refund" ? "refund" as const : "weekend" as const, weekendOutcome: outcome } : a)
+      : [...w.appointments, { day: w.day + 1, slot: 2 as Slot, person: order.person, reason: "weekend" as const, weekendOutcome: outcome }];
+    w = { ...w, appointments, weekendOrder: { ...w.weekendOrder!, echoQueued: true } };
+    w = say(w, `周末那单：${WEEKEND_RESULT[outcome]}。${personOf(people, order.person)?.name ?? "客人"}会回来聊聊那次的事。`, [order.person]);
   }
   const mems = w.memories; // 今晚读的记忆快照：夜里讲出去的话不当晚再传。
   const nightPairs: Array<[Person, Person]> = [];
@@ -1541,7 +1616,8 @@ export function nextSeason(world: World, people: Person[], heat?: readonly HeatI
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
     qualities, present: {}, touched: [], rngCalls: world.rngCalls,
-    appointments: [], requests: [], fired: {},
+    appointments: world.appointments.filter(a => a.weekendOutcome !== undefined && a.day === SEASON_DAYS + 1 && roster.has(a.person))
+      .map(({ amount: _oldAmount, ...a }) => ({ ...a, reason: "weekend" as const, day: 1 })), requests: [], fired: {},
     log: [{ day: 1, slot: 0, text: `第 ${season} 季开始。` }],
     // 季初快照记的是新季开局那一刻：看法收过一半之后的样子。
     opinionAtSeasonStart: { ...opinion },
@@ -1601,6 +1677,7 @@ export function parseWorld(data: unknown): World | null {
   if (!isRecord(raw) || raw.version !== WORLD_SAVE_VERSION || !isRecord(raw.world)) return null;
   const w = { ...raw.world };
   if (w.rivalBooking !== undefined && !validRivalBooking(w.rivalBooking)) return null;
+  if (w.weekendOrder !== undefined && !validWeekendOrder(w.weekendOrder)) return null;
   if (!isStr(w.seed) || !isInt(w.day) || w.day < 1) return null;
   if (w.season !== undefined && (!isInt(w.season) || w.season < 1)) return null;
   if (!isInt(w.slot) || w.slot < 0 || w.slot > 3) return null;
@@ -1633,7 +1710,8 @@ export function parseWorld(data: unknown): World | null {
     && isInt((a as { day: number }).day) && isInt((a as { slot: number }).slot) && (a as { slot: number }).slot >= 0 && (a as { slot: number }).slot <= 3
     && isStr((a as { person: string }).person)
     && ((a as { bring?: string[] }).bring === undefined || isStrArray((a as { bring?: string[] }).bring))
-    && ((a as { reason?: string }).reason === undefined || ["visit", "refund", "wechat"].includes((a as { reason?: string }).reason!))
+    && ((a as { reason?: string }).reason === undefined || ["visit", "refund", "wechat", "weekend"].includes((a as { reason?: string }).reason!))
+    && ((a as Appointment).weekendOutcome === undefined || WEEKEND_OUTCOMES.includes((a as Appointment).weekendOutcome!))
     && ((a as { amount?: number }).amount === undefined || isNum((a as { amount?: number }).amount)))) return null;
   if (w.requests !== undefined && !(Array.isArray(w.requests) && w.requests.every((r: unknown) => isRecord(r)
     && isStr((r as WorldRequest).id) && ["quota", "keep", "samples", "pair", "clean", "rebook"].includes((r as WorldRequest).kind)

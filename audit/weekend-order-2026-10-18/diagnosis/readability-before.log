@@ -1,0 +1,52 @@
+[WebServer] (node:32475) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:32538) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:32564) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-weekend.spec.ts:51:3 › 周末最后一单 320×568 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (5.7s)
+Testing stopped early after 1 maximum allowed failures.
+
+
+  1) tests/world-weekend.spec.ts:51:3 › 周末最后一单 320×568 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 ─────────────
+
+    Error: 说明正文应有足够阅读空间
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 180
+    Received:    64.8125
+
+      57 |       height: el.getBoundingClientRect().height, color: getComputedStyle(el.querySelector("p")!).color,
+      58 |     }));
+    > 59 |     expect.soft(readable.height, "说明正文应有足够阅读空间").toBeGreaterThanOrEqual(180);
+         |                                                  ^
+      60 |     expect.soft(readable.color, "深底正文不能继承通用灰字").toBe("rgb(242, 230, 216)");
+      61 |     await hit(page.locator(".weekend-prepare")); await hit(page.locator(".weekend-close"));
+      62 |     await page.screenshot({ path: `${audit}/prepare-${width}.png` });
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend.spec.ts:59:50
+
+    Error: 深底正文不能继承通用灰字
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgb(242, 230, 216)"
+    Received: "rgb(85, 85, 85)"
+
+      58 |     }));
+      59 |     expect.soft(readable.height, "说明正文应有足够阅读空间").toBeGreaterThanOrEqual(180);
+    > 60 |     expect.soft(readable.color, "深底正文不能继承通用灰字").toBe("rgb(242, 230, 216)");
+         |                                                 ^
+      61 |     await hit(page.locator(".weekend-prepare")); await hit(page.locator(".weekend-close"));
+      62 |     await page.screenshot({ path: `${audit}/prepare-${width}.png` });
+      63 |     await page.locator(".weekend-prepare").click();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend.spec.ts:60:49
+
+    Error Context: test-results/world-weekend-周末最后一单-320×568-周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事/error-context.md
+
+  1 failed
+    tests/world-weekend.spec.ts:51:3 › 周末最后一单 320×568 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 ──────────────
+  1 error was not a part of any test, see above for details

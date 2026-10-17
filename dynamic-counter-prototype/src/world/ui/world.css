@@ -411,3 +411,16 @@
 .world-rival-booking span { flex:none; color:#d9c5ef; }
 .has-rival-booking .world-map-view { flex-shrink:1; min-height:140px; }
 .has-rival-booking .world-scene { min-height:96px; flex-shrink:0; }
+.world-opportunities { display:flex; flex:none; min-width:0; }
+.world-opportunities .world-rival-booking { flex:1; min-width:0; }
+.world-opportunities.has-weekend .world-rival-booking { flex-direction:column; align-items:flex-start; gap:2px; }
+.weekend-preview { display:flex; flex:1; align-items:center; justify-content:space-between; gap:6px; min-width:0; min-height:44px; padding:6px 12px; border:0; border-bottom:1px solid #e1c09b33; background:#3c3023; color:#f2dfc8; text-align:left; font-size:12px; }
+.has-weekend .weekend-preview { flex:0 0 108px; flex-direction:column; align-items:flex-start; justify-content:center; border-left:1px solid #e1c09b33; gap:2px; }
+.weekend-preview span { color:#ecd19e; }
+.weekend-letter { color:#f2e6d8; font-size:14px; line-height:1.6; }
+.bottom-sheet:has(.weekend-sheet) { height:78%; }
+.weekend-letter p { margin:0 0 10px; color:#f2e6d8; font-size:14px; line-height:1.6; }
+.weekend-letter h3 { color:#f0c978; font-size:16px; }
+.weekend-close { background:#39291e; color:#f2dfc8; }
+.weekend-prepare { margin-bottom:0; }
+.weekend-prepare:disabled { opacity:.55; }

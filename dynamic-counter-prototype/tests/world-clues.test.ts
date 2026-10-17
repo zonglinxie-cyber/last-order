@@ -333,3 +333,38 @@ test("内容：主线牵住的人都在人物圣经里", () => {
   for (const clue of CLUES) for (const id of clue.about) assert.ok(ids.has(id), `线索「${clue.id}」牵住了不存在的人「${id}」`);
   for (const thread of CLUE_THREADS) assert.ok(thread.question.length > 0, `线「${thread.id}」那句问话还没写`);
 });
+
+test("收束不抢走同场尚未讲出的证词；听过、拒听或证人不在场仍可收束", () => {
+  const turn = STORYLETS.find(c => c.id === "main-slip-turn")!;
+  const desk = STORYLETS.find(c => c.id === "main-slip-turn-desk")!;
+  const fang = STORYLETS.find(c => c.id === "main-slip-fang")!;
+  const song = STORYLETS.find(c => c.id === "main-slip-song")!;
+  for (const [closing, witness, clues, present] of [
+    [turn, fang, ["slip-hand", "slip-tape"], { shen: "counter", fangmin: "cashier" }],
+    [desk, song, ["slip-hand", "slip-gap"], { fangmin: "cashier", songjie: "counter" }],
+  ] as const) {
+    let w = setQuality(at({ day: 18, present }), MAINLINE_ACT_KEY, 1);
+    for (const clue of clues) w = learnClue(w, clue);
+    const pool = [closing, witness];
+    for (let n = 0; n < 16; n++) {
+      const drawn = drawStorylet({ ...w, seed: `listen-before-closing-${n}` }, PEOPLE, pool).drawn!;
+      assert.equal(drawn.storylet.id, witness.id, "证词就在现场，不能先封住这一幕");
+    }
+    // 拒绝追问也算听过这个机会；不强迫玩家选拿线索的选项。
+    const heard = { ...w, fired: { ...w.fired, [witness.id]: w.day } };
+    assert.equal(drawStorylet(heard, PEOPLE, pool).drawn?.storylet.id, closing.id);
+    const absent: World = { ...w, present: closing === desk ? { fangmin: "cashier" } : { shen: "counter" } };
+    assert.equal(drawStorylet(absent, PEOPLE, pool).drawn?.storylet.id, closing.id);
+  }
+});
+
+test("讲述顺序只引用真实卡片且没有相互等待", () => {
+  const cards = new Map(STORYLETS.map(s => [s.id, s]));
+  const visit = (id: string, trail: string[]) => {
+    assert.ok(!trail.includes(id), `讲述顺序成环：${[...trail, id].join(" → ")}`);
+    const card = cards.get(id);
+    assert.ok(card, `等待了不存在的卡片：${id}`);
+    for (const before of card.deferWhileAvailable ?? []) visit(before, [...trail, id]);
+  };
+  for (const card of STORYLETS) visit(card.id, []);
+});

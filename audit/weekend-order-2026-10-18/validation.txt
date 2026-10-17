@@ -1,0 +1,46 @@
+人情场：周末最后一单与次日回响
+日期：2026-10-18
+基线：6cb204f94419dd5421c85f9e288417c25a7837d6；改前 src 快照逐文件与该提交一致。
+
+交付
+- 周五预告真实顾客、可提前联系（6 精力 + 1 小样）；周日最后时段实际接待，仍花 12 精力。
+- 未提前确认可当场争取；提前成交按真实结果办妥，不为了周末重复购买。
+- 对症、勉强、硬推、对面成交、未约成分别回应；次日和跨季回访不白送钱或周星。
+- 两种预约共享一行，详情保留滚动正文与固定按钮，打烊和季末承接结果。
+- 预约和同行按现有客位容量放置，同人不重复计数。
+- 主线两张收束卡给同场合法、未讲出的证词让路；不加权、不降低线索门槛。
+
+已完成验证（命令在 dynamic-counter-prototype 下，另有说明除外）
+1. npm run test:rules：302/302，exit 0；rules-final.log。
+2. npm run build：exit 0，28 个运行时保护文件通过；未改移动运行时，仍有既有包体大小提示。
+3. 独立 tsc --noEmit：extends 项目 tsconfig，包含新规则、新 browser spec、world-clues、consult-sim、world-sim、vite-env，node types；exit 0。
+4. node --experimental-strip-types tests/consult-sim.ts 20 1：exit 0。
+5. node --experimental-strip-types tests/consult-sim.ts 20 1 compete：exit 0。
+   旧、新两策略见 consult-comparison.json；20 种子首季，不抽剧情、不接请求、不加自选难度。
+   compete 新增公开预告下提前准备及已邀请客人的接待，不读取预约隐藏商品/用量。
+6. 修改前主线覆盖原检查失败：7/12（基线9/12）；修改后9/12，原门槛8/12未改。
+   新的同场收束回归修前失败、修后通过；diagnosis/clue-priority-before.log、clue-priority-after.log。
+   diagnosis/clue-probe.mjs <源码根目录> 可重放原十二种子×两季的线索计数；其 storyDeck 探针不写回随机流。
+7. 小屏详情修前正文高度64.8125px、灰字rgb(85,85,85)；新增断言实际失败。
+   修后8项周末流程通过，最终相关浏览器套件另记；不是实体手机验收。
+8. 本机预览 127.0.0.1:4188 已读回新 weekend-orders 模块与关键导出，未发布公网。
+
+边界
+- 没有真人留存数据；固定策略不是玩家体验的替代品。
+- 争取策略仍20/20季比分领先；不能声称整体对抗已完全平衡。
+- 回访不自动再买；跨季只带回应，原有旧季退款不跨季的行为保留。
+- 工作区已有 audit 图片差异和 qoder 文件不纳入本次提交。
+
+完整两季模拟已完成：node --experimental-strip-types tests/world-sim.ts 20 2，exit 0。
+- 八组结果签名均20/20，与基线一致；现有结局排名口径没有风格包揽全部种子。
+- 含原脚本的自选加难探针；四风格不主动提前联系或邀请，主动争取由有限信息模拟另测。
+- world-sim-after.log 与 simulation-comparison.json 保存结果；绝不将测试通过当作真人留存证据。
+
+完整相关浏览器检查：112/112，exit 0（11.2 分钟），browser-final.log。
+实际命令：./node_modules/.bin/playwright test tests/world-weekend.spec.ts tests/world-rival-business.spec.ts tests/world-floor.spec.ts tests/world-consult.spec.ts tests/world-dynamics.spec.ts tests/world-levels.spec.ts tests/world-opening.spec.ts tests/world-return-origin.spec.ts tests/world-season-smoke.spec.ts --workers=1
+本轮完整套件使用配置默认的127.0.0.1:4174，确认由本轮启动的Vite独占；预览4188不受影响。只有一个Playwright套件运行。
+两条整季路径均新档28天+新季3天，notes/errors/rawFields均0；season/保存逐时段报告及截图。
+44份测试覆盖旧产物已按运行前快照或初始干净HEAD恢复，restored-audit.json保存路径与哈希；新的相关截图保留在related/。
+
+结算截图复验：MOBILE_RUNTIME_TEST_PORT=4187 ./node_modules/.bin/playwright test tests/world-weekend.spec.ts --grep 周五确认 --workers=1，2/2，exit 0；browser-report-final.log。属于112条中的重复复验，不计为新增用例。等待盖章与星数opacity=1后截图，游戏代码不变。独立tsc再次exit 0。
+归档的构建日志及修前断言日志仅去除行尾空白，内容与结果不变。

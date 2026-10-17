@@ -247,6 +247,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
   },
   {
     id: "main-slip-turn",
+    deferWhileAvailable: ["main-slip-shen", "main-slip-song", "main-slip-yin", "main-slip-fang"],
     kind: "mainline",
     cast: { a: { id: "shen", where: [] }, b: { id: "fangmin", where: [], mustBePresent: false } },
     when: [
@@ -342,6 +343,7 @@ export const STORYLETS_MAINLINE: Storylet[] = [
   },
   {
     id: "main-slip-turn-desk",
+    deferWhileAvailable: ["main-slip-shen", "main-slip-song", "main-slip-yin", "main-slip-fang"],
     kind: "mainline",
     cast: { a: { id: "fangmin", where: [] } },
     when: [

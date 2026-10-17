@@ -10,6 +10,11 @@ export type Demand = { trait: Trait; want: 1 | 2; weight: 1 | 2 | 3 };
 
 export type PersonId = string;
 export type RivalTactic = "invite" | "compare";
+export type WeekendOutcome = "good" | "mixed" | "hard" | "rival" | "missed";
+export type WeekendOrder = {
+  person: PersonId; due: number; prepared: boolean;
+  outcome?: WeekendOutcome; resolvedDay?: number; echoQueued?: boolean;
+};
 /** 玩家自己在关系网上的节点 id。 */
 export const PLAYER: PersonId = "player";
 
@@ -111,13 +116,15 @@ export type Memory = {
 /** 已经发生的来访。只记录真实来路，不从好感或旧对话猜介绍人。 */
 export type Arrival = {
   person: PersonId;
-  kind: "visit" | "wechat" | "referral" | "companion" | "refund";
+  kind: "visit" | "wechat" | "referral" | "companion" | "refund" | "weekend";
   source?: PersonId;
+  weekendOutcome?: WeekendOutcome;
 };
 export type LogEntry = { day: number; slot: Slot; text: string; who?: PersonId[]; arrival?: Arrival };
 export type Appointment = {
   day: number; slot: Slot; person: PersonId; bring?: PersonId[];
-  reason?: "visit" | "refund" | "wechat"; amount?: number;
+  reason?: "visit" | "refund" | "wechat" | "weekend"; amount?: number;
+  weekendOutcome?: WeekendOutcome;
   /** 熟客替你约来的人；旧档缺失时不倒推来源。 */
   referredBy?: PersonId;
 };
@@ -205,7 +212,10 @@ export type World = {
     day: number; slot: Slot; person: PersonId; product: import("./shelf.ts").ShelfId;
     units: number; amount: number; invited: boolean;
     outcome?: "player" | "rival" | "missed";
+    weekend?: boolean;
   };
+  /** 周五公布、周日晚高峰结账；周末那单的回访只聊结果，不自动买货。 */
+  weekendOrder?: WeekendOrder;
   /** 当前节日 id（节日表由内容侧维护）；Visits.festivals 和 Cond {festival} 都读它 */
   festival?: string;
   /** 已消耗的抽数：每个随机决定都从 seed+rngCalls 推导，存档往返后确定性不断 */
@@ -313,6 +323,8 @@ export type Storylet = {
   /** 张力：-1 缓和 · 0 平常 · 1 起冲突。说书人用它控制节奏 */
   tension: -1 | 0 | 1;
   once?: boolean;
+  /** 这些卡此刻也能讲时先让它们讲；不是必须集齐，也不等待不在场的人。 */
+  deferWhileAvailable?: string[];
   /** 冷却天数 */
   cooldown?: number;
   /** 正文，可以用 {$a} {$b} 引用角色槽的人名，{player} 是玩家名 */

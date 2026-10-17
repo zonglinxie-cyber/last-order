@@ -12,7 +12,8 @@ export function validRivalBooking(value: unknown): value is NonNullable<World["r
   const b = value as Record<string, unknown>;
   const product = typeof b.product === "string" && Object.hasOwn(SHELF, b.product)
     ? SHELF[b.product as keyof typeof SHELF] : undefined;
-  return Number.isInteger(b.day) && Number(b.day) >= 1 && b.slot === 1
+  return Number.isInteger(b.day) && Number(b.day) >= 1 && (b.slot === 1 || b.slot === 3 && b.weekend === true)
+    && (b.weekend === undefined || typeof b.weekend === "boolean")
     && typeof b.person === "string" && b.person.length > 0 && !!product
     && Number.isInteger(b.units) && Number(b.units) > 0
     && b.amount === product.price * Number(b.units) && Number.isSafeInteger(b.amount)

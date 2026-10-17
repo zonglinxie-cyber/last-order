@@ -1,0 +1,114 @@
+[WebServer] (node:19021) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:19047) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:19053) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-weekend.spec.ts:47:3 › 周末最后一单 320×568 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (5.6s)
+  ✓  2 tests/world-weekend.spec.ts:85:3 › 周末最后一单 320×568 › 未提前确认也可争取；放弃后如实记对面成交，回访不伪装成玩家赢单 (1.7s)
+  ✓  3 tests/world-weekend.spec.ts:97:3 › 周末最后一单 320×568 › 午后预约与周末安排共用一行，小屏都能点；资源不足和旧档不添暗账 (1.5s)
+  ✘  4 tests/world-weekend.spec.ts:107:3 › 周末最后一单 320×568 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 (1.5m)
+(node:25139) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 tests/world-weekend.spec.ts:47:3 › 周末最后一单 390×844 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (5.5s)
+  ✓  6 tests/world-weekend.spec.ts:85:3 › 周末最后一单 390×844 › 未提前确认也可争取；放弃后如实记对面成交，回访不伪装成玩家赢单 (1.6s)
+  ✓  7 tests/world-weekend.spec.ts:97:3 › 周末最后一单 390×844 › 午后预约与周末安排共用一行，小屏都能点；资源不足和旧档不添暗账 (1.5s)
+  ✘  8 tests/world-weekend.spec.ts:107:3 › 周末最后一单 390×844 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 (10.2s)
+
+
+  1) tests/world-weekend.spec.ts:107:3 › 周末最后一单 320×568 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 ──────
+
+    Test timeout of 90000ms exceeded.
+
+    Error: locator.click: Test timeout of 90000ms exceeded.
+    Call log:
+      - waiting for locator('.world-next')
+        - locator resolved to <button type="button" class="world-next">下一时段</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div role="dialog" aria-label="今天的请求" class="world-requests">…</div> intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div role="dialog" aria-label="今天的请求" class="world-requests">…</div> intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        168 × waiting for element to be visible, enabled and stable
+            - element is visible, enabled and stable
+            - scrolling into view if needed
+            - done scrolling
+            - <div role="dialog" aria-label="今天的请求" class="world-requests">…</div> intercepts pointer events
+          - retrying click action
+            - waiting 500ms
+
+
+      36 |     if (state.ui.screen === "report") { await page.getByRole("button", { name: /^进入第 \d+ 天/ }).click(); continue; }
+      37 |     if (state.world.day === day && state.world.slot === slot) return;
+    > 38 |     await page.locator(".world-next").click();
+         |                                       ^
+      39 |     await expect.poll(async () => { const s = await save(page); return `${s.world.day}:${s.world.slot}:${s.ui.screen}`; })
+      40 |       .not.toBe(`${state.world.day}:${state.world.slot}:${state.ui.screen}`);
+      41 |   }
+        at advanceTo (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend.spec.ts:38:39)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend.spec.ts:116:5
+
+    Error Context: test-results/world-weekend-周末最后一单-320×5-efba6-回应跨季保留，季末说明下一次见面，新季到场不会自动收钱/error-context.md
+
+  2) tests/world-weekend.spec.ts:107:3 › 周末最后一单 390×844 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 ──────
+
+    Test was interrupted.
+
+    Error: locator.click: Test ended.
+    Call log:
+      - waiting for locator('.world-next')
+        - locator resolved to <button type="button" class="world-next">下一时段</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div role="dialog" aria-label="今天的请求" class="world-requests">…</div> intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div role="dialog" aria-label="今天的请求" class="world-requests">…</div> intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        18 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <div role="dialog" aria-label="今天的请求" class="world-requests">…</div> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+
+
+      36 |     if (state.ui.screen === "report") { await page.getByRole("button", { name: /^进入第 \d+ 天/ }).click(); continue; }
+      37 |     if (state.world.day === day && state.world.slot === slot) return;
+    > 38 |     await page.locator(".world-next").click();
+         |                                       ^
+      39 |     await expect.poll(async () => { const s = await save(page); return `${s.world.day}:${s.world.slot}:${s.ui.screen}`; })
+      40 |       .not.toBe(`${state.world.day}:${state.world.slot}:${state.ui.screen}`);
+      41 |   }
+        at advanceTo (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend.spec.ts:38:39)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend.spec.ts:116:5
+
+    Error Context: test-results/world-weekend-周末最后一单-390×8-bea39-回应跨季保留，季末说明下一次见面，新季到场不会自动收钱/error-context.md
+
+  1 failed
+    tests/world-weekend.spec.ts:107:3 › 周末最后一单 320×568 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 ───────
+  1 interrupted
+    tests/world-weekend.spec.ts:107:3 › 周末最后一单 390×844 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 ───────
+  6 passed (2.0m)

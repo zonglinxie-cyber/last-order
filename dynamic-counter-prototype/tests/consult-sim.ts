@@ -14,7 +14,7 @@ import {
   ambient, beginServe, beginSlot, doVerb, endDay, leaveServe, newWorld,
   nextSeason, qualityOf, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
   VERB_ENERGY,
-  inviteRivalGuest,
+  inviteRivalGuest, prepareWeekendOrder,
 } from "../src/world/engine.ts";
 import {
   askHer, lookAt, openConsult, PUSH_QUESTION, questionsOf, rememberConsult, spotsOf, tryOn,
@@ -31,6 +31,7 @@ import {
 } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { rivalBookingNow, RIVAL_INVITE_ENERGY } from "../src/world/rival-business.ts";
+import { WEEKEND_PREP_ENERGY } from "../src/world/weekend-orders.ts";
 import type { Festival, Person, PersonId, Trait, World } from "../src/world/types.ts";
 import { FIXTURE_PEOPLE } from "./fixtures/world-fixture.ts";
 
@@ -477,11 +478,18 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
     for (let slot = 0; slot < 4; slot++) {
       w = { ...w, slot: slot as 0 | 1 | 2 | 3 };
       w = beginSlot(w, people, festivals);
+      if (COMPETE_BOOKINGS && w.energy >= WEEKEND_PREP_ENERGY + VERB_ENERGY.serve) {
+        const prepared = prepareWeekendOrder(w, people);
+        if (prepared !== w) { w = prepared; social["prepare-weekend"] = (social["prepare-weekend"] ?? 0) + 1; }
+      }
       const booking = rivalBookingNow(w);
       let invited: Person | undefined;
-      if (COMPETE_BOOKINGS && booking && w.energy >= RIVAL_INVITE_ENERGY + VERB_ENERGY.serve) {
-        const next = inviteRivalGuest(w, people);
-        if (next !== w) { invited = people.find(p => p.id === booking.person); w = next; social["invite-booking"] = (social["invite-booking"] ?? 0) + 1; }
+      if (COMPETE_BOOKINGS && booking) {
+        if (booking.invited && w.energy >= VERB_ENERGY.serve) invited = people.find(p => p.id === booking.person);
+        else if (w.energy >= RIVAL_INVITE_ENERGY + VERB_ENERGY.serve) {
+          const next = inviteRivalGuest(w, people);
+          if (next !== w) { invited = people.find(p => p.id === booking.person); w = next; social["invite-booking"] = (social["invite-booking"] ?? 0) + 1; }
+        }
       }
       const person = invited ?? choseCustomer(w, people, failed);
       let attempted = false;

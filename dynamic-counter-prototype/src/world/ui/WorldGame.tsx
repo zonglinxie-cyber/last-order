@@ -6,7 +6,7 @@ import { MobileScroll } from "../../mobile";
 import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
-  advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb, inviteRivalGuest, rivalInviteBlock,
+  advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb, inviteRivalGuest, rivalInviteBlock, prepareWeekendOrder,
   beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
   verbOptions, verbEnergyNow, energyCeiling, rivalTargets, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
@@ -27,6 +27,8 @@ import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { currentArrival, publicAppointments } from "../arrivals.ts";
 import { rivalBookingNow } from "../rival-business.ts";
+import { currentWeekendOrder, WEEKEND_RESULT } from "../weekend-orders.ts";
+import { WeekendOrderSheet } from "./WeekendOrder.tsx";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -71,6 +73,7 @@ type DayReport = {
   movers: Array<{ id: PersonId; delta: number; now: number }>;
   tomorrow: Array<{ name: string; slot: Slot; detail?: string }>;
   week: boolean;
+  lastOrder?: { name: string; result: string };
 };
 /** 「自选加难」的勾选：存在自己的钥匙里（与 COACH_KEY 同类），刷新与重开一季都记得。
  *  真正生效的是 World.heat —— 这里只记"下一季想勾哪几条"。 */
@@ -239,7 +242,9 @@ function buildReport(before: World, after: World, base: DayBase): DayReport {
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
     .slice(0, 3);
   const tomorrow = publicAppointments(after, PEOPLE, after.day);
-  return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0 };
+  const order = after.weekendOrder;
+  const lastOrder = order?.due === before.day && order.outcome ? { name: nameOf(order.person), result: WEEKEND_RESULT[order.outcome] } : undefined;
+  return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0, lastOrder };
 }
 
 // —— 音效：看法动到这个数才算"明显"，招呼那点 +3 不响 ——
@@ -378,6 +383,7 @@ export default function WorldGame() {
   // 勾着开下一季：读盘里已经生效的那几条（继续玩时），没档就读上次勾选的。
   const [heat, setHeat] = useState<HeatId[]>(() => boot ? [...boot.world.heat ?? []] : readHeatPick());
   const [reqPanelOpen, setReqPanelOpen] = useState(false);
+  const [weekendOpen, setWeekendOpen] = useState(false);
   const [routesOpen, setRoutesOpen] = useState(false);
   // 收季那一刻之前的最好成绩：季末那排四关战绩拿它判"新纪录"（存档一并进档案以后就分不出来了）。
   const [prevBest, setPrevBest] = useState<number | null>(null);
@@ -826,6 +832,11 @@ export default function WorldGame() {
             : <p className="recap-empty">这一季本子上没添新的一页。</p>}
         </section>
 
+        {world.weekendOrder?.due === SEASON_DAYS && world.weekendOrder.outcome && <section className="recap-block">
+          <h2>最后那一单，话还没说完</h2>
+          <p>{nameOf(world.weekendOrder.person)} · {WEEKEND_RESULT[world.weekendOrder.outcome]}</p>
+          <p>下一季开门后，会回来聊那次的事。</p>
+        </section>}
         <section className="recap-block recap-numbers-block">
           <h2>三本账</h2>
           <div className="report-numbers recap-numbers">
@@ -854,6 +865,9 @@ export default function WorldGame() {
     return <div className="app-screen world-app world-report-page">
       <MobileScroll className="world-report-scroll"><main className="world-report">
         <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "周日对账" : "今日收工"}</p>
+        {report.lastOrder && <section className="report-block report-last-order" aria-label="周末最后一单的结果">
+          <h2>最后那一单</h2><p>{report.lastOrder.name} · {report.lastOrder.result}</p>
+        </section>}
         {report.week ? <LevelResult world={world} day={report.day} /> : <h1>今天打烊了</h1>}
         <div className="report-numbers">
           <span><small>今天进账</small><b>{report.moneyDelta === 0 ? "没开单" : `${report.moneyDelta > 0 ? "+" : "−"}${yuan(Math.abs(report.moneyDelta))}`}</b></span>
@@ -892,7 +906,7 @@ export default function WorldGame() {
     : [];
 
   // 开门那张「今天的请求」卡：第一个时段、没别的层压着、今天还没看过才弹。
-  const reqCardOpen = world.slot === 0 && !pending && !selected && !webOpen && !reqPanelOpen && !routesOpen
+  const reqCardOpen = world.slot === 0 && !pending && !selected && !webOpen && !reqPanelOpen && !routesOpen && !weekendOpen
     && reqSeenDay !== world.day && askedToday(world).length > 0;
   // 陆遥这一时段公开盯上的人：开场就亮出来，点一下直接开她的卡。挡没挡住、记不记分都按引擎的判据念。
   const rivalWord = rivalPlanWord(world);
@@ -905,7 +919,10 @@ export default function WorldGame() {
   const bookingPerson = booking && !booking.outcome && booking.person in world.present ? PEOPLE.find(p => p.id === booking.person) : undefined;
   const bookingBlock = rivalInviteBlock(world);
   const bookingWon = !!booking && world.qualities[`bought:${booking.person}`] === world.day;
-  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}${bookingPerson ? " has-rival-booking" : ""}`}>
+  const weekend = currentWeekendOrder(world);
+  const weekendPerson = weekend ? PEOPLE.find(p => p.id === weekend.person) : undefined;
+  const showWeekend = !!weekendPerson && !booking?.weekend;
+  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}${bookingPerson || showWeekend ? " has-rival-booking" : ""}`}>
     <header className="world-bar">
       <div className="world-bar-info">
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
@@ -930,12 +947,19 @@ export default function WorldGame() {
       })}
     </section>}
 
+    {(bookingPerson || showWeekend) && <div className={`world-opportunities${bookingPerson && showWeekend ? " has-weekend" : ""}`}>
     {booking && bookingPerson && <button type="button" className="world-rival-booking"
       aria-label={bookingWon ? `已接下预约：${bookingPerson.name}` : `对面预约：${bookingPerson.name}，预计 ${yuan(booking.amount)}，本时段结束结账`}
       onClick={() => tapPerson(booking.person)}>
-      <b>{bookingWon ? "✓ 预约接下" : booking.invited ? "已邀来比货" : "对面预约"} · {bookingPerson.name}</b>
+      <b>{bookingWon ? "✓ 预约接下" : booking.weekend ? "最后一单" : booking.invited ? "已邀来比货" : "对面预约"} · {bookingPerson.name}</b>
       <span>{bookingWon ? "已在你这边成交" : `${yuan(booking.amount)} · ${booking.invited ? "等你成交" : "可争取 ›"}`}</span>
     </button>}
+    {showWeekend && weekend && weekendPerson && <button type="button" className="weekend-preview" aria-label={`周末约单：${weekendPerson.name}，第 ${weekend.due} 天晚高峰`}
+      onClick={() => { setSelected(null); setWeekendOpen(true); }}>
+      <b>{bookingPerson ? "周末约单 ›" : `周末约单 · ${weekendPerson.name}`}</b>
+      <span>{weekend.outcome ? WEEKEND_RESULT[weekend.outcome] : weekend.prepared ? "已确认时间" : `第 ${weekend.due} 天晚高峰`}</span>
+    </button>}
+    </div>}
 
     <div className="world-map-view" ref={viewRef}
       onPointerDown={onPanDown} onPointerMove={onPanMove} onPointerUp={onPanUp} onPointerCancel={onPanUp}
@@ -1009,7 +1033,7 @@ export default function WorldGame() {
     {person && !serving && !receipt && <div className="world-drawer">
       {/* 抽屉盖住「现场」时在人物卡正文念结果，不遮住动作按钮。 */}
       <PersonCard person={person} world={world} people={PEOPLE} feedback={result}
-        booking={booking && bookingPerson?.id === person.id ? { amount: booking.amount, invited: booking.invited, won: bookingWon, blocked: bookingBlock } : undefined}
+        booking={booking && bookingPerson?.id === person.id ? { amount: booking.amount, invited: booking.invited, won: bookingWon, blocked: bookingBlock, weekend: booking.weekend } : undefined}
         rival={rivalWord && rivalTargets(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
         onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
@@ -1042,6 +1066,8 @@ export default function WorldGame() {
     {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqSeenDay(world.day)} />}
     {routesOpen && <RoutesSheet world={world} onClose={() => setRoutesOpen(false)} />}
+    {weekendOpen && weekendPerson && <WeekendOrderSheet world={world} person={weekendPerson}
+      onPrepare={() => setWorld(prepareWeekendOrder(world, PEOPLE))} onClose={() => setWeekendOpen(false)} />}
     {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqPanelOpen(false)} />}
 
@@ -1062,6 +1088,6 @@ export default function WorldGame() {
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
-    {!reqCardOpen && !reqPanelOpen && !routesOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
+    {!reqCardOpen && !reqPanelOpen && !routesOpen && !weekendOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
   </div>;
 }
