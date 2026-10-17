@@ -24,11 +24,11 @@ const view = (over: Partial<CoachView> = {}): CoachView => ({
   screen: "floor", storyOpen: false, webOpen: false, cardOpen: false, acted: false, ...over,
 });
 
-test("开局那个上午：指着柜前的顾客，说先点一个人看看她是谁", () => {
+test("开局那个上午：指着柜前顾客，教一次判断并允许不卖", () => {
   const tip = coachTip(view(), floor(), PEOPLE, []);
   assert.ok(tip, "新档进楼层该有一句");
   assert.equal(tip.step, "open");
-  assert.equal(tip.text, "页顶那条是这周的关：周日打烊前把钱做到那个数。先点一位客人，看看她是谁。");
+  assert.equal(tip.text, "先接一位客人。看一处、问一句，再挑货试试；卖不合适，也可以先不卖。周末，业绩、客情、守客任选一条过关。");
   assert.deepEqual(tip.anchor, { kind: "actor", id: "shen" }); // 柜前的优先于中庭的
   assert.equal(tip.side, "above");
 });
@@ -38,10 +38,10 @@ test("开局那句只在第 1 天上午讲：换了天/时段就不再冒出来"
   assert.equal(coachTip(view(), floor({ day: 2, slot: 0 }), PEOPLE, []), null);
 });
 
-test("第一次打开人物卡：指着那排动作，说每件都花精力", () => {
+test("第一次打开人物卡：接待入口与首次探问的成本说清楚", () => {
   const tip = coachTip(view({ cardOpen: true }), floor(), PEOPLE, []);
   assert.equal(tip?.step, "card");
-  assert.equal(tip.text, "下面那排是你能做的事，每件都花精力。");
+  assert.equal(tip.text, "想了解她要什么，就点「接待」。看一处、问一句才开始花精力；也可以先做别的事。");
   assert.deepEqual(tip.anchor, { kind: "verbs" });
   assert.equal(tip.side, "above");
 });

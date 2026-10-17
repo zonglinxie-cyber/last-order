@@ -1,0 +1,6 @@
+重放路径：开局跳过引导，同种子。诊断在第14天后主动停止，未作为通过结果。
+从运行中的 Playwright trace 读取：
+call@2583，world-drawer .world-verbs button nth=0，click 用时4132ms；world-toast「你帮裴岚把手上的活接了一截。」反复 intercepts pointer events，提示消失后才完成点击。
+call@2723，nth=1，click 用时4124ms；world-toast「你帮方敏把手上的活接了一截。」同样拦截。
+缩小复现：第5天傍晚、精力20、方敏与周姐在场，帮方敏后，当帧 elementFromPoint 命中 world-toast 而非「托她照看」。320与390均复现；world-floor新增两条断言在修复前均失败。
+整季首次超时本身未稳定复现；以上证据直接证明独立且相关的按钮遮挡，修复后仍须重跑整季，不把一次重跑越过卡点当作解决。

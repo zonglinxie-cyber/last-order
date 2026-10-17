@@ -83,6 +83,28 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".world-toast")).toContainText("招呼梅女士");
     });
 
+    test("动作结果不遮住下一步：帮忙后立刻能托同事照看", async ({ page }) => {
+      await enter(page, envelope({ day: 5, slot: 2, energy: 20,
+        present: { fangmin: "counter", roman: "counter", zhou: "cashier", luyao: "rival" } }));
+      await page.getByRole("button", { name: /查看方敏/ }).click();
+      await page.getByRole("button", { name: /帮一把/ }).click();
+      const feedback = page.locator(".world-toast");
+      await expect(feedback).toContainText("你帮方敏");
+      await expect(feedback).toBeInViewport({ ratio: 1 });
+      // 当帧查中心点，不等提示自动消失后才假装能点。
+      expect(await page.locator(".world-verbs button").evaluateAll(els => els.filter(el => {
+        const r = el.getBoundingClientRect();
+        return !el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      }).map(el => el.textContent))).toEqual([]);
+      await page.screenshot({ path: `../audit/first-sale-2026-10-18/toast-after-${width}.png` });
+      await page.getByRole("button", { name: /托她照看/ }).click();
+      await expect(page.locator(".world-pick")).toBeVisible();
+      await expect(feedback).toBeVisible();
+      await page.locator(".pick-targets button", { hasText: "周姐" }).click();
+      const world: World = await page.evaluate(k => JSON.parse(localStorage.getItem(k)!).world, SAVE_KEY);
+      expect(world.log.at(-1)?.text).toContain("周姐");
+    });
+
     test("完成一次接待：选货、件数、开给她", async ({ page }) => {
       await enter(page, envelope());
       await page.getByRole("button", { name: /查看梅女士/ }).click();
@@ -482,7 +504,7 @@ test.describe("新手引导 390×844", () => {
     await dismissCard(page);
     const coach = page.locator(".world-coach");
     await expect(coach).toBeVisible();
-    await expect(coach).toContainText("先点一位客人，看看她是谁");
+    await expect(coach).toContainText("先接一位客人。看一处、问一句");
     await expect(coach.getByText("苏蔓")).toBeVisible();
     await page.getByRole("button", { name: "跳过引导" }).click();
     await expect(coach).toHaveCount(0);
@@ -507,7 +529,7 @@ test.describe("新手引导 390×844", () => {
 
     // 换一档看「先点一个人」那句：只在开局那个上午讲，指着地图上的人，同样不许盖住顶栏按钮。
     await enter(page, envelope({ day: 1, slot: 0 }), false);
-    await expect(page.locator(".world-coach")).toContainText("先点一位客人，看看她是谁");
+    await expect(page.locator(".world-coach")).toContainText("先接一位客人。看一处、问一句");
     expect(await hitNext()).toBe(true);
   });
 });

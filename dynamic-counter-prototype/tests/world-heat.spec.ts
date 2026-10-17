@@ -27,6 +27,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("开季那一屏五条规矩都在，一条都没勾时说明就说这一句", async ({ page }) => {
       await openWorld(page, null);
+      await page.locator("summary", { hasText: "本季规矩" }).click();
       await expect(chips(page)).toHaveCount(HEAT_RULES.length);
       for (const rule of HEAT_RULES) {
         await expect(page.getByRole("button", { name: rule.word })).toHaveAttribute("aria-pressed", "false");
@@ -38,6 +39,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("勾两条就开季：柜上那副小样减半，说明各念一句，刷新之后还在", async ({ page }) => {
       await openWorld(page, null);
+      await page.locator("summary", { hasText: "本季规矩" }).click();
       await page.getByRole("button", { name: "小样减半" }).click();
       await page.getByRole("button", { name: "台账起点更低" }).click();
       const notes = page.locator(".world-heat-note");
@@ -57,6 +59,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("一条都不勾开出来的还是以前那副：小样 8 支、台账 55 起", async ({ page }) => {
       await openWorld(page, null);
+      await page.locator("summary", { hasText: "本季规矩" }).click();
       await page.getByRole("button", { name: "开这一季" }).click();
       await expect(page.locator(".world-bar")).toContainText("小样 8");
       const world = await page.evaluate(key => (JSON.parse(window.localStorage.getItem(key) ?? "{}") as { world: World }).world, SAVE_KEY);
@@ -107,6 +110,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
 
     test("勾选那一排点得着：每颗 ≥44px，整排不横向溢出", async ({ page }) => {
       await openWorld(page, null);
+      await page.locator("summary", { hasText: "本季规矩" }).click();
       const outside = await page.evaluate(() => [...document.querySelectorAll(".world-heat *")]
         .filter(el => (el as HTMLElement).getBoundingClientRect().width > 0)
         .filter(el => el.getBoundingClientRect().right > window.innerWidth + 1)

@@ -1,0 +1,64 @@
+[WebServer] (node:88814) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:88842) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:88885) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.4s)
+(node:89181) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.4s)
+
+
+  1) tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 ─────────────────────────
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "托她照看6 精力 · 再点一人",
+    + ]
+
+       96 |         const r = el.getBoundingClientRect();
+       97 |         return !el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    >  98 |       }).map(el => el.textContent))).toEqual([]);
+          |                                      ^
+       99 |       await page.screenshot({ path: `../audit/first-sale-2026-10-18/toast-after-${width}.png` });
+      100 |       await page.getByRole("button", { name: /托她照看/ }).click();
+      101 |       await expect(page.locator(".world-pick")).toBeVisible();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-floor.spec.ts:98:38
+
+    Error Context: test-results/world-floor-人情场-390×844-动作结果不遮住下一步：帮忙后立刻能托同事照看/error-context.md
+
+  2) tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 ─────────────────────────
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "托她照看6 精力 · 再点一人",
+    + ]
+
+       96 |         const r = el.getBoundingClientRect();
+       97 |         return !el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    >  98 |       }).map(el => el.textContent))).toEqual([]);
+          |                                      ^
+       99 |       await page.screenshot({ path: `../audit/first-sale-2026-10-18/toast-after-${width}.png` });
+      100 |       await page.getByRole("button", { name: /托她照看/ }).click();
+      101 |       await expect(page.locator(".world-pick")).toBeVisible();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-floor.spec.ts:98:38
+
+    Error Context: test-results/world-floor-人情场-320×568-动作结果不遮住下一步：帮忙后立刻能托同事照看/error-context.md
+
+  2 failed
+    tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 ──────────────────────────
+    tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 ──────────────────────────

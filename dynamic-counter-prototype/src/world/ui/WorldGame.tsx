@@ -112,6 +112,8 @@ type UiState = {
   /** 哪天看过「今天的请求」卡：同一天刷新不重弹 */
   reqSeen?: number;
   consults?: unknown;
+  /** 首日上午先接触客人；第一段柜上故事等接待收尾或主动推进时才抽。 */
+  openingPending?: boolean;
 };
 
 const restore = (): { world: World; ui: UiState } | null => {
@@ -131,8 +133,9 @@ const unreadableSave = (): boolean => {
 
 // —— 每个时段开头：落位 → 说书人抽一张。在场的人自己互动（传话、陆遥抢客）放在时段末，
 //     先让玩家动手：你这个时段没顾上的人，陆遥才带得走。
-const runPipeline = (w: World): { world: World; drawn: DrawnStorylet | null } => {
+const runPipeline = (w: World, deferStory = false): { world: World; drawn: DrawnStorylet | null } => {
   const next = beginSlot(w, PEOPLE, festivalsFor(w.season));
+  if (deferStory) return { world: next, drawn: null };
   const r = drawStorylet(next, PEOPLE, STORYLETS);
   return { world: r.world, drawn: r.drawn };
 };
@@ -260,7 +263,7 @@ const cueOpinion = (before: World, after: World, at: number) => {
 
 type CoachPos = { left: number; top: number; arrowX: number; below: boolean };
 
-function CoachLayer({ view, world }: { view: CoachView; world: World }) {
+function CoachLayer({ view, world, onServe }: { view: CoachView; world: World; onServe?: (id: PersonId) => void }) {
   const [seen, setSeen] = useState<CoachStep[]>(() => {
     try { return parseCoachSeen(window.localStorage.getItem(COACH_KEY)); } catch { return []; }
   });
@@ -313,7 +316,8 @@ function CoachLayer({ view, world }: { view: CoachView; world: World }) {
       const below = active.tip.side === "below";
       const left = Math.min(Math.max(cx - br.width / 2, 8), Math.max(8, lr.width - br.width - 8));
       const t = below ? ar.bottom - lr.top + 10 : ar.top - lr.top - 10 - br.height;
-      const top = Math.min(Math.max(t, 8), Math.max(8, lr.height - br.height - 8));
+      const header = layer.parentElement?.querySelector(".world-bar")?.getBoundingClientRect();
+      const top = Math.min(Math.max(t, header ? header.bottom - lr.top + 8 : 8), Math.max(8, lr.height - br.height - 8));
       const arrowX = Math.min(Math.max(cx - left, 16), Math.max(16, br.width - 16));
       setPos(prev => prev && prev.left === left && prev.top === top && prev.arrowX === arrowX && prev.below === below
         ? prev : { left, top, arrowX, below });
@@ -331,6 +335,13 @@ function CoachLayer({ view, world }: { view: CoachView; world: World }) {
         <img src={asset("/assets/game/staff-portraits/suman.png")} alt="" aria-hidden="true" /><b>苏蔓</b>
       </header>
       <p className="wc-text">{active.tip.text}</p>
+      {active.tip.step === "open" && active.tip.anchor.kind === "actor" && onServe
+        && availableVerbs(world, PEOPLE, [active.tip.anchor.id]).includes("serve") && <button type="button" className="wc-start"
+          onClick={() => {
+            if (active.tip.anchor.kind !== "actor") return;
+            const id = active.tip.anchor.id;
+            commit(active.tip.step); setActive(null); onServe(id);
+          }}>接待{nameOf(active.tip.anchor.id)}</button>}
       <div className="wc-actions">
         <button type="button" className="wc-ok" onClick={() => { commit(active.tip.step); setActive(null); }}>知道了</button>
         <button type="button" className="wc-skip" onClick={() => {
@@ -349,6 +360,8 @@ export default function WorldGame() {
   const [world, setWorld] = useState<World>(() => boot?.world ?? newWorld("empty", PEOPLE));
   const [phase, setPhase] = useState<"intro" | "play" | "report" | "season">("intro");
   const [pending, setPending] = useState<DrawnStorylet | null>(null);
+  const [openingPending, setOpeningPending] = useState(() => boot?.ui.openingPending === true
+    && boot.world.season === 1 && boot.world.day === 1 && boot.world.slot === 0);
   const [report, setReport] = useState<DayReport | null>(boot?.ui.report ?? null);
   const [dayBase, setDayBase] = useState<DayBase | null>(boot?.ui.dayBase ?? null);
   const [selected, setSelected] = useState<PersonId | null>(null);
@@ -411,8 +424,9 @@ export default function WorldGame() {
       dayBase: dayBase ?? undefined,
       reqSeen: reqSeenDay || undefined,
       consults: saveConsults(world, consults),
+      openingPending: openingPending || undefined,
     } satisfies UiState,
-  }), [phase, world, pending, report, dayBase, reqSeenDay, consults]);
+  }), [phase, world, pending, report, dayBase, reqSeenDay, consults, openingPending]);
   useEffect(() => {
     if (phase === "intro") return;
     try { window.localStorage.setItem(SAVE_KEY, envelope); } catch { /* 私密模式存不进就不存 */ }
@@ -478,7 +492,8 @@ export default function WorldGame() {
     writeHeatPick(heat);
     const base: DayBase = { day: fresh.day, money: fresh.money, opinion: { ...fresh.opinion } };
     setDayBase(base);
-    const { world: w, drawn } = runPipeline(fresh);
+    const { world: w, drawn } = runPipeline(fresh, true);
+    setOpeningPending(true);
     prevWorld.current = w;
     setWorld(w); setPending(drawn); setReport(null);
     setSelected(null); setPick(null); setServing(false); setWebOpen(false); setResult(null); setConsults({});
@@ -489,6 +504,7 @@ export default function WorldGame() {
     const saved = restore();
     if (!saved) { startNew(); return; }
     const { world: w, ui } = saved;
+    setOpeningPending(ui.openingPending === true && w.season === 1 && w.day === 1 && w.slot === 0);
     prevWorld.current = w;
     setDayBase(ui.dayBase ?? { day: w.day, money: w.money, opinion: { ...w.opinion } });
     setReqSeenDay(ui.reqSeen ?? 0);
@@ -503,9 +519,23 @@ export default function WorldGame() {
   };
 
   // —— 时段推进 ——
+  const showOpeningStory = (w: World) => {
+    if (!openingPending) return;
+    const next = drawStorylet(w, PEOPLE, STORYLETS);
+    setOpeningPending(false); setWorld(next.world); setPending(next.drawn);
+    if (next.drawn) sfx("card");
+  };
   const nextTurn = () => {
     setSelected(null); setPick(null); setServing(false); setResult(null); setConsults({});
-    const closed = Object.values(consults).filter(c => c.begun).reduce((w, c) => leaveServe(w, PEOPLE, c.person, c.mood), world);
+    let closed = Object.values(consults).filter(c => c.begun).reduce((w, c) => leaveServe(w, PEOPLE, c.person, c.mood), world);
+    // 可以不接待直接往下玩，但先把这时段的故事讲完，不暗中丢掉首张卡。
+    if (openingPending) {
+      const next = drawStorylet(closed, PEOPLE, STORYLETS);
+      setOpeningPending(false);
+      if (next.drawn) { setWorld(next.world); setPending(next.drawn); sfx("card"); return; }
+      // 没有合法卡也带上抽数结果，再走正常时段结算。
+      closed = next.world;
+    }
     const settled = ambient(closed, PEOPLE); // 这个时段末：在场的人互相传话，陆遥带走你没顾上的人
     // 客人被对面请走是这一档唯一要在这里补的一声：它不改钱也不改比分，世界那一侧的时刻判据认不出它。
     if (coachPoached(settled, PEOPLE) && !coachPoached(world, PEOPLE)) sfx("down");
@@ -560,9 +590,11 @@ export default function WorldGame() {
     }
     setSelected(id); setServing(false);
   };
-  const openServe = () => {
-    if (!person || !salePerson) return;
-    if (!consults[person.id]) setConsults(m => ({ ...m, [person.id]: openConsult(world, person) }));
+  const openServe = (id = selected) => {
+    const guest = PEOPLE.find(p => p.id === id);
+    if (!guest?.skin || (!consults[guest.id]?.begun && !availableVerbs(world, PEOPLE, [guest.id]).includes("serve"))) return;
+    setSelected(guest.id); setPick(null);
+    if (!consults[guest.id]) setConsults(m => ({ ...m, [guest.id]: openConsult(world, guest) }));
     setServing(true);
   };
   // 看 / 问 / 试的第一下才算正式接手：精力在这一刻花（beginServe），之后再点不重复扣。
@@ -591,9 +623,11 @@ export default function WorldGame() {
   };
   const stopServe = () => {
     if (!person || !consult) return;
-    if (consult.begun) setWorld(leaveServe(world, PEOPLE, person.id, consult.mood));
+    const next = consult.begun ? leaveServe(world, PEOPLE, person.id, consult.mood) : world;
+    setWorld(next);
     setConsults(m => { const { [person.id]: _, ...rest } = m; return rest; });
     setSelected(null); setServing(false);
+    if (consult.begun) showOpeningStory(next);
   };
   const chooseStory = (index: number) => {
     if (!pending) return;
@@ -673,18 +707,32 @@ export default function WorldGame() {
       <img className="world-intro-bg" src={asset("/assets/game/mall-floor.jpg")} alt="" aria-hidden="true" />
       <div className="world-intro-shade" />
       <section className="world-intro-card">
-        <p className="world-intro-eyebrow">AURORA · 绮光</p>
-        <h1>人情场</h1>
-        <p className="world-intro-copy">一季四关，一周一关，三条线任选一条过关：业绩到罗曼报的数；客情让 {CARE_STEPS[0]} 位不同客人真正信得过你；守客从对面陆遥手里接住 {GUARD_STEPS[0]} 位不同客人。客情到 {CARE_STEPS.slice(1).join(" / ")} 位加星；守客到 {GUARD_STEPS.slice(1).join(" / ")} 位、并挡住 {GUARD_RATE_STEPS.slice(1).map(x => `${Math.round(x * 100)}%`).join(" / ")} 的公开威胁加星；业绩赢对面、超额 {Math.round((WEEK_EXCEED_RATE - 1) * 100)}% 也加星。</p>
-        <p className="world-intro-copy world-intro-sub">商场一层是一张人情网：你怎么待一个人，会顺着网传出去，没见过面的人进门时已经对你有了看法。</p>
-        {bestStars > 0 && <p className="world-intro-best">最好的一季：{bestStars} / 12 颗星</p>}
-        {stale && <p className="world-intro-stale">柜上留过一份记录，这一版读不出来了：存档格式换过，或是上一次存到一半被打断。开新一季，旧的那一份就接不回来了。</p>}
-        <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
-          {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
-        </button>
-        {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}
-        <HeatPicker heat={heat} onChange={setHeat} />
-        <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+        <MobileScroll className="world-intro-scroll">
+          <p className="world-intro-eyebrow">AURORA · 绮光</p>
+          <h1>人情场</h1>
+          <p className="world-intro-hook">这一单怎么卖，整层楼都会记得。</p>
+          <p className="world-intro-copy">看懂客人的心事，接住对手抢的人。周末算业绩，也算谁还愿意回来。</p>
+          <p className="world-intro-copy world-intro-sub">一季四关，一周一关。做业绩、养熟客、守住客人，三条路任选。</p>
+          {bestStars > 0 && <p className="world-intro-best">最好的一季：{bestStars} / 12 颗星</p>}
+          {stale && <p className="world-intro-stale">柜上留过一份记录，这一版读不出来了：存档格式换过，或是上一次存到一半被打断。开新一季，旧的那一份就接不回来了。</p>}
+          <details className="world-intro-details">
+            <summary>怎么过关</summary>
+            <p>每周三条线，任选一条过关：业绩到罗曼报的数；客情让 {CARE_STEPS[0]} 位不同客人信得过你；守客从陆遥手里接住 {GUARD_STEPS[0]} 位不同客人。</p>
+            <p>客情到 {CARE_STEPS.slice(1).join(" / ")} 位加星；守客到 {GUARD_STEPS.slice(1).join(" / ")} 位、并挡住 {GUARD_RATE_STEPS.slice(1).map(x => `${Math.round(x * 100)}%`).join(" / ")} 的公开威胁加星；业绩赢对面、超额 {Math.round((WEEK_EXCEED_RATE - 1) * 100)}% 也加星。具体进度随时点楼层页顶查看。</p>
+          </details>
+          <details className="world-intro-details">
+            <summary>本季规矩 · {heat.length ? `已选 ${heat.length} 条` : "标准难度"}</summary>
+            <HeatPicker heat={heat} onChange={setHeat} />
+          </details>
+        </MobileScroll>
+        <div className="world-intro-foot">
+          <button className="world-primary" type="button" onClick={boot ? continueGame : startNew}>
+            {boot ? `继续 · 第 ${boot.world.season} 季 · 第 ${boot.world.day} 天 ${SLOT_WORD[boot.world.slot]}` : "开这一季"}
+          </button>
+          {!boot && <p className="world-intro-entry-note">先接一位客人，边做边学。</p>}
+          {boot && <button className="world-ghost" type="button" onClick={startNew}>重新开一季</button>}
+          <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
+        </div>
       </section>
       {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
     </div>;
@@ -945,11 +993,9 @@ export default function WorldGame() {
       </MobileScroll>
     </section>
 
-    {/* 抽屉盖住了「现场」栏，动作的结果才在这里说一遍；抽屉收起时就只在现场栏里念。 */}
-    {result && person && <p className="world-toast" role="status">{result}</p>}
-
     {person && !serving && !receipt && <div className="world-drawer">
-      <PersonCard person={person} world={world} people={PEOPLE}
+      {/* 抽屉盖住「现场」时在人物卡正文念结果，不遮住动作按钮。 */}
+      <PersonCard person={person} world={world} people={PEOPLE} feedback={result}
         rival={rivalWord && rivalTargets(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
         onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
@@ -959,7 +1005,7 @@ export default function WorldGame() {
           <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
         </div>
       </div> : <div className="world-verbs">
-        {midConsult && <button type="button" className="resume" onClick={openServe}><b>接着谈</b><small>这一单的劲已经花过</small></button>}
+        {midConsult && <button type="button" className="resume" onClick={() => openServe()}><b>接着谈</b><small>这一单的劲已经花过</small></button>}
         {verbs.filter(v => !(midConsult && v === "serve")).map(v => <button key={v} type="button" onClick={() => v === "serve" ? openServe() : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力</small></button>)}
         {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力 · 再点一人</small></button>)}
         {!midConsult && verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
@@ -970,7 +1016,7 @@ export default function WorldGame() {
       onAct={consultAct} onCommit={doServe} onLeave={stopServe}
       onChange={patch => setConsults(m => ({ ...m, [salePerson.id]: { ...m[salePerson.id], ...patch } }))}
       onClose={() => { setServing(false); setSelected(null); }} />}
-    {receipt && <SaleReceipt {...receipt} onClose={() => { setReceipt(null); setSelected(null); }} />}
+    {receipt && <SaleReceipt {...receipt} onClose={() => { setReceipt(null); setSelected(null); showOpeningStory(world); }} />}
 
     {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqSeenDay(world.day)} />}
@@ -995,6 +1041,6 @@ export default function WorldGame() {
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
-    {!reqCardOpen && !reqPanelOpen && !routesOpen && <CoachLayer world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
+    {!reqCardOpen && !reqPanelOpen && !routesOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
   </div>;
 }

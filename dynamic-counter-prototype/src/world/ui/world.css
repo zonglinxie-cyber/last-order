@@ -67,10 +67,10 @@
 .world-feed p:first-child:not(.feed-empty) { color:#ffe8b6; }
 
 /* —— 一句话结果 —— */
-.world-toast { position:absolute; z-index:70; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); width:max-content; max-width:88%; margin:0; transform:translateX(-50%); padding:10px 14px; border:1px solid #f0cf9144; border-radius:12px; background:#2a1713f2; color:#ffe8b6; font-size:12px; line-height:1.5; text-align:center; box-shadow:0 8px 24px #000a; }
+.world-toast { margin:2px 0 10px; padding:10px 12px; border:1px solid #f0cf9144; border-radius:12px; background:#2a1713f2; color:#ffe8b6; font-size:12px; line-height:1.5; }
 
 /* —— 三刻的牌：成交 / 回头客 / 比分翻面。同一时刻只念优先级最高的那一句（cues.ts 的 RANK）。
-   放在楼层顶边那条空带上，不跟 .world-toast（底部、念引擎原话）抢位置，也不报第二次数。
+   放在楼层顶边那条空带上，不跟 .world-toast（人物卡正文、念引擎原话）抢位置，也不报第二次数。
    z-index 85：早晨那一笔回头客是点「下一时段」来的，那一刻说书人的新卡已经压在上面（.world-story 是 80），
    牌要走在卡前面 —— 这一声本来就不该等玩家把卡读完才听见。 —— */
 .world-moment { position:absolute; z-index:85; top:10px; left:50%; transform:translateX(-50%); margin:0; padding:7px 14px; border-radius:999px; border:1px solid #f0cf9166; background:#2a1713f0; color:#ffe8b6; font:700 13px 'Noto Serif SC',serif; letter-spacing:.06em; white-space:nowrap; text-shadow:0 1px 3px #000; box-shadow:0 6px 20px #0009; pointer-events:none; animation:world-moment 1.9s ease forwards; }
@@ -229,7 +229,15 @@
 .world-intro-screen { display:block; }
 .world-intro-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:saturate(.8) contrast(1.02); }
 .world-intro-shade { position:absolute; inset:0; background:linear-gradient(180deg,#12090b80 0,transparent 34%,#120a0ab8 62%,#100909f0 100%); }
-.world-intro-card { position:absolute; left:15px; right:15px; bottom:calc(20px + env(safe-area-inset-bottom)); padding:18px 16px 16px; border:1px solid #f0cf912e; border-radius:20px; background:linear-gradient(145deg,rgba(32,17,18,.93),rgba(16,9,9,.97)); box-shadow:0 20px 42px #0009; }
+.world-intro-card { display:flex; flex-direction:column; height:590px; max-height:calc(100% - var(--top-inset) - 32px - env(safe-area-inset-bottom)); position:absolute; left:15px; right:15px; bottom:calc(20px + env(safe-area-inset-bottom)); padding:18px 16px 16px; border:1px solid #f0cf912e; border-radius:20px; background:linear-gradient(145deg,rgba(32,17,18,.93),rgba(16,9,9,.97)); box-shadow:0 20px 42px #0009; }
+.world-intro-scroll.mobile-page { position:relative; inset:auto; flex:1 1 auto; min-height:0; height:auto; }
+.world-intro-scroll .mobile-scroll-content { padding:0; }
+.world-intro-foot { flex:none; padding-top:10px; }
+.world-intro-hook { margin:0 0 12px; color:#f0cf8b; font:600 16px/1.65 'Noto Serif SC',serif; }
+.world-intro-details { border-top:1px solid #f0cf9126; color:#c9b8aa; font-size:12px; line-height:1.7; }
+.world-intro-details summary { min-height:44px; padding:10px 0; cursor:pointer; color:#e8d4b7; }
+.world-intro-details p { margin:0 0 10px; }
+.world-intro-entry-note { margin:7px 0 0; text-align:center; color:#c9b8aa; font-size:12px; }
 .world-intro-eyebrow { margin:0 0 4px; color:#c7a993; font-size:12px; letter-spacing:.14em; }
 .world-intro-card h1 { margin:0 0 8px; color:#ffe8b6; font:700 30px 'Noto Serif SC',serif; letter-spacing:.1em; }
 .world-intro-copy { margin:0 0 14px; color:#eee0d5; font-size:13px; line-height:1.7; }
@@ -256,6 +264,7 @@
 .wc-text { margin:0 0 8px; color:#f2e6d8; font-size:13px; line-height:1.6; }
 .wc-actions { display:flex; gap:8px; }
 .wc-actions button { flex:1 1 0; min-height:44px; border-radius:10px; font:600 13px 'Noto Serif SC',serif; }
+.wc-start { width:100%; min-height:44px; margin:0 0 6px; border:1px solid #f0cf9177; border-radius:10px; background:#f0c978; color:#2a1713; font:600 14px 'Noto Serif SC',serif; }
 .wc-ok { border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
 .wc-skip { border:1px solid #ffffff1e; background:transparent; color:#a99689; }
 

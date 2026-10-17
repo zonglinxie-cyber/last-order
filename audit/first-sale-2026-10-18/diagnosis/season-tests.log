@@ -1,0 +1,83 @@
+[WebServer] (node:36505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:36691) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 11 tests using 1 worker
+
+(node:36702) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+〔知道了〕开局世界种子：world-mywpiww0-6620
+〔知道了〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔知道了〕整季用时 203.3s，走了 141 步，记下 298 行流水、0 条问题
+〔知道了〕逐时段明细与问题清单：../audit/first-sale-2026-10-18/season/report-know.json
+〔知道了〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔知道了〕第 2 季前 3 天开出来的跨季卡：arc-tangke-sheet、arc-fangmin-line、arc-qiaowan-parrot、arc-fangmin-name、arc-fangmin-who、arc-roman-columns、arc-tangke-stock、arc-fangmin-end、arc-roman-quota、arc-qiaowan-face、arc-roman-late、arc-roman-end
+  ✓   1 tests/world-season-smoke.spec.ts:597:5 › 人情场整季冒烟 · 全程点知道了 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (3.8m)
+〔跳过引导〕开局世界种子：world-mywpiww0-6620
+〔跳过引导〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 4 天 上午 → 小结页（）
+  ✘   2 tests/world-season-smoke.spec.ts:597:5 › 人情场整季冒烟 · 开局跳过引导 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (42.0s)
+  -   3 tests/world-season-smoke.spec.ts:735:3 › 季末回顾页 › 结局当标题，高光、三本账与三颗按钮都在
+  -   4 tests/world-season-smoke.spec.ts:749:3 › 季末回顾页 › 走完的线按落点标题念，不许把内部字段名摊给玩家
+  -   5 tests/world-season-smoke.spec.ts:768:3 › 季末回顾页 › 本子翻过面了，但不许看着像讲完：第 2 幕那一档留一句钩子
+  -   6 tests/world-season-smoke.spec.ts:778:3 › 季末回顾页 › 倒数第二幕翻过面：钩子不许跟着幕号一起被写死掉
+  -   7 tests/world-season-smoke.spec.ts:787:3 › 季末回顾页 › 内容讲到最晚的那一季末：钩子要收回去，不许年年都喊下一季
+  -   8 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中
+  -   9 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中
+  -  10 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中
+  -  11 tests/world-season-smoke.spec.ts:805:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中
+
+
+  1) tests/world-season-smoke.spec.ts:597:5 › 人情场整季冒烟 · 开局跳过引导 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 ─
+
+    Error: 点人做动作 第1次 · floor · 第 1 季第 5 天 傍晚 · 卡住：Error: 单步超过 5000ms｜最上层：header.world-bar@30 / button.wf-actor@78 / button.wf-actor@76 / button.wf-actor@83 / button.wf-actor@47 / button.wf-actor@50 / button.wf-actor@45 / button.wf-actor@89 / button.wf-actor@97 / button.wf-actor@64 / button.wf-actor@115 / button.wf-actor@101｜截图 ../audit/first-sale-2026-10-18/season/stuck-跳过引导-floor-第-1-季第-5-天-傍晚-点人做动作-第1次.png
+
+      74 |     const saw = `卡住：${String(err)}｜最上层：${top}｜截图 ${shot}`;
+      75 |     note({ where: where(), did, saw });
+    > 76 |     throw new Error(`${did} · ${where()} · ${saw}`);
+         |           ^
+      77 |   } finally {
+      78 |     clearTimeout(timer);
+      79 |   }
+        at step (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-season-smoke.spec.ts:76:11)
+        at playSlots (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-season-smoke.spec.ts:500:20)
+        at playSeason (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-season-smoke.spec.ts:585:3)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-season-smoke.spec.ts:598:17
+
+    Error Context: test-results/world-season-smoke-人情场整季冒烟-c11d5--28-天散场，过季末回顾页，再进第-2-季玩-3-天/error-context.md
+
+  1 failed
+    tests/world-season-smoke.spec.ts:597:5 › 人情场整季冒烟 · 开局跳过引导 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 ──
+  9 did not run
+  1 passed (4.6m)

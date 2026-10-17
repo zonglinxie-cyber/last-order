@@ -1,0 +1,9 @@
+验证口径：2026-10-18，本地 Chromium，320×568 与 390×844；非实体手机/真人留存验收。
+规则：npm run test:rules，273/273。
+浏览器：90条不同用例。world-floor 40、world-newbie 12、world-opening 9、world-consult 6、world-heat 12、world-season-smoke 11。
+final-related.log：60/61；320结果提示贴滚动区边缘时被半像素裁切，已加2px留白。toast-green.log 两尺寸2/2复跑，覆盖那条失败；其余通过用例按无关改动复用。
+final-season.log：最终接待、加难与完整两条整季路径29/29。两条路径均完成28天、进入第二季并继续3天；notes、errors、rawFields均为空。
+受影响spec与world-coach单测用临时tsconfig单独tsc通过；npm run build通过；28个移动运行时文件锁检查通过。构建仍有既有包体大小提示。
+规则引擎、内容、咨询判定、周目标与数据契约与49b0d14一致，上一轮20种子×4打法×2季模拟器签名验证复用；UI首张剧情时序由本轮真实新档及整季浏览器检查覆盖。
+首次整季跳过引导在第5天出现超时；独立复现证明旧底部结果提示遮挡动作按钮，修复与红绿验证见diagnosis/及toast-before/after截图。未提高超时。
+所有被回归测试覆盖的旧audit文件已恢复到本轮开始前的字节；新证据单独归档。

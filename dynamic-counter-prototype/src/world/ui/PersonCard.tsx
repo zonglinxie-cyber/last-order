@@ -5,7 +5,7 @@ import { clientNotes, TRAIT_LABEL } from "../consult.ts";
 import { visitContext } from "../visits.ts";
 import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCarePeople, weekGuardedPeople } from "../target.ts";
 import { ageAtSeason } from "../content/people.ts";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { MobileScroll } from "../../mobile";
 import { PLAYER, type Person, type PersonId, type World } from "../types.ts";
 import { bondKind, bondWarmth, neighborsOf } from "./bonds.ts";
@@ -17,10 +17,16 @@ type PersonCardProps = {
   people: Person[];
   /** 陆遥这一时段盯的正是她时由楼层传进来（判据在引擎，人物卡不接引擎）。 */
   rival?: { title: string; howTo: string; held: boolean };
+  /** 最近动作的原话放进正文，不盖住下一步按钮。 */
+  feedback?: string | null;
   onClose: () => void;
 };
 
-export function PersonCard({ person, world, people, rival, onClose }: PersonCardProps) {
+export function PersonCard({ person, world, people, rival, feedback, onClose }: PersonCardProps) {
+  const cardRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (feedback) cardRef.current?.querySelector(".pc-scroll .mobile-scroll")?.scrollTo({ top: 0 });
+  }, [feedback]);
   const notes = clientNotes(world, person);
   const today = visitContext(world, person);
   const customer = person.role === "customer";
@@ -38,7 +44,7 @@ export function PersonCard({ person, world, people, rival, onClose }: PersonCard
   const aboutPlayer = useMemo(() => world.memories
     .filter(memory => memory.holder === person.id && memory.subject === PLAYER), [world.memories, person.id]);
 
-  return <aside className="person-card" aria-label={`${person.name}的人物卡`}>
+  return <aside className="person-card" ref={cardRef} aria-label={`${person.name}的人物卡`}>
     <header className="pc-head">
       <span className={"pc-avatar" + (person.portrait ? "" : " letter")}>
         {person.portrait ? <img src={person.portrait} alt="" aria-hidden="true" /> : <b aria-hidden="true">{person.name.slice(0, 1)}</b>}
@@ -50,6 +56,7 @@ export function PersonCard({ person, world, people, rival, onClose }: PersonCard
       <button className="pc-close" type="button" aria-label="关闭人物卡" onClick={onClose}>×</button>
     </header>
     <MobileScroll className="pc-scroll">
+      {feedback && <p className="world-toast" role="status">{feedback}</p>}
       <p className="pc-opinion">{ta(person)}看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
       <p className="pc-tempers">{person.tempers.map(t => TEMPER_WORD[t]).join(" · ")}</p>
       {today && <section className="pc-section" aria-label="今天的来意">

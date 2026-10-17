@@ -1,0 +1,13 @@
+[WebServer] (node:7589) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:7623) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:7638) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.5s)
+  ✓  2 tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.3s)
+
+  2 passed (7.5s)

@@ -60,6 +60,9 @@ async function step<T>(page: Page, did: string, where: () => string, label: stri
   } catch (err) {
     const shot = shotPath(label, where(), did);
     await page.screenshot({ path: shot }).catch(() => undefined);
+    // 只保存本测试创建的新档，便于把整季中途的问题缩成一次可重复操作。
+    const save = await page.evaluate(key => localStorage.getItem(key), SAVE_KEY).catch(() => null);
+    if (save) writeFileSync(shot.replace(/\.png$/, ".save.json"), save);
     // 谁压在最上面：把卡住这一步的那层浮层一并记下来
     const top = await page.evaluate(() => {
       const layers = [...document.querySelectorAll<HTMLElement>("body *")]
