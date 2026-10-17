@@ -1,3 +1,4 @@
+import { recentlyPurchased } from "../src/world/purchases.ts";
 // 人情场无界面模拟器：四种玩法风格 × N 个种子 × 28 天 × 可选多季，量"结果有多少种"。
 // 跑法：node --experimental-strip-types tests/world-sim.ts [种子数，默认 16] [季数，默认 1]
 // 季数 ≥2 时第 2 季起用 nextSeason 接着上一季的世界跑，并报告相对上一季谁倒戈了。
@@ -7,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
-  BUY_INTERVAL_DAYS, HARD_SELL_COMPLIANCE, SERVE_REFUSE_OPINION, resolveServe,
+  HARD_SELL_COMPLIANCE, SERVE_REFUSE_OPINION, resolveServe,
   newWorld, nextSeason, qualityOf, rivalTargets, rivalGuarded, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
@@ -52,8 +53,8 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
     case "honest": {
       // 认真卖货会挑当前能开的对症单，不把刚买过、今天不买的人反复接一遍。
       const offers = options.filter(c => c.verb === "serve" && untouched(c)).flatMap(call => {
-        const id = call.targets[0], bought = qualityOf(w, `bought:${id}`);
-        if ((bought > 0 && w.day - bought < BUY_INTERVAL_DAYS) || (w.opinion[id] ?? 0) <= SERVE_REFUSE_OPINION) return [];
+        const id = call.targets[0];
+        if (recentlyPurchased(w, id) || (w.opinion[id] ?? 0) <= SERVE_REFUSE_OPINION) return [];
         const p = visitPerson(w, personOf(people, id));
         return SHELF_IDS.filter(product => fitOfPerson(p, product) >= POSITIVE_FIT).map(product => {
           const units = shelfUnits(p, product, "positive", p.skin!.maxUnits);

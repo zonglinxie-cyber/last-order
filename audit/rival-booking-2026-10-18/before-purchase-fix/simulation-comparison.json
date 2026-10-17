@@ -1,0 +1,57 @@
+{
+  "baseline": "b5f0302; reuse audit/return-origin-2026-10-18/sim-after.log; unchanged world-sim.ts",
+  "before": {
+    "signatures": [
+      "honest      20/20    min 145840 / med 156540 / max 161280 min 98 / med 100 / max 100 min 61 / med 74 / max 98",
+      "pushy       20/20    min 26880 / med 54240 / max 74720 min 8 / med 22 / max 46 min 0 / med 0 / max 3",
+      "social      20/20    min 77060 / med 90260 / max 103720 min 97 / med 100 / max 100 min 31 / med 74 / max 100",
+      "random      20/20    min 13620 / med 33350 / max 48360 min 33 / med 52 / max 74 min 0 / med 2 / max 41",
+      "honest      20/20    min 140920 / med 149780 / max 157320 min 99 / med 100 / max 100 min 46 / med 77 / max 95",
+      "pushy       20/20    min 31360 / med 47600 / max 78420 min 0 / med 24 / max 51 min 0 / med 0 / max 8",
+      "social      20/20    min 85820 / med 97700 / max 115020 min 99 / med 100 / max 100 min 41 / med 76 / max 97",
+      "random      20/20    min 14000 / med 28520 / max 59410 min 19 / med 45 / max 71 min 0 / med 2 / max 14"
+    ],
+    "dominance": [
+      "没有哪种风格在所有种子上都最优"
+    ],
+    "seasonStars": [
+      "  honest   一季星数 min 10 / 中位 11 / max 12（满 12）· 周赢对面 88%",
+      "  pushy    一季星数 min 1 / 中位 4 / max 7（满 12）· 周赢对面 17%",
+      "  social   一季星数 min 8 / 中位 11 / max 12（满 12）· 周赢对面 100%",
+      "  random   一季星数 min 0 / 中位 1 / max 3（满 12）· 周赢对面 3%"
+    ],
+    "scores": [
+      "  honest   对面 min 59060 / med 85120 / max 115020 · 成交 min 34 / med 51 / max 59 单 · 领先 20/打平 0/落后 0",
+      "  pushy    对面 min 121840 / med 147680 / max 192720 · 成交 min 61 / med 71 / max 81 单 · 领先 0/打平 0/落后 20",
+      "  social   对面 min 0 / med 1960 / max 5880 · 成交 min 0 / med 1 / max 3 单 · 领先 20/打平 0/落后 0",
+      "  random   对面 min 59080 / med 99940 / max 124140 · 成交 min 39 / med 55 / max 71 单 · 领先 0/打平 0/落后 20"
+    ]
+  },
+  "after": {
+    "signatures": [
+      "honest      20/20    min 110820 / med 128800 / max 137120 min 95 / med 100 / max 100 min 41 / med 72 / max 100",
+      "pushy       20/20    min 32880 / med 50280 / max 70480 min 0 / med 25 / max 46 min 0 / med 0 / max 3",
+      "social      20/20    min 65240 / med 72160 / max 86960 min 87 / med 98 / max 100 min 38 / med 74 / max 99",
+      "random      20/20    min 9940 / med 28910 / max 40530 min 30 / med 48 / max 67 min 0 / med 4 / max 59",
+      "honest      20/20    min 87880 / med 114060 / max 131240 min 97 / med 100 / max 100 min 41 / med 80 / max 100",
+      "pushy       20/20    min 16340 / med 40580 / max 71120 min 0 / med 9 / max 26 min 0 / med 0 / max 2",
+      "social      20/20    min 62740 / med 75120 / max 86260 min 96 / med 100 / max 100 min 37 / med 70 / max 100",
+      "random      20/20    min 11660 / med 26060 / max 36580 min 15 / med 48 / max 62 min 0 / med 2 / max 8"
+    ],
+    "dominance": [
+      "没有哪种风格在所有种子上都最优"
+    ],
+    "seasonStars": [
+      "  honest   一季星数 min 4 / 中位 8 / max 10（满 12）· 周赢对面 39%",
+      "  pushy    一季星数 min 1 / 中位 4 / max 6（满 12）· 周赢对面 13%",
+      "  social   一季星数 min 6 / 中位 9 / max 11（满 12）· 周赢对面 83%",
+      "  random   一季星数 min 0 / 中位 1 / max 3（满 12）· 周赢对面 1%"
+    ],
+    "scores": [
+      "  honest   对面 min 81380 / med 129960 / max 193520 · 成交 min 53 / med 73 / max 92 单 · 领先 9/打平 0/落后 11",
+      "  pushy    对面 min 146160 / med 180020 / max 204360 · 成交 min 77 / med 94 / max 102 单 · 领先 0/打平 0/落后 20",
+      "  social   对面 min 26080 / med 36240 / max 54340 · 成交 min 20 / med 21 / max 24 单 · 领先 20/打平 0/落后 0",
+      "  random   对面 min 88680 / med 115320 / max 147140 · 成交 min 55 / med 70 / max 84 单 · 领先 0/打平 0/落后 20"
+    ]
+  }
+}

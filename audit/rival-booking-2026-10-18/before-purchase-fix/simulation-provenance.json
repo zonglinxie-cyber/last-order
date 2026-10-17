@@ -1,0 +1,11 @@
+{
+  "baselineCommit": "b5f03021599b6ceb60a324fb06364994f645c296",
+  "baselineSourceMatchesCommit": true,
+  "mismatches": [],
+  "currentEngineSha256": "06675d1a1cf380377070974a614af8005fcb1ac536ff769b51696c8797a39cce",
+  "fullSimulationBaseline": "audit/return-origin-2026-10-18/sim-after.log",
+  "consultCommands": [
+    "node --experimental-strip-types tests/consult-sim.ts 20 1",
+    "node --experimental-strip-types tests/consult-sim.ts 20 1 compete"
+  ]
+}

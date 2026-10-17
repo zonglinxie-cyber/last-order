@@ -406,3 +406,8 @@
 .has-double-rival .world-rival-plan span { max-width:100%; }
 .has-double-rival .world-map-view { flex-shrink:1; min-height:150px; }
 .has-double-rival .world-scene { min-height:96px; flex-shrink:0; }
+.world-rival-booking { flex:none; display:flex; align-items:center; justify-content:space-between; gap:6px; min-height:44px; padding:6px 12px; border:0; border-bottom:1px solid #e1c09b33; background:#2d263e; color:#f2dfc8; text-align:left; font-size:12px; }
+.world-rival-booking b { font-weight:600; }
+.world-rival-booking span { flex:none; color:#d9c5ef; }
+.has-rival-booking .world-map-view { flex-shrink:1; min-height:140px; }
+.has-rival-booking .world-scene { min-height:96px; flex-shrink:0; }

@@ -6,7 +6,7 @@ import { MobileScroll } from "../../mobile";
 import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
-  advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb,
+  advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb, inviteRivalGuest, rivalInviteBlock,
   beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
   verbOptions, verbEnergyNow, energyCeiling, rivalTargets, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
@@ -26,6 +26,7 @@ import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
 import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { currentArrival, publicAppointments } from "../arrivals.ts";
+import { rivalBookingNow } from "../rival-business.ts";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
 import { RequestsCard, RequestsPanel } from "./Requests.tsx";
@@ -900,7 +901,11 @@ export default function WorldGame() {
     return person ? [person] : [];
   });
 
-  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}`}>
+  const booking = rivalBookingNow(world);
+  const bookingPerson = booking && !booking.outcome && booking.person in world.present ? PEOPLE.find(p => p.id === booking.person) : undefined;
+  const bookingBlock = rivalInviteBlock(world);
+  const bookingWon = !!booking && world.qualities[`bought:${booking.person}`] === world.day;
+  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}${bookingPerson ? " has-rival-booking" : ""}`}>
     <header className="world-bar">
       <div className="world-bar-info">
         <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
@@ -924,6 +929,13 @@ export default function WorldGame() {
         </button>;
       })}
     </section>}
+
+    {booking && bookingPerson && <button type="button" className="world-rival-booking"
+      aria-label={bookingWon ? `已接下预约：${bookingPerson.name}` : `对面预约：${bookingPerson.name}，预计 ${yuan(booking.amount)}，本时段结束结账`}
+      onClick={() => tapPerson(booking.person)}>
+      <b>{bookingWon ? "✓ 预约接下" : booking.invited ? "已邀来比货" : "对面预约"} · {bookingPerson.name}</b>
+      <span>{bookingWon ? "已在你这边成交" : `${yuan(booking.amount)} · ${booking.invited ? "等你成交" : "可争取 ›"}`}</span>
+    </button>}
 
     <div className="world-map-view" ref={viewRef}
       onPointerDown={onPanDown} onPointerMove={onPanMove} onPointerUp={onPanUp} onPointerCancel={onPanUp}
@@ -997,6 +1009,7 @@ export default function WorldGame() {
     {person && !serving && !receipt && <div className="world-drawer">
       {/* 抽屉盖住「现场」时在人物卡正文念结果，不遮住动作按钮。 */}
       <PersonCard person={person} world={world} people={PEOPLE} feedback={result}
+        booking={booking && bookingPerson?.id === person.id ? { amount: booking.amount, invited: booking.invited, won: bookingWon, blocked: bookingBlock } : undefined}
         rival={rivalWord && rivalTargets(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
         onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
@@ -1006,15 +1019,21 @@ export default function WorldGame() {
           <button type="button" className="pick-cancel" onClick={() => setPick(null)}>算了</button>
         </div>
       </div> : <div className="world-verbs">
+        {booking && bookingPerson?.id === person.id && !booking.invited && !bookingWon && <button type="button" disabled={!!bookingBlock}
+          onClick={() => { const next = inviteRivalGuest(world, PEOPLE); setWorld(next); setResult(next.log.at(-1)?.text ?? null); }}>
+          <b>邀来比货</b><small>6 精力 · 1 份小样</small>
+        </button>}
         {midConsult && <button type="button" className="resume" onClick={() => openServe()}><b>接着谈</b><small>这一单的劲已经花过</small></button>}
         {verbs.filter(v => !(midConsult && v === "serve")).map(v => <button key={v} type="button" onClick={() => v === "serve" ? openServe() : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力</small></button>)}
         {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力 · 再点一人</small></button>)}
-        {!midConsult && verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
+        {!midConsult && bookingPerson?.id !== person.id && verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
       </div>}
     </div>}
 
     {salePerson && consult && <ConsultPanel world={world} person={salePerson} consult={consult}
-      arrival={currentArrival(world, salePerson.id, PEOPLE)}
+      arrival={booking?.person === salePerson.id && booking.invited && !bookingWon
+        ? { title: "这笔预约还在比较", line: "「我先比比看，还没决定买哪边。」本时段结束前成交才能接下。", scene: "" }
+        : currentArrival(world, salePerson.id, PEOPLE)}
       onAct={consultAct} onCommit={doServe} onLeave={stopServe}
       onChange={patch => setConsults(m => ({ ...m, [salePerson.id]: { ...m[salePerson.id], ...patch } }))}
       onClose={() => { setServing(false); setSelected(null); }} />}

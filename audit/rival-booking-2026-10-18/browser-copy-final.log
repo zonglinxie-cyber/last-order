@@ -1,0 +1,17 @@
+[WebServer] (node:68598) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:68626) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:68632) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-rival-business.spec.ts:31:3 › 对面预约 320×568 › 双目标与对面预约同时可点，邀来、刷新、正常成交确实接下这一单 (3.2s)
+  ✓  2 tests/world-rival-business.spec.ts:68:3 › 对面预约 320×568 › 可以放弃争取，按公开报价只结一次；刷新不会再收款 (416ms)
+  ✓  3 tests/world-rival-business.spec.ts:80:3 › 对面预约 320×568 › 小样不足解释原因，不扣精力；旧档没有预约也能继续 (474ms)
+  ✓  4 tests/world-rival-business.spec.ts:31:3 › 对面预约 390×844 › 双目标与对面预约同时可点，邀来、刷新、正常成交确实接下这一单 (3.1s)
+  ✓  5 tests/world-rival-business.spec.ts:68:3 › 对面预约 390×844 › 可以放弃争取，按公开报价只结一次；刷新不会再收款 (401ms)
+  ✓  6 tests/world-rival-business.spec.ts:80:3 › 对面预约 390×844 › 小样不足解释原因，不扣精力；旧档没有预约也能继续 (473ms)
+
+  6 passed (12.7s)

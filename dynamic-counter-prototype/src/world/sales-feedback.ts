@@ -1,5 +1,6 @@
 // 复盘只解释已经发生的结算，不查看预约队列中的未来退货结果。
-import { BUY_INTERVAL_DAYS, SERVE_REFUSE_OPINION } from "./engine.ts";
+import { SERVE_REFUSE_OPINION } from "./engine.ts";
+import { recentlyPurchased } from "./purchases.ts";
 import { PERFECT_MATCH, SHELF, fitOfPerson, shelfFitTier, type ShelfId } from "./shelf.ts";
 import { ROUTE_WORD, weekMoneyOf, weekResultOf, weekTargetOf } from "./target.ts";
 import { PLAYER, type Person, type World } from "./types.ts";
@@ -12,8 +13,7 @@ export type SaleFeedback = {
 };
 export function saleFeedback(before: World, after: World, person: Person, product: ShelfId, requestedUnits = 1, mood = 0): SaleFeedback {
   const amount = after.money - before.money;
-  const recent = (before.qualities[`bought:${person.id}`] ?? 0) > 0
-    && before.day - before.qualities[`bought:${person.id}`] < BUY_INTERVAL_DAYS;
+  const recent = recentlyPurchased(before, person.id);
   const hard = after.memories.slice(before.memories.length)
     .some(m => m.holder === person.id && m.subject === PLAYER && m.act === "hard-sell");
   const overAsk = amount > 0 && !hard && requestedUnits > (person.skin?.maxUnits ?? 0);

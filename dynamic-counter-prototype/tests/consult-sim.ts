@@ -1,3 +1,4 @@
+import { recentlyPurchased } from "../src/world/purchases.ts";
 // 人情场有限信息模拟：只读界面看得见的东西做接待决策，量"看了、问了、试了"到底值多少钱。
 // 跑法：node --experimental-strip-types tests/consult-sim.ts [种子数，默认 20] [季数，默认 1]
 //
@@ -10,9 +11,10 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  ambient, beginServe, beginSlot, BUY_INTERVAL_DAYS, doVerb, endDay, leaveServe, newWorld,
+  ambient, beginServe, beginSlot, doVerb, endDay, leaveServe, newWorld,
   nextSeason, qualityOf, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
   VERB_ENERGY,
+  inviteRivalGuest,
 } from "../src/world/engine.ts";
 import {
   askHer, lookAt, openConsult, PUSH_QUESTION, questionsOf, rememberConsult, spotsOf, tryOn,
@@ -28,12 +30,15 @@ import {
   weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, type WeekRoute,
 } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
+import { rivalBookingNow, RIVAL_INVITE_ENERGY } from "../src/world/rival-business.ts";
 import type { Festival, Person, PersonId, Trait, World } from "../src/world/types.ts";
 import { FIXTURE_PEOPLE } from "./fixtures/world-fixture.ts";
 
 const DAYS = 28;
 const N = Math.max(1, Number(process.argv[2]) || 20);
 const SEASONS = Math.max(1, Number(process.argv[3]) || 1);
+// 可选第四参数 compete：只按公开预约邀来比货，接待仍用同一套有限信息策略。
+const COMPETE_BOOKINGS = process.argv[4] === "compete";
 
 const yuan = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 const pct = (n: number, d: number) => d > 0 ? `${((n / d) * 100).toFixed(1)}%` : "—";
@@ -186,8 +191,7 @@ function fitInfo(w: World, person: Person, id: ShelfId, asked: number): FitInfo 
   if (!live.skin) return { score: 0, tier: "negative", units: 0, amount: 0, blocked: null };
   if ((w.opinion[live.id] ?? 0) <= SERVE_REFUSE_OPINION)
     return { score: 0, tier: "negative", units: 0, amount: 0, blocked: "opinion" };
-  const bought = qualityOf(w, `bought:${live.id}`);
-  if (bought > 0 && w.day - bought < BUY_INTERVAL_DAYS)
+  if (recentlyPurchased(w, live.id))
     return { score: 0, tier: "negative", units: 0, amount: 0, blocked: "bought" };
   const score = fitOfPerson(live, id);
   const tier = shelfFitTier(score);
@@ -385,8 +389,8 @@ function choseCustomer(w: World, people: Person[], failed: Set<PersonId>): Perso
     if (!(p.id in w.present) || w.present[p.id] === "rival") return false;
     if (w.touched.includes(p.id) || w.energy < VERB_ENERGY.serve) return false;
     if ((w.opinion[p.id] ?? 0) <= SERVE_REFUSE_OPINION) return false;
-    const bought = qualityOf(w, `bought:${p.id}`);
-    if (bought > 0 && w.day - bought < BUY_INTERVAL_DAYS) return false;
+    // 两家成交都在现场公开；记住已发生的购买，不读取隐藏诉求。
+    if (recentlyPurchased(w, p.id)) return false;
     const live = visitPerson(w, p);
     return SHELF_IDS.some(id => SHELF[id].price <= (live.skin?.budget ?? 0));
   });
@@ -473,7 +477,13 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
     for (let slot = 0; slot < 4; slot++) {
       w = { ...w, slot: slot as 0 | 1 | 2 | 3 };
       w = beginSlot(w, people, festivals);
-      const person = choseCustomer(w, people, failed);
+      const booking = rivalBookingNow(w);
+      let invited: Person | undefined;
+      if (COMPETE_BOOKINGS && booking && w.energy >= RIVAL_INVITE_ENERGY + VERB_ENERGY.serve) {
+        const next = inviteRivalGuest(w, people);
+        if (next !== w) { invited = people.find(p => p.id === booking.person); w = next; social["invite-booking"] = (social["invite-booking"] ?? 0) + 1; }
+      }
+      const person = invited ?? choseCustomer(w, people, failed);
       let attempted = false;
       if (person) {
         const run = attempt(w, people, person, seed, season);

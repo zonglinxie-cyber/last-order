@@ -1,0 +1,278 @@
+TAP version 13
+# Subtest: 独立预约在首季第二周后午后出现，报价公开，人数与区域不溢出
+ok 1 - 独立预约在首季第二周后午后出现，报价公开，人数与区域不溢出
+  ---
+  duration_ms: 6.152042
+  type: 'test'
+  ...
+# Subtest: 即使全场已建立信任，对手仍可经营自己的预约，不偷抢忠诚客人
+ok 2 - 即使全场已建立信任，对手仍可经营自己的预约，不偷抢忠诚客人
+  ---
+  duration_ms: 1.964333
+  type: 'test'
+  ...
+# Subtest: 放弃争取按公示结一次账，存档往返不会重收款，十天内不再约同一人买
+not ok 3 - 放弃争取按公示结一次账，存档往返不会重收款，十天内不再约同一人买
+  ---
+  duration_ms: 0.975458
+  type: 'test'
+  location: '/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-business.test.ts:49:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    undefined !== 22
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 22
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/derekfly3/Documents/ChatGPT/AI%E5%85%AC%E5%8F%B8%E5%A4%A7%E4%B9%B1%E6%96%97/dynamic-counter-prototype/tests/world-rival-business.test.ts:58:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 双方成交共用购买间隔：柜台接待、托单与赴约回流都不能再次卖货
+ok 4 - 双方成交共用购买间隔：柜台接待、托单与赴约回流都不能再次卖货
+  ---
+  duration_ms: 9.030375
+  type: 'test'
+  ...
+# Subtest: 旧招揽也排除近期购买：公开目标与结账二次校验，不能隔天重复收同一人的钱
+not ok 5 - 旧招揽也排除近期购买：公开目标与结账二次校验，不能隔天重复收同一人的钱
+  ---
+  duration_ms: 1.206917
+  type: 'test'
+  location: '/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-business.test.ts:89:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + [
+    +   {
+    +     age: 29,
+    +     bonds: [
+    +       {
+    +         kind: 'colleague',
+    +         to: 'miduo',
+    +         warmth: 45
+    +       },
+    +       {
+    +         kind: 'mentor',
+    +         to: 'tangtang',
+    +         warmth: 25
+    +       },
+    +       {
+    +         kind: 'rival',
+    +         to: 'luyao',
+    +         warmth: -35
+    +       },
+    +       {
+    +         kind: 'rival',
+    +         to: 'songjie',
+    +         warmth: -15
+    +       }
+    +     ],
+    +     descriptor: '熟客博主，对面也认识她',
+    +     gender: 'f',
+    +     id: 'shen',
+    +     name: '沈薇',
+    +     portrait: '/assets/game/customer-shen-consultation.webp',
+    +     role: 'customer',
+    +     secret: {
+    +       reveal: [
+    +         {
+    +           act: 'not-my-return',
+    +           remembers: 'shen'
+    +         }
+    +       ],
+    +       text: '署她名字的那张退货单，不是她退的。'
+    +     },
+    +     skin: {
+    +       budget: 3200,
+    +       demands: [
+    +         {
+    +           trait: 'natural',
+    +           want: 2,
+    +           weight: 3
+    +         },
+    +         {
+    +           trait: 'steady',
+    +           want: 1,
+    +           weight: 2
+    +         },
+    +         {
+    +           trait: 'correct',
+    +           want: 1,
+    +           weight: 1
+    +         }
+    +       ],
+    +       maxUnits: 3,
+    +       veto: {
+    +         below: 2,
+    +         note: '一厚就卡粉，镜头里全是粉感',
+    +         trait: 'natural'
+    +       }
+    +     },
+    +     tempers: [
+    +       'proud',
+    +       'wary'
+    +     ],
+    +     visits: {
+    +       chance: 0.6,
+    +       days: [
+    +         1,
+    +         3,
+    +         4,
+    +         5,
+    +         6,
+    +         7
+    +       ],
+    +       slots: [
+    +         0,
+    +         1,
+    +         2
+    +       ]
+    +     },
+    +     voice: {
+    +       complain: '{player}一开口就是品牌话术。{x}要是信了，镜头里全是粉。',
+    +       greet: '先说好，我不缺粉底。',
+    +       hurt: '你还是把我往套装上带。',
+    +       pleased: '这句像判断，不像话术。',
+    +       praise: '{player}没拿价格替我做判断。'
+    +     }
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      id: 'shen'
+      name: '沈薇'
+      role: 'customer'
+      age: 29
+      gender: 'f'
+      descriptor: '熟客博主，对面也认识她'
+      tempers:
+        0: 'proud'
+        1: 'wary'
+      skin:
+        demands:
+          0:
+            trait: 'natural'
+            want: 2
+            weight: 3
+          1:
+            trait: 'steady'
+            want: 1
+            weight: 2
+          2:
+            trait: 'correct'
+            want: 1
+            weight: 1
+        veto:
+          trait: 'natural'
+          below: 2
+          note: '一厚就卡粉，镜头里全是粉感'
+        budget: 3200
+        maxUnits: 3
+      visits:
+        days:
+          0: 1
+          1: 3
+          2: 4
+          3: 5
+          4: 6
+          5: 7
+        slots:
+          0: 0
+          1: 1
+          2: 2
+        chance: 0.6
+      secret:
+        text: '署她名字的那张退货单，不是她退的。'
+        reveal:
+          0:
+            remembers: 'shen'
+            act: 'not-my-return'
+      voice:
+        greet: '先说好，我不缺粉底。'
+        pleased: '这句像判断，不像话术。'
+        hurt: '你还是把我往套装上带。'
+        praise: '{player}没拿价格替我做判断。'
+        complain: '{player}一开口就是品牌话术。{x}要是信了，镜头里全是粉。'
+      portrait: '/assets/game/customer-shen-consultation.webp'
+      bonds:
+        0:
+          to: 'miduo'
+          kind: 'colleague'
+          warmth: 45
+        1:
+          to: 'tangtang'
+          kind: 'mentor'
+          warmth: 25
+        2:
+          to: 'luyao'
+          kind: 'rival'
+          warmth: -35
+        3:
+          to: 'songjie'
+          kind: 'rival'
+          warmth: -15
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/derekfly3/Documents/ChatGPT/AI%E5%85%AC%E5%8F%B8%E5%A4%A7%E4%B9%B1%E6%96%97/dynamic-counter-prototype/tests/world-rival-business.test.ts:93:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 邀来花真实精力与小样，重复点击不扣；必须实际成交才能赢下预约
+ok 6 - 邀来花真实精力与小样，重复点击不扣；必须实际成交才能赢下预约
+  ---
+  duration_ms: 0.359
+  type: 'test'
+  ...
+# Subtest: 只邀来或开口但没成交，预约仍由陆遥完成；高信任不替代买货
+ok 7 - 只邀来或开口但没成交，预约仍由陆遥完成；高信任不替代买货
+  ---
+  duration_ms: 0.337
+  type: 'test'
+  ...
+# Subtest: 知道需求且经营好同事关系也能接单：托单花真实名额，不凭空得到正解
+ok 8 - 知道需求且经营好同事关系也能接单：托单花真实名额，不凭空得到正解
+  ---
+  duration_ms: 0.353
+  type: 'test'
+  ...
+# Subtest: 资源不足、反感或过期不能邀请；有效旧档没有新字段仍可读取
+ok 9 - 资源不足、反感或过期不能邀请；有效旧档没有新字段仍可读取
+  ---
+  duration_ms: 0.685792
+  type: 'test'
+  ...
+# Subtest: 坏报价或状态拒收，不能通过存档多记钱；客人离开则本单落空
+ok 10 - 坏报价或状态拒收，不能通过存档多记钱；客人离开则本单落空
+  ---
+  duration_ms: 0.348375
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 8
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 168.232833

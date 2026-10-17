@@ -200,6 +200,12 @@ export type World = {
   touched: PersonId[];
   /** 陆遥开时段锁定的目标；空数组表示这时段没有目标，结算时不临时换人。旧档可缺。 */
   rivalPlan?: { day: number; slot: Slot; targets: PersonId[]; tactic: RivalTactic };
+  /** 对面自己约来的客人：本时段公开报价，实际结账一次；不是从玩家柜前偷抢。 */
+  rivalBooking?: {
+    day: number; slot: Slot; person: PersonId; product: import("./shelf.ts").ShelfId;
+    units: number; amount: number; invited: boolean;
+    outcome?: "player" | "rival" | "missed";
+  };
   /** 当前节日 id（节日表由内容侧维护）；Visits.festivals 和 Cond {festival} 都读它 */
   festival?: string;
   /** 已消耗的抽数：每个随机决定都从 seed+rngCalls 推导，存档往返后确定性不断 */

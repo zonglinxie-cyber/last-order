@@ -1,0 +1,113 @@
+{
+  "before": {
+    "weeks": [
+      {
+        "week": 1,
+        "target": 13000,
+        "playerMedian": 17630,
+        "serveMedian": 17450,
+        "rivalMedian": 340
+      },
+      {
+        "week": 2,
+        "target": 16000,
+        "playerMedian": 15890,
+        "serveMedian": 14170,
+        "rivalMedian": 6670
+      },
+      {
+        "week": 3,
+        "target": 19000,
+        "playerMedian": 23720,
+        "serveMedian": 17250,
+        "rivalMedian": 3260
+      },
+      {
+        "week": 4,
+        "target": 22000,
+        "playerMedian": 27990,
+        "serveMedian": 21550,
+        "rivalMedian": 0
+      }
+    ],
+    "summary": [
+      "合计星 215 / 满星 57 / 过关 80（共 80 周）",
+      "比分：领先 20 / 打平 0 / 落后 0；对面每季成交中位 6.5 单",
+      "社交动作：help 528 / sample 1888 / handoff 299 / wechat 382 / greet 426 / keep 70"
+    ]
+  },
+  "ignore": {
+    "weeks": [
+      {
+        "week": 1,
+        "target": 13000,
+        "playerMedian": 17910,
+        "serveMedian": 17620,
+        "rivalMedian": 0
+      },
+      {
+        "week": 2,
+        "target": 16000,
+        "playerMedian": 14440,
+        "serveMedian": 11900,
+        "rivalMedian": 10070
+      },
+      {
+        "week": 3,
+        "target": 19000,
+        "playerMedian": 15600,
+        "serveMedian": 11250,
+        "rivalMedian": 10860
+      },
+      {
+        "week": 4,
+        "target": 22000,
+        "playerMedian": 21370,
+        "serveMedian": 13840,
+        "rivalMedian": 12640
+      }
+    ],
+    "summary": [
+      "合计星 208 / 满星 50 / 过关 80（共 80 周）",
+      "比分：领先 20 / 打平 0 / 落后 0；对面每季成交中位 21 单",
+      "社交动作：help 556 / sample 2160 / wechat 549 / keep 92 / greet 869 / handoff 14"
+    ]
+  },
+  "compete": {
+    "weeks": [
+      {
+        "week": 1,
+        "target": 13000,
+        "playerMedian": 17910,
+        "serveMedian": 17620,
+        "rivalMedian": 0
+      },
+      {
+        "week": 2,
+        "target": 16000,
+        "playerMedian": 14440,
+        "serveMedian": 11900,
+        "rivalMedian": 10070
+      },
+      {
+        "week": 3,
+        "target": 19000,
+        "playerMedian": 20700,
+        "serveMedian": 14810,
+        "rivalMedian": 4130
+      },
+      {
+        "week": 4,
+        "target": 22000,
+        "playerMedian": 26660,
+        "serveMedian": 19400,
+        "rivalMedian": 1180
+      }
+    ],
+    "summary": [
+      "合计星 199 / 满星 42 / 过关 80（共 80 周）",
+      "比分：领先 20 / 打平 0 / 落后 0；对面每季成交中位 11 单",
+      "社交动作：help 556 / sample 1878 / wechat 452 / keep 100 / greet 591 / invite-booking 278 / handoff 12"
+    ]
+  }
+}

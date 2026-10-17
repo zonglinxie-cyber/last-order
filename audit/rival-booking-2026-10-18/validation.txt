@@ -1,0 +1,36 @@
+人情场：对面独立预约与公平成交
+日期：2026-10-18
+基线：b5f03021599b6ceb60a324fb06364994f645c296
+
+实际交付
+- 首季第二周起午后，符合来访、预算和购买间隔的顾客可成为对面独立预约。
+- 玩家可花 6 精力 + 1 小样邀来比货；接待另花 12 精力，只有实际成交才能接下。
+- 对面成交单独写 rival-bought；两家所有正常成交共用 10 天购买间隔，不冒充玩家首单、熟客或已知用量。
+- 旧招揽筛选和结账都排除近期购买；玩家硬推保留既有代价。
+- “对面休假周”改为“对面忙碌周”，澄清少抢客但正常接预约，规则数值不变。
+
+验证（命令工作目录 dynamic-counter-prototype）
+1. npm run test:rules：291/291，exit 0；见 rules-final.log。
+2. node --experimental-strip-types --test tests/world-rival-business.test.ts：10/10，exit 0；见 rules-business.log。
+   修正前新增回归实际失败 2 条（成交归属、旧招揽重复购买），见 purchase-before.log。
+3. node --experimental-strip-types tests/world-sim.ts 20 2：exit 0；八组签名 20/20，无一种风格在所有种子最优。
+   包含脚本原有自选加难探针；四风格不主动邀请独立预约。
+4. node --experimental-strip-types tests/consult-sim.ts 20 1：改前和最终均 exit 0。
+5. node --experimental-strip-types tests/consult-sim.ts 20 1 compete：最终 exit 0。
+   三组对照见 consult-comparison.json；同种子、无剧情/委托/自选难度，只读公开信息。
+   两家已公开成交日期可用于选择接待对象；不得读取预约隐藏商品或用量来决策。
+6. MOBILE_RUNTIME_TEST_PORT=4187 WORLD_SMOKE_AUDIT_DIR=../audit/rival-booking-2026-10-18/season npx playwright test tests/world-rival-business.spec.ts tests/world-opening.spec.ts tests/world-season-smoke.spec.ts tests/world-floor.spec.ts tests/world-dynamics.spec.ts tests/world-levels.spec.ts tests/world-consult.spec.ts --workers=1
+   96/96，exit 0；两条新档首季 28 天 + 第二季 3 天，notes/errors/rawFields 均 0。
+7. 独立 tsc：项目 TypeScript + 临时配置 extends 项目 tsconfig，include 新规则、新 spec、consult-sim、world-sim、vite-env，node types，exit 0。
+8. npm run build：exit 0；28 个运行时保护文件通过；既有大包体警告。
+9. 周规则文字调整后 world-weeks.test.ts：8/8，exit 0；再次构建通过。纯文案无数值与行为变更，复用上述数值模拟。
+
+限制与下一步
+- 不是全量浏览器套件，也不是实体手机、真人体验或留存数据。
+- 有限信息三组均整季 20/20 领先；不宣称整季难度已平衡。优先争取提高销售但挤压客情，不是万能攻略。
+- 下一阶段验证有铺垫、有取舍、有次日回响的周末关键订单；本轮没有实现周末大型竞争事件。
+- before-purchase-fix 是提交前旧实现快照，包含已纠正的成交归属/购买间隔问题；最终结论读取根目录的新报告。
+- 旧 audit 截图和记录已恢复本轮开始前字节，保留用户原有未提交内容；新证据只在此目录。
+- 本机预览 http://127.0.0.1:4188/；未发布公网。
+
+最终周名文案截图复验：MOBILE_RUNTIME_TEST_PORT=4187 npx playwright test tests/world-rival-business.spec.ts --workers=1，6/6，exit 0。属于上述 96 条的重复复验，不重复计数。

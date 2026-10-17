@@ -20,10 +20,11 @@ type PersonCardProps = {
   rival?: { title: string; howTo: string; held: boolean };
   /** 最近动作的原话放进正文，不盖住下一步按钮。 */
   feedback?: string | null;
+  booking?: { amount: number; invited: boolean; won: boolean; blocked: string | null };
   onClose: () => void;
 };
 
-export function PersonCard({ person, world, people, rival, feedback, onClose }: PersonCardProps) {
+export function PersonCard({ person, world, people, rival, feedback, booking, onClose }: PersonCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (feedback) cardRef.current?.querySelector(".pc-scroll .mobile-scroll")?.scrollTo({ top: 0 });
@@ -59,6 +60,14 @@ export function PersonCard({ person, world, people, rival, feedback, onClose }: 
     </header>
     <MobileScroll className="pc-scroll">
       {feedback && <p className="world-toast" role="status">{feedback}</p>}
+      {booking && <section className="pc-section arrival-note" aria-label="对面的预约">
+        <h3>{booking.won ? "这笔预约已经接下" : booking.invited ? "已经邀来比货" : "陆遥自己约来的客人"}</h3>
+        <p>{booking.won ? "这次在你这里买了，对面不会再收这笔预约的钱。" : `对面预计这单 ¥${booking.amount.toLocaleString("zh-CN")}，本时段结束结账。`}</p>
+        {!booking.won && <p>{booking.invited ? "愿意来看看，还不等于选你。要靠实际成交接下；也可托熟悉的同事按客情笔记开单。"
+          : "邀来花 6 精力和 1 份小样，接待另花 12 精力；也可以把力气留给眼前的客人。"}</p>
+        }
+        {booking.blocked && !booking.invited && <p>{booking.blocked}。</p>}
+      </section>}
       {arrival && <section className="pc-section arrival-note" aria-label="来访缘由">
         <h3>{arrival.title}</h3><p>{arrival.line}</p>
       </section>}

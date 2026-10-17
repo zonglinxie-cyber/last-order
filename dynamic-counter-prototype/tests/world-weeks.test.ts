@@ -119,7 +119,7 @@ test("商场巡查周：硬推那一下台账翻倍扣，方敏那张委托也�
   assert.ok(patrolHits > plainHits, `巡查周方敏那张没多出（${patrolHits} ≤ ${plainHits}）—— 权重接上了但没接进抽委托那一步`);
 });
 
-test("对面休假周：她只带走本来就不想待着的那几位，门槛从 40 收到 20", () => {
+test("对面忙碌周：她只带走本来就不想待着的那几位，门槛从 40 收到 20", () => {
   assert.equal(poachMaxOpinionOf({ [weekKey("rival-off")]: 1 }, 40), 20, "休假周没收门槛");
   assert.equal(poachMaxOpinionOf({}, 40), 40, "没落这一条时门槛不许动");
   // 看法 30：平时在她射程内，休假周不在；看法 10：两周都在（不是免疫周）
