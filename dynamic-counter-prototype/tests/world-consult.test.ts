@@ -17,6 +17,104 @@ import { PEOPLE } from "../src/world/content/index.ts";
 import type { Person, World } from "../src/world/types.ts";
 import { saleFeedback } from "../src/world/sales-feedback.ts";
 import { visitPerson } from "../src/world/visits.ts";
+import { askCompanion, companionOptions } from "../src/world/companion.ts";
+
+const companionScene = (): World => ({ ...atCounter(["anjie", "liangxia"]), day: 7, slot: 1,
+  energy: 20, opinion: { anjie: 0, liangxia: 25 } });
+
+test("熟人搭话含首次接待共18精力，只补一个未知需求，保留耐心与真实账本", () => {
+  const w = companionScene(), p = who("anjie"), c = openConsult(w, p);
+  const { world: next, consult: learned } = askCompanion(w, PEOPLE, c, "liangxia");
+  assert.equal(next.energy, 2);
+  assert.equal(learned.patience, c.patience);
+  assert.equal(learned.begun, true);
+  assert.equal(learned.known.length, c.known.length + 1);
+  assert.match(learned.lines.at(-1)!, /梁夏替你问.*安姐接过话/);
+  assert.ok(next.touched.includes(p.id));
+  for (const field of ["money", "rivalMoney", "opinion", "bonds", "rngCalls", "standing", "compliance", "appointments"] as const)
+    assert.deepEqual(next[field], w[field], `${field} 不因搭话改变`);
+  assert.ok(clientNotes(next, p).known.includes(learned.known.at(-1)!));
+});
+
+test("已接待的搭话只收6精力，不重置试用、提问、货品、件数与情绪", () => {
+  const w = companionScene(), p = who("anjie");
+  const c = { ...tryOn(openConsult(w, p), p, "soft"), stage: "offer" as const, product: "soft" as const, units: 3, mood: -3 };
+  const begun = beginServe(w, PEOPLE, p.id), result = askCompanion(begun, PEOPLE, c, "liangxia");
+  assert.equal(result.world.energy, begun.energy - 6);
+  for (const key of ["stage", "product", "units", "patience", "tried", "looked", "asked", "mood", "matched"] as const)
+    assert.deepEqual(result.consult[key], c[key], key);
+  assert.equal(settleServe(result.world, PEOPLE, p.id, "soft", 1, false).energy, result.world.energy);
+});
+
+test("缺席、不信任、闹僵、敌对、缺精力或已耗尽耐心时不能搭话，拒绝无副作用", () => {
+  const base = companionScene(), p = who("anjie"), c = openConsult(base, p);
+  const cases: Array<[World, typeof c, string]> = [
+    [{ ...base, present: { anjie: "counter" } }, c, "liangxia"],
+    [{ ...base, present: { liangxia: "counter" } }, c, "liangxia"],
+    [{ ...base, present: { anjie: "counter", liangxia: "rival" } }, c, "liangxia"],
+    [{ ...base, opinion: { liangxia: 19 } }, c, "liangxia"],
+    [{ ...base, bonds: { "anjie>liangxia": -1 } }, c, "liangxia"],
+    [{ ...base, bonds: { "liangxia>anjie": 19 } }, c, "liangxia"],
+    [{ ...base, bondKinds: { "liangxia>anjie": "rival" } }, c, "liangxia"],
+    [{ ...base, energy: 17 }, c, "liangxia"],
+    [{ ...base, standing: 0 }, c, "liangxia"],
+    [{ ...base, compliance: 0 }, c, "liangxia"],
+    [base, { ...c, patience: 0 }, "liangxia"],
+    [base, { ...c, begun: true }, "liangxia"],
+    [base, c, "anjie"], [base, c, "shen"],
+  ];
+  for (const [w, consult, helper] of cases) {
+    const result = askCompanion(w, PEOPLE, consult, helper);
+    assert.equal(result.world, w); assert.equal(result.consult, consult);
+  }
+  assert.equal(companionOptions(base, PEOPLE, c).length, 1);
+  assert.equal(companionOptions(cases[0][0], PEOPLE, c).length, 0);
+});
+
+test("当日重点由本人确认，临时重点不写成长期偏好，也不暴露秘密", () => {
+  const p = who("liangxia"), w: World = { ...companionScene(), opinion: { anjie: 30, liangxia: 40 },
+    qualities: { "visit-context-day:liangxia": 7, "visit-context-code:liangxia": 1 } };
+  const c = openConsult(w, p); assert.equal(c.focusKnown, false);
+  const result = askCompanion(w, PEOPLE, c, "anjie");
+  assert.equal(result.consult.focusKnown, true);
+  assert.ok(result.consult.known.includes("correct"));
+  assert.match(result.consult.lines.at(-1)!, /今天最要紧/);
+  assert.equal(result.world.qualities["client-note:liangxia:correct"], undefined);
+  assert.equal(result.world.qualities["secret-known:liangxia"], undefined);
+});
+
+test("底线和数量按需一次问一件，已知内容不重复收钱", () => {
+  const p = who("anjie"), w = companionScene();
+  const c = { ...openConsult(w, p), known: p.skin!.demands.map(d => d.trait) };
+  const veto = askCompanion(w, PEOPLE, c, "liangxia");
+  assert.equal(veto.consult.vetoKnown, true); assert.equal(veto.consult.unitsKnown, false);
+  const units = askCompanion(w, PEOPLE, { ...c, vetoKnown: true }, "liangxia");
+  assert.equal(units.consult.unitsKnown, true); assert.match(units.consult.lines.at(-1)!, /最多带 4 件/);
+  const complete = { ...c, vetoKnown: true, unitsKnown: true };
+  assert.equal(askCompanion(w, PEOPLE, complete, "liangxia").world, w);
+});
+
+test("刷新、收起重开或同日换时段均不能重复搭话；下一天重新计次", () => {
+  const p = who("anjie"), first = askCompanion(companionScene(), PEOPLE, openConsult(companionScene(), p), "liangxia");
+  const w = parseWorld(serializeWorld(first.world))!;
+  const restored = restoreConsults(saveConsults(w, { anjie: first.consult }), w, PEOPLE).anjie;
+  assert.deepEqual(restored, first.consult);
+  assert.equal(askCompanion(w, PEOPLE, restored, "liangxia").world, w);
+  const later = { ...w, slot: 2 as const, energy: 40 };
+  assert.equal(askCompanion(later, PEOPLE, openConsult(later, p), "liangxia").world, later);
+  const tomorrow = { ...later, day: 8 };
+  assert.notEqual(askCompanion(tomorrow, PEOPLE, openConsult(tomorrow, p), "liangxia").world, tomorrow);
+});
+
+test("搭话不保证成交，错货仍失败；取消接待不凭空奖励关系", () => {
+  const w = companionScene(), p = who("anjie"), c = openConsult(w, p);
+  const result = askCompanion(w, PEOPLE, c, "liangxia");
+  const wrong = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(p, id)) === "negative")!;
+  assert.ok(wrong);
+  const settled = settleServe(result.world, PEOPLE, p.id, wrong, 1, false, result.consult.mood);
+  assert.equal(settled.money, w.money);
+  assert.deepEqual(leaveServe(result.world, PEOPLE, p.id, result.consult.mood).opinion, w.opinion);
+});
 
 const skinned = PEOPLE.filter(p => p.skin);
 const who = (id: string) => PEOPLE.find(p => p.id === id)!;

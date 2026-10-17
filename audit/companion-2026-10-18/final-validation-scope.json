@@ -1,0 +1,11 @@
+{
+  "broadBrowserTests": 101,
+  "finalTargetedBrowserTests": 28,
+  "uniqueBrowserTests": 101,
+  "changedAfterBroad": [
+    "dynamic-counter-prototype/src/world/companion.ts",
+    "dynamic-counter-prototype/src/world/ui/ConsultPanel.tsx"
+  ],
+  "finalSourceUnchanged": true,
+  "reason": "只提取同日已用判断供界面读取，完成后收起说明与按钮；最终全量规则、有限信息搭话模拟及28项接待/续谈流程复验。原世界模拟没有调用新模块，原有引擎与内容未修改。"
+}

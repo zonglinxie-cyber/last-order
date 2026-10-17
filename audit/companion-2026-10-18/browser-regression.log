@@ -1,0 +1,182 @@
+[WebServer] (node:56578) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:56731) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 101 tests using 1 worker
+
+(node:57003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 tests/world-companion.spec.ts:44:3 › 熟人搭话 320×568 › 周末订单可请在场熟人问一句，刷新续谈并正常试用成交 (3.1s)
+  ✓    2 tests/world-companion.spec.ts:73:3 › 熟人搭话 320×568 › 已经选货试用后搭话不丢草稿，刷新不重复扣费 (2.6s)
+  ✓    3 tests/world-companion.spec.ts:90:3 › 熟人搭话 320×568 › 不信任和精力不足分别说清原因，不误导为免费搭话 (1.6s)
+  ✓    4 tests/world-companion.spec.ts:100:3 › 熟人搭话 320×568 › 熟人不在场时没有入口，普通接待仍可正常进行 (1.3s)
+  ✓    5 tests/world-companion.spec.ts:44:3 › 熟人搭话 390×844 › 周末订单可请在场熟人问一句，刷新续谈并正常试用成交 (2.8s)
+  ✓    6 tests/world-companion.spec.ts:73:3 › 熟人搭话 390×844 › 已经选货试用后搭话不丢草稿，刷新不重复扣费 (2.6s)
+  ✓    7 tests/world-companion.spec.ts:90:3 › 熟人搭话 390×844 › 不信任和精力不足分别说清原因，不误导为免费搭话 (1.5s)
+  ✓    8 tests/world-companion.spec.ts:100:3 › 熟人搭话 390×844 › 熟人不在场时没有入口，普通接待仍可正常进行 (1.4s)
+  ✓    9 tests/world-consult.spec.ts:47:3 › 接待决策 320×568 › 探问、报价、放弃各有明确成本；不卖也留下真实笔记 (1.8s)
+  ✓   10 tests/world-consult.spec.ts:73:3 › 接待决策 320×568 › 最后一次试用仍显示真实反应，开单复盘与实际账本一致 (2.3s)
+  ✓   11 tests/world-consult.spec.ts:101:3 › 接待决策 320×568 › 按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开 (4.1s)
+  ✓   12 tests/world-consult.spec.ts:47:3 › 接待决策 390×844 › 探问、报价、放弃各有明确成本；不卖也留下真实笔记 (1.9s)
+  ✓   13 tests/world-consult.spec.ts:73:3 › 接待决策 390×844 › 最后一次试用仍显示真实反应，开单复盘与实际账本一致 (2.4s)
+  ✓   14 tests/world-consult.spec.ts:101:3 › 接待决策 390×844 › 按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开 (1.2s)
+  ✓   15 tests/world-floor.spec.ts:74:5 › 人情场 390×844 › 开局能看到地图上有人，点人能开抽屉并完成一次招呼 (1.3s)
+  ✓   16 tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.4s)
+  ✓   17 tests/world-floor.spec.ts:108:5 › 人情场 390×844 › 完成一次接待：选货、件数、开给她 (2.3s)
+  ✓   18 tests/world-floor.spec.ts:128:5 › 人情场 390×844 › 看法低时她只肯说一句 (1.3s)
+  ✓   19 tests/world-floor.spec.ts:137:5 › 人情场 390×844 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 (2.2s)
+  ✓   20 tests/world-floor.spec.ts:151:5 › 人情场 390×844 › 看、问、试：第一下才花劲，每下花她一句耐心，试过的货留字，关掉再回来接着谈 (3.6s)
+  ✓   21 tests/world-floor.spec.ts:181:5 › 人情场 390×844 › 新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度 (1.2s)
+  ✓   22 tests/world-floor.spec.ts:200:5 › 人情场 390×844 › 说书人抽到卡能选，结果念一句 (307ms)
+  ✓   23 tests/world-floor.spec.ts:214:5 › 人情场 390×844 › 连点「下一时段」走进第 2 天，看到当日小结 (2.5s)
+  ✓   24 tests/world-floor.spec.ts:227:5 › 人情场 390×844 › 比分在页顶：对面的进账和自己的数同屏，不用拖才露出来 (1.2s)
+  ✓   25 tests/world-floor.spec.ts:239:5 › 人情场 390×844 › 打烊那屏念比分：对面的数与落后多少都在账那一排 (2.1s)
+  ✓   26 tests/world-floor.spec.ts:258:5 › 人情场 390×844 › 季末回顾：高光时刻、你的人、底部三颗按钮都在且点得中 (1.2s)
+  ✓   27 tests/world-floor.spec.ts:310:5 › 人情场 390×844 › 季末能进第 2 季：天数回到 1、看法收一半还在 (1.2s)
+  ✓   28 tests/world-floor.spec.ts:336:5 › 人情场 390×844 › 新客与回头客在名牌上分得出来，「现场」那行跟着报新客数 (2.3s)
+  ✓   29 tests/world-floor.spec.ts:362:5 › 人情场 390×844 › 柜台站满五位客人：一个点不站两个人，每位都点得中 (1.1s)
+  ✓   30 tests/world-floor.spec.ts:392:5 › 人情场 390×844 › 员工通道的同事收进一枚牌子：地图上不画，点开名单能点到人；全场名牌两两不叠 (2.3s)
+  ✓   31 tests/world-floor.spec.ts:425:5 › 人情场 390×844 › 中庭站满：客人两行名牌、商场方一行名牌都不许被地图上沿切掉 (1.1s)
+  ✓   32 tests/world-floor.spec.ts:444:5 › 人情场 390×844 › 刷新以后接着玩，天数不变 (2.4s)
+  ✓   33 tests/world-floor.spec.ts:454:5 › 人情场 390×844 › 除地图容器外不横向溢出、按钮不小于 44px、正文不小于 12px (2.2s)
+  ✓   34 tests/world-floor.spec.ts:74:5 › 人情场 320×568 › 开局能看到地图上有人，点人能开抽屉并完成一次招呼 (1.3s)
+  ✓   35 tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.4s)
+  ✓   36 tests/world-floor.spec.ts:108:5 › 人情场 320×568 › 完成一次接待：选货、件数、开给她 (2.4s)
+  ✓   37 tests/world-floor.spec.ts:128:5 › 人情场 320×568 › 看法低时她只肯说一句 (1.4s)
+  ✓   38 tests/world-floor.spec.ts:137:5 › 人情场 320×568 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 (2.3s)
+  ✓   39 tests/world-floor.spec.ts:151:5 › 人情场 320×568 › 看、问、试：第一下才花劲，每下花她一句耐心，试过的货留字，关掉再回来接着谈 (3.5s)
+  ✓   40 tests/world-floor.spec.ts:181:5 › 人情场 320×568 › 新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度 (1.3s)
+  ✓   41 tests/world-floor.spec.ts:200:5 › 人情场 320×568 › 说书人抽到卡能选，结果念一句 (322ms)
+  ✓   42 tests/world-floor.spec.ts:214:5 › 人情场 320×568 › 连点「下一时段」走进第 2 天，看到当日小结 (2.5s)
+  ✓   43 tests/world-floor.spec.ts:227:5 › 人情场 320×568 › 比分在页顶：对面的进账和自己的数同屏，不用拖才露出来 (1.2s)
+  ✓   44 tests/world-floor.spec.ts:239:5 › 人情场 320×568 › 打烊那屏念比分：对面的数与落后多少都在账那一排 (2.1s)
+  ✓   45 tests/world-floor.spec.ts:258:5 › 人情场 320×568 › 季末回顾：高光时刻、你的人、底部三颗按钮都在且点得中 (1.2s)
+  ✓   46 tests/world-floor.spec.ts:310:5 › 人情场 320×568 › 季末能进第 2 季：天数回到 1、看法收一半还在 (1.2s)
+  ✓   47 tests/world-floor.spec.ts:336:5 › 人情场 320×568 › 新客与回头客在名牌上分得出来，「现场」那行跟着报新客数 (2.3s)
+  ✓   48 tests/world-floor.spec.ts:362:5 › 人情场 320×568 › 柜台站满五位客人：一个点不站两个人，每位都点得中 (1.2s)
+  ✓   49 tests/world-floor.spec.ts:392:5 › 人情场 320×568 › 员工通道的同事收进一枚牌子：地图上不画，点开名单能点到人；全场名牌两两不叠 (2.3s)
+  ✓   50 tests/world-floor.spec.ts:425:5 › 人情场 320×568 › 中庭站满：客人两行名牌、商场方一行名牌都不许被地图上沿切掉 (1.1s)
+  ✓   51 tests/world-floor.spec.ts:444:5 › 人情场 320×568 › 刷新以后接着玩，天数不变 (2.1s)
+  ✓   52 tests/world-floor.spec.ts:454:5 › 人情场 320×568 › 除地图容器外不横向溢出、按钮不小于 44px、正文不小于 12px (2.2s)
+  ✓   53 tests/world-floor.spec.ts:503:3 › 新手引导 390×844 › 新档第一次进来能看到开局那句；点「跳过引导」后刷新也不再出现 (2.2s)
+  ✓   54 tests/world-floor.spec.ts:519:3 › 新手引导 390×844 › 引导气泡不遮住「下一时段」按钮 (2.1s)
+  ✓   55 tests/world-return-context.spec.ts:31:3 › 回来接上 320×568 › 接待中断后说明谈到哪里，一次继续直接回原接待且不重复扣费 (2.4s)
+  ✓   56 tests/world-return-context.spec.ts:54:3 › 回来接上 320×568 › 打烊时退出，继续页说结算的那一天，不把下一天说成已经开工 (356ms)
+  ✓   57 tests/world-return-context.spec.ts:69:3 › 回来接上 320×568 › 挑货中断能恢复所选商品、件数和最后一次试用，继续后真实开单 (2.5s)
+  ✓   58 tests/world-return-context.spec.ts:88:3 › 回来接上 320×568 › 主动关闭后回楼层；没有新停点字段的旧档仍可手动接着谈 (1.5s)
+  ✓   59 tests/world-return-context.spec.ts:106:3 › 回来接上 320×568 › 损坏停点、过期接待和对面客人不会被直接拉回柜台 (1.5s)
+  ✓   60 tests/world-return-context.spec.ts:120:3 › 回来接上 320×568 › 未完剧情和季末回顾恢复原位置，不补抽剧情、不擅自进入新季 (1.5s)
+  ✓   61 tests/world-return-context.spec.ts:138:3 › 回来接上 320×568 › 继续页用公开约定提醒下一件事，打开或继续不会替玩家联系或成交 (339ms)
+  ✓   62 tests/world-return-context.spec.ts:31:3 › 回来接上 390×844 › 接待中断后说明谈到哪里，一次继续直接回原接待且不重复扣费 (2.4s)
+  ✓   63 tests/world-return-context.spec.ts:54:3 › 回来接上 390×844 › 打烊时退出，继续页说结算的那一天，不把下一天说成已经开工 (361ms)
+  ✓   64 tests/world-return-context.spec.ts:69:3 › 回来接上 390×844 › 挑货中断能恢复所选商品、件数和最后一次试用，继续后真实开单 (2.5s)
+  ✓   65 tests/world-return-context.spec.ts:88:3 › 回来接上 390×844 › 主动关闭后回楼层；没有新停点字段的旧档仍可手动接着谈 (1.5s)
+  ✓   66 tests/world-return-context.spec.ts:106:3 › 回来接上 390×844 › 损坏停点、过期接待和对面客人不会被直接拉回柜台 (1.6s)
+  ✓   67 tests/world-return-context.spec.ts:120:3 › 回来接上 390×844 › 未完剧情和季末回顾恢复原位置，不补抽剧情、不擅自进入新季 (1.5s)
+  ✓   68 tests/world-return-context.spec.ts:138:3 › 回来接上 390×844 › 继续页用公开约定提醒下一件事，打开或继续不会替玩家联系或成交 (357ms)
+〔知道了〕开局世界种子：world-mywpiww0-6620
+〔知道了〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔知道了〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔知道了〕整季用时 225.1s，走了 141 步，记下 296 行流水、0 条问题
+〔知道了〕逐时段明细与问题清单：../audit/world-smoke/report-know.json
+〔知道了〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔知道了〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔知道了〕第 2 季前 3 天开出来的跨季卡：arc-qiaowan-parrot、arc-fangmin-line、arc-qiaowan-face、arc-roman-columns、arc-tangke-sheet、arc-roman-quota、arc-fangmin-name、arc-fangmin-who、arc-tangke-stock、arc-tangke-seat
+  ✓   69 tests/world-season-smoke.spec.ts:600:5 › 人情场整季冒烟 · 全程点知道了 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (4.1m)
+〔跳过引导〕开局世界种子：world-mywpiww0-6620
+〔跳过引导〕report · 第 1 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 3 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 4 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 5 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 6 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 7 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 8 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 9 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 10 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 11 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 12 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 13 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 14 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 15 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 16 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 17 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 18 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 19 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 20 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 21 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 22 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 23 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 24 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 25 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 26 天 上午 → 小结页（）
+〔跳过引导〕report · 第 1 季第 27 天 上午 → 小结页（）
+〔跳过引导〕整季用时 272.3s，走了 140 步，记下 300 行流水、0 条问题
+〔跳过引导〕逐时段明细与问题清单：../audit/world-smoke/report-skip.json
+〔跳过引导〕report · 第 2 季第 1 天 上午 → 小结页（）
+〔跳过引导〕report · 第 2 季第 2 天 上午 → 小结页（）
+〔跳过引导〕report · 第 2 季第 3 天 上午 → 小结页（）
+〔跳过引导〕第 2 季前 3 天开出来的跨季卡：arc-fangmin-line、arc-tangke-sheet、arc-fangmin-name、arc-fangmin-who、arc-roman-columns、arc-tangke-stock、arc-tangke-seat、arc-qiaowan-parrot、arc-tangke-end、arc-qiaowan-face
+  ✓   70 tests/world-season-smoke.spec.ts:600:5 › 人情场整季冒烟 · 开局跳过引导 › 从新档玩到第 28 天散场，过季末回顾页，再进第 2 季玩 3 天 (4.9m)
+  ✓   71 tests/world-season-smoke.spec.ts:738:3 › 季末回顾页 › 结局当标题，高光、三本账与三颗按钮都在 (309ms)
+  ✓   72 tests/world-season-smoke.spec.ts:752:3 › 季末回顾页 › 走完的线按落点标题念，不许把内部字段名摊给玩家 (260ms)
+  ✓   73 tests/world-season-smoke.spec.ts:771:3 › 季末回顾页 › 本子翻过面了，但不许看着像讲完：第 2 幕那一档留一句钩子 (224ms)
+  ✓   74 tests/world-season-smoke.spec.ts:781:3 › 季末回顾页 › 倒数第二幕翻过面：钩子不许跟着幕号一起被写死掉 (210ms)
+  ✓   75 tests/world-season-smoke.spec.ts:790:3 › 季末回顾页 › 内容讲到最晚的那一季末：钩子要收回去，不许年年都喊下一季 (214ms)
+  ✓   76 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (350ms)
+  ✓   77 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 390×844 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (341ms)
+  ✓   78 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 空手散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (338ms)
+  ✓   79 tests/world-season-smoke.spec.ts:808:9 › 季末回顾页 › 季末回顾页排版 · 320×568 · 长标题散场 › 不横向溢出、脚上三颗按钮 ≥44px 且点得中 (439ms)
+  ✓   80 tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 320×568 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 (3.7s)
+  ✓   81 tests/world-weekend-referral.spec.ts:89:3 › 周末熟客牵线 320×568 › 介绍来的朋友被硬推，打烊不报喜；刷新不重复扣介绍人的信任 (2.7s)
+  ✓   82 tests/world-weekend-referral.spec.ts:102:3 › 周末熟客牵线 320×568 › 没有实际接触过熟客时不凭好感造介绍人，自己联系保留原成本 (1.5s)
+  ✓   83 tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 390×844 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 (3.4s)
+  ✓   84 tests/world-weekend-referral.spec.ts:89:3 › 周末熟客牵线 390×844 › 介绍来的朋友被硬推，打烊不报喜；刷新不重复扣介绍人的信任 (2.8s)
+  ✓   85 tests/world-weekend-referral.spec.ts:102:3 › 周末熟客牵线 390×844 › 没有实际接触过熟客时不凭好感造介绍人，自己联系保留原成本 (1.3s)
+  ✓   86 tests/world-weekend-review.spec.ts:58:3 › 周末复盘 320×568 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 (3.1s)
+  ✓   87 tests/world-weekend-review.spec.ts:79:3 › 周末复盘 320×568 › 提前成交后打开周末单能复看实际商品件数，刷新不再收钱 (3.9s)
+  ✓   88 tests/world-weekend-review.spec.ts:94:3 › 周末复盘 320×568 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 (1.1s)
+  ✓   89 tests/world-weekend-review.spec.ts:109:3 › 周末复盘 320×568 › 缺少经过的旧档仍显示原结果，不编造一段接待 (546ms)
+  ✓   90 tests/world-weekend-review.spec.ts:58:3 › 周末复盘 390×844 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 (3.0s)
+  ✓   91 tests/world-weekend-review.spec.ts:79:3 › 周末复盘 390×844 › 提前成交后打开周末单能复看实际商品件数，刷新不再收钱 (3.6s)
+  ✓   92 tests/world-weekend-review.spec.ts:94:3 › 周末复盘 390×844 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 (747ms)
+  ✓   93 tests/world-weekend-review.spec.ts:109:3 › 周末复盘 390×844 › 缺少经过的旧档仍显示原结果，不编造一段接待 (369ms)
+  ✓   94 tests/world-weekend.spec.ts:51:3 › 周末最后一单 320×568 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (6.3s)
+  ✓   95 tests/world-weekend.spec.ts:96:3 › 周末最后一单 320×568 › 未提前确认也可争取；放弃后如实记对面成交，回访不伪装成玩家赢单 (1.6s)
+  ✓   96 tests/world-weekend.spec.ts:108:3 › 周末最后一单 320×568 › 午后预约与周末安排共用一行，小屏都能点；资源不足和旧档不添暗账 (1.5s)
+  ✓   97 tests/world-weekend.spec.ts:118:3 › 周末最后一单 320×568 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 (778ms)
+  ✓   98 tests/world-weekend.spec.ts:51:3 › 周末最后一单 390×844 › 周五确认、刷新、周日正常成交，打烊预告和次日回访说同一件事 (6.2s)
+  ✓   99 tests/world-weekend.spec.ts:96:3 › 周末最后一单 390×844 › 未提前确认也可争取；放弃后如实记对面成交，回访不伪装成玩家赢单 (1.6s)
+  ✓  100 tests/world-weekend.spec.ts:108:3 › 周末最后一单 390×844 › 午后预约与周末安排共用一行，小屏都能点；资源不足和旧档不添暗账 (1.5s)
+  ✓  101 tests/world-weekend.spec.ts:118:3 › 周末最后一单 390×844 › 第28天那一单的回应跨季保留，季末说明下一次见面，新季到场不会自动收钱 (746ms)
+
+  Slow test file: tests/world-season-smoke.spec.ts (9.0m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  101 passed (12.0m)

@@ -14,18 +14,21 @@ import { unsaidWord } from "../serve-talk.ts";
 import { servePickWord } from "./words.ts";
 import { visitContext } from "../visits.ts";
 import type { ArrivalNote } from "../arrivals.ts";
+import { companionCost, companionUsed, COMPANION_ENERGY, type companionOptions } from "../companion.ts";
 import "./consult.css";
 
 type Props = {
   world: World; person: Person; consult: Consult;
   arrival?: ArrivalNote | null;
+  companions: ReturnType<typeof companionOptions>;
+  onCompanion: (id: string) => void;
   onChange: (patch: Partial<Pick<Consult, "stage" | "product" | "units">>) => void;
   onAct: (step: (c: Consult) => Consult) => void;
   onCommit: (force: boolean) => void; onLeave: () => void; onClose: () => void;
 };
 const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
 
-export function ConsultPanel({ world, person, consult: c, arrival, onChange, onAct, onCommit, onLeave, onClose }: Props) {
+export function ConsultPanel({ world, person, consult: c, arrival, companions, onCompanion, onChange, onAct, onCommit, onLeave, onClose }: Props) {
   const plate = plateOf(person), offer = c.stage === "offer", product = c.product;
   const context = visitContext(world, person);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -55,6 +58,17 @@ export function ConsultPanel({ world, person, consult: c, arrival, onChange, onA
       : <p>「{person.voice.greet}」</p>}
     {stillHolding(c, person) && <p className="serve-hold">{unsaidWord(person.gender)}</p>}
   </div>;
+  const companion = companions.length > 0 && <section className="consult-companion" aria-label="请熟人搭话">
+    {companionUsed(world, person.id) ? <p>今天已经请熟人替{person.name}问过了，接着挑货或试用。</p> : <>
+      <b>熟人也在楼上</b>
+      <p>替你问清一件事，不耗耐心，每位客人每天一次。搭话 {COMPANION_ENERGY} 精力{!c.begun && `，另算接待 ${VERB_ENERGY.serve} 精力`}。</p>
+      {companions.map(({ person: helper, reason }) => <div key={helper.id}>
+        <button type="button" disabled={!!reason} aria-describedby={`companion-${helper.id}`}
+          onClick={() => { setProbe(null); onCompanion(helper.id); }}>请{helper.name}搭话 · {companionCost(c)} 精力</button>
+        <p id={`companion-${helper.id}`}>{reason ?? `${helper.name}和${person.name}相熟，也信得过你。`}</p>
+      </div>)}
+    </>}
+  </section>;
   return <BottomSheet open title={`${person.name} · 柜台接待`} description="问清一件事，再做一次判断。切换页面不耗耐心。"
     snap={0.92} onOpenChange={open => { if (!open) onClose(); }}>
     <div className="world-serve" ref={panelRef}>
@@ -88,6 +102,7 @@ export function ConsultPanel({ world, person, consult: c, arrival, onChange, onA
         {!offer ? <section id="consult-listen" role="tabpanel" aria-labelledby="consult-listen-tab">
           {!c.begun && said}
           {c.begun && !liveProbe && reply}
+          {companion}
           <p className="consult-cost">看一处、问一句或试一支，各花 1 次耐心。留一次给试用也可以。</p>
           {plate ? <div className="serve-face" role="group" aria-label="看"
             style={{ backgroundImage: `url(${asset(plate.src)})`, backgroundPositionY: `${plate.cropY}%` }}>
@@ -114,6 +129,7 @@ export function ConsultPanel({ world, person, consult: c, arrival, onChange, onA
           {c.begun && <p className="consult-memory">长期偏好已记下，下次见面还用得上{context ? "；今天的用途按这次来意判断" : ""}。</p>}
         </section> : <section id="consult-offer" role="tabpanel" aria-labelledby="consult-offer-tab">
           {c.begun && <p className="consult-reaction" aria-live="polite">{lastReply}</p>}
+          {companion}
           {SHELF_LINES.map(line => <div key={line.word} className="serve-line" role="group" aria-label={line.word}>
             <span className="serve-line-word">{line.word}</span><div className="serve-products">{line.ids.map(pid => {
               const tried = c.tried[pid];

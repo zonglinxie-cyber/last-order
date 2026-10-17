@@ -1,0 +1,19 @@
+[WebServer] (node:50346) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:50372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:50375) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-companion.spec.ts:44:3 › 熟人搭话 320×568 › 周末订单可请在场熟人问一句，刷新续谈并正常试用成交 (3.0s)
+  ✓  2 tests/world-companion.spec.ts:69:3 › 熟人搭话 320×568 › 已经选货试用后搭话不丢草稿，刷新不重复扣费 (2.5s)
+  ✓  3 tests/world-companion.spec.ts:86:3 › 熟人搭话 320×568 › 不信任和精力不足分别说清原因，不误导为免费搭话 (1.6s)
+  ✓  4 tests/world-companion.spec.ts:96:3 › 熟人搭话 320×568 › 熟人不在场时没有入口，普通接待仍可正常进行 (1.3s)
+  ✓  5 tests/world-companion.spec.ts:44:3 › 熟人搭话 390×844 › 周末订单可请在场熟人问一句，刷新续谈并正常试用成交 (2.7s)
+  ✓  6 tests/world-companion.spec.ts:69:3 › 熟人搭话 390×844 › 已经选货试用后搭话不丢草稿，刷新不重复扣费 (2.5s)
+  ✓  7 tests/world-companion.spec.ts:86:3 › 熟人搭话 390×844 › 不信任和精力不足分别说清原因，不误导为免费搭话 (1.5s)
+  ✓  8 tests/world-companion.spec.ts:96:3 › 熟人搭话 390×844 › 熟人不在场时没有入口，普通接待仍可正常进行 (1.3s)
+
+  8 passed (20.7s)

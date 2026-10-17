@@ -59,6 +59,11 @@
 .offer-evidence li + li { margin-top:5px; }
 .consult-history { color:#c6af99; font-size:12px; margin:10px 0; }
 .consult-history summary { min-height:44px; display:flex; align-items:center; text-decoration:underline; cursor:pointer; }
+.consult-companion { margin:10px 0; padding:10px 12px; border:1px solid #bda16b44; border-radius:10px; background:#ffffff06; color:#f2e6d8; scroll-margin:8px; }
+.consult-companion b { font-size:13px; color:#b9ddc7; }
+.world-serve .consult-companion p { color:#f2e6d8; margin:6px 0; font-size:12px; line-height:1.6; }
+.consult-companion button { width:100%; min-height:44px; padding:8px; border:1px solid #bda16b66; border-radius:8px; background:#bda16b18; color:#ffe8b6; font-size:13px; }
+.consult-companion button:disabled { color:#c6af99; background:transparent; }
 .serve-foot { flex:none; padding:8px 14px max(8px,env(safe-area-inset-bottom)); background:#281b16; border-top:1px solid #bda16b44; }
 .offer-total { margin:0 0 6px; color:#f1d39b; font-size:13px; }
 .offer-signal { margin:0 0 6px; color:#dec1a0; font-size:12px; line-height:1.4; }

@@ -1,0 +1,9 @@
+{
+  "baseline": "2e0b298 / audit/weekend-review-2026-10-18/world-sim.log",
+  "command": "node --experimental-strip-types tests/world-sim.ts 20 2",
+  "exitCode": 0,
+  "normalizedReportEqual": true,
+  "currentSha256": "7341709734089f933fde519327f0b65e2e55a10f621ee3340377ba5b40b29c41",
+  "baselineSha256": "7341709734089f933fde519327f0b65e2e55a10f621ee3340377ba5b40b29c41",
+  "scope": "原有四打法不使用搭话；新增动作另由有限信息20种子对照、规则和浏览器检验。"
+}

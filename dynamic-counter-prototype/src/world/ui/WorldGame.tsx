@@ -21,6 +21,7 @@ import { GoalStrip, LevelResult, RoutesSheet, SeasonLevels, weekGapWord } from "
 import { CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, WEEK_EXCEED_RATE, weekDaysLeft, weekGuardedPeople, weekGoalWord, weekLevelWord, weekResultOf, weekStarsKey } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
 import { openConsult, rememberConsult, restoreConsults, saveConsults, type Consult } from "../consult.ts";
+import { askCompanion, companionOptions } from "../companion.ts";
 import type { ShelfId } from "../shelf.ts";
 import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
 import { visitPerson } from "../visits.ts";
@@ -1085,6 +1086,12 @@ export default function WorldGame() {
     </div>}
 
     {salePerson && consult && <ConsultPanel world={world} person={salePerson} consult={consult}
+      companions={companionOptions(world, PEOPLE, consult)}
+      onCompanion={helper => {
+        const next = askCompanion(world, PEOPLE, consult, helper);
+        if (next.world === world) return;
+        setWorld(next.world); setConsults(m => ({ ...m, [consult.person]: next.consult })); sfx("tap");
+      }}
       arrival={booking?.person === salePerson.id && booking.invited && !bookingWon
         ? { title: "这笔预约还在比较", line: "「我先比比看，还没决定买哪边。」本时段结束前成交才能接下。", scene: "" }
         : currentArrival(world, salePerson.id, PEOPLE)}

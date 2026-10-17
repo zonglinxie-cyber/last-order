@@ -1,0 +1,176 @@
+{
+  "seeds": 20,
+  "seasons": 1,
+  "companionUses": 113,
+  "seedsWithCompanion": 20,
+  "moreIncome": 13,
+  "lessIncome": 6,
+  "sameIncome": 1,
+  "rebookMedian": 73720.0,
+  "companionMedian": 77900.0,
+  "medianPairedDelta": 6250.0,
+  "rows": [
+    {
+      "seed": 0,
+      "rebookMoney": 77480,
+      "companionMoney": 83940,
+      "delta": 6460,
+      "rebookRival": 39020,
+      "companionRival": 32700
+    },
+    {
+      "seed": 1,
+      "rebookMoney": 64580,
+      "companionMoney": 77280,
+      "delta": 12700,
+      "rebookRival": 41340,
+      "companionRival": 41840
+    },
+    {
+      "seed": 2,
+      "rebookMoney": 77760,
+      "companionMoney": 89220,
+      "delta": 11460,
+      "rebookRival": 43600,
+      "companionRival": 36720
+    },
+    {
+      "seed": 3,
+      "rebookMoney": 72940,
+      "companionMoney": 82240,
+      "delta": 9300,
+      "rebookRival": 38060,
+      "companionRival": 32380
+    },
+    {
+      "seed": 4,
+      "rebookMoney": 65100,
+      "companionMoney": 86680,
+      "delta": 21580,
+      "rebookRival": 44980,
+      "companionRival": 29380
+    },
+    {
+      "seed": 5,
+      "rebookMoney": 74280,
+      "companionMoney": 78500,
+      "delta": 4220,
+      "rebookRival": 35880,
+      "companionRival": 29540
+    },
+    {
+      "seed": 6,
+      "rebookMoney": 72260,
+      "companionMoney": 92120,
+      "delta": 19860,
+      "rebookRival": 42840,
+      "companionRival": 28280
+    },
+    {
+      "seed": 7,
+      "rebookMoney": 59520,
+      "companionMoney": 69540,
+      "delta": 10020,
+      "rebookRival": 57640,
+      "companionRival": 45060
+    },
+    {
+      "seed": 8,
+      "rebookMoney": 78580,
+      "companionMoney": 75920,
+      "delta": -2660,
+      "rebookRival": 44460,
+      "companionRival": 44080
+    },
+    {
+      "seed": 9,
+      "rebookMoney": 76660,
+      "companionMoney": 82700,
+      "delta": 6040,
+      "rebookRival": 36280,
+      "companionRival": 30420
+    },
+    {
+      "seed": 10,
+      "rebookMoney": 73160,
+      "companionMoney": 81520,
+      "delta": 8360,
+      "rebookRival": 40800,
+      "companionRival": 39020
+    },
+    {
+      "seed": 11,
+      "rebookMoney": 70380,
+      "companionMoney": 86860,
+      "delta": 16480,
+      "rebookRival": 47860,
+      "companionRival": 21060
+    },
+    {
+      "seed": 12,
+      "rebookMoney": 78440,
+      "companionMoney": 66480,
+      "delta": -11960,
+      "rebookRival": 39000,
+      "companionRival": 48340
+    },
+    {
+      "seed": 13,
+      "rebookMoney": 80140,
+      "companionMoney": 78980,
+      "delta": -1160,
+      "rebookRival": 33740,
+      "companionRival": 35600
+    },
+    {
+      "seed": 14,
+      "rebookMoney": 70660,
+      "companionMoney": 70400,
+      "delta": -260,
+      "rebookRival": 50440,
+      "companionRival": 42200
+    },
+    {
+      "seed": 15,
+      "rebookMoney": 79270,
+      "companionMoney": 71280,
+      "delta": -7990,
+      "rebookRival": 41020,
+      "companionRival": 48600
+    },
+    {
+      "seed": 16,
+      "rebookMoney": 70380,
+      "companionMoney": 77300,
+      "delta": 6920,
+      "rebookRival": 41140,
+      "companionRival": 35400
+    },
+    {
+      "seed": 17,
+      "rebookMoney": 74920,
+      "companionMoney": 74920,
+      "delta": 0,
+      "rebookRival": 37340,
+      "companionRival": 37340
+    },
+    {
+      "seed": 18,
+      "rebookMoney": 79500,
+      "companionMoney": 76560,
+      "delta": -2940,
+      "rebookRival": 39740,
+      "companionRival": 38960
+    },
+    {
+      "seed": 19,
+      "rebookMoney": 66360,
+      "companionMoney": 72160,
+      "delta": 5800,
+      "rebookRival": 47260,
+      "companionRival": 42460
+    }
+  ],
+  "scope": "同种子相同有限信息策略，仅允许额外搭话；行动改变资源、关系与后续来访，不是单次搭话的独立因果收益。无剧情、委托或自选加难，不代表真人留存。",
+  "finalRerunIdentical": true
+}

@@ -34,6 +34,7 @@ import { rivalBookingNow, RIVAL_INVITE_ENERGY } from "../src/world/rival-busines
 import { WEEKEND_PREP_ENERGY } from "../src/world/weekend-orders.ts";
 import type { Festival, Person, PersonId, Trait, World } from "../src/world/types.ts";
 import { FIXTURE_PEOPLE } from "./fixtures/world-fixture.ts";
+import { askCompanion, companionOptions } from "../src/world/companion.ts";
 
 const DAYS = 28;
 const N = Math.max(1, Number(process.argv[2]) || 20);
@@ -41,7 +42,9 @@ const SEASONS = Math.max(1, Number(process.argv[3]) || 1);
 // 可选第四参数 compete：争取公开预约；referral：同样争取，公开有熟客愿意牵线时优先请人帮忙。
 // 两者接待仍用同一套有限信息策略，不读取隐藏需求。
 // rebook 在 referral 基础上每天收工前最多主动约一位，并优先接待自己约来的客人。
-const REBOOK = process.argv[4] === "rebook";
+// companion 与 rebook 同一套策略，只在有合法搭话机会时额外请熟人问一句。
+const USE_COMPANION = process.argv[4] === "companion";
+const REBOOK = process.argv[4] === "rebook" || USE_COMPANION;
 const USE_REFERRAL = process.argv[4] === "referral" || REBOOK;
 const COMPETE_BOOKINGS = process.argv[4] === "compete" || USE_REFERRAL;
 
@@ -218,11 +221,13 @@ function ceilingOf(w: World, person: Person): { amount: number; product: ShelfId
 // —— 一次接待 ——
 
 type ActionStats = {
+  companion: number;
   look: number; blankLook: number; ask: number; shrug: number;
   try: number; tryPositive: number; tryMixed: number; tryNegative: number;
   unitsAsk: number; patience: number; startPatience: number;
 };
 const emptyActions = (): ActionStats => ({
+  companion: 0,
   look: 0, blankLook: 0, ask: 0, shrug: 0,
   try: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0,
   startPatience: 0,
@@ -231,12 +236,21 @@ const infoKey = (c: Consult) => `${[...c.known].sort().join(",")}|${c.focusKnown
 
 /** 看 / 问 / 试的顺序：先确认件数；再看一处、问一句；剩下的耐心必须留给试。
  *  和柜台一致：看/问/试用当天来访的那位（熟客的诉求和预算会变），不拿原始人物硬套。 */
-function runConsult(w: World, person: Person, stats: ActionStats): { world: World; consult: Consult } {
+function runConsult(w: World, people: Person[], person: Person, stats: ActionStats): { world: World; consult: Consult } {
   const live = visitPerson(w, person);
   let c = openConsult(w, person);
   const start = c.patience;
   stats.startPatience = start;
   let cw = w;
+  if (USE_COMPANION) {
+    // attempt 已经支付了接待成本；搭话只能再收额外6点。
+    c = { ...c, begun: true };
+    const helper = companionOptions(cw, people, c).find(option => !option.reason);
+    if (helper) {
+      const helped = askCompanion(cw, people, c, helper.person.id);
+      if (helped.world !== cw) { cw = helped.world; c = helped.consult; stats.companion++; }
+    }
+  }
   const apply = (next: Consult) => {
     c = next;
     cw = rememberConsult(cw, person, next);
@@ -351,7 +365,7 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
   }
 
   const stats = emptyActions();
-  const run = runConsult(cw, person, stats);
+  const run = runConsult(cw, people, person, stats);
   cw = run.world;
   const c = run.consult;
   const liveAfter = visitPerson(cw, person);
@@ -635,6 +649,7 @@ console.log(`== 人情场 · 有限信息接待模拟 · 内容来源 ${source} 
 console.log(`== ${N} 个种子 × ${SEASONS} 季 · 每格最多接待 1 位 · 不抽剧情卡 / 不接委托 / 无自选加难 ==`);
 console.log("盲策只读：openConsult 的 known / focusKnown 与台词、试穿反应、货架 tag / note / 价、预算、件数问答。");
 console.log("不读：fitOfPerson、bestFit、隐藏诉求、未揭开的今天的重点、maxUnits（除非已经问出）。影子账只用于测量，不参与决策。\n");
+if (USE_COMPANION) console.log(`熟人搭话：${sum(attempts.map(a => a.actions.companion))} 次；有搭话的种子季 ${runs.filter(r => r.attempts.some(a => a.actions.companion)).length}/${runs.length}；均为自然在场且满足信任与精力条件。`);
 
 console.log("一、每季（接待销售 = 种子里的接待单；影子猜 / 全知顶 是同一批接待机会的对照）");
 console.log("种子      总收入     接待销售    影子猜      全知顶     捕获率   成交  完美  星  过关周  对面");
