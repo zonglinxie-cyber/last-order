@@ -4,25 +4,25 @@ import { ambient, beginServe, beginSlot, doVerb, inviteRivalGuest, MAX_PRESENT_C
   hasOpenedSale, isReturningGuest, parseWorld, resolveServe, rivalCandidates, rivalTargets, serializeWorld, ZONE_GUEST_CAPACITY } from "../src/world/engine.ts";
 import { openConsult } from "../src/world/consult.ts";
 import { saleFeedback } from "../src/world/sales-feedback.ts";
-import { rivalBookingNow } from "../src/world/rival-business.ts";
+import { rivalBookingNow, rivalBookingSlots } from "../src/world/rival-business.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { bestShelf, SHELF } from "../src/world/shelf.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import type { World } from "../src/world/types.ts";
 
 const opening = (over: Partial<World> = {}) => beginSlot({ ...newWorld("booking-test", PEOPLE), day: 22, slot: 1, ...over }, PEOPLE);
-const isolated = () => {
-  const w = opening(); const b = rivalBookingNow(w)!;
+const isolated = (slot: 1 | 3 = 1) => {
+  const w = opening({ slot }); const b = rivalBookingNow(w)!;
   assert.ok(b);
   return { ...w, present: { [b.person]: "rival", luyao: "rival" }, rivalPlan: { day: w.day, slot: w.slot, targets: [], tactic: "invite" } } as World;
 };
 
-test("独立预约在首季第二周后午后出现，报价公开，人数与区域不溢出", () => {
+test("独立预约从首季第二周起分午后与晚高峰两场，报价公开，人数与区域不溢出", () => {
   assert.equal(rivalBookingNow(opening({ day: 7 })), undefined);
   assert.equal(rivalBookingNow(opening({ day: 8, slot: 0 })), undefined);
   assert.ok(rivalBookingNow(opening({ season: 2, day: 1 })));
-  for (let i = 0; i < 20; i++) {
-    const w = opening({ seed: `booking-${i}` }); const b = rivalBookingNow(w)!;
+  for (const slot of [1, 3] as const) for (let i = 0; i < 20; i++) {
+    const w = opening({ seed: `booking-${i}`, slot }); const b = rivalBookingNow(w)!;
     assert.ok(b && b.units > 0);
     assert.equal(w.rivalMoney, 0, "公示不等于已成交");
     assert.equal(b.amount, b.units * SHELF[b.product].price);
@@ -32,6 +32,65 @@ test("独立预约在首季第二周后午后出现，报价公开，人数与�
     assert.ok(guests.length <= MAX_PRESENT_CUSTOMERS);
     for (const [zone, max] of Object.entries(ZONE_GUEST_CAPACITY)) assert.ok(guests.filter(p => w.present[p.id] === zone).length <= max);
     assert.ok(w.log.some(l => l.text.includes(`预计这单 ¥${b.amount}`)));
+    assert.ok(w.log.some(l => l.text.includes(slot === 1 ? "第 22 天午后" : "第 22 天晚高峰")));
+    assert.deepEqual(parseWorld(serializeWorld(w))!.rivalBooking, b);
+  }
+});
+
+test("约客时段按日历公示，不随比分变；上午与傍晚留给其他经营", () => {
+  for (const day of [1, 5, 7]) assert.deepEqual(rivalBookingSlots({ season: 1, day }), []);
+  for (const [season, day] of [[1, 8], [1, 28], [2, 1]]) {
+    assert.deepEqual(rivalBookingSlots({ season, day }), [1, 3]);
+    for (const slot of [0, 2] as const) assert.equal(rivalBookingNow(opening({ season, day, slot })), undefined);
+    for (const slot of [1, 3] as const) {
+      const a = opening({ season, day, slot, money: 0, rivalMoney: 100000 });
+      const b = opening({ season, day, slot, money: 100000, rivalMoney: 0 });
+      assert.deepEqual(a.rivalBooking, b.rivalBooking, "领先落后不暗改约客人选或报价");
+    }
+  }
+});
+
+test("晚高峰的普通预约可邀来争取，真实结账且刷新不重收；午后买过的人不会连买两场", () => {
+  const afternoon = ambient(isolated(), PEOPLE), first = afternoon.rivalBooking!;
+  const evening = beginSlot({ ...afternoon, slot: 3 }, PEOPLE), second = evening.rivalBooking!;
+  assert.ok(second); assert.notEqual(second.person, first.person);
+  const w = isolated(3), b = w.rivalBooking!;
+  const end = ambient(w, PEOPLE);
+  assert.equal(end.rivalMoney, b.amount);
+  assert.equal(ambient(parseWorld(serializeWorld(end))!, PEOPLE).rivalMoney, b.amount);
+  const invited = inviteRivalGuest(w, PEOPLE);
+  assert.equal(invited.energy, w.energy - 6); assert.equal(invited.samples, w.samples - 1);
+  const guest = PEOPLE.find(p => p.id === b.person)!;
+  const sold = resolveServe(invited, PEOPLE, b.person, bestShelf(visitPerson(invited, guest)), 1);
+  assert.ok(sold.money > w.money);
+  const won = ambient(sold, PEOPLE);
+  assert.equal(won.rivalBooking?.outcome, "player"); assert.equal(won.rivalMoney, 0);
+});
+
+test("两场都让位于玩家预约与客位上限，周末最后一单不叠加一场普通预约", () => {
+  const ids = PEOPLE.filter(p => p.role === "customer").slice(0, MAX_PRESENT_CUSTOMERS).map(p => p.id);
+  for (const slot of [1, 3] as const) {
+    const full = opening({ slot, appointments: ids.map(person => ({ person, day: 22, slot, reason: "visit" })) });
+    assert.equal(rivalBookingNow(full), undefined);
+    assert.ok(ids.every(id => id in full.present));
+    const bought = opening({ slot, qualities: Object.fromEntries(PEOPLE.map(p => [`bought:${p.id}`, 21])) });
+    assert.equal(rivalBookingNow(bought), undefined);
+  }
+  const weekend = opening({ day: 28, slot: 3, weekendOrder: { due: 28, person: "shen", prepared: false } });
+  assert.equal(weekend.rivalBooking?.person, "shen");
+  assert.equal(weekend.rivalBooking?.weekend, true);
+  assert.equal(weekend.log.filter(l => l.text.startsWith("陆遥约了")).length, 0);
+});
+
+test("新增晚场只使用剩余客位，不挤掉原本自然来访的人或改掉其站位", () => {
+  for (let i = 0; i < 20; i++) {
+    const world: World = { ...newWorld(`evening-space-${i}`, PEOPLE), day: 22, slot: 3 };
+    // 同时段已经结清的预约关闭追加入口，作为同一份来访排布的对照；不改人员或随机数。
+    const without = beginSlot({ ...world, rivalBooking: { day: 22, slot: 3, person: "shen", product: "plain",
+      units: 1, amount: SHELF.plain.price, invited: false, outcome: "missed" } }, PEOPLE);
+    const withBooking = beginSlot(world, PEOPLE);
+    for (const [id, zone] of Object.entries(without.present)) assert.equal(withBooking.present[id], zone, `种子 ${i} 原来会来的人 ${id} 不该被夜场挤掉`);
+    assert.equal(withBooking.rngCalls, without.rngCalls, "夜场额外抽签不挪动自然来访随机流");
   }
 });
 
@@ -169,7 +228,7 @@ test("资源不足、反感或过期不能邀请；有效旧档没有新字段�
 
 test("坏报价或状态拒收，不能通过存档多记钱；客人离开则本单落空", () => {
   const w = isolated();
-  for (const patch of [{ amount: 1 }, { units: 1.5 }, { product: "unknown" }, { invited: "yes" }, { outcome: "paid" }])
+  for (const patch of [{ slot: 0 }, { slot: 2 }, { amount: 1 }, { units: 1.5 }, { product: "unknown" }, { invited: "yes" }, { outcome: "paid" }])
     assert.equal(parseWorld(serializeWorld({ ...w, rivalBooking: { ...w.rivalBooking, ...patch } } as World)), null);
   const absent = ambient({ ...w, present: { luyao: "rival" } }, PEOPLE);
   assert.equal(absent.rivalMoney, 0);

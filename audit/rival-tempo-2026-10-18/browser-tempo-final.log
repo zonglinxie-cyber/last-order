@@ -1,0 +1,17 @@
+[WebServer] (node:52460) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:52505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:52570) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (3.1s)
+  ✓  2 tests/world-rival-tempo.spec.ts:59:3 › 约客节奏 320×568 › 晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账 (2.8s)
+  ✓  3 tests/world-rival-tempo.spec.ts:91:3 › 约客节奏 320×568 › 从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账 (612ms)
+  ✓  4 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 390×844 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (3.0s)
+  ✓  5 tests/world-rival-tempo.spec.ts:59:3 › 约客节奏 390×844 › 晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账 (2.8s)
+  ✓  6 tests/world-rival-tempo.spec.ts:91:3 › 约客节奏 390×844 › 从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账 (578ms)
+
+  6 passed (16.7s)

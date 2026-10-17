@@ -1,0 +1,120 @@
+[WebServer] (node:87267) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:87312) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:87320) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (1.5s)
+(node:87464) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 320×568 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 (5.3s)
+(node:87585) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 390×844 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (1.5s)
+(node:87784) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 390×844 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 (5.3s)
+
+
+  1) tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 ────────
+
+    Error: 长说明应使用可用屏高，不能只剩最低抽屉高度
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 397.59999999999997
+    Received:    260
+
+      46 |         return t === "none" ? 0 : Math.abs(new DOMMatrixReadOnly(t).m42);
+      47 |       })).toBeLessThan(0.1);
+    > 48 |       expect(await sheet.evaluate(el => el.getBoundingClientRect().height), "长说明应使用可用屏高，不能只剩最低抽屉高度").toBeGreaterThanOrEqual(height * 0.7);
+         |                                                                                                      ^
+      49 |       const schedule = page.getByLabel("对面的约客安排");
+      50 |       await expect(schedule.locator("p").first(), "深底正文不能继承通用灰字").toHaveCSS("color", "rgb(242, 230, 216)");
+      51 |       await schedule.locator("h3").scrollIntoViewIfNeeded();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-tempo.spec.ts:48:102
+
+    Error Context: test-results/world-rival-tempo-约客节奏-320-db206-道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点/error-context.md
+
+  2) tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 320×568 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 ────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('.wg-schedule')
+    Expected: "接下来：对面午后约客；晚高峰接周末约单"
+    Received: "接下来：对面午后、晚高峰约客"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('.wg-schedule')
+        14 × locator resolved to <span class="wg-schedule">接下来：对面午后、晚高峰约客</span>
+           - unexpected value "接下来：对面午后、晚高峰约客"
+
+
+      71 |     for (const slot of [0, 2] as const) {
+      72 |       await enter(page, slot === 2 ? w : beginSlot({ ...prepared, day: 28, slot }, PEOPLE));
+    > 73 |       await expect(page.locator(".wg-schedule")).toHaveText(slot === 0
+         |                                                  ^
+      74 |         ? "接下来：对面午后约客；晚高峰接周末约单" : "接下来：晚高峰接周末约单");
+      75 |       await expect(page.locator(".wg-schedule")).toBeInViewport({ ratio: 1 });
+      76 |       await hit(page.locator(".world-next"));
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-tempo.spec.ts:73:50
+
+    Error Context: test-results/world-rival-tempo-约客节奏-320×568-已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本/error-context.md
+
+  3) tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 390×844 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 ────────
+
+    Error: 长说明应使用可用屏高，不能只剩最低抽屉高度
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 590.8
+    Received:    260
+
+      46 |         return t === "none" ? 0 : Math.abs(new DOMMatrixReadOnly(t).m42);
+      47 |       })).toBeLessThan(0.1);
+    > 48 |       expect(await sheet.evaluate(el => el.getBoundingClientRect().height), "长说明应使用可用屏高，不能只剩最低抽屉高度").toBeGreaterThanOrEqual(height * 0.7);
+         |                                                                                                      ^
+      49 |       const schedule = page.getByLabel("对面的约客安排");
+      50 |       await expect(schedule.locator("p").first(), "深底正文不能继承通用灰字").toHaveCSS("color", "rgb(242, 230, 216)");
+      51 |       await schedule.locator("h3").scrollIntoViewIfNeeded();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-tempo.spec.ts:48:102
+
+    Error Context: test-results/world-rival-tempo-约客节奏-390-1f9fa-道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点/error-context.md
+
+  4) tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 390×844 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 ────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('.wg-schedule')
+    Expected: "接下来：对面午后约客；晚高峰接周末约单"
+    Received: "接下来：对面午后、晚高峰约客"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('.wg-schedule')
+        14 × locator resolved to <span class="wg-schedule">接下来：对面午后、晚高峰约客</span>
+           - unexpected value "接下来：对面午后、晚高峰约客"
+
+
+      71 |     for (const slot of [0, 2] as const) {
+      72 |       await enter(page, slot === 2 ? w : beginSlot({ ...prepared, day: 28, slot }, PEOPLE));
+    > 73 |       await expect(page.locator(".wg-schedule")).toHaveText(slot === 0
+         |                                                  ^
+      74 |         ? "接下来：对面午后约客；晚高峰接周末约单" : "接下来：晚高峰接周末约单");
+      75 |       await expect(page.locator(".wg-schedule")).toBeInViewport({ ratio: 1 });
+      76 |       await hit(page.locator(".world-next"));
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-tempo.spec.ts:73:50
+
+    Error Context: test-results/world-rival-tempo-约客节奏-390×844-已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本/error-context.md
+
+  4 failed
+    tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 ─────────
+    tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 320×568 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 ─────────────
+    tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 390×844 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 ─────────
+    tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 390×844 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 ─────────────

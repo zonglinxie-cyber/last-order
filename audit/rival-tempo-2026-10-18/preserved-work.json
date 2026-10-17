@@ -1,0 +1,432 @@
+{
+  "restoredAuditArtifacts": [
+    "audit/contact-invite-2026-10-18/arrived-390.png",
+    "audit/design-2026-10-13/phase2-ui/floor-rival-320x568.png",
+    "audit/design-2026-10-13/phase2-ui/routes-sheet-320x568.png",
+    "audit/first-sale-2026-10-18/toast-after-320.png",
+    "audit/first-sale-2026-10-18/toast-after-390.png",
+    "audit/rival-booking-2026-10-18/floor-320.png",
+    "audit/rival-booking-2026-10-18/floor-390.png",
+    "audit/rival-booking-2026-10-18/won-320.png",
+    "audit/rival-booking-2026-10-18/won-390.png",
+    "audit/rival-choice-2026-10-18/double-320.png",
+    "audit/rival-choice-2026-10-18/double-390.png",
+    "audit/weekend-order-2026-10-18/both-orders-320.png",
+    "audit/weekend-order-2026-10-18/both-orders-390.png",
+    "audit/weekend-order-2026-10-18/last-order-320.png",
+    "audit/weekend-order-2026-10-18/last-order-390.png",
+    "audit/weekend-order-2026-10-18/return-320.png",
+    "audit/weekend-order-2026-10-18/return-390.png"
+  ],
+  "originalFiles": [
+    {
+      "path": "audit/design-2026-10-13/notebook-320.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/design-2026-10-13/notebook-390.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/design-2026-10-13/phase2-ui/floor-rival-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/design-2026-10-13/phase2-ui/routes-sheet-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/design-2026-10-13/receipt-320.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/design-2026-10-13/receipt-390.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-crowding-day1.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-crowding-day4.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-pull-row-320x568-scrolled.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-pull-row-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-pull-row-390x667-scrolled.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-pull-row-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/floor-pull-row-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-brief.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-dock.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-evening-touch.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-face-trial-offer.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-face-trial.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-pull-over.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-summary-ledger-line-calm.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/mobile-summary-ledger-line.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p14-mobile-empty.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p14-mobile-rows-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p14-mobile-rows-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p15-mobile-bundle-row.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p16-mobile-bundle-row-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p16-mobile-bundle-row-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p17-mobile-brief.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p18-transfer-foot-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p18-transfer-foot-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p18-transfer-foot-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p20-mobile-brief-day3.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p20-mobile-brief-iphone.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p20-mobile-brief-pixel-10.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p20-mobile-complaint-day4.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p21-mobile-floor-day2.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p21-mobile-floor-day4.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p21-mobile-floor-tired-alone.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p22-mobile-floor-day2.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p22-mobile-floor-day4.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p23-mobile-pull-over-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p23-mobile-pull-over-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p23-mobile-pull-over-offer.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p24-sample-note-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p24-sample-note-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p25-mobile-face-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p25-mobile-face-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p25-mobile-face-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p26-mobile-structure-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p26-mobile-structure-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p28-mobile-day4-night.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p32-mobile-day3-night.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p32-mobile-fold-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p32-mobile-fold-390x667.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p32-mobile-fold-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p33-mobile-day4-gap-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p34-mobile-askback-day2.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p34-mobile-closing-iphone.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p34-mobile-closing-pixel-10.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p35-mobile-refund-copy-day3.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p37-mobile-morning-foot-390x844.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p38-mobile-day2-night-320x568.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p38-mobile-day2-night.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p38-mobile-day4-morning.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p39-mobile-borrow-blocked.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p39-mobile-borrow-open.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p41-mobile-chain-after-borrow.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p41-mobile-chain-borrow-open.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p42-mobile-borrow-blocked-lost.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p42-mobile-borrow-blocked-record.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p43-mobile-typed-correct.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p43-mobile-typed-steady.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p44-mobile-echo-her-words.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p44-mobile-white-ask.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p45-mobile-white-ask-her-own-line.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p46-mobile-visit-minutes.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p47-mobile-gate-pick.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p48-mobile-finale-foot.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p49-mobile-rival-echo.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/experience-v2/p52-mobile-typed-shen.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/rescue-2026-09-08/after-pwa-rival.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/floor-day1-know.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/floor-day1-skip.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/report-day1-know.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/report-day1-skip.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/report-know.json",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/report-skip.json",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-2-day3-know.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-2-day3-skip.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-2-start-know.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-2-start-skip.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-archive-know.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-archive-skip.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-end-know.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-end-skip.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-ending-title.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-raw-fields.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-recap-320x568-空手散场.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-recap-320x568-长标题散场.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-recap-390x844-空手散场.png",
+      "unchanged": true
+    },
+    {
+      "path": "audit/world-smoke/season-recap-390x844-长标题散场.png",
+      "unchanged": true
+    },
+    {
+      "path": "dynamic-counter-prototype/.最后一单 · 人情场.qoder.site",
+      "unchanged": true
+    }
+  ],
+  "allOriginalFilesUnchanged": true
+}

@@ -7,6 +7,9 @@ import {
 } from "../target.ts";
 import { WEEK_RULES, weekRuleOf } from "../weeks.ts";
 import type { World } from "../types.ts";
+import { rivalBookingSlots, RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES } from "../rival-business.ts";
+import { currentWeekendOrder } from "../weekend-orders.ts";
+import { SLOT_WORD } from "./words.ts";
 import { PEOPLE } from "../content/index.ts";
 import { BottomSheet, MobileScroll } from "../../mobile";
 
@@ -59,8 +62,15 @@ export function GoalStrip({ world, lit, bump, onOpen }: { world: World; lit: boo
   const progressWord = track === "sales" ? weekGoalWord(world)
     : track === "care" ? `客情 ${live.care} / ${nextStep(live.care, CARE_STEPS)} 位`
     : `守客 ${guardNextWord(live.guard, live.guardStars, live.guardRate)}`;
+  const upcoming = rivalBookingSlots(world).filter(slot => slot > world.slot);
+  const weekend = currentWeekendOrder(world);
+  const ownWeekend = !!weekend?.prepared && !weekend.outcome && weekend.due === world.day;
+  const rivalTimes = upcoming.filter(slot => !(slot === 3 && ownWeekend)).map(slot => SLOT_WORD[slot]);
+  const plans = [rivalTimes.length ? `对面${rivalTimes.join("、")}约客` : "",
+    ownWeekend && upcoming.includes(3) ? "晚高峰接周末约单" : ""].filter(Boolean).join("；");
+  const schedule = (world.slot === 0 || world.slot === 2) && plans ? `接下来：${plans}` : "";
   return <button type="button" className={`world-goal${live.stars ? " is-passed" : ""}${lit ? " is-hit" : ""}`}
-    aria-label={`本周目标：${weekLevelWord(world)}，${lines.map(x => x.short).join("，")}。点开看三条过关线`} onClick={onOpen}>
+    aria-label={`本周目标：${weekLevelWord(world)}，${lines.map(x => x.short).join("，")}。${schedule ? `${schedule}。` : ""}点开看三条过关线`} onClick={onOpen}>
     <span className="wg-row">
       <b>{weekLevelWord(world)}</b>
       <span className={`wg-tail${rival > made ? " is-trail" : made > 0 ? " is-lead" : ""}`}>{weekGoalTail(world)}</span>
@@ -78,6 +88,7 @@ export function GoalStrip({ world, lit, bump, onOpen }: { world: World; lit: boo
         {x.stars ? "✓" : ""}{x.short}</span>)}
       <span className="wg-more" aria-hidden="true">›</span>
     </span>
+    {schedule && <span className="wg-schedule">{schedule}</span>}
   </button>;
 }
 
@@ -87,6 +98,7 @@ export function RoutesSheet({ world, onClose }: { world: World; onClose: () => v
   const lines = routeLines(world);
   const cared = weekCarePeople(world).map(nameOf), guarded = weekGuardedPeople(world).map(nameOf);
   const [sales, care, guard] = lines;
+  const bookingSlots = rivalBookingSlots(world);
   const head = (x: typeof sales) => <h3><b>{ROUTE_WORD[x.route]}线 {starRow(x.stars)}</b><span>{x.short}</span></h3>;
   // 用现成的 BottomSheet：Escape、焦点圈定、下滑关闭都是它的；正文在 MobileScroll 里滚，320×568 也够得着「知道了」。
   return <BottomSheet open title="三条过关线" description={`${weekLevelWord(world)} · 任选一条到线就过关`} snap={0.86}
@@ -105,6 +117,12 @@ export function RoutesSheet({ world, onClose }: { world: World; onClose: () => v
             <small>{guardStepWords.join("；")}</small>
             <small className="routes-rate">按客人逐个计，本周公开威胁 {live.guardThreats} 人次，挡住 {live.guardStops} 人次{live.guardThreats ? `（${pct(live.guardRate)}）` : ""}{guarded.length ? ` · 已记：${guarded.join("、")}` : ""}</small></li>
         </ul>
+        <section className="routes-booking" aria-label="对面的约客安排">
+          <h3>对面也在约客</h3>
+          <p>{bookingSlots.length ? `每天${bookingSlots.map(slot => SLOT_WORD[slot]).join("、")}各有一次约客机会。` : "首季第一周先熟悉柜台；从第 8 天起，每天午后、晚高峰各有一次约客机会。"}周末最后一单占用当晚这一场；提前确认过的周末客人直接来你柜前。</p>
+          <p>客人到场才公开姓名和报价，本时段结束结账。邀来比货花 {RIVAL_INVITE_ENERGY} 精力、{RIVAL_INVITE_SAMPLES} 份小样，接待另花 12 精力；也可以把精力留给自己约好的客人。</p>
+          <small>有空位、有合适客人才约得成；刚在任一家买过的客人先用完再来。不会挤掉你已约好的人。</small>
+        </section>
         <p className="routes-foot">周日打烊只取星最多的一条：过关柜位 +{WEEK_HIT_STANDING}。</p>
       </MobileScroll>
       <button className="routes-close" type="button" onClick={onClose}>知道了</button>

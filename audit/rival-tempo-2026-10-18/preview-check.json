@@ -1,0 +1,17 @@
+{
+  "url": "http://127.0.0.1:4188/",
+  "moduleChecks": {
+    "/src/world/engine.ts": {
+      "startOrdinaryBooking": true,
+      "w.slot === 3": true
+    },
+    "/src/world/ui/Levels.tsx": {
+      "wg-schedule": true,
+      "晚高峰接周末约单": true
+    },
+    "/src/world/ui/world.css": {
+      "height:86%": true,
+      "color:#f2e6d8": true
+    }
+  }
+}

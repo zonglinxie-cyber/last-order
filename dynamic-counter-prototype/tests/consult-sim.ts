@@ -494,6 +494,7 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
         }
       }
       const booking = rivalBookingNow(w);
+      if (booking) social[`booking-open-${slot}`] = (social[`booking-open-${slot}`] ?? 0) + 1;
       let invited: Person | undefined;
       if (COMPETE_BOOKINGS && booking) {
         if (booking.invited && w.energy >= VERB_ENERGY.serve) invited = people.find(p => p.id === booking.person);
@@ -526,7 +527,13 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
           .sort((a, b) => (w.opinion[b.id] ?? 0) - (w.opinion[a.id] ?? 0) || a.id.localeCompare(b.id))[0];
         if (contact) { w = inviteContact(w, people, contact.id); social["invite-contact"] = (social["invite-contact"] ?? 0) + 1; }
       }
+      const rivalBefore = w.rivalMoney;
       w = ambient(w, people);
+      const bookingResult = rivalBookingNow(w)?.outcome;
+      const bookingIncome = booking && bookingResult === "rival" ? booking.amount : 0;
+      if (booking && bookingResult) social[`booking-${bookingResult}`] = (social[`booking-${bookingResult}`] ?? 0) + 1;
+      social["rival-booking-money"] = (social["rival-booking-money"] ?? 0) + bookingIncome;
+      social["rival-poach-money"] = (social["rival-poach-money"] ?? 0) + w.rivalMoney - rivalBefore - bookingIncome;
     }
     const closingDay = w.day;
     w = endDay(w, people);

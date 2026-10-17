@@ -318,8 +318,13 @@
 .world-goal .wg-routes .is-track { color:#ffedca; }
 .world-goal .wg-routes .done { color:#a8dcb0; }
 .world-goal .wg-routes .wg-more { flex:0 0 auto; margin-left:auto; color:#f0c978; font-size:14px; }
+.world-goal .wg-schedule { display:block; margin-top:4px; color:#dfb995; font-size:12px; line-height:1.4; }
+.routes-booking { margin:0 0 12px; padding:12px; border:1px solid #e8b67144; border-radius:10px; background:#3a262455; }
+.routes-booking h3 { margin:0 0 8px; color:#f0c978; font-size:15px; }
+.routes-booking p { margin:6px 0; color:#f2e6d8; font-size:13px; line-height:1.6; }
+.routes-booking small { color:#c9ad92; font-size:12px; line-height:1.6; }
 .world-goal .wg-bump { margin-left:6px; padding:0 6px; border-radius:999px; background:#2f4a36; color:#c8f0cc; font:600 12px/1.5 system-ui,sans-serif; font-style:normal; }
-.bottom-sheet:has(.world-routes) { background:#241713; color:#f9e8cc; z-index:90; border:1px solid #bda16b66; border-bottom:0; }
+.bottom-sheet:has(.world-routes) { height:86%; background:#241713; color:#f9e8cc; z-index:90; border:1px solid #bda16b66; border-bottom:0; }
 .bottom-sheet:has(.world-routes) .sheet-handle-zone { flex-shrink:0; height:18px; }
 .bottom-sheet:has(.world-routes) .sheet-header { padding:0 16px 6px; }
 .bottom-sheet:has(.world-routes) .sheet-title { font:700 18px 'Noto Serif SC',serif; }
@@ -413,8 +418,8 @@
 .world-rival-booking { flex:none; display:flex; align-items:center; justify-content:space-between; gap:6px; min-height:44px; padding:6px 12px; border:0; border-bottom:1px solid #e1c09b33; background:#2d263e; color:#f2dfc8; text-align:left; font-size:12px; }
 .world-rival-booking b { font-weight:600; }
 .world-rival-booking span { flex:none; color:#d9c5ef; }
-.has-rival-booking .world-map-view { flex-shrink:1; min-height:140px; }
-.has-rival-booking .world-scene { min-height:96px; flex-shrink:0; }
+.has-rival-booking .world-map-view,.world-app:has(.wg-schedule) .world-map-view { flex-shrink:1; min-height:140px; }
+.has-rival-booking .world-scene,.world-app:has(.wg-schedule) .world-scene { min-height:96px; flex-shrink:0; }
 .world-opportunities { display:flex; flex:none; min-width:0; }
 .world-opportunities .world-rival-booking { flex:1; min-width:0; }
 .world-opportunities.has-weekend .world-rival-booking { flex-direction:column; align-items:flex-start; gap:2px; }

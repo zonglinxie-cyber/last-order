@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: 新增晚场只使用剩余客位，不挤掉原本自然来访的人或改掉其站位
+not ok 1 - 新增晚场只使用剩余客位，不挤掉原本自然来访的人或改掉其站位
+  ---
+  duration_ms: 3.457542
+  type: 'test'
+  location: '/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-business.test.ts:85:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    种子 0 原来会来的人 gaoyuan 不该被夜场挤掉
+    + actual - expected
+
+    + undefined
+    - 'counter'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'counter'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/derekfly3/Documents/ChatGPT/AI%E5%85%AC%E5%8F%B8%E5%A4%A7%E4%B9%B1%E6%96%97/dynamic-counter-prototype/tests/world-rival-business.test.ts:92:70)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 177.388292

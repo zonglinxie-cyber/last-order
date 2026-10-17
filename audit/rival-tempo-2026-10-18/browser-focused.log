@@ -1,0 +1,60 @@
+[WebServer] (node:46405) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:46488) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 26 tests using 1 worker
+
+(node:46662) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-levels.spec.ts:30:5 › 每周一关 390×844 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (472ms)
+  ✓   2 tests/world-levels.spec.ts:43:5 › 每周一关 390×844 › 过了这一关，页顶那条变色并亮星 (214ms)
+  ✓   3 tests/world-levels.spec.ts:50:5 › 每周一关 390×844 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (377ms)
+  ✓   4 tests/world-levels.spec.ts:62:5 › 每周一关 390×844 › 钱没达标也能凭客情过关，结算写明获胜路线 (284ms)
+  ✓   5 tests/world-levels.spec.ts:80:5 › 每周一关 390×844 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓   6 tests/world-levels.spec.ts:108:5 › 每周一关 390×844 › 没到数：结算屏盖「没过」，零颗星 (261ms)
+  ✓   7 tests/world-levels.spec.ts:120:5 › 每周一关 390×844 › 季末那排四关战绩：每关几颗星、一共几颗 (245ms)
+  ✓   8 tests/world-levels.spec.ts:30:5 › 每周一关 320×568 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (246ms)
+  ✓   9 tests/world-levels.spec.ts:43:5 › 每周一关 320×568 › 过了这一关，页顶那条变色并亮星 (215ms)
+  ✓  10 tests/world-levels.spec.ts:50:5 › 每周一关 320×568 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (259ms)
+  ✓  11 tests/world-levels.spec.ts:62:5 › 每周一关 320×568 › 钱没达标也能凭客情过关，结算写明获胜路线 (259ms)
+  ✓  12 tests/world-levels.spec.ts:80:5 › 每周一关 320×568 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓  13 tests/world-levels.spec.ts:108:5 › 每周一关 320×568 › 没到数：结算屏盖「没过」，零颗星 (280ms)
+  ✓  14 tests/world-levels.spec.ts:120:5 › 每周一关 320×568 › 季末那排四关战绩：每关几颗星、一共几颗 (226ms)
+  ✓  15 tests/world-rival-business.spec.ts:31:3 › 对面预约 320×568 › 双目标与对面预约同时可点，邀来、刷新、正常成交确实接下这一单 (3.1s)
+  ✓  16 tests/world-rival-business.spec.ts:68:3 › 对面预约 320×568 › 可以放弃争取，按公开报价只结一次；刷新不会再收款 (453ms)
+  ✓  17 tests/world-rival-business.spec.ts:80:3 › 对面预约 320×568 › 小样不足解释原因，不扣精力；旧档没有预约也能继续 (504ms)
+  ✓  18 tests/world-rival-business.spec.ts:31:3 › 对面预约 390×844 › 双目标与对面预约同时可点，邀来、刷新、正常成交确实接下这一单 (3.1s)
+  ✓  19 tests/world-rival-business.spec.ts:68:3 › 对面预约 390×844 › 可以放弃争取，按公开报价只结一次；刷新不会再收款 (453ms)
+  ✓  20 tests/world-rival-business.spec.ts:80:3 › 对面预约 390×844 › 小样不足解释原因，不扣精力；旧档没有预约也能继续 (502ms)
+  ✘  21 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (395ms)
+(node:50091) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  22 tests/world-rival-tempo.spec.ts:59:3 › 约客节奏 320×568 › 晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账 (3.0s)
+  ✓  23 tests/world-rival-tempo.spec.ts:91:3 › 约客节奏 320×568 › 从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账 (578ms)
+  ✓  24 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 390×844 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (3.0s)
+  ✓  25 tests/world-rival-tempo.spec.ts:59:3 › 约客节奏 390×844 › 晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账 (2.9s)
+  ✓  26 tests/world-rival-tempo.spec.ts:91:3 › 约客节奏 390×844 › 从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账 (577ms)
+
+
+  1) tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 ────────
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 96
+    Received:    23.765625
+
+      38 |       await expect(page.locator(".wg-schedule")).toBeInViewport({ ratio: 1 });
+      39 |       await hit(page.locator(".world-goal")); await hit(page.locator(".world-next"));
+    > 40 |       expect(await page.locator(".world-scene").evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(96);
+         |                                                                                                    ^
+      41 |       await page.screenshot({ path: `${audit}/schedule-${slot}-${width}.png` });
+      42 |       await page.locator(".world-goal").click();
+      43 |       const schedule = page.getByLabel("对面的约客安排");
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-tempo.spec.ts:40:100
+
+    Error Context: test-results/world-rival-tempo-约客节奏-320-db206-道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点/error-context.md
+
+  1 failed
+    tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 ─────────
+  25 passed (29.6s)

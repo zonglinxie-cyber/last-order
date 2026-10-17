@@ -1,0 +1,1551 @@
+{
+  "default-before": {
+    "n": 20,
+    "incomeMedian": 69160.0,
+    "rivalMedian": 39800.0,
+    "marginMedian": 27250.0,
+    "marginMin": -2420,
+    "ahead": 19,
+    "salesMedian": 45.0,
+    "stars": 206,
+    "passedWeeks": 80,
+    "rivalSalesMedian": 23.0,
+    "fullStarWeeks": 49,
+    "actions": {
+      "contact-arrived": 0,
+      "help": 558,
+      "rival-booking-money": 780200,
+      "rival-poach-money": 2680,
+      "sample": 2175,
+      "wechat": 562,
+      "booking-open-3": 32,
+      "booking-rival": 447,
+      "booking-open-1": 415,
+      "greet": 928,
+      "keep": 99,
+      "handoff": 15
+    },
+    "rows": [
+      {
+        "seed": "sim-0",
+        "income": 68400,
+        "consult": 47400,
+        "rival": 47860,
+        "margin": 20540,
+        "sales": 41,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-1",
+        "income": 73860,
+        "consult": 56460,
+        "rival": 39060,
+        "margin": 34800,
+        "sales": 45,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-2",
+        "income": 63160,
+        "consult": 41260,
+        "rival": 33540,
+        "margin": 29620,
+        "sales": 41,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-3",
+        "income": 74160,
+        "consult": 55840,
+        "rival": 23000,
+        "margin": 51160,
+        "sales": 46,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-4",
+        "income": 62360,
+        "consult": 50380,
+        "rival": 39900,
+        "margin": 22460,
+        "sales": 49,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-5",
+        "income": 53340,
+        "consult": 37900,
+        "rival": 55760,
+        "margin": -2420,
+        "sales": 40,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-6",
+        "income": 64380,
+        "consult": 51940,
+        "rival": 41680,
+        "margin": 22700,
+        "sales": 45,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-7",
+        "income": 76760,
+        "consult": 54400,
+        "rival": 36580,
+        "margin": 40180,
+        "sales": 43,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-8",
+        "income": 68300,
+        "consult": 46660,
+        "rival": 46640,
+        "margin": 21660,
+        "sales": 45,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-9",
+        "income": 74100,
+        "consult": 58980,
+        "rival": 31280,
+        "margin": 42820,
+        "sales": 44,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-10",
+        "income": 72800,
+        "consult": 56480,
+        "rival": 43220,
+        "margin": 29580,
+        "sales": 45,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-11",
+        "income": 84300,
+        "consult": 57340,
+        "rival": 26560,
+        "margin": 57740,
+        "sales": 43,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-12",
+        "income": 67780,
+        "consult": 43800,
+        "rival": 29560,
+        "margin": 38220,
+        "sales": 39,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-13",
+        "income": 69920,
+        "consult": 52400,
+        "rival": 45000,
+        "margin": 24920,
+        "sales": 46,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-14",
+        "income": 70780,
+        "consult": 49380,
+        "rival": 47180,
+        "margin": 23600,
+        "sales": 45,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-15",
+        "income": 79600,
+        "consult": 63140,
+        "rival": 37680,
+        "margin": 41920,
+        "sales": 48,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-16",
+        "income": 65860,
+        "consult": 53880,
+        "rival": 42680,
+        "margin": 23180,
+        "sales": 49,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-17",
+        "income": 59540,
+        "consult": 45580,
+        "rival": 39700,
+        "margin": 19840,
+        "sales": 44,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-18",
+        "income": 67040,
+        "consult": 52780,
+        "rival": 44520,
+        "margin": 22520,
+        "sales": 45,
+        "stars": 12,
+        "passed": 4
+      },
+      {
+        "seed": "sim-19",
+        "income": 69940,
+        "consult": 55740,
+        "rival": 31480,
+        "margin": 38460,
+        "sales": 47,
+        "stars": 10,
+        "passed": 4
+      }
+    ]
+  },
+  "default-after": {
+    "n": 20,
+    "incomeMedian": 58670.0,
+    "rivalMedian": 61220.0,
+    "marginMedian": 1040.0,
+    "marginMin": -27160,
+    "ahead": 11,
+    "salesMedian": 37.5,
+    "stars": 205,
+    "passedWeeks": 80,
+    "rivalSalesMedian": 36.0,
+    "fullStarWeeks": 48,
+    "actions": {
+      "contact-arrived": 0,
+      "help": 560,
+      "rival-booking-money": 1198040,
+      "rival-poach-money": 2680,
+      "sample": 2210,
+      "wechat": 572,
+      "booking-open-3": 324,
+      "booking-rival": 716,
+      "booking-open-1": 392,
+      "greet": 1167,
+      "keep": 105,
+      "handoff": 9
+    },
+    "rows": [
+      {
+        "seed": "sim-0",
+        "income": 62760,
+        "consult": 49280,
+        "rival": 61880,
+        "margin": 880,
+        "sales": 43,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-1",
+        "income": 56920,
+        "consult": 36060,
+        "rival": 53640,
+        "margin": 3280,
+        "sales": 37,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-2",
+        "income": 49900,
+        "consult": 39240,
+        "rival": 63100,
+        "margin": -13200,
+        "sales": 37,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-3",
+        "income": 61560,
+        "consult": 53800,
+        "rival": 59360,
+        "margin": 2200,
+        "sales": 41,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-4",
+        "income": 74160,
+        "consult": 54920,
+        "rival": 56080,
+        "margin": 18080,
+        "sales": 41,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-5",
+        "income": 43920,
+        "consult": 36140,
+        "rival": 71080,
+        "margin": -27160,
+        "sales": 35,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-6",
+        "income": 54100,
+        "consult": 36800,
+        "rival": 55160,
+        "margin": -1060,
+        "sales": 39,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-7",
+        "income": 55680,
+        "consult": 33000,
+        "rival": 67140,
+        "margin": -11460,
+        "sales": 33,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-8",
+        "income": 57700,
+        "consult": 42860,
+        "rival": 62540,
+        "margin": -4840,
+        "sales": 42,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-9",
+        "income": 65120,
+        "consult": 54420,
+        "rival": 55040,
+        "margin": 10080,
+        "sales": 37,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-10",
+        "income": 59160,
+        "consult": 48960,
+        "rival": 66900,
+        "margin": -7740,
+        "sales": 39,
+        "stars": 12,
+        "passed": 4
+      },
+      {
+        "seed": "sim-11",
+        "income": 63840,
+        "consult": 47560,
+        "rival": 62640,
+        "margin": 1200,
+        "sales": 37,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-12",
+        "income": 64340,
+        "consult": 39080,
+        "rival": 48760,
+        "margin": 15580,
+        "sales": 32,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-13",
+        "income": 55240,
+        "consult": 44720,
+        "rival": 61080,
+        "margin": -5840,
+        "sales": 40,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-14",
+        "income": 60000,
+        "consult": 42760,
+        "rival": 58780,
+        "margin": 1220,
+        "sales": 39,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-15",
+        "income": 58180,
+        "consult": 46480,
+        "rival": 50620,
+        "margin": 7560,
+        "sales": 39,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-16",
+        "income": 65920,
+        "consult": 51640,
+        "rival": 61360,
+        "margin": 4560,
+        "sales": 33,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-17",
+        "income": 51740,
+        "consult": 37020,
+        "rival": 67220,
+        "margin": -15480,
+        "sales": 38,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-18",
+        "income": 66280,
+        "consult": 47040,
+        "rival": 55040,
+        "margin": 11240,
+        "sales": 36,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-19",
+        "income": 47520,
+        "consult": 35960,
+        "rival": 63300,
+        "margin": -15780,
+        "sales": 35,
+        "stars": 11,
+        "passed": 4
+      }
+    ]
+  },
+  "rebook-before": {
+    "n": 20,
+    "incomeMedian": 83520.0,
+    "rivalMedian": 20700.0,
+    "marginMedian": 62410.0,
+    "marginMin": 35360,
+    "ahead": 20,
+    "salesMedian": 57.0,
+    "stars": 204,
+    "passedWeeks": 80,
+    "rivalSalesMedian": 13.0,
+    "fullStarWeeks": 49,
+    "actions": {
+      "contact-arrived": 308,
+      "help": 556,
+      "rival-booking-money": 382080,
+      "rival-poach-money": 44020,
+      "sample": 1848,
+      "prepare-weekend": 60,
+      "wechat": 432,
+      "invite-contact": 308,
+      "booking-open-3": 37,
+      "booking-player": 216,
+      "greet": 468,
+      "booking-open-1": 412,
+      "booking-rival": 233,
+      "keep": 103,
+      "handoff": 20,
+      "invite-booking": 274,
+      "prepare-weekend-referral": 37,
+      "referral-result-good": 25,
+      "referral-result-rival": 9,
+      "referral-result-mixed": 3
+    },
+    "rows": [
+      {
+        "seed": "sim-0",
+        "income": 68700,
+        "consult": 59560,
+        "rival": 25220,
+        "margin": 43480,
+        "sales": 61,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-1",
+        "income": 86460,
+        "consult": 68680,
+        "rival": 15840,
+        "margin": 70620,
+        "sales": 52,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-2",
+        "income": 83280,
+        "consult": 63480,
+        "rival": 21620,
+        "margin": 61660,
+        "sales": 54,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-3",
+        "income": 87460,
+        "consult": 80080,
+        "rival": 22720,
+        "margin": 64740,
+        "sales": 61,
+        "stars": 12,
+        "passed": 4
+      },
+      {
+        "seed": "sim-4",
+        "income": 66780,
+        "consult": 52420,
+        "rival": 31420,
+        "margin": 35360,
+        "sales": 54,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-5",
+        "income": 81260,
+        "consult": 71220,
+        "rival": 26260,
+        "margin": 55000,
+        "sales": 60,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-6",
+        "income": 71560,
+        "consult": 58600,
+        "rival": 17700,
+        "margin": 53860,
+        "sales": 50,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-7",
+        "income": 86880,
+        "consult": 75180,
+        "rival": 14840,
+        "margin": 72040,
+        "sales": 58,
+        "stars": 12,
+        "passed": 4
+      },
+      {
+        "seed": "sim-8",
+        "income": 82720,
+        "consult": 69060,
+        "rival": 26640,
+        "margin": 56080,
+        "sales": 56,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-9",
+        "income": 81960,
+        "consult": 70080,
+        "rival": 24740,
+        "margin": 57220,
+        "sales": 58,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-10",
+        "income": 85180,
+        "consult": 71160,
+        "rival": 19780,
+        "margin": 65400,
+        "sales": 58,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-11",
+        "income": 85900,
+        "consult": 68580,
+        "rival": 18220,
+        "margin": 67680,
+        "sales": 57,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-12",
+        "income": 89880,
+        "consult": 80420,
+        "rival": 18700,
+        "margin": 71180,
+        "sales": 57,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-13",
+        "income": 79480,
+        "consult": 66580,
+        "rival": 16320,
+        "margin": 63160,
+        "sales": 55,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-14",
+        "income": 84120,
+        "consult": 59680,
+        "rival": 16220,
+        "margin": 67900,
+        "sales": 54,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-15",
+        "income": 84940,
+        "consult": 73040,
+        "rival": 23760,
+        "margin": 61180,
+        "sales": 58,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-16",
+        "income": 87060,
+        "consult": 80800,
+        "rival": 19420,
+        "margin": 67640,
+        "sales": 59,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-17",
+        "income": 77660,
+        "consult": 69320,
+        "rival": 21700,
+        "margin": 55960,
+        "sales": 55,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-18",
+        "income": 83760,
+        "consult": 71400,
+        "rival": 14900,
+        "margin": 68860,
+        "sales": 57,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-19",
+        "income": 73860,
+        "consult": 64540,
+        "rival": 30080,
+        "margin": 43780,
+        "sales": 56,
+        "stars": 10,
+        "passed": 4
+      }
+    ]
+  },
+  "rebook-after": {
+    "n": 20,
+    "incomeMedian": 73280.0,
+    "rivalMedian": 43010.0,
+    "marginMedian": 31710.0,
+    "marginMin": 10480,
+    "ahead": 20,
+    "salesMedian": 52.0,
+    "stars": 175,
+    "passedWeeks": 80,
+    "rivalSalesMedian": 24.5,
+    "fullStarWeeks": 29,
+    "actions": {
+      "contact-arrived": 276,
+      "help": 559,
+      "rival-booking-money": 830720,
+      "rival-poach-money": 21060,
+      "sample": 1806,
+      "prepare-weekend": 60,
+      "wechat": 466,
+      "invite-contact": 276,
+      "booking-open-3": 347,
+      "booking-player": 255,
+      "greet": 605,
+      "booking-open-1": 387,
+      "booking-rival": 479,
+      "keep": 102,
+      "invite-booking": 343,
+      "prepare-weekend-referral": 32,
+      "referral-result-good": 17,
+      "handoff": 16,
+      "referral-result-rival": 11,
+      "referral-result-mixed": 4
+    },
+    "rows": [
+      {
+        "seed": "sim-0",
+        "income": 78680,
+        "consult": 70800,
+        "rival": 41160,
+        "margin": 37520,
+        "sales": 56,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-1",
+        "income": 67040,
+        "consult": 60260,
+        "rival": 50560,
+        "margin": 16480,
+        "sales": 52,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-2",
+        "income": 69340,
+        "consult": 61600,
+        "rival": 47460,
+        "margin": 21880,
+        "sales": 49,
+        "stars": 7,
+        "passed": 4
+      },
+      {
+        "seed": "sim-3",
+        "income": 83720,
+        "consult": 72960,
+        "rival": 43940,
+        "margin": 39780,
+        "sales": 54,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-4",
+        "income": 65380,
+        "consult": 57840,
+        "rival": 42080,
+        "margin": 23300,
+        "sales": 54,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-5",
+        "income": 86820,
+        "consult": 73920,
+        "rival": 35680,
+        "margin": 51140,
+        "sales": 53,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-6",
+        "income": 90720,
+        "consult": 83700,
+        "rival": 34500,
+        "margin": 56220,
+        "sales": 57,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-7",
+        "income": 79140,
+        "consult": 71860,
+        "rival": 38860,
+        "margin": 40280,
+        "sales": 55,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-8",
+        "income": 69680,
+        "consult": 62900,
+        "rival": 56960,
+        "margin": 12720,
+        "sales": 49,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-9",
+        "income": 73080,
+        "consult": 59920,
+        "rival": 44200,
+        "margin": 28880,
+        "sales": 57,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-10",
+        "income": 71320,
+        "consult": 62060,
+        "rival": 49500,
+        "margin": 21820,
+        "sales": 53,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-11",
+        "income": 66920,
+        "consult": 53080,
+        "rival": 46400,
+        "margin": 20520,
+        "sales": 52,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-12",
+        "income": 59300,
+        "consult": 44200,
+        "rival": 48820,
+        "margin": 10480,
+        "sales": 46,
+        "stars": 7,
+        "passed": 4
+      },
+      {
+        "seed": "sim-13",
+        "income": 82140,
+        "consult": 68300,
+        "rival": 29260,
+        "margin": 52880,
+        "sales": 52,
+        "stars": 10,
+        "passed": 4
+      },
+      {
+        "seed": "sim-14",
+        "income": 66920,
+        "consult": 56660,
+        "rival": 52520,
+        "margin": 14400,
+        "sales": 52,
+        "stars": 7,
+        "passed": 4
+      },
+      {
+        "seed": "sim-15",
+        "income": 80940,
+        "consult": 65480,
+        "rival": 39420,
+        "margin": 41520,
+        "sales": 48,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-16",
+        "income": 72220,
+        "consult": 65140,
+        "rival": 38500,
+        "margin": 33720,
+        "sales": 52,
+        "stars": 8,
+        "passed": 4
+      },
+      {
+        "seed": "sim-17",
+        "income": 73480,
+        "consult": 64820,
+        "rival": 36960,
+        "margin": 36520,
+        "sales": 51,
+        "stars": 9,
+        "passed": 4
+      },
+      {
+        "seed": "sim-18",
+        "income": 87260,
+        "consult": 81280,
+        "rival": 27640,
+        "margin": 59620,
+        "sales": 58,
+        "stars": 11,
+        "passed": 4
+      },
+      {
+        "seed": "sim-19",
+        "income": 77060,
+        "consult": 69700,
+        "rival": 47360,
+        "margin": 29700,
+        "sales": 52,
+        "stars": 10,
+        "passed": 4
+      }
+    ]
+  },
+  "default-paired": [
+    {
+      "seed": "sim-0",
+      "incomeDelta": -5640,
+      "marginDelta": -19660
+    },
+    {
+      "seed": "sim-1",
+      "incomeDelta": -16940,
+      "marginDelta": -31520
+    },
+    {
+      "seed": "sim-2",
+      "incomeDelta": -13260,
+      "marginDelta": -42820
+    },
+    {
+      "seed": "sim-3",
+      "incomeDelta": -12600,
+      "marginDelta": -48960
+    },
+    {
+      "seed": "sim-4",
+      "incomeDelta": 11800,
+      "marginDelta": -4380
+    },
+    {
+      "seed": "sim-5",
+      "incomeDelta": -9420,
+      "marginDelta": -24740
+    },
+    {
+      "seed": "sim-6",
+      "incomeDelta": -10280,
+      "marginDelta": -23760
+    },
+    {
+      "seed": "sim-7",
+      "incomeDelta": -21080,
+      "marginDelta": -51640
+    },
+    {
+      "seed": "sim-8",
+      "incomeDelta": -10600,
+      "marginDelta": -26500
+    },
+    {
+      "seed": "sim-9",
+      "incomeDelta": -8980,
+      "marginDelta": -32740
+    },
+    {
+      "seed": "sim-10",
+      "incomeDelta": -13640,
+      "marginDelta": -37320
+    },
+    {
+      "seed": "sim-11",
+      "incomeDelta": -20460,
+      "marginDelta": -56540
+    },
+    {
+      "seed": "sim-12",
+      "incomeDelta": -3440,
+      "marginDelta": -22640
+    },
+    {
+      "seed": "sim-13",
+      "incomeDelta": -14680,
+      "marginDelta": -30760
+    },
+    {
+      "seed": "sim-14",
+      "incomeDelta": -10780,
+      "marginDelta": -22380
+    },
+    {
+      "seed": "sim-15",
+      "incomeDelta": -21420,
+      "marginDelta": -34360
+    },
+    {
+      "seed": "sim-16",
+      "incomeDelta": 60,
+      "marginDelta": -18620
+    },
+    {
+      "seed": "sim-17",
+      "incomeDelta": -7800,
+      "marginDelta": -35320
+    },
+    {
+      "seed": "sim-18",
+      "incomeDelta": -760,
+      "marginDelta": -11280
+    },
+    {
+      "seed": "sim-19",
+      "incomeDelta": -22420,
+      "marginDelta": -54240
+    }
+  ],
+  "rebook-paired": [
+    {
+      "seed": "sim-0",
+      "incomeDelta": 9980,
+      "marginDelta": -5960
+    },
+    {
+      "seed": "sim-1",
+      "incomeDelta": -19420,
+      "marginDelta": -54140
+    },
+    {
+      "seed": "sim-2",
+      "incomeDelta": -13940,
+      "marginDelta": -39780
+    },
+    {
+      "seed": "sim-3",
+      "incomeDelta": -3740,
+      "marginDelta": -24960
+    },
+    {
+      "seed": "sim-4",
+      "incomeDelta": -1400,
+      "marginDelta": -12060
+    },
+    {
+      "seed": "sim-5",
+      "incomeDelta": 5560,
+      "marginDelta": -3860
+    },
+    {
+      "seed": "sim-6",
+      "incomeDelta": 19160,
+      "marginDelta": 2360
+    },
+    {
+      "seed": "sim-7",
+      "incomeDelta": -7740,
+      "marginDelta": -31760
+    },
+    {
+      "seed": "sim-8",
+      "incomeDelta": -13040,
+      "marginDelta": -43360
+    },
+    {
+      "seed": "sim-9",
+      "incomeDelta": -8880,
+      "marginDelta": -28340
+    },
+    {
+      "seed": "sim-10",
+      "incomeDelta": -13860,
+      "marginDelta": -43580
+    },
+    {
+      "seed": "sim-11",
+      "incomeDelta": -18980,
+      "marginDelta": -47160
+    },
+    {
+      "seed": "sim-12",
+      "incomeDelta": -30580,
+      "marginDelta": -60700
+    },
+    {
+      "seed": "sim-13",
+      "incomeDelta": 2660,
+      "marginDelta": -10280
+    },
+    {
+      "seed": "sim-14",
+      "incomeDelta": -17200,
+      "marginDelta": -53500
+    },
+    {
+      "seed": "sim-15",
+      "incomeDelta": -4000,
+      "marginDelta": -19660
+    },
+    {
+      "seed": "sim-16",
+      "incomeDelta": -14840,
+      "marginDelta": -33920
+    },
+    {
+      "seed": "sim-17",
+      "incomeDelta": -4180,
+      "marginDelta": -19440
+    },
+    {
+      "seed": "sim-18",
+      "incomeDelta": 3500,
+      "marginDelta": -9240
+    },
+    {
+      "seed": "sim-19",
+      "incomeDelta": 3200,
+      "marginDelta": -14080
+    }
+  ],
+  "probe10": {
+    "base": {
+      "n": 10,
+      "incomeMedian": 82340.0,
+      "rivalMedian": 23730.0,
+      "marginMedian": 56650.0,
+      "marginMin": 35360,
+      "ahead": 10,
+      "salesMedian": 57.0,
+      "stars": 100,
+      "passedWeeks": 40,
+      "rivalSalesMedian": 13.5,
+      "fullStarWeeks": 24,
+      "actions": {
+        "contact-arrived": 155,
+        "help": 278,
+        "rival-booking-money": 207140,
+        "rival-poach-money": 19860,
+        "sample": 933,
+        "prepare-weekend": 30,
+        "wechat": 209,
+        "invite-contact": 155,
+        "booking-open-3": 21,
+        "booking-player": 108,
+        "greet": 214,
+        "booking-open-1": 205,
+        "booking-rival": 118,
+        "keep": 50,
+        "handoff": 9,
+        "invite-booking": 135,
+        "prepare-weekend-referral": 18,
+        "referral-result-good": 13,
+        "referral-result-rival": 5
+      },
+      "rows": [
+        {
+          "seed": "sim-0",
+          "income": 68700,
+          "consult": 59560,
+          "rival": 25220,
+          "margin": 43480,
+          "sales": 61,
+          "stars": 8,
+          "passed": 4
+        },
+        {
+          "seed": "sim-1",
+          "income": 86460,
+          "consult": 68680,
+          "rival": 15840,
+          "margin": 70620,
+          "sales": 52,
+          "stars": 11,
+          "passed": 4
+        },
+        {
+          "seed": "sim-2",
+          "income": 83280,
+          "consult": 63480,
+          "rival": 21620,
+          "margin": 61660,
+          "sales": 54,
+          "stars": 10,
+          "passed": 4
+        },
+        {
+          "seed": "sim-3",
+          "income": 87460,
+          "consult": 80080,
+          "rival": 22720,
+          "margin": 64740,
+          "sales": 61,
+          "stars": 12,
+          "passed": 4
+        },
+        {
+          "seed": "sim-4",
+          "income": 66780,
+          "consult": 52420,
+          "rival": 31420,
+          "margin": 35360,
+          "sales": 54,
+          "stars": 8,
+          "passed": 4
+        },
+        {
+          "seed": "sim-5",
+          "income": 81260,
+          "consult": 71220,
+          "rival": 26260,
+          "margin": 55000,
+          "sales": 60,
+          "stars": 10,
+          "passed": 4
+        },
+        {
+          "seed": "sim-6",
+          "income": 71560,
+          "consult": 58600,
+          "rival": 17700,
+          "margin": 53860,
+          "sales": 50,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-7",
+          "income": 86880,
+          "consult": 75180,
+          "rival": 14840,
+          "margin": 72040,
+          "sales": 58,
+          "stars": 12,
+          "passed": 4
+        },
+        {
+          "seed": "sim-8",
+          "income": 82720,
+          "consult": 69060,
+          "rival": 26640,
+          "margin": 56080,
+          "sales": 56,
+          "stars": 10,
+          "passed": 4
+        },
+        {
+          "seed": "sim-9",
+          "income": 81960,
+          "consult": 70080,
+          "rival": 24740,
+          "margin": 57220,
+          "sales": 58,
+          "stars": 10,
+          "passed": 4
+        }
+      ]
+    },
+    "two": {
+      "n": 10,
+      "incomeMedian": 75880.0,
+      "rivalMedian": 43010.0,
+      "marginMedian": 33200.0,
+      "marginMin": 12720,
+      "ahead": 10,
+      "salesMedian": 54.0,
+      "stars": 88,
+      "passedWeeks": 40,
+      "rivalSalesMedian": 24.5,
+      "fullStarWeeks": 15,
+      "actions": {
+        "contact-arrived": 137,
+        "help": 280,
+        "rival-booking-money": 422180,
+        "rival-poach-money": 13220,
+        "sample": 896,
+        "prepare-weekend": 30,
+        "wechat": 233,
+        "invite-contact": 137,
+        "booking-open-3": 171,
+        "booking-player": 130,
+        "greet": 271,
+        "booking-open-1": 197,
+        "booking-rival": 238,
+        "keep": 48,
+        "invite-booking": 176,
+        "prepare-weekend-referral": 16,
+        "referral-result-good": 8,
+        "handoff": 7,
+        "referral-result-rival": 7,
+        "referral-result-mixed": 1
+      },
+      "rows": [
+        {
+          "seed": "sim-0",
+          "income": 78680,
+          "consult": 70800,
+          "rival": 41160,
+          "margin": 37520,
+          "sales": 56,
+          "stars": 8,
+          "passed": 4
+        },
+        {
+          "seed": "sim-1",
+          "income": 67040,
+          "consult": 60260,
+          "rival": 50560,
+          "margin": 16480,
+          "sales": 52,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-2",
+          "income": 69340,
+          "consult": 61600,
+          "rival": 47460,
+          "margin": 21880,
+          "sales": 49,
+          "stars": 7,
+          "passed": 4
+        },
+        {
+          "seed": "sim-3",
+          "income": 83720,
+          "consult": 72960,
+          "rival": 43940,
+          "margin": 39780,
+          "sales": 54,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-4",
+          "income": 65380,
+          "consult": 57840,
+          "rival": 42080,
+          "margin": 23300,
+          "sales": 54,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-5",
+          "income": 86820,
+          "consult": 73920,
+          "rival": 35680,
+          "margin": 51140,
+          "sales": 53,
+          "stars": 11,
+          "passed": 4
+        },
+        {
+          "seed": "sim-6",
+          "income": 90720,
+          "consult": 83700,
+          "rival": 34500,
+          "margin": 56220,
+          "sales": 57,
+          "stars": 10,
+          "passed": 4
+        },
+        {
+          "seed": "sim-7",
+          "income": 79140,
+          "consult": 71860,
+          "rival": 38860,
+          "margin": 40280,
+          "sales": 55,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-8",
+          "income": 69680,
+          "consult": 62900,
+          "rival": 56960,
+          "margin": 12720,
+          "sales": 49,
+          "stars": 8,
+          "passed": 4
+        },
+        {
+          "seed": "sim-9",
+          "income": 73080,
+          "consult": 59920,
+          "rival": 44200,
+          "margin": 28880,
+          "sales": 57,
+          "stars": 8,
+          "passed": 4
+        }
+      ]
+    },
+    "three": {
+      "n": 10,
+      "incomeMedian": 78720.0,
+      "rivalMedian": 46160.0,
+      "marginMedian": 31650.0,
+      "marginMin": 3800,
+      "ahead": 10,
+      "salesMedian": 53.5,
+      "stars": 92,
+      "passedWeeks": 38,
+      "rivalSalesMedian": 26.5,
+      "fullStarWeeks": 22,
+      "actions": {
+        "contact-arrived": 139,
+        "help": 279,
+        "rival-booking-money": 422760,
+        "rival-poach-money": 15740,
+        "sample": 836,
+        "prepare-weekend": 30,
+        "wechat": 277,
+        "invite-contact": 139,
+        "booking-open-3": 114,
+        "booking-player": 196,
+        "booking-open-0": 181,
+        "greet": 288,
+        "booking-rival": 251,
+        "booking-open-1": 152,
+        "keep": 49,
+        "invite-booking": 251,
+        "prepare-weekend-referral": 14,
+        "referral-result-good": 9,
+        "referral-result-mixed": 2,
+        "handoff": 4,
+        "referral-result-rival": 3
+      },
+      "rows": [
+        {
+          "seed": "sim-0",
+          "income": 70540,
+          "consult": 64460,
+          "rival": 48020,
+          "margin": 22520,
+          "sales": 54,
+          "stars": 8,
+          "passed": 4
+        },
+        {
+          "seed": "sim-1",
+          "income": 85300,
+          "consult": 74760,
+          "rival": 30100,
+          "margin": 55200,
+          "sales": 57,
+          "stars": 10,
+          "passed": 4
+        },
+        {
+          "seed": "sim-2",
+          "income": 63920,
+          "consult": 59820,
+          "rival": 60120,
+          "margin": 3800,
+          "sales": 54,
+          "stars": 7,
+          "passed": 3
+        },
+        {
+          "seed": "sim-3",
+          "income": 80660,
+          "consult": 71880,
+          "rival": 47500,
+          "margin": 33160,
+          "sales": 51,
+          "stars": 11,
+          "passed": 4
+        },
+        {
+          "seed": "sim-4",
+          "income": 61060,
+          "consult": 54140,
+          "rival": 50020,
+          "margin": 11040,
+          "sales": 51,
+          "stars": 7,
+          "passed": 3
+        },
+        {
+          "seed": "sim-5",
+          "income": 82860,
+          "consult": 68860,
+          "rival": 28480,
+          "margin": 54380,
+          "sales": 58,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-6",
+          "income": 77240,
+          "consult": 65540,
+          "rival": 47100,
+          "margin": 30140,
+          "sales": 52,
+          "stars": 10,
+          "passed": 4
+        },
+        {
+          "seed": "sim-7",
+          "income": 80200,
+          "consult": 72760,
+          "rival": 37980,
+          "margin": 42220,
+          "sales": 53,
+          "stars": 9,
+          "passed": 4
+        },
+        {
+          "seed": "sim-8",
+          "income": 82980,
+          "consult": 74940,
+          "rival": 45220,
+          "margin": 37760,
+          "sales": 52,
+          "stars": 11,
+          "passed": 4
+        },
+        {
+          "seed": "sim-9",
+          "income": 72640,
+          "consult": 62360,
+          "rival": 43960,
+          "margin": 28680,
+          "sales": 57,
+          "stars": 10,
+          "passed": 4
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+src/base.ts(4,34): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+tests/consult-sim.ts(11,28): error TS2591: Cannot find name 'node:fs'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/consult-sim.ts(12,31): error TS2591: Cannot find name 'node:url'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/consult-sim.ts(39,30): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/consult-sim.ts(40,36): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/consult-sim.ts(44,16): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/consult-sim.ts(45,22): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/consult-sim.ts(46,26): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/world-rival-business.test.ts(1,20): error TS2591: Cannot find name 'node:assert/strict'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/world-rival-business.test.ts(2,22): error TS2591: Cannot find name 'node:test'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+tests/world-rival-business.test.ts(157,16): error TS18048: 'captured' is possibly 'undefined'.
+tests/world-rival-business.test.ts(158,16): error TS18048: 'captured' is possibly 'undefined'.
+tests/world-rival-business.test.ts(159,36): error TS2345: Argument of type '{ seed?: string | undefined; season?: number | undefined; slot?: Slot | undefined; money?: number | undefined; rivalMoney?: number | undefined; rivalWins?: number | undefined; ... 23 more ...; present: { ...; }; }' is not assignable to parameter of type 'World'.
+  Types of property 'seed' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.

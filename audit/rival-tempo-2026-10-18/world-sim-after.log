@@ -1,0 +1,344 @@
+== 人情场模拟 · 内容来源 src/world/content · 42 人 · 371 张卡 ==
+== 20 个种子 × 28 天 × 2 季 × 4 种风格 ==
+
+风格      不同签名数   钱 (min/med/max)              柜位 (min/med/max)   台账 (min/med/max)
+honest      20/20    min 89540 / med 109480 / max 123520 min 97 / med 99 / max 100 min 45 / med 70 / max 100
+pushy       20/20    min 19700 / med 35180 / max 51040 min 0 / med 14 / max 32 min 0 / med 2 / max 6
+social      20/20    min 39740 / med 53860 / max 65000 min 77 / med 93 / max 100 min 39 / med 65 / max 94
+random      20/20    min 6300 / med 19500 / max 30820 min 13 / med 39 / max 63 min 0 / med 0 / max 26
+
+比分（第 1 季，我 vs 对面维珞）:
+  全盘 23 领先 / 0 打平 / 57 落后（共 80）
+  honest   对面 min 44940 / med 61000 / max 77640 · 成交 min 35 / med 37 / max 42 单 · 领先 20/打平 0/落后 0
+  pushy    对面 min 72520 / med 96160 / max 105320 · 成交 min 57 / med 64 / max 69 单 · 领先 0/打平 0/落后 20
+  social   对面 min 55460 / med 69560 / max 93680 · 成交 min 36 / med 40 / max 42 单 · 领先 3/打平 0/落后 17
+  random   对面 min 93080 / med 106520 / max 121480 · 成交 min 56 / med 61 / max 67 单 · 领先 0/打平 0/落后 20
+
+自选加难各档（honest × 20 副 × 1 季，勾法按 heat.ts 那张表的顺序）:
+  勾 0 条（平时的柜上）  领先 20 / 打平 0 / 落后 0 · 对面成交中位 37.3 单
+  勾 1 条（小样减半）  领先 20 / 打平 0 / 落后 0 · 对面成交中位 36.8 单
+  勾 2 条（小样减半、罗曼多要一件）  领先 20 / 打平 0 / 落后 0 · 对面成交中位 37.1 单
+  勾 3 条（小样减半、罗曼多要一件、陆遥更狠）  领先 20 / 打平 0 / 落后 0 · 对面成交中位 38.0 单
+  勾 4 条（小样减半、罗曼多要一件、陆遥更狠、不许加微信）  领先 20 / 打平 0 / 落后 0 · 对面成交中位 38.5 单
+  勾 5 条（小样减半、罗曼多要一件、陆遥更狠、不许加微信、台账起点更低）  领先 20 / 打平 0 / 落后 0 · 对面成交中位 37.8 单
+
+规矩周结果不同探针（同一位客人、同一个动作，只差这一周落没落上那条）:
+  training 改动了：开一格发到手的精神（20 → 15）
+  patrol 改动了：硬推一次的台账（51 → 47）
+  member-day 改动了：这一格放不放「加微信」（false → true）
+  3 / 16 —— 改之前这条该是 0（规矩只是台词），装上去以后要 > 0
+
+规矩周 × 风格（按周结的钱：领先周数 / 走过周数；100% = 这一周没人输，说明那条规矩没咬住）:
+  1. honest  31/ 40 · pushy    3/ 40 · social   9/ 40 · random   0/ 40
+  2. honest  26/ 40 · pushy    0/ 40 · social   6/ 40 · random   0/ 40
+  3. honest  12/ 40 · pushy    0/ 40 · social   3/ 40 · random   0/ 40
+  4. honest  34/ 40 · pushy   20/ 40 · social  20/ 40 · random   1/ 40
+
+每周一关（每格：这一关过关率 · 钱 P25/中位/P75 · 平均星；目标 13000 / 16000 / 19000 / 22000）:
+  honest   第1季 100% ¥47340/48340/50800 3.0★ | 100% ¥16340/21360/25360 2.4★ |  65% ¥12360/15960/16800 0.8★ |  50% ¥18020/20640/28240 1.1★
+  honest   第2季 100% ¥33360/35700/36360 3.0★ | 100% ¥22360/27040/30120 2.9★ |   0% ¥6580/8340/11860 0.0★ | 100% ¥24080/25380/28640 2.1★
+  pushy    第1季 100% ¥23360/26480/34080 3.0★ |   0% ¥300/1180/3960 0.0★ |   0% ¥1080/3540/7880 0.0★ |   0% ¥-1660/0/1680 0.0★
+  pushy    第2季 100% ¥13380/20020/25840 1.8★ |   0% ¥-980/980/4560 0.0★ |   5% ¥0/1680/5200 0.1★ |   0% ¥-980/0/2280 0.0★
+  social   第1季 100% ¥20460/22740/25020 3.0★ | 100% ¥10140/11980/16520 2.0★ |  95% ¥7100/8500/11200 1.4★ |  90% ¥8480/11040/13100 1.1★
+  social   第2季 100% ¥18740/23640/25920 3.0★ | 100% ¥7640/10420/13480 1.4★ |  80% ¥6900/8560/9640 0.8★ | 100% ¥12500/14840/16600 1.2★
+  random   第1季  35% ¥4970/7240/8740 0.5★ |   5% ¥1000/2740/5320 0.1★ |   0% ¥2660/3460/6270 0.0★ |   0% ¥2540/3700/6320 0.0★
+  random   第2季  15% ¥2740/4220/6560 0.1★ |   0% ¥1450/2660/4220 0.0★ |   0% ¥980/2680/4600 0.0★ |   0% ¥2860/4440/4720 0.0★
+  honest   一季星数 min 5 / 中位 8 / max 11（满 12）· 周赢对面 64%
+  honest   过关路线：业绩 98 / 客情 0 / 守客 25
+  honest   每周客情/守客人数中位：0 / 4 · 挡住率中位 71%
+  pushy    一季星数 min 1 / 中位 3 / max 3（满 12）· 周赢对面 14%
+  pushy    过关路线：业绩 36 / 客情 0 / 守客 5
+  pushy    每周客情/守客人数中位：0 / 0 · 挡住率中位 0%
+  social   一季星数 min 5 / 中位 7 / max 9（满 12）· 周赢对面 24%
+  social   过关路线：业绩 31 / 客情 83 / 守客 39
+  social   每周客情/守客人数中位：10 / 4 · 挡住率中位 100%
+  random   一季星数 min 0 / 中位 0 / max 3（满 12）· 周赢对面 1%
+  random   过关路线：业绩 2 / 客情 0 / 守客 9
+  random   每周客情/守客人数中位：2 / 0 · 挡住率中位 0%
+
+各批次平均字数（文 + 结果，不含 label；手机上读一张的份量）:
+  通用社交               117 张  15011 字 均  128.3 字/张
+  个人线                 82 张  12276 字 均  149.7 字/张
+  人生一步·第 8 季          20 张   7026 字 均  351.3 字/张
+  主线                  29 张   6210 字 均  214.1 字/张
+  人生一步·第 7 季          20 张   5088 字 均  254.4 字/张
+  人生一步·第 5 季          20 张   5031 字 均  251.6 字/张
+  楼层                  38 张   4928 字 均  129.7 字/张
+  人生一步·第 6 季          20 张   4607 字 均  230.3 字/张
+  人生一步·第 9 季          10 张   3794 字 均  379.4 字/张
+  回访卡                 12 张   2117 字 均  176.4 字/张
+  回访卡·第二回              3 张    480 字 均  160.0 字/张
+  全柜                371 张  66568 字 均  179.4 字/张
+
+每天开出几件（quota 阶梯按这个定）:
+  honest   中位 2 · P75 4 · P90 7 · 最高 12 件/天
+  pushy    中位 0 · P75 3 · P90 8 · 最高 20 件/天
+  social   中位 1 · P75 3 · P90 4 · 最高 11 件/天
+  random   中位 1 · P75 1 · P90 2 · 最高 6 件/天
+  现在写死的这组（2→3 件，每 14 天一格）：  honest 50% · pushy 30% · social 37% · random 17%
+  候选（起步件数 → 封顶件数，每 N 天一格）：
+    2→2 件 / 每 28 天  honest 58% · pushy 31% · social 49% · random 23%
+    2→3 件 / 每 28 天  honest 58% · pushy 31% · social 49% · random 23%
+    2→4 件 / 每 28 天  honest 58% · pushy 31% · social 49% · random 23%
+    2→2 件 / 每 14 天  honest 58% · pushy 31% · social 49% · random 23%
+    2→3 件 / 每 14 天  honest 50% · pushy 30% · social 37% · random 17%
+    2→4 件 / 每 14 天  honest 50% · pushy 30% · social 37% · random 17%
+    2→2 件 / 每 10 天  honest 58% · pushy 31% · social 49% · random 23%
+    2→3 件 / 每 10 天  honest 48% · pushy 29% · social 34% · random 15%
+    2→4 件 / 每 10 天  honest 42% · pushy 26% · social 31% · random 13%
+    2→2 件 / 每  5 天  honest 58% · pushy 31% · social 49% · random 23%
+    2→3 件 / 每  5 天  honest 47% · pushy 29% · social 31% · random 12%
+    2→4 件 / 每  5 天  honest 38% · pushy 21% · social 25% · random  8%
+    3→3 件 / 每 28 天  honest 46% · pushy 29% · social 25% · random 10%
+    3→4 件 / 每 28 天  honest 46% · pushy 29% · social 25% · random 10%
+    3→5 件 / 每 28 天  honest 46% · pushy 29% · social 25% · random 10%
+    3→3 件 / 每 14 天  honest 46% · pushy 29% · social 25% · random 10%
+    3→4 件 / 每 14 天  honest 39% · pushy 22% · social 21% · random  6%
+    3→5 件 / 每 14 天  honest 39% · pushy 22% · social 21% · random  6%
+    3→3 件 / 每 10 天  honest 46% · pushy 29% · social 25% · random 10%
+    3→4 件 / 每 10 天  honest 37% · pushy 21% · social 20% · random  5%
+    3→5 件 / 每 10 天  honest 32% · pushy 20% · social 19% · random  5%
+    3→3 件 / 每  5 天  honest 46% · pushy 29% · social 25% · random 10%
+    3→4 件 / 每  5 天  honest 35% · pushy 20% · social 18% · random  5%
+    3→5 件 / 每  5 天  honest 27% · pushy 17% · social 15% · random  3%
+
+结局分布（rank 越小越好）:
+  honest   folder-follows(r27)×7 · still-named(r30)×2 · books-hold(r31)×9 · regulars-stay(r32)×1 · nobody-left(r33)×1
+  pushy    ledger-empty(r34)×20
+  social   folder-follows(r27)×9 · still-named(r30)×2 · books-hold(r31)×7 · nobody-left(r33)×2
+  random   nobody-left(r33)×2 · ledger-empty(r34)×17 · counter-empty(r35)×1
+
+结局层逐季命中（每格 = 四风格 × 这些副牌里落到这一句的牌数；* = 主线那四句）:
+  判词                      第1季    第2季   合计
+  names-stay                0      7       7
+  own-sentence              0      6       6
+  file-and-sheet            0      3       3
+  folder-follows           16     14      30
+  still-named               4      2       6
+  books-hold               16      8      24
+  regulars-stay             1      0       1
+  nobody-left               5      0       5
+  ledger-empty             37     37      74
+  counter-empty             1      3       4
+  这一季出现过的不同判词             7      8
+
+个人线走到终点（end≥1）:
+  shen     honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 2 end=2 39 end=3 1 end=4 38
+  anjie    honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 11 end=2 20 end=3 14 end=4 35
+  luyao    honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 3 end=2 23 end=3 4 end=4 50
+  suman    honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 27 end=2 15 end=3 6 end=4 32
+  xiaoyu   honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 11 end=2 1 end=3 36 end=4 32
+  zhou     honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 7 end=2 29 end=3 14 end=4 30
+  zhao     honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 9 end=2 26 end=3 9 end=4 36
+  miduo    honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 9 end=2 19 end=3 18 end=4 34
+  mei      honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · end=1 13 end=2 11 end=3 33 end=4 23
+
+按种子算账（结局更好者赢，并列都算）: honest 11/20 · pushy 0/20 · social 14/20 · random 0/20
+没有哪种风格在所有种子上都最优
+
+每日委托（done / 已结算，未到期与作废不计）:
+  honest   56%（done 1231 · failed 969 · declined 0 · 未到期 0 · 作废 0）
+  pushy    19%（done 413 · failed 1214 · declined 573 · 未到期 0 · 作废 0）
+  social   54%（done 1178 · failed 1002 · declined 0 · 未到期 18 · 作废 2）
+  random   37%（done 798 · failed 1197 · declined 190 · 未到期 15 · 作废 0）
+  分模板（各风格 done/已结算）:
+    quota    honest 51%(329/642) · pushy 28%(201/723) · social 35%(181/518) · random 19%(107/570)
+    keep     honest 48%(79/163) · pushy 15%(31/211) · social 74%(108/146) · random 59%(103/174)
+    samples  honest 100%(443/443) · pushy 0%(0/573) · social 100%(361/361) · random 51%(196/386)
+    pair     honest 1%(3/417) · pushy 0%(0/32) · social 1%(5/371) · random 4%(9/203)
+    clean    honest 70%(377/535) · pushy 27%(181/661) · social 66%(280/424) · random 31%(145/470)
+    rebook   honest - · pushy - · social 68%(243/360) · random 62%(238/382)
+
+自主社交（每种动作一季平均几次）:
+  pull     honest 0.0 · pushy 1.3 · social 0.1 · random 0.8
+  quarrel  honest 13.9 · pushy 9.3 · social 12.9 · random 12.2
+  backbite honest 12.9 · pushy 123.9 · social 23.1 · random 62.4
+  oneup    honest 49.5 · pushy 26.6 · social 46.3 · random 36.3
+  vouch    honest 3.9 · pushy 1.1 · social 4.8 · random 6.1
+  chat     honest 143.8 · pushy 61.9 · social 136.7 · random 106.3
+
+每条个人线的落点分布（全风格合计）:
+  shen     end=2: 39 · end=4: 38 · end=1: 2 · end=3: 1
+  mei      end=3: 33 · end=4: 23 · end=1: 13 · end=2: 11
+  xiaoyu   end=3: 36 · end=4: 32 · end=1: 11 · end=2: 1
+  zhao     end=4: 36 · end=2: 26 · end=3: 9 · end=1: 9
+  anjie    end=4: 35 · end=2: 20 · end=3: 14 · end=1: 11
+  zhou     end=4: 30 · end=2: 29 · end=3: 14 · end=1: 7
+  duan     （未触发）: 80
+  roman    （未触发）: 80
+  suman    end=4: 32 · end=1: 27 · end=2: 15 · end=3: 6
+  tangke   （未触发）: 80
+  fangmin  （未触发）: 80
+  luyao    end=4: 50 · end=2: 23 · end=3: 4 · end=1: 3
+  qiaowan  （未触发）: 80
+  peilan   （未触发）: 80
+  ligui    （未触发）: 80
+  laokang  （未触发）: 80
+  huojie   （未触发）: 80
+  miduo    end=4: 34 · end=2: 19 · end=3: 18 · end=1: 9
+  tangtang （未触发）: 80
+  liangxia （未触发）: 80
+  baijie   （未触发）: 80
+  zhaoning （未触发）: 80
+  heqing   （未触发）: 80
+  ruanxiaoman （未触发）: 80
+  caiaiyi  （未触发）: 80
+  linyi    （未触发）: 80
+  wulaoshi （未触发）: 80
+  dongayi  （未触发）: 80
+  guyan    （未触发）: 80
+  jiangning （未触发）: 80
+  suxiao   （未触发）: 80
+  songjie  （未触发）: 80
+  hanlei   （未触发）: 80
+  chendao  （未触发）: 80
+  yenushi  （未触发）: 80
+  lina     （未触发）: 80
+  yinxiaojie （未触发）: 80
+  qianjie  （未触发）: 80
+  gaoyuan  （未触发）: 80
+  cenning  （未触发）: 80
+  chenke   （未触发）: 80
+  tanwan   （未触发）: 80
+
+== 第 2 季（接着上一季的世界再跑 28 天）==
+风格      不同签名数   钱 (min/med/max)              柜位 (min/med/max)   台账 (min/med/max)
+honest      20/20    min 82440 / med 95560 / max 108720 min 98 / med 99 / max 100 min 51 / med 78 / max 98
+pushy       20/20    min 9220 / med 21660 / max 43040 min 0 / med 0 / max 8  min 0 / med 2 / max 15
+social      20/20    min 43660 / med 55680 / max 78680 min 88 / med 97 / max 100 min 51 / med 75 / max 96
+random      20/20    min 2900 / med 13650 / max 37160 min 8 / med 37 / max 74 min 0 / med 1 / max 8
+结局分布（rank 越小越好）:
+  honest   names-stay(r24)×3 · own-sentence(r25)×2 · file-and-sheet(r26)×2 · folder-follows(r27)×8 · books-hold(r31)×5
+  pushy    ledger-empty(r34)×18 · counter-empty(r35)×2
+  social   names-stay(r24)×4 · own-sentence(r25)×4 · file-and-sheet(r26)×1 · folder-follows(r27)×6 · still-named(r30)×2 · books-hold(r31)×3
+  random   ledger-empty(r34)×19 · counter-empty(r35)×1
+倒戈（相对上一季盘点）:
+  honest   盟友→仇人 0 人次 / 0 个种子 · 仇人→盟友 6 人次 / 4 个种子（tangke×3, roman×2, suman）
+  pushy    盟友→仇人 3 人次 / 2 个种子（suman, qiaowan, huojie） · 仇人→盟友 0 人次 / 0 个种子
+  social   盟友→仇人 0 人次 / 0 个种子 · 仇人→盟友 16 人次 / 8 个种子（tangke×3, qiaowan×4, roman×2, suman×3, fangmin, mei, dongayi, laokang）
+  random   盟友→仇人 0 人次 / 0 个种子 · 仇人→盟友 28 人次 / 15 个种子（tangke×8, peilan×3, qiaowan×6, suman×5, roman, songjie, cenning, fangmin, dongayi, ligui）
+个人线走到终点（end≥1）:
+  yinxiaojie honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 8 end=2 14 end=3 11 end=4 47
+  duan     honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 8 end=2 9 end=3 16 end=4 47
+  zhaoning honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 15 end=2 11 end=3 14 end=4 40
+  tangke   honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 4 end=2 35 end=3 5 end=4 36
+  roman    honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 21 end=2 26 end=3 17 end=4 16
+  fangmin  honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 10 end=2 11 end=3 21 end=4 38
+  qiaowan  honest 20/20 · pushy 20/20 · social 20/20 · random 20/20 · 合计 80/80 · end=1 33 end=2 19 end=3 1 end=4 27
+第 2 季那三个新结局（第 2 季读数）:
+  names-stay       7/80（honest, social）
+  own-sentence     6/80（honest, social）
+  file-and-sheet   3/80（honest, social）
+
+落点那一屏摆上桌几格（收尾卡被抽到那一刻，含四风格四种子的全部读数）:
+  线          抽到   中位露出  只给默认   各格露出率（#1 起按卡片里的顺序；门是死的会露出 0%）
+  shen         200      2 格     3%    #1 12% · #2 86% · #3 8% · #4 100%
+  anjie        200      2 格     3%    #1 49% · #2 46% · #3 19% · #4 100%
+  luyao        200      2 格    26%    #1 10% · #2 64% · #3 11% · #4 100%
+  suman        200      2 格     4%    #1 67% · #2 30% · #3 26% · #4 100%
+  xiaoyu       200      3 格     0%    #1 44% · #2 27% · #3 82% · #4 100%
+  zhou         200      3 格     0%    #1 29% · #2 81% · #3 75% · #4 100%
+  zhao         200      2 格     0%    #1 37% · #2 65% · #3 41% · #4 100%
+  miduo        200      3 格     0%    #1 34% · #2 70% · #3 77% · #4 100%
+  mei          200      3 格     0%    #1 49% · #2 35% · #3 100% · #4 100%
+  yinxiaojie    80      2 格    23%    #1 15% · #2 38% · #3 34% · #4 100%
+  duan          80      2 格    33%    #1 11% · #2 26% · #3 30% · #4 100%
+  zhaoning      80      2 格     3%    #1 45% · #2 31% · #3 38% · #4 100%
+  tangke        80      2 格    66%    #1 20% · #2 100% · #3 18% · #4 100%
+  roman         80      3 格     4%    #1 100% · #2 100% · #3 46% · #4 50%
+  fangmin       80      2 格     3%    #1 43% · #2 33% · #3 57% · #4 100%
+  qiaowan       80      3 格     9%    #1 100% · #2 91% · #3 8% · #4 100%
+
+每季的故事卡（个人线 + 主线；"新演" = 这副牌里第一次抽到它。各列取 200 副牌的中位）:
+季   天数区间    抽到故事卡   新演   其中个人线  其中主线   故事卡占本季抽牌
+  1    1~28         48 次    44 张       38 张       6 张      43%
+  2   29~56         42 次    42 张       39 张       3 张      38%
+
+每季的节奏（各列取 200 副牌的中位；"做不动" = 进这个时段时精力连最便宜的招呼（3 点）都不够、或场上点不到人）:
+季   时段数   抽到卡   做不动  其中缺劲  其中没人   只能读不能做   每时段做成几件  每天做成几件   做不动的时段落在哪一档
+  1     112    100%      0%        0%        0%        0%       2.55 件      10.21 件   整季都有劲
+  2     112    100%      0%        0%        0%        0%       2.93 件      11.71 件   整季都有劲
+（缺劲与没人按均值算，一个时段可以两条都占，所以两列加起来会略高于「做不动」。）
+
+四个时段开门那一刻（同样池化）：场上点得到几位 / 还剩多少劲
+档       上午    午后    傍晚   晚高峰
+点得到       12     15     16     12 位
+剩精力       20     20     21     21 点
+
+每季桌上有几张戏可讲（每天上午那一格数一次，各列取 7840 个读数的均值；"可抽" = 那一刻说书人那一摞里合法的张数）:
+季       可抽总张数        过场        主线    个人线未开头    个人线进行中  走完的线还剩的卡 走完的线数(中位)
+  1       32.6      31.3       0.4       0.2       0.4       0.4         6
+  2       37.0      35.1       0.3       0.2       0.4       1.0        15
+
+柜位这一路谁在加、谁在扣（40 个种子合计：笔数 / 累计点数）:
+  第 1 季 honest  动作 serve 5342 次/+5342 · 动作 help 2925 次/+2925 · 动作 mediate 32 次/+64 · 剧情选项 224 次/-288 · 打烊(名额与委托) 2042 次/-1251
+  第 2 季 honest  动作 serve 473 次/+473 · 动作 help 318 次/+318 · 动作 mediate 11 次/+22 · 剧情选项 61 次/+18 · 打烊(名额与委托) 272 次/-336
+  第 1 季 pushy   剧情选项 31 次/-39 · 动作 serve 665 次/-277 · 打烊(名额与委托) 345 次/-393
+  第 2 季 pushy   剧情选项 64 次/+0 · 动作 serve 433 次/-175 · 打烊(名额与委托) 320 次/-460
+  第 1 季 random  动作 help 500 次/+500 · 动作 introduce 34 次/+34 · 剧情选项 41 次/-13 · 动作 serve 290 次/-216 · 打烊(名额与委托) 302 次/-563
+  第 2 季 random  动作 help 503 次/+503 · 动作 introduce 32 次/+32 · 动作 mediate 3 次/+6 · 剧情选项 80 次/+4 · 动作 serve 199 次/-169 · 打烊(名额与委托) 273 次/-590
+  第 1 季 social  动作 help 535 次/+535 · 动作 serve 360 次/+360 · 动作 mediate 20 次/+40 · 剧情选项 28 次/-29 · 打烊(名额与委托) 291 次/-68
+  第 2 季 social  动作 help 495 次/+495 · 动作 serve 199 次/+199 · 动作 mediate 28 次/+54 · 剧情选项 77 次/+32 · 打烊(名额与委托) 305 次/-295
+
+各风格挑过几次哪个动作（四季合计；括号 = 挑了却没做成、整格收手）:
+  honest  help 24431 · greet 12436 · serve 7391 · keep 1053 · mediate 669
+  pushy   serve 1098
+  social  handoff 5267 · sample 3808 · greet 2495 · help 1065 · serve 567 · wechat 545 · tell 279 · keep 179 · mediate 62
+  random  greet 4526 · help 2909 · sample 2195 · introduce 1386 · serve 946 · handoff 946 · wechat 291 · tell 248 · keep 158 · mediate 9
+
+内容燃烧曲线（2 季 × 28 天 = 56 天，跨季连着算）:
+风格      见过的卡数   半池在第几天  八成在第几天  新内容见底  见底后还剩几天  整段重复率  第1季重复率
+  honest       85/371            12 天            20 天        28 天          28 天        25%        25%
+  pushy       142/371            21 天            37 天        55 天           1 天        37%        25%
+  social      142/371            21 天            37 天        56 天           0 天        37%        25%
+  random      143/371            21 天            37 天        56 天           0 天        36%        25%
+
+主线本子（幕号与线索跨季带着走）:
+风格      幕号（0 没开局 / 1 摆上桌 / 2 翻过面）    本子上条数   拧过来的线
+  honest   0:0 1:0 2:20 3:0 4:0 5:0         4/12      100%
+  pushy    0:0 1:0 2:20 3:0 4:0 5:0         4/12      100%
+  social   0:0 1:0 2:20 3:0 4:0 5:0         4/12      100%
+  random   0:0 1:0 2:20 3:0 4:0 5:0         4/12      100%
+  那张退货单：
+     1 把日期、笔迹和你自己那句一起交出去 24/80
+     2 只说名字是从群里借的 7/80
+     3 等档案自己走到台面上，今天不开口 21/80
+     4 这单就是沈薇退的 26/80
+     6 问她能不能再等一天 2/80
+  主线卡的出场率（几个种子里见过这张卡）:
+    main-slip-open         200/200  中位第  5 天
+    main-slip-shen         200/200  中位第 11 天
+    main-slip-song         149/200  中位第 15 天
+    main-slip-yin          112/200  中位第 16 天
+    main-slip-fang         200/200  中位第 10 天
+    main-slip-turn         163/200  中位第 18 天
+    main-slip-turn-desk     30/200  中位第 18 天
+    main-slip-filed          7/200  中位第 24 天
+    main-slip-after-own     46/200  中位第 19 天
+    main-slip-after-name    22/200  中位第 22 天
+    main-slip-after-quiet  127/200  中位第 20 天
+    main-act3-open           0/200  中位第  0 天
+    main-act3-row            0/200  中位第  0 天
+    main-act3-tape           0/200  中位第  0 天
+    main-act3-signed         0/200  中位第  0 天
+    main-a2-audit           80/200  中位第 35 天
+    main-a2-tape            72/200  中位第 43 天
+    main-a2-mirror          80/200  中位第 33 天
+    main-a4-page             0/200  中位第  0 天
+    main-a4-who              0/200  中位第  0 天
+    main-a4-desk             0/200  中位第  0 天
+    main-a4-valve            0/200  中位第  0 天
+    main-a5-open             0/200  中位第  0 天
+    main-a5-names            0/200  中位第  0 天
+    main-a5-desk             0/200  中位第  0 天
+    main-a6-relay            0/200  中位第  0 天
+    main-a7-same             0/200  中位第  0 天
+    main-a8-blank            0/200  中位第  0 天
+    main-a9-ownrow           0/200  中位第  0 天
+
+故事碎片覆盖（抽到过的张数 / 总张数）:
+  honest   165/371
+  pushy    164/371
+  social   164/371
+  random   163/371
+  从没出现过 205 张：s3-val-proxy s3-val-couple s3-val-wrap s3-val-receipt s3-val-budget s3-val-card s3-val-rival s3-w8-list s3-w8-invoice s3-w8-both s3-w8-shade s3-w8-sample s3-w8-blank s3-w8-rival s3-w8-fangmin s3-spr-back s3-spr-skin s3-spr-old s3-spr-rival s3-spr-front s3-spr-set s3-spr-suman s3-soc-shot s3-soc-bring s3-soc-first s3-soc-chat s3-soc-quiet s3-soc-aisle s3-soc-elder s3-soc-fast s3-soc-again s3-soc-half s3-soc-lens s3-soc-hold s3-soc-owe s3-work-roman s3-work-suman s3-work-tangke s3-work-fangmin s3-work-luyao s4-sch-budget s4-sch-room s4-sch-parent s4-sch-mini s4-sch-cut s4-sch-note s4-sch-rival s4-moon-box s4-moon-mom s4-moon-invoice s4-moon-two s4-moon-label s4-moon-face s4-moon-rival s4-moon-fangmin s4-nat-line s4-nat-tour s4-nat-shot s4-nat-rival s4-nat-stock s4-nat-back s4-nat-roman s4-soc-dorm s4-soc-empty s4-soc-stool s4-soc-class s4-soc-roomprice s4-soc-aisle s4-soc-family s4-soc-rush s4-soc-again s4-soc-split s4-soc-unbox s4-soc-hold s4-soc-owe s4-work-roman s4-work-suman s4-work-tangke s4-work-fangmin s4-work-luyao arc-sj-shot arc-sj-book arc-sj-who arc-sj-end arc-bj-six arc-bj-chair arc-bj-kit arc-bj-end arc-pl-table arc-pl-who arc-pl-list arc-pl-end arc-lx-shoot arc-lx-set arc-lx-base arc-lx-end main-act3-open main-act3-row main-act3-tape main-act3-signed main-a4-page main-a4-who main-a4-desk main-a4-valve main-a5-open main-a5-names main-a5-desk main-a6-relay main-a7-same main-a8-blank main-a9-ownrow echo-yinxiaojie echo-duan echo-zhaoning echo2-zhou life-shen life-anjie life-mei life-xiaoyu life-zhou life-suman life-luyao life-miduo life2-shen life2-anjie life2-mei life-zhao life-yinxiaojie life-duan life-zhaoning life-tangke life-roman life-fangmin life-qiaowan life-songjie life-baijie life-peilan life-liangxia life2-xiaoyu life2-zhou life2-suman life2-luyao life2-miduo life2-zhao life2-tangke life2-fangmin life2-liangxia life2-yinxiaojie life2-duan life2-zhaoning life2-roman life2-qiaowan life2-songjie life2-baijie life2-peilan life3-shen life3-anjie life3-mei life3-xiaoyu life3-zhou life3-suman life3-luyao life3-miduo life3-zhao life3-liangxia life3-yinxiaojie life3-duan life3-zhaoning life3-tangke life3-roman life3-fangmin life3-qiaowan life3-songjie life3-baijie life3-peilan life4-shen life4-anjie life4-mei life4-xiaoyu life4-zhou life4-suman life4-luyao life4-miduo life4-zhao life4-fangmin life4-duan life4-yinxiaojie life4-zhaoning life4-tangke life4-roman life4-qiaowan life4-songjie life4-baijie life4-peilan life4-liangxia life5-shen life5-anjie life5-mei life5-xiaoyu life5-zhou life5-suman life5-luyao life5-miduo life5-zhao life5-fangmin

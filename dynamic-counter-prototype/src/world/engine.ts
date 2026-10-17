@@ -22,7 +22,7 @@ import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
 import { appointmentTime, arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
-import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, validRivalBooking } from "./rival-business.ts";
+import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, rivalBookingSlots, validRivalBooking } from "./rival-business.ts";
 import { BUY_INTERVAL_DAYS, lastPurchaseDay, recentlyPurchased } from "./purchases.ts";
 import { currentWeekendOrder, planWeekendOrder, recordWeekendOutcome, validWeekendOrder,
   WEEKEND_OUTCOMES, WEEKEND_PREP_ENERGY, WEEKEND_PREP_SAMPLES, WEEKEND_RESPONSE, WEEKEND_RESULT,
@@ -697,7 +697,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       product: quote.product, units: quote.units, amount: quote.amount, invited: prepared, ...(weekend ? { weekend: true } : {}) } };
     w = say(w, weekend
       ? `周末最后一单：${guest.name}到了${prepared ? "你的柜前，提前确认的时间派上了用场" : "对面，还能邀来比货"}。对面预计这单 ¥${quote.amount}，收工前才结账。`
-      : `陆遥约了${guest.name}午后来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
+      : `陆遥约了${guest.name}在${appointmentTime(w, w)}来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
     if (weekend && prepared && w.weekendOrder?.sponsor) {
       const arrival: Arrival = { person: guest.id, kind: "referral", source: w.weekendOrder.sponsor };
       w = say(w, describeArrival(arrival, people)!.scene, [guest.id, w.weekendOrder.sponsor], arrival);
@@ -712,23 +712,26 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       w = say(w, "周末那单这次没约成；不再另开一笔账，明天再聊。", [weekend.person]);
     }
   }
-  // 午后的一位是陆遥自己的预约，先留真实客位，报价随后在玩家行动前公开。
+  // 午后保留已安排的预约；新增晚场等自然来访落位后再加，不能挤掉原本要来的人。
   // 不占用玩家约好的人，不让十天内买过货的人重复掏钱；首季第一周保持原体验。
-  if (w.slot === 1 && (w.season > 1 || w.day > 7) && !rivalBookingNow(w)
-    && customerCount < MAX_PRESENT_CUSTOMERS && people.some(p => p.role === "rival")) {
-    const pool = people.filter(p => p.role === "customer" && p.skin && !(p.id in present)
-      && !awayToday(w, p.id) && (p.visits.fromDay ?? 1) <= w.day
-      && (!p.visits.festivals || !!w.festival && p.visits.festivals.includes(w.festival))
-      && !w.appointments.some(a => a.day === w.day && (a.person === p.id || a.bring?.includes(p.id)))
-      && !recentlyPurchased(w, p.id)
-      && !(weekend && !weekend.outcome && weekend.person === p.id)
-      && poachSale(p).units > 0);
-    if (pool.length) {
-      // 独立确定性抽签，不挪动既有抽数流；场上多一位仍会自然参与后续互动。
-      const guest = pool[drawIndex(`${w.seed}:booking:${w.season}:${w.day}`, 0, pool.length)];
-      startBooking(guest);
+  const startOrdinaryBooking = () => {
+    if (rivalBookingSlots(w).includes(w.slot) && !rivalBookingNow(w)
+      && customerCount < MAX_PRESENT_CUSTOMERS && people.some(p => p.role === "rival")) {
+      const pool = people.filter(p => p.role === "customer" && p.skin && !(p.id in present)
+        && !awayToday(w, p.id) && (p.visits.fromDay ?? 1) <= w.day
+        && (!p.visits.festivals || !!w.festival && p.visits.festivals.includes(w.festival))
+        && !w.appointments.some(a => a.day === w.day && (a.person === p.id || a.bring?.includes(p.id)))
+        && !recentlyPurchased(w, p.id)
+        && !(weekend && !weekend.outcome && weekend.person === p.id)
+        && poachSale(p).units > 0);
+      if (pool.length) {
+        // 独立确定性抽签，不挪动既有抽数流；场上多一位仍会自然参与后续互动。
+        const guest = pool[drawIndex(`${w.seed}:booking:${w.season}:${w.day}${w.slot === 1 ? "" : `:${w.slot}`}`, 0, pool.length)];
+        startBooking(guest);
+      }
     }
-  }
+  };
+  if (w.slot === 1) startOrdinaryBooking();
 
   // 开局那个上午：先到的两位站在柜台前。
   if (w.day === 1 && w.slot === 0) {
@@ -770,6 +773,8 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     if (i < 0) break;
     placeCustomer(pool[i].id, drawGuestZone()); customerCount++;
   }
+
+  if (w.slot === 3) startOrdinaryBooking();
 
   w = assignVisitContexts({ ...w, present }, people);
 

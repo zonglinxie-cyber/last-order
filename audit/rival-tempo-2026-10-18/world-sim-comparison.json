@@ -1,0 +1,127 @@
+{
+  "baselineReport": "audit/contact-invite-2026-10-18/world-sim-after.log",
+  "before": {
+    "signatureRows": [
+      "honest      20/20    min 109680 / med 124380 / max 145540 min 97 / med 100 / max 100 min 55 / med 72 / max 100",
+      "pushy       20/20    min 22900 / med 37140 / max 52800 min 0 / med 14 / max 33 min 0 / med 0 / max 2",
+      "social      20/20    min 55060 / med 67840 / max 75640 min 85 / med 99 / max 100 min 41 / med 68 / max 84",
+      "random      20/20    min 10210 / med 19690 / max 38710 min 21 / med 37 / max 60 min 0 / med 2 / max 37",
+      "honest      20/20    min 95800 / med 111620 / max 124460 min 97 / med 100 / max 100 min 56 / med 84 / max 98",
+      "pushy       20/20    min 9260 / med 24400 / max 44000 min 0 / med 0 / max 17 min 0 / med 4 / max 13",
+      "social      20/20    min 52300 / med 71000 / max 85340 min 93 / med 100 / max 100 min 44 / med 70 / max 98",
+      "random      20/20    min 4000 / med 18060 / max 31180 min 12 / med 40 / max 52 min 0 / med 2 / max 11"
+    ],
+    "signatures": [
+      {
+        "season": 1,
+        "style": "honest",
+        "count": 20
+      },
+      {
+        "season": 1,
+        "style": "pushy",
+        "count": 20
+      },
+      {
+        "season": 1,
+        "style": "social",
+        "count": 20
+      },
+      {
+        "season": 1,
+        "style": "random",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "honest",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "pushy",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "social",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "random",
+        "count": 20
+      }
+    ],
+    "endingBestBySeed": {
+      "honest": 15,
+      "pushy": 0,
+      "social": 9,
+      "random": 0
+    },
+    "rankingLine": "按种子算账（结局更好者赢，并列都算）: honest 15/20 · pushy 0/20 · social 9/20 · random 0/20"
+  },
+  "after": {
+    "signatureRows": [
+      "honest      20/20    min 89540 / med 109480 / max 123520 min 97 / med 99 / max 100 min 45 / med 70 / max 100",
+      "pushy       20/20    min 19700 / med 35180 / max 51040 min 0 / med 14 / max 32 min 0 / med 2 / max 6",
+      "social      20/20    min 39740 / med 53860 / max 65000 min 77 / med 93 / max 100 min 39 / med 65 / max 94",
+      "random      20/20    min 6300 / med 19500 / max 30820 min 13 / med 39 / max 63 min 0 / med 0 / max 26",
+      "honest      20/20    min 82440 / med 95560 / max 108720 min 98 / med 99 / max 100 min 51 / med 78 / max 98",
+      "pushy       20/20    min 9220 / med 21660 / max 43040 min 0 / med 0 / max 8  min 0 / med 2 / max 15",
+      "social      20/20    min 43660 / med 55680 / max 78680 min 88 / med 97 / max 100 min 51 / med 75 / max 96",
+      "random      20/20    min 2900 / med 13650 / max 37160 min 8 / med 37 / max 74 min 0 / med 1 / max 8"
+    ],
+    "signatures": [
+      {
+        "season": 1,
+        "style": "honest",
+        "count": 20
+      },
+      {
+        "season": 1,
+        "style": "pushy",
+        "count": 20
+      },
+      {
+        "season": 1,
+        "style": "social",
+        "count": 20
+      },
+      {
+        "season": 1,
+        "style": "random",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "honest",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "pushy",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "social",
+        "count": 20
+      },
+      {
+        "season": 2,
+        "style": "random",
+        "count": 20
+      }
+    ],
+    "endingBestBySeed": {
+      "honest": 11,
+      "pushy": 0,
+      "social": 14,
+      "random": 0
+    },
+    "rankingLine": "按种子算账（结局更好者赢，并列都算）: honest 11/20 · pushy 0/20 · social 14/20 · random 0/20"
+  },
+  "signatureCountsNotReduced": true,
+  "noUniversalBestEndingStyle": true
+}

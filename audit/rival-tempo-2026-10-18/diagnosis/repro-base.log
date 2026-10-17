@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: 连玩十二副四季：那条录音不再大面积漏（经验判据 · 格随机取）
+ok 1 - 连玩十二副四季：那条录音不再大面积漏（经验判据 · 格随机取）
+  ---
+  duration_ms: 14157.401875
+  type: 'test'
+  ...
+# Subtest: 梅女士的十分钟：一路给她时间，一季之内必定走到反转和落点
+ok 2 - 梅女士的十分钟：一路给她时间，一季之内必定走到反转和落点
+  ---
+  duration_ms: 2533.093416
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16862.598708

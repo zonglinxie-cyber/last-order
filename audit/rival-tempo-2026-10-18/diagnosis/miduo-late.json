@@ -1,0 +1,402 @@
+{
+  "ending": 2,
+  "trace": [
+    {
+      "day": 3,
+      "slot": 1,
+      "zone": "counter",
+      "ap": [],
+      "card": "arc-shen-team",
+      "eligible": []
+    },
+    {
+      "day": 4,
+      "slot": 0,
+      "zone": "lounge",
+      "ap": [],
+      "card": "arc-shen-call",
+      "eligible": []
+    },
+    {
+      "day": 5,
+      "slot": 1,
+      "zone": "counter",
+      "ap": [],
+      "card": "arc-miduo-lamp",
+      "eligible": [
+        "arc-miduo-lamp"
+      ]
+    },
+    {
+      "day": 5,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 1,
+      "ap": [
+        {
+          "day": 6,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "shen"
+          ],
+          "reason": "visit"
+        }
+      ],
+      "card": "arc-shen-camera",
+      "eligible": [
+        "arc-miduo-retake"
+      ]
+    },
+    {
+      "day": 5,
+      "slot": 3,
+      "chapter": 1,
+      "ap": [
+        {
+          "day": 6,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "shen"
+          ],
+          "reason": "visit"
+        }
+      ],
+      "card": "social-cold-table",
+      "eligible": []
+    },
+    {
+      "day": 6,
+      "slot": 0,
+      "chapter": 1,
+      "ap": [
+        {
+          "day": 6,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "shen"
+          ],
+          "reason": "visit"
+        }
+      ],
+      "card": "social-third-hand-secret",
+      "eligible": []
+    },
+    {
+      "day": 6,
+      "slot": 1,
+      "chapter": 1,
+      "ap": [
+        {
+          "day": 6,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "shen"
+          ],
+          "reason": "visit"
+        }
+      ],
+      "card": "arc-anjie-call",
+      "eligible": []
+    },
+    {
+      "day": 6,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 1,
+      "ap": [
+        {
+          "day": 6,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "shen"
+          ],
+          "reason": "visit"
+        }
+      ],
+      "card": "arc-xiaoyu-budget",
+      "eligible": [
+        "arc-miduo-retake"
+      ]
+    },
+    {
+      "day": 6,
+      "slot": 3,
+      "zone": "cashier",
+      "chapter": 1,
+      "ap": [],
+      "card": "arc-xiaoyu-dorm",
+      "eligible": []
+    },
+    {
+      "day": 7,
+      "slot": 3,
+      "zone": "atrium",
+      "chapter": 1,
+      "ap": [],
+      "booking": "dongayi",
+      "card": "floor-folder",
+      "eligible": []
+    },
+    {
+      "day": 8,
+      "slot": 3,
+      "zone": "rival",
+      "chapter": 1,
+      "ap": [],
+      "booking": "miduo",
+      "card": "social-first-hearsay",
+      "eligible": []
+    },
+    {
+      "day": 9,
+      "slot": 3,
+      "zone": "rival",
+      "chapter": 1,
+      "ap": [],
+      "booking": "miduo",
+      "card": "arc-xiaoyu-end",
+      "eligible": []
+    },
+    {
+      "day": 10,
+      "slot": 1,
+      "zone": "rival",
+      "chapter": 1,
+      "ap": [],
+      "booking": "miduo",
+      "card": "arc-zhao-row",
+      "eligible": [
+        "arc-miduo-retake"
+      ]
+    },
+    {
+      "day": 11,
+      "slot": 1,
+      "zone": "rival",
+      "chapter": 1,
+      "ap": [],
+      "booking": "miduo",
+      "card": "arc-zhao-two",
+      "eligible": [
+        "arc-miduo-retake"
+      ]
+    },
+    {
+      "day": 12,
+      "slot": 3,
+      "zone": "counter",
+      "chapter": 1,
+      "ap": [],
+      "booking": "gaoyuan",
+      "card": "social-warm-invite",
+      "eligible": []
+    },
+    {
+      "day": 13,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 1,
+      "ap": [],
+      "booking": "zhou",
+      "card": "arc-miduo-retake",
+      "eligible": [
+        "arc-miduo-retake"
+      ]
+    },
+    {
+      "day": 13,
+      "slot": 3,
+      "zone": "counter",
+      "chapter": 2,
+      "ap": [
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "cenning"
+          ],
+          "reason": "visit"
+        }
+      ],
+      "booking": "cenning",
+      "card": "arc-miduo-two",
+      "eligible": [
+        "arc-miduo-two"
+      ]
+    },
+    {
+      "day": 14,
+      "slot": 0,
+      "chapter": 3,
+      "ap": [
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "cenning"
+          ],
+          "reason": "visit"
+        },
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "reason": "visit"
+        }
+      ],
+      "booking": "cenning",
+      "card": "social-checkout-step",
+      "eligible": []
+    },
+    {
+      "day": 14,
+      "slot": 1,
+      "chapter": 3,
+      "ap": [
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "cenning"
+          ],
+          "reason": "visit"
+        },
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "reason": "visit"
+        }
+      ],
+      "booking": "linyi",
+      "card": "arc-zhou-split",
+      "eligible": []
+    },
+    {
+      "day": 14,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "bring": [
+            "cenning"
+          ],
+          "reason": "visit"
+        },
+        {
+          "day": 14,
+          "slot": 2,
+          "person": "miduo",
+          "reason": "visit"
+        }
+      ],
+      "booking": "linyi",
+      "card": "arc-miduo-end",
+      "eligible": [
+        "arc-miduo-end"
+      ]
+    },
+    {
+      "day": 19,
+      "slot": 3,
+      "zone": "rival",
+      "chapter": 3,
+      "ap": [],
+      "booking": "miduo",
+      "card": "social-hearsay-confront",
+      "eligible": []
+    },
+    {
+      "day": 20,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [],
+      "booking": "cenning",
+      "card": "social-warm-invite",
+      "eligible": []
+    },
+    {
+      "day": 21,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [],
+      "booking": "cenning",
+      "card": "social-intro-mirror",
+      "eligible": []
+    },
+    {
+      "day": 26,
+      "slot": 2,
+      "zone": "cashier",
+      "chapter": 3,
+      "ap": [],
+      "booking": "tangtang",
+      "card": "social-fan-room",
+      "eligible": []
+    },
+    {
+      "day": 26,
+      "slot": 3,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [],
+      "booking": "lina",
+      "card": "floor-mother-watches",
+      "eligible": []
+    },
+    {
+      "day": 27,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [],
+      "booking": "guyan",
+      "card": "floor-door-quiet",
+      "eligible": []
+    },
+    {
+      "day": 27,
+      "slot": 3,
+      "zone": "lounge",
+      "chapter": 3,
+      "ap": [],
+      "booking": "tangtang",
+      "card": "social-warm-invite",
+      "eligible": []
+    },
+    {
+      "day": 28,
+      "slot": 2,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [],
+      "booking": "duan",
+      "card": "social-client-handoff",
+      "eligible": []
+    },
+    {
+      "day": 28,
+      "slot": 3,
+      "zone": "counter",
+      "chapter": 3,
+      "ap": [],
+      "booking": "yenushi",
+      "card": "social-enemies-meet",
+      "eligible": []
+    }
+  ]
+}

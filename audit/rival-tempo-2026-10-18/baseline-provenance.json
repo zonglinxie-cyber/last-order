@@ -1,0 +1,321 @@
+{
+  "commit": "0581251",
+  "source": [
+    {
+      "path": "dynamic-counter-prototype/src/base.ts",
+      "sha256": "ee2f78824ed630534af06c9f37e7c9a9c9710a75890bec237c3e3428849c61aa",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/arrivals.ts",
+      "sha256": "2177e2b872258a113835466787c755a2728cd15e20697c914e8556a550245afb",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/consult.ts",
+      "sha256": "6d8f60f65a3f38e95cf3e6b91bb917c7aec4c4ec008046a88b00316e25a1dfec",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/batches.ts",
+      "sha256": "97e042dffd61598b94a5145b2833d324d785e207454a743cd36690b2a96e5a2d",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/clues.ts",
+      "sha256": "cd5b7dc4814adb67e9e2419e9c97a7c75edbf584d496d30d15980c0e8b052458",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/consult-lines.ts",
+      "sha256": "1fcfd01c8b27bbc1095b22fb5cca1c5d85f0faebc3611e950493100c6f2dd16a",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/festivals.ts",
+      "sha256": "670fb3df1ccfe59e823fedbf3aae45b49683aa85b02e48dd61f2f2741c28156f",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/index.ts",
+      "sha256": "f97b9360fd88023ee5155223632b2c70c72267927aeb0d581c2c0d0943fbf827",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/people.ts",
+      "sha256": "004d93e6b5529eee231633025a9e55b085b45eb866bffc6c40dff2f75b471ec6",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-arcs3.ts",
+      "sha256": "91d91004a07c62b87eb8c38ed2aa3023da61029093024af84e2f1e2ab1c67fb0",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-arcs4.ts",
+      "sha256": "313aca40d9b9bb39a86a6cf24f8757ece9f3c49224de59b1615663ab6c2c3400",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-arcs5.ts",
+      "sha256": "78ff54f14b2122bdc94e653c58757d69c412efef20a4a066e867cdcbf78540e1",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-arcs6.ts",
+      "sha256": "70e6624941450837397aa3609756a4a91dbc95aea622637ee72d79aa4b7325c6",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-echo.ts",
+      "sha256": "0b8d0c757cf6c5e08377906186900aec5fd39352da2e59ec9ebcc0bc1164e27e",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-life.ts",
+      "sha256": "fb139d256538617c191c6f790a9620ad47ec00973b45122c0744a1463e8f19b3",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-mainline.ts",
+      "sha256": "1ac2ee5c77088fd5aa67825ff9d14306cc49825551d3a2e339d627a010010baa",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-season2.ts",
+      "sha256": "046b6c4020d6a811ed462a433d5e5822146a7c15c72c5286c7c59b376c528472",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-season3.ts",
+      "sha256": "605d18c54b1d0f3480975f158dfa70c4e99eae3209796a36e53b7bf4105b2091",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-season4.ts",
+      "sha256": "d582892a2bd70c4398e5bfc875d4ef147fdcbfe061ab108a3fbf60b51205d406",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets-social2.ts",
+      "sha256": "99c34b20290cbeb41fc28f864bc871c6b65b3a739dbfeb46db17bc0894287984",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/content/storylets.ts",
+      "sha256": "63d1a02c83607c180259c8a2a907b01cf7e85ac2201718371888c397303f5cba",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ending-hints.ts",
+      "sha256": "c5c7b20c81df2a542355f81c7c3598b033409512a66ff64aa1439ee340bc88d3",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ending.ts",
+      "sha256": "7c9f8f0ea2a1adcfbd4646279f47d9434991a95491aea025951923d3dbd32fc5",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/engine.ts",
+      "sha256": "78f51f0cf8c7c5b7002a1cff275b3e93bf27173d54cb237324d89a9b16640c76",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/exchanges.ts",
+      "sha256": "e64c0e3ec3c1cce9f6275444c422350ac3a9855f82074f2557496826e8b017f9",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/heat.ts",
+      "sha256": "ca71f80ec64345dd1734d6e413e9df8f243119528385949b42072c053b3f524c",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/progress.ts",
+      "sha256": "f87f2cf398c3621090a9d35bd828f14d59afb317ef47dc924e246a4235d37c02",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/pronoun.ts",
+      "sha256": "a4f8b14173a76c91d2020c43090637f6d86b6696db1006453f3a3b96b9838e8c",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/purchases.ts",
+      "sha256": "5ac10f949c134c4a9ed6be1041d743d7d00ebe7010b9cb7d027c1b8a575d1e16",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/recap.ts",
+      "sha256": "1f3379918c002cbd0d1987ac617aa6fe64645d83c46f39e2c6e50cf64be86677",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/requests.ts",
+      "sha256": "dd9215afbc7cbf90c11ead2446ab8245710351e445bce3225aa9ec37edd33b0c",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/rival-business.ts",
+      "sha256": "2698364956154a7d7fd6b781031afa8b97fac182b7ddd552e0366ed53962ecd8",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/rng.ts",
+      "sha256": "fb32ef120e43ed4c7bbae35ef92cd5841b6d7abb0ff80c5c17215561abc2d317",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/sales-feedback.ts",
+      "sha256": "88256a81b024fd615c00e63b0ce7f531674df7dc770e9fc3abb4f9709cc8e642",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/serve-talk.ts",
+      "sha256": "99a35ebab4c21538641bf75ae1f9b9320e1f4be891b1fc7c1d8f8834397d7d6f",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/shelf.ts",
+      "sha256": "ba28b0590ef3bfa84e5179c78960c23fddf51683ddd7e9fdbbf4ece426e40aa3",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/target.ts",
+      "sha256": "0fe5b96a1ae1fae76035b48ce87fcaef11e14965d77e286f8270b02165a2b135",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/types.ts",
+      "sha256": "b53709757aea9a5631534a4bbcdebd023c4765627c2e271b8a80a81cdf19eee3",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/ConsultPanel.tsx",
+      "sha256": "ceab132f168068879e13cc8a076fbcfb9894c59ee5542a277af1043cf8df75b6",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/Levels.tsx",
+      "sha256": "ca596c8ff8b00a55625f0ad3e81ab37c51595c0498b9e439bdd01b3f2a1a639e",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/PersonCard.tsx",
+      "sha256": "eea9efad29ec3f5fb051da5262cdbab704cc6bad4cdc3a834db4e75cfa729ef8",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/Requests.tsx",
+      "sha256": "112cc5a132bdf37ebb5cb3936fb0940e3814c4f8a6e23ba4aa77d077975d272f",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/WebView.tsx",
+      "sha256": "03887a112c80821e98ab6b7e418e509982c305299cdda87a0f7e96491c0750a2",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/WeekendOrder.tsx",
+      "sha256": "895be385a375a345bba2eeb1369db3cbf348a989a64674946ce6a39d3ac81fef",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/WorldArchive.tsx",
+      "sha256": "7804cf524b843d688e402b7b15c8003da886de10d10405563ceb94c2fab93974",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/WorldGame.tsx",
+      "sha256": "fe7fd05e92e41d84cf020112b6412691f57a9deb6bb16c3a0660e028ac0d2271",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/archive-base.css",
+      "sha256": "fe47a0f114b597823465146ad65373e27af42834833fba25e917d1de2f91df1d",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/base.css",
+      "sha256": "8bc886b529b6d4f8a279ddd0c98cbf805cbfc0fcedeef4a0779b0cefa8ed68c2",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/bonds.ts",
+      "sha256": "ee6342c482cfaa0db3d8d395bc2b371086eb8d9f8e05574af7c005bdac6e6ea5",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/coach.ts",
+      "sha256": "43985a903ca2b09ca2ffae00be2ea96984567421f33e87d0c4e2325ab9e077e8",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/consult.css",
+      "sha256": "7ff5c17dc26245a1518e02342b5129bbcec77f92028dc408927b6d01ef244f9a",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/cues.ts",
+      "sha256": "f445671e560fa97e07c98375315cd8357e94121c7c2fc32a71de19c21e5c61b7",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/return-context.ts",
+      "sha256": "a8f451dafc87ebb6a28990fc3cfc29cc67a71e71d917e44476c5b7ee4adc63ad",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/web.css",
+      "sha256": "4e97f8f346b593185182aa08c4dff8fd14d64f4417bd6c0cebbec850a66a10dc",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/words.ts",
+      "sha256": "0456f6e3d0e80551eeafcd640ee5bb5c1d05734c50ebeab89d4f6326e307d2c4",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/world-archive.css",
+      "sha256": "45950157bdb6e613c1287f8629d67670a2d5fc613fe4f92ca82c9b2d894c94a5",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/world.css",
+      "sha256": "5142488e0f8cb5373cb9c236b4ada999201abfe8c0853ba0a32b3ee1eb0315e9",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/ui/zones.ts",
+      "sha256": "79cac0cc9d2c49e53ab79133f02369e32ce3a3e76c1cd7e97502ae73cf39f3fa",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/visits.ts",
+      "sha256": "1c24f56d638b4825ae74cdc6ec4f8ba238f9434a4a2698a7409b4027b032ca44",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/weekend-orders.ts",
+      "sha256": "eed74c4f054c552e0f9b427ec57aa3033deaeba6c79a23c7aa372876a95a29ea",
+      "matchesHead": true
+    },
+    {
+      "path": "dynamic-counter-prototype/src/world/weeks.ts",
+      "sha256": "b86f5a452e90ef9c801a63d27a2011f032a3322ca33f2cfdf168f7a8e9309d7e",
+      "matchesHead": true
+    }
+  ],
+  "simNote": "All modes use the same instrumented consult-sim.ts; added counters do not affect policy or RNG.",
+  "fullSimBaseline": {
+    "dynamic-counter-prototype/tests/world-sim.ts": {
+      "matchesHead": true,
+      "sha256": "cbe7da65291c193527082c479dda545656e06eb42d1f85a50f95dd282fcc2c7c"
+    },
+    "audit/contact-invite-2026-10-18/world-sim-after.log": {
+      "matchesHead": true,
+      "sha256": "4fc271c91a192b3436f3ec2ac7177aebe86b933e4949669a82c3a335be199891"
+    }
+  }
+}
