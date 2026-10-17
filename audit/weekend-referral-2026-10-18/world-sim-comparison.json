@@ -1,0 +1,42 @@
+{
+  "exactReportEqualIgnoringNodeWarnings": true,
+  "beforeSha256": "bc2488654342cc9a202a9c3480d6f6a1e53e45869ed611b9432d1bf3c610b3af",
+  "afterSha256": "bc2488654342cc9a202a9c3480d6f6a1e53e45869ed611b9432d1bf3c610b3af",
+  "signatureRows": [
+    [
+      "honest",
+      "20"
+    ],
+    [
+      "pushy",
+      "20"
+    ],
+    [
+      "social",
+      "20"
+    ],
+    [
+      "random",
+      "20"
+    ],
+    [
+      "honest",
+      "20"
+    ],
+    [
+      "pushy",
+      "20"
+    ],
+    [
+      "social",
+      "20"
+    ],
+    [
+      "random",
+      "20"
+    ]
+  ],
+  "ranking": "按种子算账（结局更好者赢，并列都算）: honest 15/20 · pushy 0/20 · social 9/20 · random 0/20",
+  "scope": "20 seeds x 4 existing policies x 2 seasons plus original simulator probes. Policies do not call the new optional sponsor path; referral path is covered separately by consult-sim.",
+  "normalization": "Remove Node runtime warning lines and trailing whitespace on each line before comparison."
+}

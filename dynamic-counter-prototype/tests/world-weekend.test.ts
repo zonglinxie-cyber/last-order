@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ambient, beginServe, beginSlot, endDay, inviteRivalGuest, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason,
-  parseWorld, prepareWeekendOrder, resolveServe, serializeWorld, weekendPrepareBlock, ZONE_GUEST_CAPACITY } from "../src/world/engine.ts";
+  parseWorld, prepareWeekendOrder, resolveServe, serializeWorld, weekendPrepareBlock, weekendSponsors, ZONE_GUEST_CAPACITY } from "../src/world/engine.ts";
 import { currentArrival, publicAppointments } from "../src/world/arrivals.ts";
-import { planWeekendOrder, WEEKEND_RESPONSE } from "../src/world/weekend-orders.ts";
+import { planWeekendOrder, WEEKEND_RESPONSE, WEEKEND_SPONSOR_RESPONSE } from "../src/world/weekend-orders.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { bestShelf, fitOfPerson, SHELF_IDS, shelfFitTier } from "../src/world/shelf.ts";
-import { visitPerson } from "../src/world/visits.ts";
+import { LAST_MET, visitPerson } from "../src/world/visits.ts";
 import type { Person, WeekendOutcome, World } from "../src/world/types.ts";
 
 const friday = (day = 5) => beginSlot({ ...newWorld("weekend-test", PEOPLE), day }, PEOPLE);
@@ -30,6 +30,100 @@ test("周五预告真实周日约单：不占已有预约，不约近期买过�
     assert.equal(planWeekendOrder(blocked, PEOPLE), undefined);
     const allBought = { ...w, weekendOrder: undefined, qualities: Object.fromEntries(PEOPLE.map(p => [`rival-bought:${p.id}`, day])) };
     assert.equal(planWeekendOrder(allBought, PEOPLE), undefined);
+  }
+});
+
+const referralWorld = (): World => ({ ...friday(),
+  weekendOrder: { person: "liangxia", due: 7, prepared: false },
+  opinion: { anjie: 35, liangxia: 0 }, qualities: { [LAST_MET("anjie")]: 1 }, samples: 0,
+});
+
+test("熟客牵线要求真接触、信任与双向熟悉，不拿单向关系或传闻高好感凑人", () => {
+  const w = referralWorld();
+  assert.ok(weekendSponsors(w, PEOPLE).some(p => p.id === "anjie"));
+  const blockedCases: Partial<World>[] = [{ qualities: {} }, { opinion: { anjie: 29 } },
+    { bonds: { "anjie>liangxia": 19 } }, { bonds: { "liangxia>anjie": 19 } }];
+  for (const patch of blockedCases) {
+    const blocked = { ...w, ...patch };
+    assert.ok(!weekendSponsors(blocked, PEOPLE).some(p => p.id === "anjie"));
+    assert.equal(prepareWeekendOrder(blocked, PEOPLE, "anjie"), blocked);
+  }
+  for (const id of ["liangxia", "roman", "missing"]) assert.equal(prepareWeekendOrder(w, PEOPLE, id), w);
+});
+
+test("牵线省小样但仍付精力：不能重复付费、换人或绕过拒绝与关柜；普通联系照旧", () => {
+  const w = referralWorld(), prepared = prepareWeekendOrder(w, PEOPLE, "anjie");
+  assert.equal(prepared.energy, w.energy - 6); assert.equal(prepared.samples, 0);
+  assert.equal(prepared.weekendOrder?.sponsor, "anjie");
+  assert.deepEqual(prepared.opinion, w.opinion); assert.equal(prepared.money, w.money);
+  assert.deepEqual(parseWorld(serializeWorld(prepared))!.weekendOrder, prepared.weekendOrder);
+  assert.equal(prepareWeekendOrder(prepared, PEOPLE), prepared);
+  assert.equal(prepareWeekendOrder(prepared, PEOPLE, "anjie"), prepared);
+  for (const patch of [{ energy: 5 }, { standing: 0 }, { compliance: 0 }, { opinion: { anjie: 35, liangxia: -30 } }, { day: 7, slot: 3 as const }]) {
+    const blocked = { ...w, ...patch };
+    assert.equal(prepareWeekendOrder(blocked, PEOPLE, "anjie"), blocked);
+  }
+  assert.equal(prepareWeekendOrder(w, PEOPLE), w);
+  const direct = prepareWeekendOrder({ ...w, samples: 1 }, PEOPLE);
+  assert.equal(direct.samples, 0); assert.equal(direct.weekendOrder?.sponsor, undefined);
+});
+
+test("牵线到场有真实介绍来路，和直接联系同样接待、不赠需求或自动买单", () => {
+  const w = referralWorld();
+  const referred = beginSlot({ ...prepareWeekendOrder(w, PEOPLE, "anjie"), day: 7, slot: 3, energy: 0 }, PEOPLE);
+  const direct = beginSlot({ ...prepareWeekendOrder({ ...w, samples: 1 }, PEOPLE), day: 7, slot: 3, energy: 0 }, PEOPLE);
+  assert.equal(currentArrival(referred, "liangxia", PEOPLE)?.title, "安姐介绍来的");
+  assert.equal(currentArrival(parseWorld(serializeWorld(referred))!, "liangxia", PEOPLE)?.title, "安姐介绍来的");
+  assert.equal(currentArrival({ ...referred, slot: 0 }, "liangxia", PEOPLE), null);
+  assert.equal(referred.money, direct.money); assert.deepEqual(referred.opinion, direct.opinion);
+  assert.deepEqual(referred.rivalBooking, direct.rivalBooking);
+  assert.deepEqual(referred.qualities, direct.qualities);
+  assert.equal(beginServe(referred, PEOPLE, "liangxia").energy, referred.energy - 12);
+});
+
+test("介绍人听实际结果且只结一次：合适加信任、勉强或硬推扣信任，未买不罚", () => {
+  const people = PEOPLE.filter(p => ["liangxia", "anjie"].includes(p.id));
+  for (const outcome of ["good", "mixed", "hard", "rival", "missed"] as const) {
+    const w: World = { ...prepareWeekendOrder(referralWorld(), PEOPLE, "anjie"), day: 7, slot: 3,
+      present: { anjie: "counter", liangxia: "counter" }, requests: [], memories: [],
+      weekendOrder: { person: "liangxia", sponsor: "anjie", prepared: true, due: 7, outcome, resolvedDay: 7 } };
+    const expected = WEEKEND_SPONSOR_RESPONSE[outcome];
+    const end = endDay(w, people);
+    assert.equal(end.opinion.anjie, w.opinion.anjie + expected.delta);
+    assert.ok(end.log.some(l => l.text.includes(expected.line)));
+    assert.equal(end.memories.filter(m => m.holder === "anjie" && m.act === expected.act).length, expected.delta ? 1 : 0);
+    const again = endDay({ ...parseWorld(serializeWorld(end))!, day: 7, present: w.present }, people);
+    assert.equal(again.opinion.anjie, end.opinion.anjie);
+    assert.equal(again.memories.filter(m => m.holder === "anjie" && m.act === expected.act).length, expected.delta ? 1 : 0);
+  }
+});
+
+test("有介绍人的旧档兼容与损坏校验：未准备不能凭空担保，不能自己介绍自己", () => {
+  const w = referralWorld();
+  for (const patch of [{ sponsor: "anjie", prepared: false }, { sponsor: "liangxia", prepared: true }, { sponsor: "", prepared: true }, { sponsor: 3, prepared: true }])
+    assert.equal(parseWorld(serializeWorld({ ...w, weekendOrder: { ...w.weekendOrder!, ...patch } } as World)), null);
+  assert.ok(parseWorld(serializeWorld(w)));
+});
+
+test("真实销售分支接到介绍人反馈：不另发奖金，季末先结人情再带入新季", () => {
+  const guest = { ...PEOPLE.find(p => p.id === "mei")!, skin: { ...PEOPLE.find(p => p.id === "mei")!.skin!, budget: 10000, maxUnits: 2 } };
+  const people = [guest, PEOPLE.find(p => p.id === "anjie")!];
+  const mixed = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(guest, id)) === "mixed")!;
+  const bad = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(guest, id)) === "negative")!;
+  for (const [product, force, outcome] of [[bestShelf(guest), false, "good"], [mixed, false, "mixed"], [bad, true, "hard"]] as const) {
+    const w: World = { ...newWorld("real-referral", people), day: 28, slot: 3, energy: 60,
+      opinion: { anjie: 35 }, present: { anjie: "counter", mei: "counter" },
+      weekendOrder: { person: "mei", sponsor: "anjie", prepared: true, due: 28 } };
+    const sold = resolveServe(w, people, guest.id, product, 1, force);
+    assert.equal(sold.weekendOrder?.outcome, outcome);
+    const direct = endDay({ ...sold, weekendOrder: { ...sold.weekendOrder!, sponsor: undefined } }, people);
+    const end = endDay(sold, people);
+    assert.equal(end.money, direct.money);
+    assert.equal(end.opinion.anjie - direct.opinion.anjie, WEEKEND_SPONSOR_RESPONSE[outcome].delta);
+    const next = nextSeason(end, people);
+    assert.equal(next.weekendOrder, undefined);
+    assert.equal(next.opinion.anjie, Math.trunc(end.opinion.anjie / 2));
+    assert.equal(next.money, 0);
   }
 });
 

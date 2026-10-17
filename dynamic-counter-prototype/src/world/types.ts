@@ -13,6 +13,8 @@ export type RivalTactic = "invite" | "compare";
 export type WeekendOutcome = "good" | "mixed" | "hard" | "rival" | "missed";
 export type WeekendOrder = {
   person: PersonId; due: number; prepared: boolean;
+  /** 熟客替你牵线；没有时是自己联系。打烊随 echoQueued 一次结清介绍人的反馈。 */
+  sponsor?: PersonId;
   outcome?: WeekendOutcome; resolvedDay?: number; echoQueued?: boolean;
 };
 /** 玩家自己在关系网上的节点 id。 */

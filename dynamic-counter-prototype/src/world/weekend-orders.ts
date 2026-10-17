@@ -5,6 +5,16 @@ import { SEASON_DAYS, type Person, type PersonId, type WeekendOrder, type Weeken
 
 export const WEEKEND_PREP_ENERGY = 6;
 export const WEEKEND_PREP_SAMPLES = 1;
+export const WEEKEND_SPONSOR_TRUST = 30;
+export const WEEKEND_SPONSOR_WARMTH = 20;
+/** 介绍人关心朋友被怎样接待，不要求每次都买成。 */
+export const WEEKEND_SPONSOR_RESPONSE: Record<WeekendOutcome, { delta: number; act: string; line: string }> = {
+  good: { delta: 4, act: "referral-kept", line: "「朋友说你挑得合适。我这次没介绍错人。」" },
+  mixed: { delta: -4, act: "referral-rushed", line: "「朋友买了，心里却还有犹豫。下次先听清楚，别急着开单。」" },
+  hard: { delta: -8, act: "referral-pressed", line: "「我介绍朋友来，不是让你硬推的。以后还怎么开这个口？」" },
+  rival: { delta: 0, act: "", line: "「朋友最后在对面买了。各有合适，别为了一单勉强人。」" },
+  missed: { delta: 0, act: "", line: "「这次没买成就下次再聊。别因为是我介绍的，就觉得非开单不可。」" },
+};
 export const WEEKEND_OUTCOMES: readonly WeekendOutcome[] = ["good", "mixed", "hard", "rival", "missed"];
 export const WEEKEND_RESULT: Record<WeekendOutcome, string> = {
   good: "这一单，接住了", mixed: "成交了，还有话没说完", hard: "开出了单，也留下了压力",
@@ -50,6 +60,7 @@ export function validWeekendOrder(value: unknown): value is WeekendOrder {
   return typeof o.person === "string" && !!o.person && Number.isInteger(o.due)
     && Number(o.due) >= 7 && Number(o.due) <= SEASON_DAYS && Number(o.due) % 7 === 0
     && typeof o.prepared === "boolean"
+    && (o.sponsor === undefined || typeof o.sponsor === "string" && !!o.sponsor && o.sponsor !== o.person && o.prepared === true)
     && (o.echoQueued === undefined || typeof o.echoQueued === "boolean")
     && (o.outcome === undefined ? o.resolvedDay === undefined && !o.echoQueued
       : WEEKEND_OUTCOMES.includes(o.outcome as WeekendOutcome) && Number.isInteger(o.resolvedDay)

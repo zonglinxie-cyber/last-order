@@ -1,0 +1,17 @@
+[WebServer] (node:41592) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:41613) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:41940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 320×568 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 (3.8s)
+  ✓  2 tests/world-weekend-referral.spec.ts:89:3 › 周末熟客牵线 320×568 › 介绍来的朋友被硬推，打烊不报喜；刷新不重复扣介绍人的信任 (2.6s)
+  ✓  3 tests/world-weekend-referral.spec.ts:102:3 › 周末熟客牵线 320×568 › 没有实际接触过熟客时不凭好感造介绍人，自己联系保留原成本 (1.2s)
+  ✓  4 tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 390×844 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 (3.6s)
+  ✓  5 tests/world-weekend-referral.spec.ts:89:3 › 周末熟客牵线 390×844 › 介绍来的朋友被硬推，打烊不报喜；刷新不重复扣介绍人的信任 (2.6s)
+  ✓  6 tests/world-weekend-referral.spec.ts:102:3 › 周末熟客牵线 390×844 › 没有实际接触过熟客时不凭好感造介绍人，自己联系保留原成本 (1.2s)
+
+  6 passed (20.6s)

@@ -1,0 +1,41 @@
+[WebServer] (node:29278) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:29296) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:29299) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 390×844 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 (6.3s)
+
+
+  1) tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 390×844 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 ──
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  getByRole('button', { name: '请安姐牵线 · 6 精力', exact: true })
+    Expected: in viewport
+    Received: viewport ratio 0.994016170501709
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeInViewport" with timeout 5000ms
+      - waiting for getByRole('button', { name: '请安姐牵线 · 6 精力', exact: true })
+        13 × locator resolved to <button type="button">请安姐牵线 · 6 精力</button>
+           - unexpected value "viewport ratio 0.994016170501709"
+
+
+      55 |       scrollTop: e.closest(".mobile-scroll")!.scrollTop,
+      56 |     })), null, 2));
+    > 57 |     await expect(sponsor).toBeInViewport({ ratio: 1 });
+         |                           ^
+      58 |     expect(await sponsor.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+      59 |     await expect(page.getByLabel("请熟客牵线")).toContainText("勉强成交或硬推，会让介绍人失望");
+      60 |     await expect(page.locator(".weekend-close")).toBeInViewport({ ratio: 1 });
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-referral.spec.ts:57:27
+
+    Error Context: test-results/world-weekend-referral-周末熟-b4c52-能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响/error-context.md
+
+  1 failed
+    tests/world-weekend-referral.spec.ts:45:3 › 周末熟客牵线 390×844 › 缺小样时能看懂人情代价、请真熟客牵线，刷新后正常接待和收到回响 ───

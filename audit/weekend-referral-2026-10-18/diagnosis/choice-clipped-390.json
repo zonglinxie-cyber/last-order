@@ -1,0 +1,23 @@
+{
+  "button": {
+    "x": 15,
+    "y": 675.75,
+    "width": 360,
+    "height": 44.390625,
+    "top": 675.75,
+    "right": 375,
+    "bottom": 720.140625,
+    "left": 15
+  },
+  "scroll": {
+    "x": 1,
+    "y": 256.875,
+    "width": 388,
+    "height": 463.125,
+    "top": 256.875,
+    "right": 389,
+    "bottom": 720,
+    "left": 1
+  },
+  "scrollTop": 36
+}

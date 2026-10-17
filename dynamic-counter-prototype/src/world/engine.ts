@@ -25,7 +25,8 @@ import { arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.t
 import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, validRivalBooking } from "./rival-business.ts";
 import { recentlyPurchased } from "./purchases.ts";
 import { currentWeekendOrder, planWeekendOrder, recordWeekendOutcome, validWeekendOrder,
-  WEEKEND_OUTCOMES, WEEKEND_PREP_ENERGY, WEEKEND_PREP_SAMPLES, WEEKEND_RESPONSE, WEEKEND_RESULT } from "./weekend-orders.ts";
+  WEEKEND_OUTCOMES, WEEKEND_PREP_ENERGY, WEEKEND_PREP_SAMPLES, WEEKEND_RESPONSE, WEEKEND_RESULT,
+  WEEKEND_SPONSOR_RESPONSE, WEEKEND_SPONSOR_TRUST, WEEKEND_SPONSOR_WARMTH } from "./weekend-orders.ts";
 export { BUY_INTERVAL_DAYS } from "./purchases.ts";
 
 // —— 可调常量（引擎拍的数值，主控定平衡） ——
@@ -650,6 +651,10 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     w = say(w, weekend
       ? `周末最后一单：${guest.name}到了${prepared ? "你的柜前，提前确认的时间派上了用场" : "对面，还能邀来比货"}。对面预计这单 ¥${quote.amount}，收工前才结账。`
       : `陆遥约了${guest.name}午后来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
+    if (weekend && prepared && w.weekendOrder?.sponsor) {
+      const arrival: Arrival = { person: guest.id, kind: "referral", source: w.weekendOrder.sponsor };
+      w = say(w, describeArrival(arrival, people)!.scene, [guest.id, w.weekendOrder.sponsor], arrival);
+    }
     return true;
   };
   const weekend = currentWeekendOrder(w);
@@ -869,23 +874,39 @@ export function inviteRivalGuest(world: World, people: Person[]): World {
     `你拿一份小样邀${guest.name}来比货。「可以看看，但我还没决定买哪边的。」这时段结束前，要靠实际成交留住这单。`, [guest.id]);
 }
 
-export function weekendPrepareBlock(world: World): string | null {
+/** 能牵线的人来自真实人情网，不能把没见过的高好感者或单向熟人当成介绍人。 */
+export function weekendSponsors(world: World, people: Person[]): Person[] {
+  const order = currentWeekendOrder(world);
+  if (!order || order.outcome || order.prepared) return [];
+  return people.filter(p => p.role === "customer" && p.id !== order.person
+    && opinionOf(world, p.id) >= WEEKEND_SPONSOR_TRUST
+    && (qualityOf(world, LAST_MET(p.id)) > 0 || qualityOf(world, `bought:${p.id}`) > 0)
+    && Math.min(warmthOf(world, people, p.id, order.person), warmthOf(world, people, order.person, p.id)) >= WEEKEND_SPONSOR_WARMTH)
+    .sort((a, b) => opinionOf(world, b.id) - opinionOf(world, a.id) || a.id.localeCompare(b.id));
+}
+
+export function weekendPrepareBlock(world: World, sponsor?: PersonId, people: Person[] = []): string | null {
   const order = currentWeekendOrder(world);
   if (!order || order.outcome) return "这一单已经有了结果";
   if (order.prepared) return "已经确认过时间";
   if (world.day === order.due && world.slot === 3) return "客人已经到场，现在直接接待或邀来比货";
   if (world.energy < WEEKEND_PREP_ENERGY) return `还需要 ${WEEKEND_PREP_ENERGY} 精力`;
-  if (world.samples < WEEKEND_PREP_SAMPLES) return "需要留一份小样";
+  if (sponsor !== undefined) {
+    if (!weekendSponsors(world, people).some(p => p.id === sponsor)) return "这位熟客现在不方便替你牵线";
+  } else if (world.samples < WEEKEND_PREP_SAMPLES) return "需要留一份小样";
   if (world.standing <= SERVE_STAT_FLOOR || world.compliance <= SERVE_STAT_FLOOR) return "先把柜台恢复营业";
   if (opinionOf(world, order.person) <= SERVE_REFUSE_OPINION) return "她现在不愿约到你的柜前";
   return null;
 }
 
-export function prepareWeekendOrder(world: World, people: Person[]): World {
+export function prepareWeekendOrder(world: World, people: Person[], sponsor?: PersonId): World {
   const order = currentWeekendOrder(world);
-  if (!order || weekendPrepareBlock(world)) return world;
+  if (!order || weekendPrepareBlock(world, sponsor, people)) return world;
   const guest = personOf(people, order.person);
   if (!guest || guest.role !== "customer") return world;
+  if (sponsor !== undefined) return say({ ...world, energy: world.energy - WEEKEND_PREP_ENERGY,
+    weekendOrder: { ...order, prepared: true, sponsor } },
+    `${personOf(people, sponsor)!.name}替你联系了${guest.name}，约好第 ${order.due} 天晚高峰来柜前。这次省下一份小样；接待仍花 12 精力，介绍人也会听到朋友的真实感受。`, [guest.id, sponsor]);
   return say({ ...world, energy: world.energy - WEEKEND_PREP_ENERGY, samples: world.samples - WEEKEND_PREP_SAMPLES,
     weekendOrder: { ...order, prepared: true } },
     `你拿一份小样联系${guest.name}，确认了第 ${order.due} 天晚高峰的时间。到时${ta(guest)}直接来你的柜前；接待仍花 12 精力，买不买要看真实推荐。`, [guest.id]);
@@ -1507,6 +1528,15 @@ export function endDay(world: World, people: Person[]): World {
     const order = w.weekendOrder;
     w = recordWeekendOutcome(w, order.person, "missed");
     const outcome = w.weekendOrder!.outcome!;
+    const sponsor = order.sponsor ? personOf(people, order.sponsor) : undefined;
+    if (sponsor?.role === "customer") {
+      const response = WEEKEND_SPONSOR_RESPONSE[outcome];
+      if (response.delta) {
+        w = addOpinion(w, sponsor.id, response.delta);
+        w = remember(w, sponsor.id, response.act, response.delta > 0 ? 1 : -1, PLAYER, order.person);
+      }
+      w = say(w, `${sponsor.name}听完朋友说的周末那单：${response.line}`, [sponsor.id, order.person]);
+    }
     const existing = w.appointments.find(a => a.person === order.person && a.day === w.day + 1);
     const appointments = existing ? w.appointments.map(a => a === existing
       ? { ...a, reason: a.reason === "refund" ? "refund" as const : "weekend" as const, weekendOutcome: outcome } : a)

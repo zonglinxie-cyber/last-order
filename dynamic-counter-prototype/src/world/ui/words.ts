@@ -41,6 +41,9 @@ export const ACT_WORD: Record<string, string> = {
   "sold-anyway": "明知不合适还是卖给了她",
   "returned-goods": "让她跑回来退了货",
   "came-back-bought": "她回头又在你这儿买了",
+  "referral-kept": "接好了介绍来的朋友，没有辜负这份信任",
+  "referral-rushed": "没听清介绍来的朋友的顾虑就开了单",
+  "referral-pressed": "向介绍来的朋友硬推了不需要的东西",
   // 招呼与人情
   "greeted": "主动招呼了她",
   "pestered": "一趟趟围上来推销",

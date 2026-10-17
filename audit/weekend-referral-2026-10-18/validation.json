@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "passed": 308,
+    "failed": 0
+  },
+  "weekendRuleRepeat": 15,
+  "browserDistinct": 124,
+  "finalReferralRepeat": 6,
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "runtimeFilesChecked": 28,
+  "preview": "http://127.0.0.1:4188/",
+  "previewModuleHasFinalReferralHeading": true,
+  "screens": [
+    [
+      320,
+      568
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "limitations": [
+    "Browser automation, not physical phone or human retention evidence.",
+    "Fixed strategy simulations are not an estimate of real player retention."
+  ]
+}

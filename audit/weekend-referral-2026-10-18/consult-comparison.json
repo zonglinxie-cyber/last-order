@@ -1,0 +1,418 @@
+{
+  "scope": "Same 20 seeds x first season, fixed public-information strategy; no story choices, requests or heat. Referral mode uses first publicly eligible sponsor, otherwise direct preparation. Savings and feedback change later decisions; this is not a one-variable causal estimate.",
+  "direct": {
+    "stars": 198,
+    "fullStarWeeks": 45,
+    "passedWeeks": 79,
+    "totalWeeks": 80,
+    "actions": {
+      "help": 557,
+      "sample": 1834,
+      "prepare-weekend": 60,
+      "wechat": 481,
+      "keep": 103,
+      "greet": 611,
+      "invite-booking": 275,
+      "handoff": 20
+    },
+    "weeks": [
+      {
+        "week": 1,
+        "target": 13000,
+        "playerMedian": 18000,
+        "consultMedian": 17810,
+        "rivalMedian": 0
+      },
+      {
+        "week": 2,
+        "target": 16000,
+        "playerMedian": 14780,
+        "consultMedian": 11270,
+        "rivalMedian": 11130
+      },
+      {
+        "week": 3,
+        "target": 19000,
+        "playerMedian": 22130,
+        "consultMedian": 14540,
+        "rivalMedian": 5430
+      },
+      {
+        "week": 4,
+        "target": 22000,
+        "playerMedian": 26300,
+        "consultMedian": 17180,
+        "rivalMedian": 2160
+      }
+    ]
+  },
+  "referral": {
+    "stars": 201,
+    "fullStarWeeks": 47,
+    "passedWeeks": 78,
+    "totalWeeks": 80,
+    "actions": {
+      "help": 557,
+      "sample": 1858,
+      "prepare-weekend": 60,
+      "wechat": 472,
+      "keep": 100,
+      "greet": 592,
+      "invite-booking": 278,
+      "handoff": 20,
+      "prepare-weekend-referral": 30,
+      "referral-result-good": 19,
+      "referral-result-mixed": 5,
+      "referral-result-rival": 6
+    },
+    "weeks": [
+      {
+        "week": 1,
+        "target": 13000,
+        "playerMedian": 18000,
+        "consultMedian": 17810,
+        "rivalMedian": 0
+      },
+      {
+        "week": 2,
+        "target": 16000,
+        "playerMedian": 14780,
+        "consultMedian": 11270,
+        "rivalMedian": 11130
+      },
+      {
+        "week": 3,
+        "target": 19000,
+        "playerMedian": 22130,
+        "consultMedian": 14060,
+        "rivalMedian": 5460
+      },
+      {
+        "week": 4,
+        "target": 22000,
+        "playerMedian": 27820,
+        "consultMedian": 19890,
+        "rivalMedian": 2260
+      }
+    ]
+  },
+  "seedComparison": [
+    {
+      "seed": "sim-0",
+      "direct": {
+        "money": 86920,
+        "stars": 8,
+        "passed": 4,
+        "rival": 22020
+      },
+      "referral": {
+        "money": 86920,
+        "stars": 8,
+        "passed": 4,
+        "rival": 22020
+      }
+    },
+    {
+      "seed": "sim-1",
+      "direct": {
+        "money": 88660,
+        "stars": 10,
+        "passed": 4,
+        "rival": 15360
+      },
+      "referral": {
+        "money": 89060,
+        "stars": 10,
+        "passed": 4,
+        "rival": 15360
+      }
+    },
+    {
+      "seed": "sim-2",
+      "direct": {
+        "money": 82080,
+        "stars": 10,
+        "passed": 4,
+        "rival": 17280
+      },
+      "referral": {
+        "money": 82080,
+        "stars": 10,
+        "passed": 4,
+        "rival": 17280
+      }
+    },
+    {
+      "seed": "sim-3",
+      "direct": {
+        "money": 70880,
+        "stars": 9,
+        "passed": 4,
+        "rival": 20400
+      },
+      "referral": {
+        "money": 70880,
+        "stars": 10,
+        "passed": 4,
+        "rival": 20400
+      }
+    },
+    {
+      "seed": "sim-4",
+      "direct": {
+        "money": 68920,
+        "stars": 9,
+        "passed": 4,
+        "rival": 31520
+      },
+      "referral": {
+        "money": 68920,
+        "stars": 10,
+        "passed": 4,
+        "rival": 31520
+      }
+    },
+    {
+      "seed": "sim-5",
+      "direct": {
+        "money": 66260,
+        "stars": 9,
+        "passed": 4,
+        "rival": 26880
+      },
+      "referral": {
+        "money": 74480,
+        "stars": 10,
+        "passed": 4,
+        "rival": 26880
+      }
+    },
+    {
+      "seed": "sim-6",
+      "direct": {
+        "money": 85900,
+        "stars": 11,
+        "passed": 4,
+        "rival": 23160
+      },
+      "referral": {
+        "money": 85900,
+        "stars": 11,
+        "passed": 4,
+        "rival": 23160
+      }
+    },
+    {
+      "seed": "sim-7",
+      "direct": {
+        "money": 77220,
+        "stars": 11,
+        "passed": 4,
+        "rival": 27600
+      },
+      "referral": {
+        "money": 80800,
+        "stars": 11,
+        "passed": 4,
+        "rival": 27600
+      }
+    },
+    {
+      "seed": "sim-8",
+      "direct": {
+        "money": 74840,
+        "stars": 9,
+        "passed": 4,
+        "rival": 20060
+      },
+      "referral": {
+        "money": 73020,
+        "stars": 8,
+        "passed": 3,
+        "rival": 20060
+      }
+    },
+    {
+      "seed": "sim-9",
+      "direct": {
+        "money": 70820,
+        "stars": 10,
+        "passed": 4,
+        "rival": 26960
+      },
+      "referral": {
+        "money": 80060,
+        "stars": 11,
+        "passed": 4,
+        "rival": 26960
+      }
+    },
+    {
+      "seed": "sim-10",
+      "direct": {
+        "money": 79560,
+        "stars": 10,
+        "passed": 4,
+        "rival": 28980
+      },
+      "referral": {
+        "money": 79560,
+        "stars": 10,
+        "passed": 4,
+        "rival": 28980
+      }
+    },
+    {
+      "seed": "sim-11",
+      "direct": {
+        "money": 79900,
+        "stars": 10,
+        "passed": 4,
+        "rival": 13900
+      },
+      "referral": {
+        "money": 79900,
+        "stars": 10,
+        "passed": 4,
+        "rival": 13900
+      }
+    },
+    {
+      "seed": "sim-12",
+      "direct": {
+        "money": 92100,
+        "stars": 11,
+        "passed": 4,
+        "rival": 12980
+      },
+      "referral": {
+        "money": 92100,
+        "stars": 11,
+        "passed": 4,
+        "rival": 12980
+      }
+    },
+    {
+      "seed": "sim-13",
+      "direct": {
+        "money": 89820,
+        "stars": 12,
+        "passed": 4,
+        "rival": 18300
+      },
+      "referral": {
+        "money": 82880,
+        "stars": 10,
+        "passed": 4,
+        "rival": 19280
+      }
+    },
+    {
+      "seed": "sim-14",
+      "direct": {
+        "money": 72100,
+        "stars": 10,
+        "passed": 4,
+        "rival": 41440
+      },
+      "referral": {
+        "money": 72100,
+        "stars": 10,
+        "passed": 4,
+        "rival": 41440
+      }
+    },
+    {
+      "seed": "sim-15",
+      "direct": {
+        "money": 77200,
+        "stars": 10,
+        "passed": 4,
+        "rival": 16960
+      },
+      "referral": {
+        "money": 87260,
+        "stars": 11,
+        "passed": 4,
+        "rival": 15980
+      }
+    },
+    {
+      "seed": "sim-16",
+      "direct": {
+        "money": 80800,
+        "stars": 9,
+        "passed": 3,
+        "rival": 25620
+      },
+      "referral": {
+        "money": 80800,
+        "stars": 9,
+        "passed": 3,
+        "rival": 25620
+      }
+    },
+    {
+      "seed": "sim-17",
+      "direct": {
+        "money": 71700,
+        "stars": 10,
+        "passed": 4,
+        "rival": 27900
+      },
+      "referral": {
+        "money": 71700,
+        "stars": 10,
+        "passed": 4,
+        "rival": 27900
+      }
+    },
+    {
+      "seed": "sim-18",
+      "direct": {
+        "money": 86820,
+        "stars": 10,
+        "passed": 4,
+        "rival": 8640
+      },
+      "referral": {
+        "money": 91600,
+        "stars": 11,
+        "passed": 4,
+        "rival": 13960
+      }
+    },
+    {
+      "seed": "sim-19",
+      "direct": {
+        "money": 82780,
+        "stars": 10,
+        "passed": 4,
+        "rival": 13740
+      },
+      "referral": {
+        "money": 82780,
+        "stars": 10,
+        "passed": 4,
+        "rival": 13740
+      }
+    }
+  ],
+  "referralComparedToDirect": {
+    "money": {
+      "better": 6,
+      "equal": 12,
+      "worse": 2
+    },
+    "stars": {
+      "better": 6,
+      "equal": 12,
+      "worse": 2
+    },
+    "passed": {
+      "better": 0,
+      "equal": 19,
+      "worse": 1
+    }
+  }
+}

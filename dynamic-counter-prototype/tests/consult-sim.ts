@@ -14,7 +14,7 @@ import {
   ambient, beginServe, beginSlot, doVerb, endDay, leaveServe, newWorld,
   nextSeason, qualityOf, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
   VERB_ENERGY,
-  inviteRivalGuest, prepareWeekendOrder,
+  inviteRivalGuest, prepareWeekendOrder, weekendSponsors,
 } from "../src/world/engine.ts";
 import {
   askHer, lookAt, openConsult, PUSH_QUESTION, questionsOf, rememberConsult, spotsOf, tryOn,
@@ -38,8 +38,10 @@ import { FIXTURE_PEOPLE } from "./fixtures/world-fixture.ts";
 const DAYS = 28;
 const N = Math.max(1, Number(process.argv[2]) || 20);
 const SEASONS = Math.max(1, Number(process.argv[3]) || 1);
-// 可选第四参数 compete：只按公开预约邀来比货，接待仍用同一套有限信息策略。
-const COMPETE_BOOKINGS = process.argv[4] === "compete";
+// 可选第四参数 compete：争取公开预约；referral：同样争取，公开有熟客愿意牵线时优先请人帮忙。
+// 两者接待仍用同一套有限信息策略，不读取隐藏需求。
+const USE_REFERRAL = process.argv[4] === "referral";
+const COMPETE_BOOKINGS = process.argv[4] === "compete" || USE_REFERRAL;
 
 const yuan = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 const pct = (n: number, d: number) => d > 0 ? `${((n / d) * 100).toFixed(1)}%` : "—";
@@ -479,8 +481,12 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
       w = { ...w, slot: slot as 0 | 1 | 2 | 3 };
       w = beginSlot(w, people, festivals);
       if (COMPETE_BOOKINGS && w.energy >= WEEKEND_PREP_ENERGY + VERB_ENERGY.serve) {
-        const prepared = prepareWeekendOrder(w, people);
-        if (prepared !== w) { w = prepared; social["prepare-weekend"] = (social["prepare-weekend"] ?? 0) + 1; }
+        const sponsor = USE_REFERRAL ? weekendSponsors(w, people)[0] : undefined;
+        const prepared = prepareWeekendOrder(w, people, sponsor?.id);
+        if (prepared !== w) {
+          w = prepared; social["prepare-weekend"] = (social["prepare-weekend"] ?? 0) + 1;
+          if (sponsor) social["prepare-weekend-referral"] = (social["prepare-weekend-referral"] ?? 0) + 1;
+        }
       }
       const booking = rivalBookingNow(w);
       let invited: Person | undefined;
@@ -513,6 +519,10 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
     }
     const closingDay = w.day;
     w = endDay(w, people);
+    if (w.weekendOrder?.sponsor && w.weekendOrder.due === w.day - 1 && w.weekendOrder.outcome) {
+      const key = `referral-result-${w.weekendOrder.outcome}`;
+      social[key] = (social[key] ?? 0) + 1;
+    }
     if (isSunday(closingDay)) {
       weeks.push(weekRowOf(w, closingDay, seed, season, weekServe));
       weekServe = 0;

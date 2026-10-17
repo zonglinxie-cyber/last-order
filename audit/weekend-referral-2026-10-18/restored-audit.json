@@ -1,0 +1,278 @@
+[
+  {
+    "path": "audit/design-2026-10-13/notebook-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/notebook-320.png",
+    "restoredSha256": "83e477b98b30905c889cb7f296e283dd57d46e4078b1b987f57ba3128c474f08",
+    "currentRunSha256": "897e5a78724fc8f307031e2cb92489409b755d1956a8cfdcbd7fa51e7cbbc28f"
+  },
+  {
+    "path": "audit/design-2026-10-13/notebook-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/notebook-390.png",
+    "restoredSha256": "446476731a6a834fdacf8ea845fe3fe63950177b1fbf63adc729f0901678dcfd",
+    "currentRunSha256": "c198152e21d5fe5016ef6c60f6da441dc61f190ce613ff52de5a714593538d74"
+  },
+  {
+    "path": "audit/design-2026-10-13/offer-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/offer-320.png",
+    "restoredSha256": "83b83901b57f41449043eb7ba86dd9ea9e2fc2ad5fd6990410ad9bf6a8272cb0",
+    "currentRunSha256": "9e8d014696b42f5607bfed6c79034d92dab8e93a44095c067c4d6f9d3dc68575"
+  },
+  {
+    "path": "audit/design-2026-10-13/offer-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/offer-390.png",
+    "restoredSha256": "b5d8eebf90e79d3e2ef85e39b5d94796f097094733bd373e3151da4abbf01476",
+    "currentRunSha256": "6bb8873f18765ffca61f178d08b9d99885044a67d51a15ad1b343e95d183d539"
+  },
+  {
+    "path": "audit/design-2026-10-13/phase2-ui/floor-rival-320x568.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/phase2-ui/floor-rival-320x568.png",
+    "restoredSha256": "ca321062df4f79c52452da1c0ce2c17a73f10713f3225d5539eabae459b25325",
+    "currentRunSha256": "5974b9acf3d58e593e33f8b242a01986984cf4f7e176a565fb0181f0ae899918"
+  },
+  {
+    "path": "audit/design-2026-10-13/phase2-ui/routes-sheet-320x568.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/phase2-ui/routes-sheet-320x568.png",
+    "restoredSha256": "5ecbb97af2b94aa21c873888700b76c3f9f083d52049a1630d6b2f8b7ef156e7",
+    "currentRunSha256": "1d4777bed688d2ff6da7650319ec307b0fff22875825b5e52a1fb56d95c1243d"
+  },
+  {
+    "path": "audit/design-2026-10-13/receipt-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/receipt-320.png",
+    "restoredSha256": "c27ed70c9ef67ca2fa1540243b85539b816da36d7d5e1112b3a4c11ece990a82",
+    "currentRunSha256": "5c8eef0ff023df4da255c2843ffa1509e79e6a025c4855edafc4a1b7f77cf487"
+  },
+  {
+    "path": "audit/design-2026-10-13/receipt-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/design-2026-10-13/receipt-390.png",
+    "restoredSha256": "b318395960a34f34befbc466d056b3f84ba2682a66d79e3e60ffd4c2c87719ff",
+    "currentRunSha256": "9db3a867930f477fc9350401c967470987319f176147a39b89f4ab0eae90552b"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/after-consult-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/after-consult-320.png",
+    "restoredSha256": "a3a0ef737c41196442f113d9b9398f36f55bea1e8c70e8f90d738ed764314c53",
+    "currentRunSha256": "5cf580fbc84123e5729eb151b528eab319ed53cccdd713fd00fefba58a4c1dc1"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/after-consult-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/after-consult-390.png",
+    "restoredSha256": "563a7fe730ae40878b1f46bca247a6d676bc293a3dc8314bdcbe74ca6b99ccfc",
+    "currentRunSha256": "4c9f9074f6b467ecae576ad4ccd81d7ff9058c552dfc15147cc99eaff309d037"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/first-receipt-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/first-receipt-320.png",
+    "restoredSha256": "16b4acd5c885370ec99c339498cdd35fdb3e2e31b77480d12d9e65e493f6b249",
+    "currentRunSha256": "0be1cd6e58295b4af588868f0a045cb5c9929cf3a018b9add703e475cc49ba2e"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/first-receipt-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/first-receipt-390.png",
+    "restoredSha256": "eca3780503627590f0029a6a05aeec08cf45adb36818e58a6e3bbcfd9783c95c",
+    "currentRunSha256": "3f75ca911a57ae5f38bc59b619ee37f4569dd0c618ff5b0817fd10f3329a923d"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/opening-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/opening-320.png",
+    "restoredSha256": "81aec1c819951ac7ef383a28e5ea789d9862ca50981ce85c9d4fbb30da848c54",
+    "currentRunSha256": "9a09a2b86ecc3228bb4aeba9614017784d7e60ea1bc337288ac114836b87d569"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/opening-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/opening-390.png",
+    "restoredSha256": "fd3b56ad679079422f388477aa40e07b9427a43d2933767765757f391ff2881d",
+    "currentRunSha256": "ddcc5c9ca35e651c412c69ca65c2f7d1f3f1a3d091aa470da270ed262986cca6"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/toast-after-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/toast-after-320.png",
+    "restoredSha256": "4f202940838a20d953d778b5b9262f3ddc2a80a63f4fedc71bb4795423f24f42",
+    "currentRunSha256": "c906d149cf3c90428800a402966ba8d2d7e00fc9d7d1bba5bc429e445a5682aa"
+  },
+  {
+    "path": "audit/first-sale-2026-10-18/toast-after-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/first-sale-2026-10-18/toast-after-390.png",
+    "restoredSha256": "d116292601b5d688a04f03e87cffdc0716323f09bd90f6790e56fcab6fed7e15",
+    "currentRunSha256": "6e0bfe54b0e6206786e9cfae5b7881010c5a7bbd58ea743b20c804245df5d486"
+  },
+  {
+    "path": "audit/return-origin-2026-10-18/person-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/return-origin-2026-10-18/person-320.png",
+    "restoredSha256": "152076fa9e6b4a8709b287b0759efb3fbe2647a7b6845e9fc804b276420b2abe",
+    "currentRunSha256": "fbdc20b56e8feb3ed1ec73e7f91aa822f298a9ef9f94a28f12b6f208892ee86a"
+  },
+  {
+    "path": "audit/return-origin-2026-10-18/person-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/return-origin-2026-10-18/person-390.png",
+    "restoredSha256": "bd8eab2551c3bdbff148587c75fdec880721b95ffb3451f7672956b835e45036",
+    "currentRunSha256": "4a237af2bba077b37ae25de597381bcd6dabeee888ae6ad16d23aa9e1ffb3780"
+  },
+  {
+    "path": "audit/rival-booking-2026-10-18/floor-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/rival-booking-2026-10-18/floor-320.png",
+    "restoredSha256": "5d9af5a2cc2ac7f6f98c9d76f4b5da3fbedb4037ca6f389fad3e117c13b80d12",
+    "currentRunSha256": "e2553a28b8cc6af54d2065a38e64df33203aab8bfc23831bda447da725eebbbc"
+  },
+  {
+    "path": "audit/rival-booking-2026-10-18/won-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/rival-booking-2026-10-18/won-320.png",
+    "restoredSha256": "78b988178cdda71d0dc75132c6107d7c8d3a1b3e9b924d6ce07402718cd88eec",
+    "currentRunSha256": "5308936f9816f246fed009784707608f509694caef0c38900e1372c494327263"
+  },
+  {
+    "path": "audit/rival-choice-2026-10-18/double-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/rival-choice-2026-10-18/double-320.png",
+    "restoredSha256": "bee124bc6d495d16b255a9deb2389abc07c82ea836a1240e3010374659fadb41",
+    "currentRunSha256": "c5fc32b111a9785b6b311858da7750753928d46e539f27f6fd679056ce997cf3"
+  },
+  {
+    "path": "audit/rival-choice-2026-10-18/double-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/rival-choice-2026-10-18/double-390.png",
+    "restoredSha256": "acaf8b671e863df9ca2f582dfa1217812a4a56d3b578944c4dab6f9af0fca3aa",
+    "currentRunSha256": "d8ba6dada32e816fcd846703660570ae7faf0ff224fb67df6297a5611290980f"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/last-order-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/weekend-order-2026-10-18/last-order-320.png",
+    "restoredSha256": "fca5ac74c7920325767b7d9ba7cefe329af9de439a5f7cc1a79dee37fd2159df",
+    "currentRunSha256": "c805e3fa535e2f24582337578269476c2e21e76aeffb8fcb0a6ffeba0ac2fcab"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/last-order-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/weekend-order-2026-10-18/last-order-390.png",
+    "restoredSha256": "d7be3a921d8bfb868dbb0c6ebca351fa7fe9981d598bd04979fc23584d036ac4",
+    "currentRunSha256": "4a0e4a44f9ae8b3aa09872d89606b39f545eb61692c15de4d876c4c3a507aed0"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/return-320.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/weekend-order-2026-10-18/return-320.png",
+    "restoredSha256": "b315e174b845121351478a801f6c26ec4ba8c16d501e3385cf8461ac149d155b",
+    "currentRunSha256": "135cfef0fdd243564c9eadbeb2d51a96ccde617cc2d36a65b22649b48f847e21"
+  },
+  {
+    "path": "audit/weekend-order-2026-10-18/return-390.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/weekend-order-2026-10-18/return-390.png",
+    "restoredSha256": "1ed37a15a475b3ddfd896864e98e90cf93d3c97359691cd60c6c218ceea8c823",
+    "currentRunSha256": "d1384fb5d0409ee1fb207d3ef5e5f77f1f2d18f9a67ead1526eedda881f88831"
+  },
+  {
+    "path": "audit/world-smoke/floor-day1-know.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/floor-day1-know.png",
+    "restoredSha256": "0bef12e3c83a180017baf65fc5a93bfe05c610059c121ff9b428529f1ce91adc",
+    "currentRunSha256": "ff2d1b70dde4af81285aaf09068a7b7a5afb26ee520d65a1a2222a72b6c9ca24"
+  },
+  {
+    "path": "audit/world-smoke/floor-day1-skip.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/floor-day1-skip.png",
+    "restoredSha256": "262ae20635f41785f0aeeb65221d8f6256310567b736204afa4b82d14d3403b8",
+    "currentRunSha256": "f0a648edbec2b34b502a8bf14b49c24e55d72a7962aaa355469b167c63c24d35"
+  },
+  {
+    "path": "audit/world-smoke/report-day1-know.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/report-day1-know.png",
+    "restoredSha256": "1ce97c3b14f3da1ed2bf72972e6c142a2b47d7b5188fdafdcd11bd220bbd5920",
+    "currentRunSha256": "dce74b5d998cc8fac62f117fe5ccb0353570bb601234609c0573d3926f659ab4"
+  },
+  {
+    "path": "audit/world-smoke/report-day1-skip.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/report-day1-skip.png",
+    "restoredSha256": "b0e49f1aa4195f484612ec62e3b813e580f05ef5c6b432541d11a65546fb2404",
+    "currentRunSha256": "83902fdfb1437855436ecfea9138ba1597b06f480dad56fb4d93a8c1f86f3a7e"
+  },
+  {
+    "path": "audit/world-smoke/report-know.json",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/report-know.json",
+    "restoredSha256": "1e9787b8b1e3163aef08673ae87cf030c8906be42d1de6937c3562ae346611e3",
+    "currentRunSha256": "81180ee90a34d28c3b9e05481bd35fbc16c33b2567ae487459bf9c291e72b7a5"
+  },
+  {
+    "path": "audit/world-smoke/report-skip.json",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/report-skip.json",
+    "restoredSha256": "b29a530db023e701297a048ef8eec03b953ac6c9b27cd2265c3dc7aca877caae",
+    "currentRunSha256": "af9fb1c84ab268dde373db28785b1106faef09995bc5b79bfb136278b86a3b67"
+  },
+  {
+    "path": "audit/world-smoke/season-2-day3-know.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-2-day3-know.png",
+    "restoredSha256": "f8c3da3d554e13e098dfe7e83c63b2be9876e572b1eb2a3a10df916165f849c7",
+    "currentRunSha256": "124b5636f995cd0a0768a613a8fc3f10b7c916ccab3a77b746eec6f016366a49"
+  },
+  {
+    "path": "audit/world-smoke/season-2-day3-skip.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-2-day3-skip.png",
+    "restoredSha256": "fbafa15bd23702c5aa006d1868e5625b3ec64bd5b98dbb3a61795241f6a9a96c",
+    "currentRunSha256": "31cb9a92dc6f16e6d8c8a3ebf49b23f32f69932b06878ec514a426e2146fb133"
+  },
+  {
+    "path": "audit/world-smoke/season-2-start-know.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-2-start-know.png",
+    "restoredSha256": "9fa4ffb982390a34231c637133315a901014057a51a194f62cebdc60f0810972",
+    "currentRunSha256": "a42cc41baaeb4214272d405fbcd16580631efb3e6ea2d433f2c41d37dc8ebc85"
+  },
+  {
+    "path": "audit/world-smoke/season-2-start-skip.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-2-start-skip.png",
+    "restoredSha256": "7b5bc55ef02700703d469b781e0417edb37763e495c4ab014fe6fa3e222b1d1a",
+    "currentRunSha256": "bc803b78277798a724719c7f218a3d6e958cc922646651a91334207b63411e25"
+  },
+  {
+    "path": "audit/world-smoke/season-archive-know.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-archive-know.png",
+    "restoredSha256": "3123c5928926620410a5df4f52c10480ca4c65bd9365b88cfb57f3e50cf7645b",
+    "currentRunSha256": "7ace359732c3f7ffd8aa97961f3c3ee7701acf5257a7da8d657b3f370b02f8e2"
+  },
+  {
+    "path": "audit/world-smoke/season-archive-skip.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-archive-skip.png",
+    "restoredSha256": "502b8cdf9f000fe9a3a3d49d70f861d1701a83f37cc4a9634c742a70dcc2544e",
+    "currentRunSha256": "93c93794829e425b04669cd3346d1dc6d84f053160295d5250cfdca81a7ea1b2"
+  },
+  {
+    "path": "audit/world-smoke/season-end-know.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-end-know.png",
+    "restoredSha256": "bd61472683f2eb5c7e2375786c0196f9bf2db53c31913f4b6fb97efb7a0f7193",
+    "currentRunSha256": "13b4b8426596fb35d5095d35ce348701b3fff06e114aa626b0088d3b25ca702f"
+  },
+  {
+    "path": "audit/world-smoke/season-end-skip.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-end-skip.png",
+    "restoredSha256": "d838f77294b5c14bfb10d135fff25d5020b6a27d1db44426f5829abf85b1eec7",
+    "currentRunSha256": "0fb1e6f6561cd762f9088d87e82694c5db33bed7cec8a30b51cee12dd6aab637"
+  },
+  {
+    "path": "audit/world-smoke/season-ending-title.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-ending-title.png",
+    "restoredSha256": "2da0d772bf1f05ea66ec748ca13d8e65bf2210108a765878105c1ef14325adfe",
+    "currentRunSha256": "6aa09b73187026ef57f23549eb437339a227ae8d83b6320f897c36bc6e256ffe"
+  },
+  {
+    "path": "audit/world-smoke/season-raw-fields.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-raw-fields.png",
+    "restoredSha256": "65eaf9f10a033cb13602fd6937805d1526f1eb67c6ff5b2fa420e25736fd4f59",
+    "currentRunSha256": "06d289a277c2d29758312f2d09f840dc2d6e285f93ded3ca2d45f8c4e13ca70c"
+  },
+  {
+    "path": "audit/world-smoke/season-recap-320x568-空手散场.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-recap-320x568-空手散场.png",
+    "restoredSha256": "02c0a9365d68de44fbba0de70a337846ea265740dba247a123e3df7f4f77a8c6",
+    "currentRunSha256": "0fbe9e8d88bb3a1df59bbf5b5459d93b1a27d0d410c844e8c0e9d5d58bd6bf0a"
+  },
+  {
+    "path": "audit/world-smoke/season-recap-320x568-长标题散场.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-recap-320x568-长标题散场.png",
+    "restoredSha256": "24da0c7390b29c31d23698ab434b6e70bdbb4e309b093f08e7931d3571d10890",
+    "currentRunSha256": "5412dc31af99206a4d6c58e5f6cf3da4eb06e5a7ab4dfcaeacf72e589faa2181"
+  },
+  {
+    "path": "audit/world-smoke/season-recap-390x844-空手散场.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-recap-390x844-空手散场.png",
+    "restoredSha256": "07da379e7930384317f5dc0aa546ef1250ac62478afe143982ad4e6cc5eeade8",
+    "currentRunSha256": "edfda75135922d1c7cf71b49c7c733ba4ca7dec26f7df0bf7c82d18967d5bc38"
+  },
+  {
+    "path": "audit/world-smoke/season-recap-390x844-长标题散场.png",
+    "currentRunArtifact": "audit/weekend-referral-2026-10-18/related/world-smoke/season-recap-390x844-长标题散场.png",
+    "restoredSha256": "d3e81e06423585bf54bb033e14af1353cd91bfedb69cf66c31ab677d00ce59e3",
+    "currentRunSha256": "d43af1c94fc2ada8129834baf5672a4a2fabf5fa0836ec6daf76356a9b63d551"
+  }
+]

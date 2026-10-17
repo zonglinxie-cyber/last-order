@@ -424,3 +424,7 @@
 .weekend-close { background:#39291e; color:#f2dfc8; }
 .weekend-prepare { margin-bottom:0; }
 .weekend-prepare:disabled { opacity:.55; }
+.weekend-sponsors { margin-top:16px; border-top:1px solid #e1c09b33; }
+.weekend-sponsors button { width:100%; min-height:44px; margin:0 0 8px; padding:10px; scroll-margin-block:8px; border:1px solid #bda16b88; border-radius:10px; background:#f0c97812; color:#ffe1a3; font:inherit; text-align:left; }
+.weekend-sponsors button:disabled { opacity:.55; }
+.weekend-sponsors small { display:block; margin-bottom:8px; color:#d9c3a6; font-size:12px; }

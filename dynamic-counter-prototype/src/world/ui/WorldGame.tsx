@@ -27,7 +27,7 @@ import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { currentArrival, publicAppointments } from "../arrivals.ts";
 import { rivalBookingNow } from "../rival-business.ts";
-import { currentWeekendOrder, WEEKEND_RESULT } from "../weekend-orders.ts";
+import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
 import { WeekendOrderSheet } from "./WeekendOrder.tsx";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard } from "./PersonCard.tsx";
@@ -73,7 +73,7 @@ type DayReport = {
   movers: Array<{ id: PersonId; delta: number; now: number }>;
   tomorrow: Array<{ name: string; slot: Slot; detail?: string }>;
   week: boolean;
-  lastOrder?: { name: string; result: string };
+  lastOrder?: { name: string; result: string; sponsor?: { name: string; line: string } };
 };
 /** 「自选加难」的勾选：存在自己的钥匙里（与 COACH_KEY 同类），刷新与重开一季都记得。
  *  真正生效的是 World.heat —— 这里只记"下一季想勾哪几条"。 */
@@ -243,7 +243,8 @@ function buildReport(before: World, after: World, base: DayBase): DayReport {
     .slice(0, 3);
   const tomorrow = publicAppointments(after, PEOPLE, after.day);
   const order = after.weekendOrder;
-  const lastOrder = order?.due === before.day && order.outcome ? { name: nameOf(order.person), result: WEEKEND_RESULT[order.outcome] } : undefined;
+  const lastOrder = order?.due === before.day && order.outcome ? { name: nameOf(order.person), result: WEEKEND_RESULT[order.outcome],
+    ...(order.sponsor && PEOPLE.some(p => p.id === order.sponsor) ? { sponsor: { name: nameOf(order.sponsor), line: WEEKEND_SPONSOR_RESPONSE[order.outcome].line } } : {}) } : undefined;
   return { day: before.day, moneyDelta: after.money - base.money, movers, tomorrow, week: before.day % 7 === 0, lastOrder };
 }
 
@@ -867,6 +868,7 @@ export default function WorldGame() {
         <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "周日对账" : "今日收工"}</p>
         {report.lastOrder && <section className="report-block report-last-order" aria-label="周末最后一单的结果">
           <h2>最后那一单</h2><p>{report.lastOrder.name} · {report.lastOrder.result}</p>
+          {report.lastOrder.sponsor && <p className="report-sponsor">{report.lastOrder.sponsor.name}的回应：{report.lastOrder.sponsor.line}</p>}
         </section>}
         {report.week ? <LevelResult world={world} day={report.day} /> : <h1>今天打烊了</h1>}
         <div className="report-numbers">
@@ -957,7 +959,7 @@ export default function WorldGame() {
     {showWeekend && weekend && weekendPerson && <button type="button" className="weekend-preview" aria-label={`周末约单：${weekendPerson.name}，第 ${weekend.due} 天晚高峰`}
       onClick={() => { setSelected(null); setWeekendOpen(true); }}>
       <b>{bookingPerson ? "周末约单 ›" : `周末约单 · ${weekendPerson.name}`}</b>
-      <span>{weekend.outcome ? WEEKEND_RESULT[weekend.outcome] : weekend.prepared ? "已确认时间" : `第 ${weekend.due} 天晚高峰`}</span>
+      <span>{weekend.outcome ? WEEKEND_RESULT[weekend.outcome] : weekend.prepared ? weekend.sponsor ? `${nameOf(weekend.sponsor)}已牵线` : "已确认时间" : `第 ${weekend.due} 天晚高峰`}</span>
     </button>}
     </div>}
 
@@ -1066,8 +1068,8 @@ export default function WorldGame() {
     {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqSeenDay(world.day)} />}
     {routesOpen && <RoutesSheet world={world} onClose={() => setRoutesOpen(false)} />}
-    {weekendOpen && weekendPerson && <WeekendOrderSheet world={world} person={weekendPerson}
-      onPrepare={() => setWorld(prepareWeekendOrder(world, PEOPLE))} onClose={() => setWeekendOpen(false)} />}
+    {weekendOpen && weekendPerson && <WeekendOrderSheet world={world} person={weekendPerson} people={PEOPLE}
+      onPrepare={sponsor => setWorld(prepareWeekendOrder(world, PEOPLE, sponsor))} onClose={() => setWeekendOpen(false)} />}
     {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqPanelOpen(false)} />}
 
