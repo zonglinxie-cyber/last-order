@@ -1,0 +1,102 @@
+[WebServer] (node:9495) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:9546) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:9576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-weekend-review.spec.ts:52:3 › 周末复盘 320×568 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 (675ms)
+(node:9693) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 tests/world-weekend-review.spec.ts:73:3 › 周末复盘 320×568 › 提前成交后打开周末单能复看实际商品件数，刷新不再收钱 (3.8s)
+  ✘  3 tests/world-weekend-review.spec.ts:88:3 › 周末复盘 320×568 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 (5.5s)
+(node:10452) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 tests/world-weekend-review.spec.ts:101:3 › 周末复盘 320×568 › 缺少经过的旧档仍显示原结果，不编造一段接待 (472ms)
+  ✘  5 tests/world-weekend-review.spec.ts:52:3 › 周末复盘 390×844 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 (346ms)
+(node:10518) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  6 tests/world-weekend-review.spec.ts:73:3 › 周末复盘 390×844 › 提前成交后打开周末单能复看实际商品件数，刷新不再收钱 (3.7s)
+  ✓  7 tests/world-weekend-review.spec.ts:88:3 › 周末复盘 390×844 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 (687ms)
+  ✓  8 tests/world-weekend-review.spec.ts:101:3 › 周末复盘 390×844 › 缺少经过的旧档仍显示原结果，不编造一段接待 (320ms)
+
+
+  1) tests/world-weekend-review.spec.ts:52:3 › 周末复盘 320×568 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 ────────
+
+    Error: locator.click: Error: strict mode violation: getByRole('button', { name: /接待/ }) resolved to 2 elements:
+        1) <button type="button" class="world-rival-plan" aria-label="陆遥邀客去对面：梅女士。本时段接待或托同事照看；用托单守住后，下时段陆遥会比货">…</button> aka getByRole('button', { name: '陆遥邀客去对面：梅女士。本时段接待或托同事照看；用托单守住后，下时段陆遥会比货' })
+        2) <button type="button">…</button> aka getByRole('button', { name: '接待 12 精力' })
+
+    Call log:
+      - waiting for getByRole('button', { name: /接待/ })
+
+
+      30 | }
+      31 | async function offer(page: Page, product: ShelfId) {
+    > 32 |   await page.getByRole("button", { name: /接待/ }).click();
+         |                                                  ^
+      33 |   await page.getByRole("tab", { name: "挑货开单" }).click();
+      34 |   const p = SHELF[product];
+      35 |   await page.getByRole("button", { name: `${p.short} ¥${p.price.toLocaleString("zh-CN")} ${p.tag}`, exact: true }).click();
+        at offer (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-review.spec.ts:32:50)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-review.spec.ts:56:85
+
+    Error Context: test-results/world-weekend-review-周末复盘--fef7d-推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新/error-context.md
+
+  2) tests/world-weekend-review.spec.ts:88:3 › 周末复盘 320×568 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 ─────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  getByLabel('这一单怎么走到这里').locator('p').nth(2)
+    Expected: in viewport
+    Received: viewport ratio 0.9940518736839294
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeInViewport" with timeout 5000ms
+      - waiting for getByLabel('这一单怎么走到这里').locator('p').nth(2)
+        14 × locator resolved to <p class="weekend-lesson">…</p>
+           - unexpected value "viewport ratio 0.9940518736839294"
+
+
+      40 |   await expect(review).toBeVisible();
+      41 |   for (const p of await review.locator("p").all()) {
+    > 42 |     await p.scrollIntoViewIfNeeded(); await expect(p).toBeInViewport({ ratio: 1 });
+         |                                                       ^
+      43 |     expect(await p.evaluate(el => {
+      44 |       const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+      45 |       return parseFloat(s.fontSize) >= 12 && s.color === "rgb(242, 230, 216)"
+        at read (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-review.spec.ts:42:55)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-review.spec.ts:95:55
+
+    Error Context: test-results/world-weekend-review-周末复盘--a69b3-末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单/error-context.md
+
+  3) tests/world-weekend-review.spec.ts:52:3 › 周末复盘 390×844 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 ────────
+
+    Error: locator.click: Error: strict mode violation: getByRole('button', { name: /接待/ }) resolved to 2 elements:
+        1) <button type="button" class="world-rival-plan" aria-label="陆遥邀客去对面：梅女士。本时段接待或托同事照看；用托单守住后，下时段陆遥会比货">…</button> aka getByRole('button', { name: '陆遥邀客去对面：梅女士。本时段接待或托同事照看；用托单守住后，下时段陆遥会比货' })
+        2) <button type="button">…</button> aka getByRole('button', { name: '接待 12 精力' })
+
+    Call log:
+      - waiting for getByRole('button', { name: /接待/ })
+
+
+      30 | }
+      31 | async function offer(page: Page, product: ShelfId) {
+    > 32 |   await page.getByRole("button", { name: /接待/ }).click();
+         |                                                  ^
+      33 |   await page.getByRole("tab", { name: "挑货开单" }).click();
+      34 |   const p = SHELF[product];
+      35 |   await page.getByRole("button", { name: `${p.short} ¥${p.price.toLocaleString("zh-CN")} ${p.tag}`, exact: true }).click();
+        at offer (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-review.spec.ts:32:50)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-weekend-review.spec.ts:56:85
+
+    Error Context: test-results/world-weekend-review-周末复盘--3c1e1-推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新/error-context.md
+
+  3 failed
+    tests/world-weekend-review.spec.ts:52:3 › 周末复盘 320×568 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 ─────────
+    tests/world-weekend-review.spec.ts:88:3 › 周末复盘 320×568 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 ──────────
+    tests/world-weekend-review.spec.ts:52:3 › 周末复盘 390×844 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 ─────────
+  5 passed (20.8s)

@@ -1,7 +1,7 @@
 import { drawIndex } from "./rng.ts";
 import { BUY_INTERVAL_DAYS, lastPurchaseDay } from "./purchases.ts";
 import { bestShelf, POSITIVE_FIT, fitOfPerson, SHELF } from "./shelf.ts";
-import { SEASON_DAYS, type Person, type PersonId, type WeekendOrder, type WeekendOutcome, type World } from "./types.ts";
+import { SEASON_DAYS, type Person, type PersonId, type WeekendOrder, type WeekendOutcome, type WeekendSale, type World } from "./types.ts";
 
 export const WEEKEND_PREP_ENERGY = 6;
 export const WEEKEND_PREP_SAMPLES = 1;
@@ -48,10 +48,40 @@ export const currentWeekendOrder = (world: World) => world.weekendOrder
   && world.day >= world.weekendOrder.due - 2 && world.day <= world.weekendOrder.due ? world.weekendOrder : undefined;
 
 /** 归因只读实际成交；提前买好也算办妥，不能为了周末的戏强迫客人再买一遍。 */
-export function recordWeekendOutcome(world: World, person: PersonId, outcome: WeekendOutcome): World {
+export function recordWeekendOutcome(world: World, person: PersonId, outcome: WeekendOutcome, sale?: WeekendSale): World {
   const order = currentWeekendOrder(world);
   if (!order || order.person !== person || order.outcome) return world;
-  return { ...world, weekendOrder: { ...order, outcome, resolvedDay: world.day } };
+  return { ...world, weekendOrder: { ...order, outcome, resolvedDay: world.day, ...(sale ? { sale } : {}) } };
+}
+
+const ATTEMPT_REASONS = ["good", "mixed", "over-ask", "hard", "refused", "recent", "price", "mismatch"] as const;
+const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const positiveInt = (v: unknown) => Number.isSafeInteger(v) && Number(v) > 0;
+const productOf = (v: unknown) => typeof v === "string" && Object.hasOwn(SHELF, v) ? SHELF[v as keyof typeof SHELF] : undefined;
+function validReview(o: Record<string, unknown>): boolean {
+  if (o.attempt !== undefined) {
+    const a = o.attempt;
+    if (!record(a) || !productOf(a.product) || !positiveInt(a.requested) || !Number.isSafeInteger(a.sold)
+      || Number(a.sold) < 0 || Number(a.sold) > Number(a.requested)
+      || !Number.isInteger(a.day) || Number(a.day) < Number(o.due) - 2 || Number(a.day) > Number(o.resolvedDay ?? o.due)
+      || !Number.isInteger(a.slot) || Number(a.slot) < 0 || Number(a.slot) > 3
+      || !ATTEMPT_REASONS.includes(a.reason as typeof ATTEMPT_REASONS[number])) return false;
+    const soldOutcome = a.reason === "good" ? "good" : a.reason === "hard" ? "hard"
+      : a.reason === "mixed" || a.reason === "over-ask" ? "mixed" : undefined;
+    if (soldOutcome ? Number(a.sold) <= 0 || o.outcome !== soldOutcome : a.sold !== 0) return false;
+  }
+  if (o.sale !== undefined) {
+    const s = o.sale;
+    if (!record(s) || !productOf(s.product) || !positiveInt(s.units) || !Number.isSafeInteger(s.amount)
+      || s.amount !== productOf(s.product)!.price * Number(s.units)
+      || !["serve", "return", "handoff", "booking", "poach"].includes(s.via as string)
+      || !o.outcome || o.outcome === "missed"
+      || ((s.via === "booking" || s.via === "poach") !== (o.outcome === "rival"))
+      || ((s.via === "return" || s.via === "handoff") && o.outcome !== "good")
+      || (s.via === "booking" ? typeof s.invited !== "boolean" : s.invited !== undefined)
+      || (s.via === "serve" && (!record(o.attempt) || o.attempt.product !== s.product || o.attempt.sold !== s.units))) return false;
+  }
+  return true;
 }
 
 export function validWeekendOrder(value: unknown): value is WeekendOrder {
@@ -59,10 +89,51 @@ export function validWeekendOrder(value: unknown): value is WeekendOrder {
   const o = value as Record<string, unknown>;
   return typeof o.person === "string" && !!o.person && Number.isInteger(o.due)
     && Number(o.due) >= 7 && Number(o.due) <= SEASON_DAYS && Number(o.due) % 7 === 0
-    && typeof o.prepared === "boolean"
+    && typeof o.prepared === "boolean" && validReview(o)
     && (o.sponsor === undefined || typeof o.sponsor === "string" && !!o.sponsor && o.sponsor !== o.person && o.prepared === true)
     && (o.echoQueued === undefined || typeof o.echoQueued === "boolean")
     && (o.outcome === undefined ? o.resolvedDay === undefined && !o.echoQueued
       : WEEKEND_OUTCOMES.includes(o.outcome as WeekendOutcome) && Number.isInteger(o.resolvedDay)
         && Number(o.resolvedDay) >= Number(o.due) - 2 && Number(o.resolvedDay) <= Number(o.due));
+}
+
+const ATTEMPT_WORD = {
+  good: "推荐符合需要，客人愿意买单。", mixed: "客人勉强接受了，仍有顾虑。",
+  "over-ask": "开口的件数超过了客人想带的量，多要的部分没有多卖出去。",
+  hard: "这笔靠硬推成交，关系和台账都付了代价；多出来的货以后可能退回。",
+  refused: "客人当时不愿接受你的推荐，这次没有成交。",
+  recent: "上次买的还没用完，这次没有再买。",
+  price: "产品对症，但单件价格超过了当天预算。",
+  mismatch: "这支货没有接住客人的需要，这次没有成交。",
+};
+const ATTEMPT_LESSON = {
+  good: "记住这次问出的偏好；下次见面，再确认当次的用途。",
+  mixed: "试用时如果还有犹豫，可以先问清顾虑，再决定换货或留到下次。",
+  "over-ask": "下一次先问想带几件，再决定开单数量；多开口未必多成交。",
+  hard: "可以少开一些、换一支，或把这笔生意留到以后。",
+  refused: "先用招呼、帮忙或履约修复关系，再谈下一单。",
+  recent: "不必追着重复开单。先照应这次来意，等真正有需要时再约。",
+  price: "下次先核对预算，再在买得起的货里用试用判断是否合适。",
+  mismatch: "下次把问出的需求与货架标签对照，留一次耐心给试用。",
+};
+
+/** 只复述已记录的经过。旧档缺证据时不编造“没问”“没留精力”等原因。 */
+export function weekendReview(order: WeekendOrder): { facts: string[]; lesson: string } | null {
+  const { attempt: a, sale: s } = order;
+  if (!a && !s) return null;
+  const facts: string[] = [];
+  if (a) facts.push(`第 ${a.day} 天，你推荐${productOf(a.product)!.name}，开口 ${a.requested} 件${a.sold ? `、实际带走 ${a.sold} 件` : ""}。${ATTEMPT_WORD[a.reason]}`);
+  if (s) {
+    const lead = s.via === "handoff" ? "同事接手后在本柜开单" : s.via === "return" ? "回店时在本柜买好"
+      : s.via === "booking" ? s.invited ? "已经邀来，本柜仍未成交；最后在对面买好" : "没有邀来比货，最后在对面买好"
+      : s.via === "poach" ? "被对面争取过去并成交" : "在本柜成交";
+    facts.push(`第 ${order.resolvedDay} 天，${lead}：${productOf(s.product)!.name} ${s.units} 件，¥${s.amount.toLocaleString("zh-CN")}。`);
+  }
+  const lesson = order.outcome === "good" ? ATTEMPT_LESSON.good
+    : a ? ATTEMPT_LESSON[a.reason]
+    : s?.via === "booking" ? s.invited
+      ? "确认时间或邀到柜前之后，还要留出接待的精力，听清需要再开单。"
+      : "下次可在周五先确认时间；也可以留 6 精力和 1 份小样，晚高峰邀来，再留 12 精力接待。"
+    : "先看对面公开的目标，再安排接待；守住一位客人也可能要放下另一笔机会。";
+  return { facts, lesson };
 }

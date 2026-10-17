@@ -1,0 +1,26 @@
+{
+  "url": "http://127.0.0.1:4188",
+  "checks": {
+    "/src/world/ui/WeekendOrder.tsx": {
+      "status": 200,
+      "expected_strings": {
+        "这一单怎么走到这里": true,
+        "weekendReview": true
+      }
+    },
+    "/src/world/weekend-orders.ts": {
+      "status": 200,
+      "expected_strings": {
+        "ATTEMPT_LESSON": true,
+        "下次先核对预算": true
+      }
+    },
+    "/src/world/ui/world.css": {
+      "status": 200,
+      "expected_strings": {
+        ".recap-weekend > p": true,
+        "scroll-margin-block:8px": true
+      }
+    }
+  }
+}

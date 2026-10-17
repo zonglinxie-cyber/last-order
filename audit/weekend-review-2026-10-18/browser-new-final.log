@@ -1,0 +1,19 @@
+[WebServer] (node:11779) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:11838) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:11907) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-weekend-review.spec.ts:52:3 › 周末复盘 320×568 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 (2.9s)
+  ✓  2 tests/world-weekend-review.spec.ts:73:3 › 周末复盘 320×568 › 提前成交后打开周末单能复看实际商品件数，刷新不再收钱 (3.5s)
+  ✓  3 tests/world-weekend-review.spec.ts:88:3 › 周末复盘 320×568 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 (691ms)
+  ✓  4 tests/world-weekend-review.spec.ts:101:3 › 周末复盘 320×568 › 缺少经过的旧档仍显示原结果，不编造一段接待 (335ms)
+  ✓  5 tests/world-weekend-review.spec.ts:52:3 › 周末复盘 390×844 › 实际推荐失败后去对面：两段经过与下一次建议保留到打烊及刷新 (2.7s)
+  ✓  6 tests/world-weekend-review.spec.ts:73:3 › 周末复盘 390×844 › 提前成交后打开周末单能复看实际商品件数，刷新不再收钱 (3.5s)
+  ✓  7 tests/world-weekend-review.spec.ts:88:3 › 周末复盘 390×844 › 季末硬推复盘说真实代价，未来退款不泄漏，进入新季清掉旧单 (690ms)
+  ✓  8 tests/world-weekend-review.spec.ts:101:3 › 周末复盘 390×844 › 缺少经过的旧档仍显示原结果，不编造一段接待 (321ms)
+
+  8 passed (19.1s)

@@ -29,7 +29,7 @@ import { appointmentTime, currentArrival, publicAppointments } from "../arrivals
 import { CONTACT_INVITE_ENERGY, contactInviteBlock, inviteContact, planContactInvite } from "../engine.ts";
 import { rivalBookingNow } from "../rival-business.ts";
 import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
-import { WeekendOrderSheet } from "./WeekendOrder.tsx";
+import { WeekendOrderSheet, WeekendReview } from "./WeekendOrder.tsx";
 import { returnPoint } from "./return-context.ts";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard, type ContactInvitation } from "./PersonCard.tsx";
@@ -855,9 +855,10 @@ export default function WorldGame() {
             : <p className="recap-empty">这一季本子上没添新的一页。</p>}
         </section>
 
-        {world.weekendOrder?.due === SEASON_DAYS && world.weekendOrder.outcome && <section className="recap-block">
+        {world.weekendOrder?.due === SEASON_DAYS && world.weekendOrder.outcome && <section className="recap-block recap-weekend">
           <h2>最后那一单，话还没说完</h2>
           <p>{nameOf(world.weekendOrder.person)} · {WEEKEND_RESULT[world.weekendOrder.outcome]}</p>
+          <WeekendReview order={world.weekendOrder} />
           <p>下一季开门后，会回来聊那次的事。</p>
         </section>}
         <section className="recap-block recap-numbers-block">
@@ -890,6 +891,7 @@ export default function WorldGame() {
         <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "周日对账" : "今日收工"}</p>
         {report.lastOrder && <section className="report-block report-last-order" aria-label="周末最后一单的结果">
           <h2>最后那一单</h2><p>{report.lastOrder.name} · {report.lastOrder.result}</p>
+          {world.weekendOrder?.due === report.day && <WeekendReview order={world.weekendOrder} />}
           {report.lastOrder.sponsor && <p className="report-sponsor">{report.lastOrder.sponsor.name}的回应：{report.lastOrder.sponsor.line}</p>}
         </section>}
         {report.week ? <LevelResult world={world} day={report.day} /> : <h1>今天打烊了</h1>}

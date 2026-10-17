@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ambient, beginServe, beginSlot, endDay, inviteRivalGuest, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason,
+import { ambient, beginServe, beginSlot, doVerb, endDay, inviteRivalGuest, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason,
   parseWorld, prepareWeekendOrder, resolveServe, serializeWorld, weekendPrepareBlock, weekendSponsors, ZONE_GUEST_CAPACITY } from "../src/world/engine.ts";
 import { currentArrival, publicAppointments } from "../src/world/arrivals.ts";
-import { planWeekendOrder, WEEKEND_RESPONSE, WEEKEND_SPONSOR_RESPONSE } from "../src/world/weekend-orders.ts";
+import { planWeekendOrder, weekendReview, WEEKEND_RESPONSE, WEEKEND_SPONSOR_RESPONSE } from "../src/world/weekend-orders.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import { bestShelf, fitOfPerson, SHELF_IDS, shelfFitTier } from "../src/world/shelf.ts";
+import { bestShelf, fitOfPerson, SHELF, SHELF_IDS, shelfFitTier } from "../src/world/shelf.ts";
 import { LAST_MET, visitPerson } from "../src/world/visits.ts";
 import type { Person, WeekendOutcome, World } from "../src/world/types.ts";
 
@@ -250,4 +250,114 @@ test("客位不足或顾客已经买过，不另造收入；有效旧档继续�
     assert.equal(parseWorld(serializeWorld({ ...w, weekendOrder: { ...weekendOrder, ...patch } } as World)), null);
   for (const outcome of ["good", "mixed", "hard", "rival", "missed"] as WeekendOutcome[])
     assert.ok(parseWorld(serializeWorld({ ...w, weekendOrder: { ...weekendOrder!, outcome, resolvedDay: w.day } })));
+});
+
+
+// 周末复盘必须来自本次真实结算；记录事实不改变原有游戏结果。
+const reviewGuest = { ...PEOPLE.find(p => p.id === "mei")!, skin: { ...PEOPLE.find(p => p.id === "mei")!.skin!, budget: 10000, maxUnits: 2 } };
+const reviewWorld = (): World => ({ ...newWorld("weekend-review", PEOPLE), day: 7, slot: 3, energy: 80,
+  present: { mei: "counter" }, weekendOrder: { person: "mei", due: 7, prepared: true } });
+const withoutOrder = (w: World) => { const { weekendOrder, ...rest } = w; return rest; };
+for (const reason of ["good", "mixed", "over-ask", "hard", "refused", "recent", "price", "mismatch"] as const) {
+  test(`周末记录实际推荐 ${reason}：理由、件数与结算一致，其他状态不受复盘影响`, () => {
+    const good = bestShelf(reviewGuest);
+    const mixed = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(reviewGuest, id)) === "mixed")!;
+    const bad = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(reviewGuest, id)) === "negative")!;
+    const product = reason === "mixed" ? mixed : reason === "hard" || reason === "mismatch" ? bad : good;
+    assert.ok(product);
+    const guest = reason === "price" ? { ...reviewGuest, skin: { ...reviewGuest.skin, budget: SHELF[good].price - 1 } } : reviewGuest;
+    const people = PEOPLE.map(p => p.id === "mei" ? guest : p);
+    const w = { ...reviewWorld(), ...(reason === "refused" ? { opinion: { mei: -40 } } : {}),
+      ...(reason === "recent" ? { qualities: { "bought:mei": 6 } } : {}) };
+    const units = reason === "over-ask" ? 3 : 1;
+    const input = structuredClone(w);
+    const result = resolveServe(w, people, "mei", product, units, reason === "hard");
+    const reference = resolveServe({ ...w, weekendOrder: undefined }, people, "mei", product, units, reason === "hard");
+    assert.deepEqual(withoutOrder(result), withoutOrder(reference));
+    assert.deepEqual(w, input);
+    const o = result.weekendOrder!;
+    assert.deepEqual(o.attempt, { day: 7, slot: 3, product, requested: units,
+      sold: (result.money - w.money) / SHELF[product].price, reason });
+    if (o.attempt!.sold) assert.deepEqual(o.sale, { product, units: o.attempt!.sold, amount: result.money - w.money, via: "serve" });
+    else assert.equal(o.sale, undefined);
+    assert.deepEqual(parseWorld(serializeWorld(result))?.weekendOrder, o);
+    assert.ok(weekendReview(o)?.facts.some(line => line.includes(SHELF[product].name)));
+  });
+}
+
+test("推荐失败后对面成交：保留两段事实，不能把选货不合适说成没有接待", () => {
+  const first = sunday(true), guest = guestOf(first), profile = visitPerson(first, guest);
+  const bad = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(profile, id)) === "negative")!;
+  assert.ok(bad);
+  const tried = resolveServe(first, PEOPLE, guest.id, bad, 1);
+  assert.equal(tried.weekendOrder?.attempt?.reason, "mismatch");
+  const result = ambient(tried, PEOPLE), o = result.weekendOrder!;
+  assert.equal(o.outcome, "rival"); assert.deepEqual(o.attempt, tried.weekendOrder!.attempt);
+  const b = first.rivalBooking!;
+  assert.deepEqual(o.sale, { product: b.product, units: b.units, amount: b.amount, via: "booking", invited: true });
+  assert.deepEqual(parseWorld(serializeWorld(result))!.weekendOrder, o);
+  const review = weekendReview(o)!;
+  assert.ok(review.facts.some(line => line.includes("没有接住客人的需要")));
+  assert.ok(review.facts.some(line => line.includes("最后在对面买好")));
+  assert.ok(review.lesson.includes("留一次耐心给试用"));
+  // 存档重读、重复结账不增加一笔记录或一笔钱。
+  const again = ambient(parseWorld(serializeWorld(result))!, PEOPLE);
+  assert.deepEqual(again.weekendOrder, o); assert.equal(again.rivalMoney, result.rivalMoney);
+});
+
+test("周末已结案或给别人推荐不改经过；退款排期不提前泄漏到复盘", () => {
+  const w = reviewWorld(), sold = resolveServe(w, [reviewGuest], "mei", bestShelf(reviewGuest), 1);
+  const o = sold.weekendOrder!;
+  const later = resolveServe({ ...sold, energy: 80 }, [reviewGuest], "mei", bestShelf(reviewGuest), 2, true);
+  assert.deepEqual(later.weekendOrder, o);
+  const other = resolveServe({ ...w, present: { ...w.present, shen: "counter" } }, PEOPLE, "shen", bestShelf(PEOPLE.find(p => p.id === "shen")!), 1);
+  assert.deepEqual(other.weekendOrder, w.weekendOrder);
+  const withRefund = { ...sold, appointments: [...sold.appointments, { person: "mei", day: 9, slot: 1 as const, reason: "refund" as const, amount: 9999 }] };
+  assert.deepEqual(weekendReview(withRefund.weekendOrder!), weekendReview(o));
+  assert.ok(!JSON.stringify(weekendReview(o)).includes("9999"));
+});
+
+test("复盘旧档不编原因；未知商品、错误金额、无成交却有小票等损坏记录拒绝读取", () => {
+  const old = { ...reviewWorld(), weekendOrder: { person: "mei", due: 7, prepared: true, outcome: "good" as const, resolvedDay: 7 } };
+  assert.ok(parseWorld(serializeWorld(old))); assert.equal(weekendReview(old.weekendOrder), null);
+  const sold = resolveServe(reviewWorld(), [reviewGuest], "mei", bestShelf(reviewGuest), 1), order = sold.weekendOrder!;
+  for (const patch of [
+    { attempt: { ...order.attempt!, product: "missing" } }, { attempt: { ...order.attempt!, reason: "guessed" } },
+    { attempt: { ...order.attempt!, day: 4 } }, { attempt: { ...order.attempt!, slot: 4 } },
+    { attempt: { ...order.attempt!, sold: 0 } }, { attempt: { ...order.attempt!, requested: -1 } },
+    { sale: { ...order.sale!, amount: 1 } },
+    { sale: { ...order.sale!, units: 2, amount: order.sale!.amount * 2 } }, { sale: { ...order.sale!, product: "missing" } },
+    { sale: { ...order.sale!, via: "booking" } }, { sale: { ...order.sale!, invited: true } },
+    { outcome: "missed" }, { outcome: undefined, resolvedDay: undefined },
+  ]) assert.equal(parseWorld(serializeWorld({ ...sold, weekendOrder: { ...order, ...patch } } as World)), null, JSON.stringify(patch));
+});
+
+
+test("同事接手和熟客回购各记真实出处，不冒充玩家亲自推荐", () => {
+  const w: World = { ...reviewWorld(), day: 6, slot: 1, opinion: { mei: 60, suman: 60 },
+    qualities: { "client-note:mei:soothe": 1, "client-note:mei:steady": 1, "client-note:mei:correct": 1 },
+    present: { mei: "counter", suman: "counter" } };
+  const handoff = doVerb(w, PEOPLE, "handoff", ["suman", "mei"]);
+  assert.equal(handoff.weekendOrder?.sale?.via, "handoff");
+  assert.equal(handoff.weekendOrder?.attempt, undefined);
+  assert.equal(handoff.weekendOrder!.sale!.amount, handoff.money - w.money);
+  assert.ok(weekendReview(handoff.weekendOrder!)!.facts.some(line => line.includes("同事接手")));
+  assert.ok(parseWorld(serializeWorld(handoff)));
+  const back = beginSlot({ ...w, appointments: [{ day: 6, slot: 1, person: "mei", reason: "visit" }] }, PEOPLE);
+  assert.equal(back.weekendOrder?.sale?.via, "return");
+  assert.equal(back.weekendOrder?.attempt, undefined);
+  assert.ok(weekendReview(back.weekendOrder!)!.facts.some(line => line.includes("回店时在本柜")));
+  assert.ok(parseWorld(serializeWorld(back)));
+});
+
+test("没有邀来、邀来未开单两种实际经过分别提示，不凭空断言缺精力", () => {
+  for (const prepared of [false, true]) {
+    const w = sunday(prepared), result = ambient(w, PEOPLE), order = result.weekendOrder!;
+    assert.equal(order.sale?.via, "booking"); assert.equal(order.sale?.invited, prepared);
+    assert.equal(order.attempt, undefined);
+    const review = weekendReview(order)!;
+    assert.ok(review.facts.some(line => line.includes(prepared ? "已经邀来" : "没有邀来比货")));
+    assert.ok(review.lesson.includes(prepared ? "还要留出接待的精力" : "周五先确认时间"));
+    assert.ok(!JSON.stringify(review).includes("精力不足"));
+  }
 });

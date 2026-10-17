@@ -11,11 +11,23 @@ export type Demand = { trait: Trait; want: 1 | 2; weight: 1 | 2 | 3 };
 export type PersonId = string;
 export type RivalTactic = "invite" | "compare";
 export type WeekendOutcome = "good" | "mixed" | "hard" | "rival" | "missed";
+export type WeekendAttemptReason = "good" | "mixed" | "over-ask" | "hard" | "refused" | "recent" | "price" | "mismatch";
+/** 只记已经开口推荐的那一笔；不从未来退款或隐藏需求倒推经过。 */
+export type WeekendAttempt = {
+  day: number; slot: Slot; product: string; requested: number; sold: number; reason: WeekendAttemptReason;
+};
+export type WeekendSale = {
+  product: string; units: number; amount: number;
+  via: "serve" | "return" | "handoff" | "booking" | "poach";
+  invited?: boolean;
+};
 export type WeekendOrder = {
   person: PersonId; due: number; prepared: boolean;
   /** 熟客替你牵线；没有时是自己联系。打烊随 echoQueued 一次结清介绍人的反馈。 */
   sponsor?: PersonId;
   outcome?: WeekendOutcome; resolvedDay?: number; echoQueued?: boolean;
+  /** 最后一次实际推荐与最终成交分开记：推荐失败后，客人仍可能去对面或托同事买成。旧档可缺。 */
+  attempt?: WeekendAttempt; sale?: WeekendSale;
 };
 /** 玩家自己在关系网上的节点 id。 */
 export const PLAYER: PersonId = "player";

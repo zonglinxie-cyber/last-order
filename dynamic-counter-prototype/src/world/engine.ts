@@ -16,7 +16,7 @@ import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, 
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
   Appointment, Arrival, BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
-  Storylet, Verb, Visits, World, WorldRequest, Zone,
+  Storylet, Verb, Visits, WeekendAttemptReason, World, WorldRequest, Zone,
 } from "./types.ts";
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
@@ -664,7 +664,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
         const amount = SHELF[product].price;
         w = { ...w, money: w.money + amount };
         w = setQuality(w, `bought:${ap.person}`, w.day);
-        w = recordWeekendOutcome(w, ap.person, "good");
+        w = recordWeekendOutcome(w, ap.person, "good", { product, units: 1, amount, via: "return" });
         w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
         w = remember(w, ap.person, "came-back-bought", 1);
         w = say(w, `${person.name}回来又带了一支${SHELF[product].name}，进账 ¥${amount}。`, [ap.person]);
@@ -874,7 +874,7 @@ export function ambient(world: World, people: Person[]): World {
             const sale = poachSale(visitPerson(w, mark));
             if (sale.units) w = setQuality({ ...w, rivalMoney: w.rivalMoney + sale.amount,
               rivalWins: w.rivalWins + 1 }, `rival-bought:${mark.id}`, w.day);
-            if (sale.units) w = recordWeekendOutcome(w, mark.id, "rival");
+            if (sale.units) w = recordWeekendOutcome(w, mark.id, "rival", { product: sale.product, units: sale.units, amount: sale.amount, via: "poach" });
             const missed = w.rivalPlan?.tactic === "compare" ? `这次没给${mark.name}对症成交` : `你没顾上${mark.name}`;
             w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
           }
@@ -975,7 +975,7 @@ function settleRivalBooking(world: World, people: Person[]): World {
   const w = setQuality({ ...world, rivalBooking: { ...b, outcome: "rival" },
     rivalMoney: world.rivalMoney + b.amount, rivalWins: world.rivalWins + 1,
     present: { ...world.present, [guest.id]: "rival" } }, `rival-bought:${guest.id}`, world.day);
-  return say(recordWeekendOutcome(setQuality(w, `away:${guest.id}`, w.day), guest.id, "rival"),
+  return say(recordWeekendOutcome(setQuality(w, `away:${guest.id}`, w.day), guest.id, "rival", { product: b.product, units: b.units, amount: b.amount, via: "booking", invited: b.invited }),
     `${b.invited ? `${guest.name}比较后仍回到对面，` : ""}陆遥接完${b.weekend ? "周末那一单" : "自己的预约"}：${guest.name}带走 ${b.units} 件${SHELF[b.product].name}，对面进账 ¥${b.amount}。`, [guest.id]);
 }
 
@@ -1360,7 +1360,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
           w = { ...w, money: w.money + amount };
           w = setQuality(w, gate, 1);
           w = setQuality(w, `bought:${b.id}`, w.day);
-          w = recordWeekendOutcome(w, b.id, "good");
+          w = recordWeekendOutcome(w, b.id, "good", { product, units: 1, amount, via: "handoff" });
           w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + 1);
           w = say(w, `你请${a.name}照看${b.name}，${ta(a)}替你开出了一支${SHELF[product].name}，进账 ¥${amount}。`, targets);
           return w;
@@ -1464,19 +1464,26 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
   const score = fitFor(person, productId);
   const tier = shelfFitTier(score);
   const price = SHELF[productId].price;
+  // 复盘附在实际结算后，不改收入、关系、随机流；已结案的周末单不被之后的推荐覆盖。
+  const order = currentWeekendOrder(world);
+  const finish = (next: World, reason: WeekendAttemptReason): World => order?.person === personId && !order.outcome
+    ? { ...next, weekendOrder: { ...next.weekendOrder!, attempt: {
+      day: world.day, slot: world.slot, product: productId, requested: units,
+      sold: (next.money - world.money) / price, reason,
+    } } } : next;
   w = setQuality(w, `served:${personId}`, qualityOf(w, `served:${personId}`) + 1);
 
   // 看法坏到这份上，她连接待都不愿意：精力照花，单开不出来。
   if (opinionOf(w, personId) <= SERVE_REFUSE_OPINION && !force) {
     w = say(w, `${person.name}理都不理你，直接走了。`, [personId]);
-    return w;
+    return finish(w, "refused");
   }
 
   const recentlyBought = recentlyPurchased(w, personId);
   // 她前不久才买过，正常推荐她不买（硬推不管这个）。
   if (recentlyBought && !force) {
     w = say(w, `${person.name}上次带的还没用完，今天只聊了聊。`, [personId]);
-    return w;
+    return finish(w, "recent");
   }
 
   const wanted = recentlyBought ? 0 : shelfUnits(person, productId, tier, units);
@@ -1506,9 +1513,9 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
       w = say(w, `你硬是把${SHELF[productId].name}塞给了${person.name}，${sold} 件 ¥${amount}，${ta(person)}认了。`, [personId]);
     }
     w = setQuality(w, `bought:${personId}`, w.day);
-    w = recordWeekendOutcome(w, personId, "hard");
+    w = recordWeekendOutcome(w, personId, "hard", { product: productId, units: sold, amount, via: "serve" });
     w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + sold);
-    return witnessed(w, people, [personId], "hard-sell", -2);
+    return finish(witnessed(w, people, [personId], "hard-sell", -2), "hard");
   }
 
   if (wanted <= 0) {
@@ -1518,12 +1525,12 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
       w = addOpinion(w, personId, PRICE_MISS_OPINION);
       w = remember(w, personId, "price-miss", -1);
       w = say(w, `${SHELF[productId].name}是对症的，${person.name}看了看价签没说话：${ta(person)}今天只留了 ¥${person.skin.budget}。`, [personId]);
-      return witnessed(w, people, [personId], "price-miss", -1);
+      return finish(witnessed(w, people, [personId], "price-miss", -1), "price");
     }
     w = addOpinion(w, personId, SERVE_MISS_OPINION);
     w = remember(w, personId, "wrong-pick", -1);
     w = say(w, `你推荐的是${SHELF[productId].name}，${person.name}摇头：这解决不了我的事。`, [personId]);
-    return witnessed(w, people, [personId], "wrong-pick", -1);
+    return finish(witnessed(w, people, [personId], "wrong-pick", -1), "mismatch");
   }
   const amount = price * wanted;
   w = { ...w, money: w.money + amount, standing: clamp(w.standing + 1, 0, 100) };
@@ -1531,7 +1538,7 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
   w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + wanted);
   // 开口比她说过的上限多：她只拿她要的，多出来那几件记在脸上。
   const overAsk = Math.max(0, units - person.skin.maxUnits);
-  w = recordWeekendOutcome(w, personId, tier === "positive" && !overAsk ? "good" : "mixed");
+  w = recordWeekendOutcome(w, personId, tier === "positive" && !overAsk ? "good" : "mixed", { product: productId, units: wanted, amount, via: "serve" });
   if (overAsk) {
     w = addOpinion(w, personId, OVER_ASK_OPINION * overAsk);
     w = say(w, `你开口要 ${units} 件，${person.name}皱了下眉：「用不了那么多。」`, [personId]);
@@ -1548,12 +1555,12 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
     }
     w = remember(w, personId, "honest-advice", 2);
     w = say(w, `${person.name}试了${SHELF[productId].name}，${perfect ? `${ta(person)}要的每条都被接住了，` : ""}带走 ${wanted} 件，进账 ¥${amount}。`, [personId]);
-    return witnessed(w, people, [personId], "honest-advice", 2);
+    return finish(witnessed(w, people, [personId], "honest-advice", 2), overAsk ? "over-ask" : "good");
   }
   w = addOpinion(w, personId, SERVE_MIXED_OPINION);
   w = remember(w, personId, "sold-anyway", 1);
   w = say(w, `${person.name}勉强带走了 ${wanted} 件${SHELF[productId].name}，进账 ¥${amount}。`, [personId]);
-  return witnessed(w, people, [personId], "sold-anyway", 1);
+  return finish(witnessed(w, people, [personId], "sold-anyway", 1), overAsk ? "over-ask" : "mixed");
 }
 
 // —— 夜里：微信群传话、加过微信的人约回来、精力重置 ——

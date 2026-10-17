@@ -1,0 +1,10 @@
+{
+  "dynamic-counter-prototype/src/world/engine.ts": "76550960f7bc1241a04427a19d167bc6ae53d427446115d2f694f8449908f6f4",
+  "dynamic-counter-prototype/src/world/types.ts": "19d6dd18de8b078c1039b5b5ca9e15b9b671c670c05b555a92518569015009c7",
+  "dynamic-counter-prototype/src/world/weekend-orders.ts": "d8a8019e5c574ce663dd8eabf345bbc300e5072c584db2c1246f46884b218d9a",
+  "dynamic-counter-prototype/src/world/ui/WeekendOrder.tsx": "7d32943c811b37449718bb28de80b3d6d4a9f896664719ae162b3f3783b70091",
+  "dynamic-counter-prototype/src/world/ui/WorldGame.tsx": "b62b2c6546a968410e5e877d7d40e5f38de8c8c6bc8c7c8070d1a072242c64ea",
+  "dynamic-counter-prototype/src/world/ui/world.css": "802aee79d73beaafced574a97e98b1330c8fa2d12692e839fd6718ab20099b39",
+  "dynamic-counter-prototype/tests/world-weekend.test.ts": "c04ac04a871ab9029135b72ee12f7bdf892f380ac047f27d1987c3fc77ed72ef",
+  "dynamic-counter-prototype/tests/world-weekend-review.spec.ts": "cb8fde4182ef2a4ef2c2d2c49487687efe1a34149ef00e26c6dc1e6661e1bb59"
+}

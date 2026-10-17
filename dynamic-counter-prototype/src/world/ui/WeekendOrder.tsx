@@ -1,7 +1,16 @@
 import { weekendPrepareBlock, weekendSponsors } from "../engine.ts";
 import { BottomSheet, MobileScroll } from "../../mobile";
-import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
-import type { Person, PersonId, World } from "../types.ts";
+import { currentWeekendOrder, weekendReview, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
+import type { Person, PersonId, WeekendOrder, World } from "../types.ts";
+
+export function WeekendReview({ order }: { order: WeekendOrder }) {
+  const review = weekendReview(order);
+  return review && <section className="weekend-review" aria-label="这一单怎么走到这里">
+    <h3>这一单怎么走到这里</h3>
+    {review.facts.map((line, i) => <p key={i}>{line}</p>)}
+    <p className="weekend-lesson"><b>下次可以试试</b>{review.lesson}</p>
+  </section>;
+}
 
 export function WeekendOrderSheet({ world, person, people, onPrepare, onClose }: {
   world: World; person: Person; people: Person[]; onPrepare: (sponsor?: PersonId) => void; onClose: () => void;
@@ -26,6 +35,7 @@ export function WeekendOrderSheet({ world, person, people, onPrepare, onClose }:
               <p>提前联系花 6 精力和 1 份小样，到时直接来你的柜前，晚高峰可多留一点劲照应别人。</p>
               <p>也可以先顾眼前的客人。没有提前确认，到时先去对面；仍能花同样资源邀来比货。</p>
               <p>到店再听清今天的需要。接待另花 12 精力，不保证成交；提前买好了就不再开第二单。</p></>}
+          <WeekendReview order={order} />
           {!order.outcome && !order.prepared && block && <p role="status">{sponsors.length ? "自己联系：" : ""}{block}。</p>}
           {!order.outcome && !order.prepared && sponsors.length > 0 && <section className="weekend-sponsors" aria-label="请熟客牵线">
             <h3>也可以请熟客牵线</h3>

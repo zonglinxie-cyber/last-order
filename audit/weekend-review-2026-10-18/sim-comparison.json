@@ -1,0 +1,63 @@
+{
+  "before": "audit/rival-tempo-2026-10-18/world-sim-after.log",
+  "after": "audit/weekend-review-2026-10-18/world-sim.log",
+  "normalized_reports_equal": true,
+  "normalization": "Remove Node warning lines and trailing line whitespace only.",
+  "sha256": "7341709734089f933fde519327f0b65e2e55a10f621ee3340377ba5b40b29c41",
+  "signatures": [
+    {
+      "season": 1,
+      "strategy": "honest",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 1,
+      "strategy": "pushy",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 1,
+      "strategy": "social",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 1,
+      "strategy": "random",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 2,
+      "strategy": "honest",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 2,
+      "strategy": "pushy",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 2,
+      "strategy": "social",
+      "distinct": 20,
+      "seeds": 20
+    },
+    {
+      "season": 2,
+      "strategy": "random",
+      "distinct": 20,
+      "seeds": 20
+    }
+  ],
+  "ending_rank_wins_with_ties": {
+    "honest": 11,
+    "pushy": 0,
+    "social": 14,
+    "random": 0
+  }
+}
