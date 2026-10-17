@@ -228,10 +228,12 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await enter(page, envelope({ money: 4_600, rivalMoney: 6_280, rivalWins: 4 }));
       const score = page.locator(".world-score");
       await expect(score).toHaveText("对面 ¥6,280");
-      const box = await score.boundingBox();
-      expect(box, "页顶那一格没渲染出来").not.toBeNull();
-      // 页顶是一条能横滑的带子：看得见不等于在眼前，比分不该藏在要拖一下才露出来的那一头。
-      expect(box!.x + box!.width, `比分右边界 ${box!.x + box!.width} 出屏了`).toBeLessThanOrEqual(width);
+      // 视口内的坐标仍可能被父容器裁掉；检查真实交集，并排除按钮遮挡。
+      await expect(score).toBeInViewport({ ratio: 1 });
+      expect(await score.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      })).toBe(true);
     });
 
     test("打烊那屏念比分：对面的数与落后多少都在账那一排", async ({ page }) => {

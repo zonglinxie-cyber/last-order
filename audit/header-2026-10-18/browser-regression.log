@@ -1,0 +1,154 @@
+[WebServer] (node:46762) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:46789) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 118 tests using 1 worker
+
+(node:46841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 tests/world-background.spec.ts:47:3 › 人情场切后台回来 › 动手之后被系统回收：重开一次，这一格一步都没多走 (796ms)
+  ✓    2 tests/world-background.spec.ts:67:3 › 人情场切后台回来 › 抽到手还没选的牌：回来还是那一张，不许重抽 (318ms)
+  ✘    3 tests/world-background.spec.ts:87:3 › 人情场切后台回来 › 接待面板摊开着被回收：那一单没开成，精力不能扣第二遍 (20.0s)
+(node:47929) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    4 tests/world-background.spec.ts:120:3 › 人情场切后台回来 › 只是切出去看一眼（hidden→visible）：什么都不推进 (808ms)
+  ✓    5 tests/world-background.spec.ts:139:3 › 人情场切后台回来 › 小结页上被回收：回来还是今天那一页，数字不许自己重算 (555ms)
+  ✓    6 tests/world-background.spec.ts:159:3 › 人情场切后台回来 › 存档读不出来的时候，不许一下手就把这一季抹了 (276ms)
+  ✓    7 tests/world-floor.spec.ts:74:5 › 人情场 390×844 › 开局能看到地图上有人，点人能开抽屉并完成一次招呼 (1.2s)
+  ✓    8 tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.3s)
+  ✓    9 tests/world-floor.spec.ts:108:5 › 人情场 390×844 › 完成一次接待：选货、件数、开给她 (2.3s)
+  ✓   10 tests/world-floor.spec.ts:128:5 › 人情场 390×844 › 看法低时她只肯说一句 (1.2s)
+  ✓   11 tests/world-floor.spec.ts:137:5 › 人情场 390×844 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 (2.2s)
+  ✓   12 tests/world-floor.spec.ts:151:5 › 人情场 390×844 › 看、问、试：第一下才花劲，每下花她一句耐心，试过的货留字，关掉再回来接着谈 (3.5s)
+  ✓   13 tests/world-floor.spec.ts:181:5 › 人情场 390×844 › 新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度 (1.2s)
+  ✓   14 tests/world-floor.spec.ts:200:5 › 人情场 390×844 › 说书人抽到卡能选，结果念一句 (291ms)
+  ✓   15 tests/world-floor.spec.ts:214:5 › 人情场 390×844 › 连点「下一时段」走进第 2 天，看到当日小结 (2.5s)
+  ✓   16 tests/world-floor.spec.ts:227:5 › 人情场 390×844 › 比分在页顶：对面的进账和自己的数同屏，不用拖才露出来 (1.1s)
+  ✓   17 tests/world-floor.spec.ts:239:5 › 人情场 390×844 › 打烊那屏念比分：对面的数与落后多少都在账那一排 (2.1s)
+  ✓   18 tests/world-floor.spec.ts:258:5 › 人情场 390×844 › 季末回顾：高光时刻、你的人、底部三颗按钮都在且点得中 (1.1s)
+  ✓   19 tests/world-floor.spec.ts:310:5 › 人情场 390×844 › 季末能进第 2 季：天数回到 1、看法收一半还在 (1.2s)
+  ✓   20 tests/world-floor.spec.ts:336:5 › 人情场 390×844 › 新客与回头客在名牌上分得出来，「现场」那行跟着报新客数 (2.3s)
+  ✓   21 tests/world-floor.spec.ts:362:5 › 人情场 390×844 › 柜台站满五位客人：一个点不站两个人，每位都点得中 (1.1s)
+  ✓   22 tests/world-floor.spec.ts:392:5 › 人情场 390×844 › 员工通道的同事收进一枚牌子：地图上不画，点开名单能点到人；全场名牌两两不叠 (2.2s)
+  ✓   23 tests/world-floor.spec.ts:425:5 › 人情场 390×844 › 中庭站满：客人两行名牌、商场方一行名牌都不许被地图上沿切掉 (1.1s)
+  ✓   24 tests/world-floor.spec.ts:444:5 › 人情场 390×844 › 刷新以后接着玩，天数不变 (2.1s)
+  ✓   25 tests/world-floor.spec.ts:454:5 › 人情场 390×844 › 除地图容器外不横向溢出、按钮不小于 44px、正文不小于 12px (2.2s)
+  ✓   26 tests/world-floor.spec.ts:74:5 › 人情场 320×568 › 开局能看到地图上有人，点人能开抽屉并完成一次招呼 (1.2s)
+  ✓   27 tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (1.3s)
+  ✓   28 tests/world-floor.spec.ts:108:5 › 人情场 320×568 › 完成一次接待：选货、件数、开给她 (2.3s)
+  ✓   29 tests/world-floor.spec.ts:128:5 › 人情场 320×568 › 看法低时她只肯说一句 (1.2s)
+  ✓   30 tests/world-floor.spec.ts:137:5 › 人情场 320×568 › 旧版手写过的客人：近景大图上点三处，念的是手写的线索；问话也是手写那几句 (2.3s)
+  ✓   31 tests/world-floor.spec.ts:151:5 › 人情场 320×568 › 看、问、试：第一下才花劲，每下花她一句耐心，试过的货留字，关掉再回来接着谈 (3.5s)
+  ✓   32 tests/world-floor.spec.ts:181:5 › 人情场 320×568 › 新一天第一个时段能看到「今天的请求」卡，知道了收起、标记能看进度 (1.2s)
+  ✓   33 tests/world-floor.spec.ts:200:5 › 人情场 320×568 › 说书人抽到卡能选，结果念一句 (274ms)
+  ✓   34 tests/world-floor.spec.ts:214:5 › 人情场 320×568 › 连点「下一时段」走进第 2 天，看到当日小结 (2.5s)
+  ✓   35 tests/world-floor.spec.ts:227:5 › 人情场 320×568 › 比分在页顶：对面的进账和自己的数同屏，不用拖才露出来 (1.1s)
+  ✓   36 tests/world-floor.spec.ts:239:5 › 人情场 320×568 › 打烊那屏念比分：对面的数与落后多少都在账那一排 (2.1s)
+  ✓   37 tests/world-floor.spec.ts:258:5 › 人情场 320×568 › 季末回顾：高光时刻、你的人、底部三颗按钮都在且点得中 (1.2s)
+  ✓   38 tests/world-floor.spec.ts:310:5 › 人情场 320×568 › 季末能进第 2 季：天数回到 1、看法收一半还在 (1.2s)
+  ✓   39 tests/world-floor.spec.ts:336:5 › 人情场 320×568 › 新客与回头客在名牌上分得出来，「现场」那行跟着报新客数 (2.3s)
+  ✓   40 tests/world-floor.spec.ts:362:5 › 人情场 320×568 › 柜台站满五位客人：一个点不站两个人，每位都点得中 (1.1s)
+  ✓   41 tests/world-floor.spec.ts:392:5 › 人情场 320×568 › 员工通道的同事收进一枚牌子：地图上不画，点开名单能点到人；全场名牌两两不叠 (2.3s)
+  ✓   42 tests/world-floor.spec.ts:425:5 › 人情场 320×568 › 中庭站满：客人两行名牌、商场方一行名牌都不许被地图上沿切掉 (1.1s)
+  ✓   43 tests/world-floor.spec.ts:444:5 › 人情场 320×568 › 刷新以后接着玩，天数不变 (2.2s)
+  ✓   44 tests/world-floor.spec.ts:454:5 › 人情场 320×568 › 除地图容器外不横向溢出、按钮不小于 44px、正文不小于 12px (2.2s)
+  ✓   45 tests/world-floor.spec.ts:503:3 › 新手引导 390×844 › 新档第一次进来能看到开局那句；点「跳过引导」后刷新也不再出现 (2.1s)
+  ✓   46 tests/world-floor.spec.ts:519:3 › 新手引导 390×844 › 引导气泡不遮住「下一时段」按钮 (2.1s)
+  ✓   47 tests/world-fullscreen.spec.ts:45:3 › 真手机那一档 · 390×844 › 假外框一件都不画，屏幕就是整个窗口 (294ms)
+  ✓   48 tests/world-fullscreen.spec.ts:60:3 › 真手机那一档 · 390×844 › 第一行只让开真实刘海，不再多让一条 54px 假状态栏 (290ms)
+  ✓   49 tests/world-fullscreen.spec.ts:76:3 › 真手机那一档 · 390×844 › 省下来的那 46px 给了内容：柜前两位都站在屏内 (241ms)
+  ✓   50 tests/world-fullscreen.spec.ts:98:3 › 装到桌面的 PWA（navigator.standalone 替身） › 桌面窗口没有触屏信号，但加到桌面这一条就够全屏 (238ms)
+  ✓   51 tests/world-fullscreen.spec.ts:109:3 › 装到桌面的 PWA（navigator.standalone 替身） › ?chrome=app 是同一支的另一条路，?chrome=frame 把它按回去（反证） (327ms)
+  ✓   52 tests/world-fullscreen.spec.ts:127:3 › 桌面预览那一档不许被顺手改掉 › 外框、假状态栏、设备切换器照常画，内容照常让开 54px (296ms)
+  ✓   53 tests/world-header.spec.ts:52:3 › 顶栏 320×568 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (957ms)
+  ✓   54 tests/world-header.spec.ts:72:3 › 顶栏 320×568 › 多位季号、七位金额和节日仍读得全，数字不靠缩写 (416ms)
+  ✓   55 tests/world-header.spec.ts:84:3 › 顶栏 320×568 › 看见资源后能邀请客人，扣款立即更新，静音与时段按钮不串动 (666ms)
+  ✓   56 tests/world-header.spec.ts:52:3 › 顶栏 390×667 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (975ms)
+  ✓   57 tests/world-header.spec.ts:72:3 › 顶栏 390×667 › 多位季号、七位金额和节日仍读得全，数字不靠缩写 (418ms)
+  ✓   58 tests/world-header.spec.ts:84:3 › 顶栏 390×667 › 看见资源后能邀请客人，扣款立即更新，静音与时段按钮不串动 (764ms)
+  ✓   59 tests/world-header.spec.ts:52:3 › 顶栏 390×844 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (1.0s)
+  ✓   60 tests/world-header.spec.ts:72:3 › 顶栏 390×844 › 多位季号、七位金额和节日仍读得全，数字不靠缩写 (417ms)
+  ✓   61 tests/world-header.spec.ts:84:3 › 顶栏 390×844 › 看见资源后能邀请客人，扣款立即更新，静音与时段按钮不串动 (765ms)
+  ✓   62 tests/world-levels.spec.ts:30:5 › 每周一关 390×844 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (245ms)
+  ✓   63 tests/world-levels.spec.ts:43:5 › 每周一关 390×844 › 过了这一关，页顶那条变色并亮星 (201ms)
+  ✓   64 tests/world-levels.spec.ts:50:5 › 每周一关 390×844 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (235ms)
+  ✓   65 tests/world-levels.spec.ts:62:5 › 每周一关 390×844 › 钱没达标也能凭客情过关，结算写明获胜路线 (272ms)
+  ✓   66 tests/world-levels.spec.ts:80:5 › 每周一关 390×844 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓   67 tests/world-levels.spec.ts:108:5 › 每周一关 390×844 › 没到数：结算屏盖「没过」，零颗星 (233ms)
+  ✓   68 tests/world-levels.spec.ts:120:5 › 每周一关 390×844 › 季末那排四关战绩：每关几颗星、一共几颗 (217ms)
+  ✓   69 tests/world-levels.spec.ts:30:5 › 每周一关 320×568 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (213ms)
+  ✓   70 tests/world-levels.spec.ts:43:5 › 每周一关 320×568 › 过了这一关，页顶那条变色并亮星 (189ms)
+  ✓   71 tests/world-levels.spec.ts:50:5 › 每周一关 320×568 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (238ms)
+  ✓   72 tests/world-levels.spec.ts:62:5 › 每周一关 320×568 › 钱没达标也能凭客情过关，结算写明获胜路线 (229ms)
+  ✓   73 tests/world-levels.spec.ts:80:5 › 每周一关 320×568 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓   74 tests/world-levels.spec.ts:108:5 › 每周一关 320×568 › 没到数：结算屏盖「没过」，零颗星 (232ms)
+  ✓   75 tests/world-levels.spec.ts:120:5 › 每周一关 320×568 › 季末那排四关战绩：每关几颗星、一共几颗 (216ms)
+  ✓   76 tests/world-moments.spec.ts:81:5 › 人情场三刻的反馈 390×844 › 成交那一下：牌写「成交 · 梅女士」、钱那一格亮、收银声先响 (3.6s)
+  ✓   77 tests/world-moments.spec.ts:94:5 › 人情场三刻的反馈 390×844 › 硬推那一单：看法跌下去也不吃掉收银声，两声隔开一拍 (1.3s)
+  ✓   78 tests/world-moments.spec.ts:106:5 › 人情场三刻的反馈 390×844 › 回头客那一早：她没有经过任何按钮，声音、名牌、牌都要有 (262ms)
+  ✓   79 tests/world-moments.spec.ts:115:5 › 人情场三刻的反馈 390×844 › 超过对面那一下：比分那一格翻色，头衔让给比分这一句 (282ms)
+  ✓   80 tests/world-moments.spec.ts:125:5 › 人情场三刻的反馈 390×844 › 被对面超过那一下：比分那一格压暗，牌写「被对面超过」 (277ms)
+  ✓   81 tests/world-moments.spec.ts:136:5 › 人情场三刻的反馈 390×844 › 牌不跟页顶那排控件和楼层名牌抢地方 (1.3s)
+  ✓   82 tests/world-moments.spec.ts:81:5 › 人情场三刻的反馈 320×568 › 成交那一下：牌写「成交 · 梅女士」、钱那一格亮、收银声先响 (3.6s)
+  ✓   83 tests/world-moments.spec.ts:94:5 › 人情场三刻的反馈 320×568 › 硬推那一单：看法跌下去也不吃掉收银声，两声隔开一拍 (1.4s)
+  ✓   84 tests/world-moments.spec.ts:106:5 › 人情场三刻的反馈 320×568 › 回头客那一早：她没有经过任何按钮，声音、名牌、牌都要有 (275ms)
+  ✓   85 tests/world-moments.spec.ts:115:5 › 人情场三刻的反馈 320×568 › 超过对面那一下：比分那一格翻色，头衔让给比分这一句 (264ms)
+  ✓   86 tests/world-moments.spec.ts:125:5 › 人情场三刻的反馈 320×568 › 被对面超过那一下：比分那一格压暗，牌写「被对面超过」 (261ms)
+  ✓   87 tests/world-moments.spec.ts:136:5 › 人情场三刻的反馈 320×568 › 牌不跟页顶那排控件和楼层名牌抢地方 (1.3s)
+  ✓   88 tests/world-opening.spec.ts:40:3 › 真实开场 320×568 › 标题与开局完整可见，展开全部规则后仍可滚动并直接开局 (435ms)
+  ✓   89 tests/world-opening.spec.ts:59:3 › 真实开场 320×568 › 引导直接接客，探问中断可续谈，真实成交复盘后首张剧情只出现一次 (3.9s)
+  ✓   90 tests/world-opening.spec.ts:118:3 › 真实开场 320×568 › 随时退出查看不扣精力；探问后不卖也能自然接上剧情 (2.3s)
+  ✓   91 tests/world-opening.spec.ts:140:3 › 真实开场 320×568 › 跳过引导可直接推进：先讲完上午的故事，然后只推进一次 (401ms)
+  ✓   92 tests/world-opening.spec.ts:40:3 › 真实开场 390×844 › 标题与开局完整可见，展开全部规则后仍可滚动并直接开局 (442ms)
+  ✓   93 tests/world-opening.spec.ts:59:3 › 真实开场 390×844 › 引导直接接客，探问中断可续谈，真实成交复盘后首张剧情只出现一次 (4.0s)
+  ✓   94 tests/world-opening.spec.ts:118:3 › 真实开场 390×844 › 随时退出查看不扣精力；探问后不卖也能自然接上剧情 (2.3s)
+  ✓   95 tests/world-opening.spec.ts:140:3 › 真实开场 390×844 › 跳过引导可直接推进：先讲完上午的故事，然后只推进一次 (419ms)
+  ✓   96 tests/world-opening.spec.ts:157:1 › 旧档首日上午的剧情与绑定照常恢复，不重新抽首张卡 (346ms)
+  ✓   97 tests/world-rival-business.spec.ts:31:3 › 对面预约 320×568 › 双目标与对面预约同时可点，邀来、刷新、正常成交确实接下这一单 (3.0s)
+  ✓   98 tests/world-rival-business.spec.ts:68:3 › 对面预约 320×568 › 可以放弃争取，按公开报价只结一次；刷新不会再收款 (402ms)
+  ✓   99 tests/world-rival-business.spec.ts:80:3 › 对面预约 320×568 › 小样不足解释原因，不扣精力；旧档没有预约也能继续 (455ms)
+  ✓  100 tests/world-rival-business.spec.ts:31:3 › 对面预约 390×844 › 双目标与对面预约同时可点，邀来、刷新、正常成交确实接下这一单 (3.0s)
+  ✓  101 tests/world-rival-business.spec.ts:68:3 › 对面预约 390×844 › 可以放弃争取，按公开报价只结一次；刷新不会再收款 (403ms)
+  ✓  102 tests/world-rival-business.spec.ts:80:3 › 对面预约 390×844 › 小样不足解释原因，不扣精力；旧档没有预约也能继续 (453ms)
+  ✓  103 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 320×568 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (2.9s)
+  ✓  104 tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 320×568 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 (594ms)
+  ✓  105 tests/world-rival-tempo.spec.ts:89:3 › 约客节奏 320×568 › 晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账 (2.8s)
+  ✓  106 tests/world-rival-tempo.spec.ts:121:3 › 约客节奏 320×568 › 从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账 (561ms)
+  ✓  107 tests/world-rival-tempo.spec.ts:32:3 › 约客节奏 390×844 › 上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点 (2.9s)
+  ✓  108 tests/world-rival-tempo.spec.ts:66:3 › 约客节奏 390×844 › 已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本 (625ms)
+  ✓  109 tests/world-rival-tempo.spec.ts:89:3 › 约客节奏 390×844 › 晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账 (2.8s)
+  ✓  110 tests/world-rival-tempo.spec.ts:121:3 › 约客节奏 390×844 › 从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账 (579ms)
+  ✓  111 tests/world-weeks.spec.ts:35:5 › 本周规矩 390×844 › 第 1 季第 1 周周目标念得出这一周那条，早会那句也念过 (238ms)
+  ✓  112 tests/world-weeks.spec.ts:45:5 › 本周规矩 390×844 › 一季四周：周目标那一行逐周换，四条都露过面 (461ms)
+  ✓  113 tests/world-weeks.spec.ts:56:5 › 本周规矩 390×844 › 培训周那一个上午发的精力在顶栏就是 15，没落培训周那周是 20 (314ms)
+  ✓  114 tests/world-weeks.spec.ts:71:5 › 本周规矩 390×844 › 周日打烊之后：下一周换一条，旧的那句不留在周目标 (314ms)
+  ✓  115 tests/world-weeks.spec.ts:35:5 › 本周规矩 320×568 › 第 1 季第 1 周周目标念得出这一周那条，早会那句也念过 (229ms)
+  ✓  116 tests/world-weeks.spec.ts:45:5 › 本周规矩 320×568 › 一季四周：周目标那一行逐周换，四条都露过面 (442ms)
+  ✓  117 tests/world-weeks.spec.ts:56:5 › 本周规矩 320×568 › 培训周那一个上午发的精力在顶栏就是 15，没落培训周那周是 20 (317ms)
+  ✓  118 tests/world-weeks.spec.ts:71:5 › 本周规矩 320×568 › 周日打烊之后：下一周换一条，旧的那句不留在周目标 (297ms)
+
+
+  1) tests/world-background.spec.ts:87:3 › 人情场切后台回来 › 接待面板摊开着被回收：那一单没开成，精力不能扣第二遍 ───────────────────
+
+    Test timeout of 20000ms exceeded.
+
+    Error: locator.click: Test timeout of 20000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: /继续 · 第 1 季 · 第 1 天/ })
+
+
+      101 |
+      102 |     await p.reload();
+    > 103 |     await p.getByRole("button", { name: /继续 · 第 1 季 · 第 1 天/ }).click();
+          |                                                                 ^
+      104 |     expect(await savedWorld(p)).toBe(before);
+      105 |     expect(await barWords(p)).toBe(beforeBar);
+      106 |     // 面板是本地状态，回来收在楼层上：她人还在现场，重新点她就接得回去
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-background.spec.ts:103:65
+
+    Error Context: test-results/world-background-人情场切后台回来-接待面板摊开着被回收：那一单没开成，精力不能扣第二遍/error-context.md
+
+  1 failed
+    tests/world-background.spec.ts:87:3 › 人情场切后台回来 › 接待面板摊开着被回收：那一单没开成，精力不能扣第二遍 ────────────────────
+  117 passed (2.7m)

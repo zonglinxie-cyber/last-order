@@ -5,12 +5,17 @@
 /* 只提高底色优先级，不影响各屏的布局覆盖；打烊与季末也须保持正文对比度。 */
 .app-screen.world-app { background:#17100f; }
 
-/* —— 顶栏：一条细栏，第 N 天 · 时段 · 钱 · 精力 · 小样 —— */
-.world-bar { flex:0 0 auto; z-index:30; display:flex; align-items:center; gap:8px; padding:var(--top-inset) 10px 8px; background:linear-gradient(#120a0af5,#140c0cd8); border-bottom:1px solid #f0cf9122; }
-.world-bar-info { flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:10px; white-space:nowrap; overflow-x:auto; scrollbar-width:none; }
-.world-bar-info::-webkit-scrollbar { display:none; }
-.world-bar-info b { flex:0 0 auto; color:#ffedca; font:700 13px 'Noto Serif SC',serif; }
-.world-bar-info span { flex:0 0 auto; color:#d5b994; font-size:12px; }
+/* —— 顶栏：日期与比分用整行；资源和操作并排，窄屏也不需要横滑找数字。 —— */
+.world-bar { flex:0 0 auto; z-index:30; display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; align-items:center; gap:2px 8px; padding:var(--top-inset) 10px 4px; background:linear-gradient(#120a0af5,#140c0cd8); border-bottom:1px solid #f0cf9122; }
+.world-bar-info { display:contents; }
+.world-bar-summary { grid-column:1 / -1; grid-row:1; min-width:0; }
+.world-bar-info b { display:block; color:#ffedca; font:700 12px/1.4 'Noto Serif SC',serif; }
+.world-bar-info span { color:#d5b994; font-size:12px; line-height:1.5; white-space:nowrap; }
+.world-bar-score { display:flex; flex-wrap:wrap; gap:0 14px; }
+.world-bar-resources { grid-column:1; grid-row:2; display:flex; flex-direction:column; align-items:flex-start; }
+.world-bar .world-mute { grid-column:2; grid-row:2; }
+.world-bar .world-web-btn { grid-column:3; grid-row:2; }
+.world-bar .world-next { grid-column:4; grid-row:2; }
 .world-web-btn,.world-next { flex:0 0 auto; min-height:44px; padding:0 14px; border-radius:12px; font:600 13px 'Noto Serif SC',serif; }
 .world-web-btn { border:1px solid #f0cf9133; background:#ffffff0a; color:#efd6b0; }
 .world-next { display:flex; align-items:center; gap:6px; border:1px solid #f0cf9177; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; }
@@ -19,7 +24,7 @@
 /* —— 大地图 —— */
 /* 地图只占上半屏、约两屏宽：一眼看得出是整层商场，左右拖看另一半。下面是常驻的「现场」栏。 */
 .world-app { container-type:inline-size; }
-.world-map-view { position:relative; flex:0 0 auto; height:min(58%, calc(100cqw * 1.9 * 9 / 16)); overflow:hidden; touch-action:none; user-select:none; background:#0c0707; }
+.world-map-view { position:relative; flex:0 1 auto; min-height:140px; height:min(58%, calc(100cqw * 1.9 * 9 / 16)); overflow:hidden; touch-action:none; user-select:none; background:#0c0707; }
 .world-map { position:absolute; top:0; left:0; height:100%; aspect-ratio:16/9; container-type:size; will-change:transform; }
 .wf-floor { position:absolute; inset:0; width:100%; height:100%; display:block; -webkit-user-drag:none; }
 .wf-zone { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border-radius:999px; background:#120a0a59; color:#ffe8b6cc; font:600 12px 'Noto Serif SC',serif; letter-spacing:.1em; pointer-events:none; }
@@ -60,7 +65,7 @@
 }
 
 /* —— 刚刚发生 —— */
-.world-scene { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #f0cf9133; background:linear-gradient(#1c1210,#130c0b); }
+.world-scene { flex:1 0 auto; min-height:96px; display:flex; flex-direction:column; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #f0cf9133; background:linear-gradient(#1c1210,#130c0b); }
 .world-scene h2 { flex:0 0 auto; margin:0 0 6px; color:#d5b994; font:600 12px 'Noto Serif SC',serif; letter-spacing:.08em; }
 .world-scene .world-feed { position:relative; inset:auto; flex:1 1 auto; min-height:0; }
 .world-feed p { margin:0 0 7px; color:#eee0d5; font-size:13px; line-height:1.55; }
@@ -296,7 +301,6 @@
 .world-heat-chip[aria-pressed="true"] { border-color:#ffedca88; color:#ffedca; background:linear-gradient(145deg,rgba(78,42,30,.92),rgba(36,18,16,.96)); }
 .world-heat-note { margin:0; color:#bba89b; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
 .world-heat-note li { margin:0 0 4px; list-style:none; }
-.world-week { border-color:#ffedca44; color:#ffedca; }
 
 /* —— 每周一关（target.ts / ui/Levels.tsx）—— */
 .world-goal { flex:0 0 auto; z-index:29; display:block; width:100%; min-height:44px; padding:6px 12px 7px; border:0; border-bottom:1px solid #f0cf9122; border-radius:0; background:#160d0cf0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
@@ -413,13 +417,9 @@
 .has-double-rival .world-rival-plan { flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; min-height:52px; padding:5px 10px; }
 .has-double-rival .world-rival-plan + .world-rival-plan { border-left:1px solid #f0cf9133; }
 .has-double-rival .world-rival-plan span { max-width:100%; }
-.has-double-rival .world-map-view { flex-shrink:1; min-height:150px; }
-.has-double-rival .world-scene { min-height:96px; flex-shrink:0; }
 .world-rival-booking { flex:none; display:flex; align-items:center; justify-content:space-between; gap:6px; min-height:44px; padding:6px 12px; border:0; border-bottom:1px solid #e1c09b33; background:#2d263e; color:#f2dfc8; text-align:left; font-size:12px; }
 .world-rival-booking b { font-weight:600; }
 .world-rival-booking span { flex:none; color:#d9c5ef; }
-.has-rival-booking .world-map-view,.world-app:has(.wg-schedule) .world-map-view { flex-shrink:1; min-height:140px; }
-.has-rival-booking .world-scene,.world-app:has(.wg-schedule) .world-scene { min-height:96px; flex-shrink:0; }
 .world-opportunities { display:flex; flex:none; min-width:0; }
 .world-opportunities .world-rival-booking { flex:1; min-width:0; }
 .world-opportunities.has-weekend .world-rival-booking { flex-direction:column; align-items:flex-start; gap:2px; }

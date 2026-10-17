@@ -45,7 +45,7 @@ import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, score
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
 import { seasonEnding } from "../ending.ts";
 import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
-import { weekNoOf, weekWordOf } from "../weeks.ts";
+import { weekNoOf } from "../weeks.ts";
 import { commitWorldProgress } from "../progress.ts";
 import "./base.css";
 import "./world.css";
@@ -946,11 +946,14 @@ export default function WorldGame() {
   const weekend = currentWeekendOrder(world);
   const weekendPerson = weekend ? PEOPLE.find(p => p.id === weekend.person) : undefined;
   const showWeekend = !!weekendPerson && !booking?.weekend;
-  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}${bookingPerson || showWeekend ? " has-rival-booking" : ""}`}>
+  return <div className={`app-screen world-app${rivalMarks.length > 1 ? " has-double-rival" : ""}`}>
     <header className="world-bar">
       <div className="world-bar-info">
-        <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
-        <span className={lit.money ? "world-money is-hit" : "world-money"}>{yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span>{weekWordOf(world.qualities) ? <span className="world-week">本周·{weekWordOf(world.qualities)}</span> : null}
+        <div className="world-bar-summary">
+          <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
+          <div className="world-bar-score"><span className={lit.money ? "world-money is-hit" : "world-money"}>我方 {yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span></div>
+        </div>
+        <div className="world-bar-resources"><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span></div>
       </div>
       <button className="world-mute" type="button" aria-label={muted ? "开声音" : "静音"} aria-pressed={muted}
         onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "🔇" : "🔊"}</button>

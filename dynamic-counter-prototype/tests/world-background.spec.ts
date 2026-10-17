@@ -100,13 +100,12 @@ test.describe("人情场切后台回来", () => {
     const beforeBar = await barWords(p);
 
     await p.reload();
-    await p.getByRole("button", { name: /继续 · 第 1 季 · 第 1 天/ }).click();
+    await expect(p.getByLabel("上次停在这里")).toContainText("和梅女士还没谈完");
+    await p.getByRole("button", { name: "继续 · 和梅女士接着谈", exact: true }).click();
     expect(await savedWorld(p)).toBe(before);
     expect(await barWords(p)).toBe(beforeBar);
-    // 面板是本地状态，回来收在楼层上：她人还在现场，重新点她就接得回去
-    await expect(p.locator(".world-serve")).toHaveCount(0);
-    await p.getByRole("button", { name: /查看梅女士/ }).first().click();
-    await p.getByRole("button", { name: /接着谈/ }).click();
+    // 继续页直接恢复未完成接待；不用再找人，也不能重扣接待精力。
+    await expect(p.locator(".world-serve")).toBeVisible();
     await expect(p.getByRole("tab", { name: "挑货开单" })).toHaveAttribute("aria-selected", "true");
     await expect(p.locator(".serve-meta")).toContainText("上限 1 件");
     await expect(p.locator(".serve-products button.on b")).toHaveText("精华");

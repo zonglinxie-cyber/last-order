@@ -1,0 +1,20 @@
+[WebServer] (node:31648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:31703) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 9 tests using 1 worker
+
+(node:31732) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-header.spec.ts:52:3 › 顶栏 320×568 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (1.2s)
+  ✓  2 tests/world-header.spec.ts:72:3 › 顶栏 320×568 › 多位季号、七位金额和节日仍读得全，数字不靠缩写 (395ms)
+  ✓  3 tests/world-header.spec.ts:84:3 › 顶栏 320×568 › 看见资源后能邀请客人，扣款立即更新，静音与时段按钮不串动 (732ms)
+  ✓  4 tests/world-header.spec.ts:52:3 › 顶栏 390×667 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (1.0s)
+  ✓  5 tests/world-header.spec.ts:72:3 › 顶栏 390×667 › 多位季号、七位金额和节日仍读得全，数字不靠缩写 (432ms)
+  ✓  6 tests/world-header.spec.ts:84:3 › 顶栏 390×667 › 看见资源后能邀请客人，扣款立即更新，静音与时段按钮不串动 (719ms)
+  ✓  7 tests/world-header.spec.ts:52:3 › 顶栏 390×844 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (1.1s)
+  ✓  8 tests/world-header.spec.ts:72:3 › 顶栏 390×844 › 多位季号、七位金额和节日仍读得全，数字不靠缩写 (451ms)
+  ✓  9 tests/world-header.spec.ts:84:3 › 顶栏 390×844 › 看见资源后能邀请客人，扣款立即更新，静音与时段按钮不串动 (828ms)
+
+  9 passed (10.3s)

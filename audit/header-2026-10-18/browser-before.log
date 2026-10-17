@@ -1,0 +1,1046 @@
+[WebServer] (node:24505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:24532) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:24535) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-header.spec.ts:52:3 › 顶栏 320×568 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (6.1s)
+(node:25005) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/world-header.spec.ts:52:3 › 顶栏 390×667 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (4.4s)
+(node:25691) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/world-header.spec.ts:52:3 › 顶栏 390×844 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 (4.4s)
+
+
+  1) tests/world-header.spec.ts:52:3 › 顶栏 320×568 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 ──────────────────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar-info b')
+    Expected: in viewport
+    Received: viewport ratio 0.6488110423088074
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar-info b')
+        6 × locator resolved to <b>…</b>
+          - unexpected value "viewport ratio 0.6488110423088074"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：第 1 季 · 第 1 天 · 上午
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-money')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-money')
+        6 × locator resolved to <span class="world-money">¥0</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：¥0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-score')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-score')
+        6 × locator resolved to <span class="world-score">对面 ¥0</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：对面 ¥0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+        6 × locator resolved to <span>精力 20</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：精力 20
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+        6 × locator resolved to <span>小样 8</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：小样 8
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 96
+    Received:    44.5625
+
+      65 |       for (const loc of [page.locator(".world-bar-info b"), page.locator(".world-money"), page.locator(".world-score"), resources(page, "精力"), resources(page, "小样")]) await readable(loc);
+      66 |       for (const sel of [".world-mute", ".world-web-btn", ".world-next"]) await hit(page.locator(sel));
+    > 67 |       expect.soft(await page.locator(".world-scene").evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(96);
+         |                                                                                                         ^
+      68 |       await expect.soft(page.locator(".world-scene")).toBeInViewport({ ratio: 1 });
+      69 |     }
+      70 |   });
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:67:105
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar-info b')
+    Expected: in viewport
+    Received: viewport ratio 0.6034221649169922
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar-info b')
+        6 × locator resolved to <b>…</b>
+          - unexpected value "viewport ratio 0.6034221649169922"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：第 1 季 · 第 26 天 · 午后
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-money')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-money')
+        6 × locator resolved to <span class="world-money">¥124,380</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：¥124,380
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-score')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-score')
+        6 × locator resolved to <span class="world-score">对面 ¥98,420</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：对面 ¥98,420
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+        6 × locator resolved to <span>精力 40</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：精力 40
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+        6 × locator resolved to <span>小样 8</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：小样 8
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error Context: test-results/world-header-顶栏-320×568-日期、双方比分与资源不被裁切，拥挤时仍保留可读现场/error-context.md
+
+  2) tests/world-header.spec.ts:52:3 › 顶栏 390×667 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 ──────────────────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-score')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-score')
+        6 × locator resolved to <span class="world-score">对面 ¥0</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：对面 ¥0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+        6 × locator resolved to <span>精力 20</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：精力 20
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+        6 × locator resolved to <span>小样 8</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：小样 8
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 96
+    Received:    86.140625
+
+      65 |       for (const loc of [page.locator(".world-bar-info b"), page.locator(".world-money"), page.locator(".world-score"), resources(page, "精力"), resources(page, "小样")]) await readable(loc);
+      66 |       for (const sel of [".world-mute", ".world-web-btn", ".world-next"]) await hit(page.locator(sel));
+    > 67 |       expect.soft(await page.locator(".world-scene").evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(96);
+         |                                                                                                         ^
+      68 |       await expect.soft(page.locator(".world-scene")).toBeInViewport({ ratio: 1 });
+      69 |     }
+      70 |   });
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:67:105
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-money')
+    Expected: in viewport
+    Received: viewport ratio 0.12653419375419617
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-money')
+        6 × locator resolved to <span class="world-money">¥124,380</span>
+          - unexpected value "viewport ratio 0.12653419375419617"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：¥124,380
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-score')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-score')
+        6 × locator resolved to <span class="world-score">对面 ¥98,420</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：对面 ¥98,420
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+        6 × locator resolved to <span>精力 40</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：精力 40
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+        6 × locator resolved to <span>小样 8</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：小样 8
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error Context: test-results/world-header-顶栏-390×667-日期、双方比分与资源不被裁切，拥挤时仍保留可读现场/error-context.md
+
+  3) tests/world-header.spec.ts:52:3 › 顶栏 390×844 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 ──────────────────────
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-score')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-score')
+        6 × locator resolved to <span class="world-score">对面 ¥0</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：对面 ¥0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+        6 × locator resolved to <span>精力 20</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：精力 20
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+        6 × locator resolved to <span>小样 8</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：小样 8
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-money')
+    Expected: in viewport
+    Received: viewport ratio 0.12653419375419617
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-money')
+        6 × locator resolved to <span class="world-money">¥124,380</span>
+          - unexpected value "viewport ratio 0.12653419375419617"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：¥124,380
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-score')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-score')
+        6 × locator resolved to <span class="world-score">对面 ¥98,420</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：对面 ¥98,420
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^精力 \d+$/ })
+        6 × locator resolved to <span>精力 40</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：精力 40
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error: expect(locator).toBeInViewport() failed
+
+    Locator:  locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+    Expected: in viewport
+    Received: viewport ratio 0
+    Timeout:  500ms
+
+    Call log:
+      - Expect "soft toBeInViewport" with timeout 500ms
+      - waiting for locator('.world-bar span').filter({ hasText: /^小样 \d+$/ })
+        6 × locator resolved to <span>小样 8</span>
+          - unexpected value "viewport ratio 0"
+
+
+      22 | /** 包括父容器裁切与上层按钮遮挡，不能只看文字的坐标是否在屏幕里。 */
+      23 | async function readable(loc: Locator) {
+    > 24 |   await expect.soft(loc).toBeInViewport({ ratio: 1, timeout: 500 });
+         |                          ^
+      25 |   expect.soft(await loc.evaluate(el => {
+      26 |     const range = document.createRange(); range.selectNodeContents(el);
+      27 |     return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).every(r => {
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:24:26)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:174
+
+    Error: 文字被裁切或遮挡：小样 8
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      36 |       return true;
+      37 |     });
+    > 38 |   }), `文字被裁切或遮挡：${await loc.innerText()}`).toBe(true);
+         |                                            ^
+      39 | }
+      40 | async function hit(loc: Locator) {
+      41 |   await loc.click({ trial: true }); await expect(loc).toBeInViewport({ ratio: 1 });
+        at readable (/Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:38:44)
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-header.spec.ts:65:168
+
+    Error Context: test-results/world-header-顶栏-390×844-日期、双方比分与资源不被裁切，拥挤时仍保留可读现场/error-context.md
+
+  3 failed
+    tests/world-header.spec.ts:52:3 › 顶栏 320×568 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 ───────────────────────
+    tests/world-header.spec.ts:52:3 › 顶栏 390×667 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 ───────────────────────
+    tests/world-header.spec.ts:52:3 › 顶栏 390×844 › 日期、双方比分与资源不被裁切，拥挤时仍保留可读现场 ───────────────────────

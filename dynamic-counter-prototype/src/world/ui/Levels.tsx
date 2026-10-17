@@ -72,7 +72,7 @@ export function GoalStrip({ world, lit, bump, onOpen }: { world: World; lit: boo
   return <button type="button" className={`world-goal${live.stars ? " is-passed" : ""}${lit ? " is-hit" : ""}`}
     aria-label={`本周目标：${weekLevelWord(world)}，${lines.map(x => x.short).join("，")}。${schedule ? `${schedule}。` : ""}点开看三条过关线`} onClick={onOpen}>
     <span className="wg-row">
-      <b>{weekLevelWord(world)}</b>
+      <b className="world-week">{weekLevelWord(world)}</b>
       <span className={`wg-tail${rival > made ? " is-trail" : made > 0 ? " is-lead" : ""}`}>{weekGoalTail(world)}</span>
     </span>
     <span className="wg-track" aria-hidden="true">

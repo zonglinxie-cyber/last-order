@@ -1,0 +1,25 @@
+{
+  "url": "http://127.0.0.1:4188",
+  "checks": {
+    "/": {
+      "status": 200,
+      "expected_strings": {
+        "<div id=\"root\">": true
+      }
+    },
+    "/src/world/ui/WorldGame.tsx": {
+      "status": 200,
+      "expected_strings": {
+        "world-bar-summary": true,
+        "world-bar-resources": true
+      }
+    },
+    "/src/world/ui/world.css": {
+      "status": 200,
+      "expected_strings": {
+        "grid-template-columns:minmax(0,1fr) auto auto auto": true,
+        "min-height:96px": true
+      }
+    }
+  }
+}
