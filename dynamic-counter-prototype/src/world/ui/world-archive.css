@@ -1,6 +1,7 @@
 /* 人情场跨季档案：叠在 archive.css 的配色与卡片骨架上，只补三页签、人物三行、个人线与剪影头像。
    正文一律 ≥12px，长句 overflow-wrap:anywhere 防横向溢出（390×844 与 320×568 都不许撑破）。 */
 .world-archive-page .archive-tabs { grid-template-columns: 1fr 1fr 1fr; }
+.app-screen.world-archive-page { z-index:110; background:radial-gradient(circle at 78% 10%,#3d2a26,#1a1010 46%,#120b0b 100%); }
 .world-archive-page .archive-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
 
 /* 没立绘的人用首字圆牌；没见过的人整张压暗成剪影。 */

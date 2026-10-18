@@ -1,0 +1,16 @@
+.rival-season-recap p,.rival-year-standing p,.rival-history-list p,.rival-history-empty p { color:#f2e6d8; font-size:13px; line-height:1.65; margin:7px 0; overflow-wrap:anywhere; }
+.rival-season-recap blockquote { margin:12px 0; padding:10px 12px; border-left:2px solid #edc779; background:#ffffff06; border-radius:0 10px 10px 0; }
+.rival-season-recap blockquote b { font-size:12px; color:#edc779; }
+.rival-year-standing h3 { color:#ffedca; font-size:14px; margin:10px 0 6px; }
+.rival-year-standing .rival-year-verdict { color:#edc779; font-weight:700; }
+.rival-year-standing .rival-history-gap { color:#d5b994; }
+.rival-history-list,.rival-history-empty { padding:12px; }
+.rival-history-run + .rival-history-run { margin-top:20px; }
+.rival-history-run h2,.rival-history-empty h2 { font:700 16px 'Noto Serif SC',serif; color:#ffedca; margin:4px 0 12px; }
+.rival-history-year { margin:0 0 12px; padding:12px; border:1px solid #f0cf9122; border-radius:14px; background:#ffffff06; }
+.rival-history-year ol { list-style:none; padding:0; margin:10px 0 0; }
+.rival-history-year li { padding:10px 0; border-top:1px solid #f0cf9122; }
+.rival-history-year li div { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.rival-history-year li b { color:#ffe8b6; font-size:13px; }
+.rival-history-year li small { color:#d5b994; font-size:12px; }
+.rival-history-list p,.rival-history-empty p,.rival-season-recap { scroll-margin:8px; }

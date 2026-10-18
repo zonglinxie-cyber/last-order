@@ -1,0 +1,7 @@
+{
+  "baseline": "70bf536 / audit/companion-2026-10-18/world-sim.log",
+  "command": "node --experimental-strip-types tests/world-sim.ts 20 2",
+  "exitCode": 0,
+  "normalizedReportEqual": true,
+  "sha256": "7341709734089f933fde519327f0b65e2e55a10f621ee3340377ba5b40b29c41"
+}

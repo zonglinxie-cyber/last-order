@@ -1,0 +1,22 @@
+{
+  "know": {
+    "day": 4,
+    "slot": 0,
+    "screen": "floor",
+    "steps": 157,
+    "actions": 326,
+    "notes": 0,
+    "errors": 0,
+    "rawFields": 0
+  },
+  "skip": {
+    "day": 4,
+    "slot": 0,
+    "screen": "floor",
+    "steps": 156,
+    "actions": 332,
+    "notes": 0,
+    "errors": 0,
+    "rawFields": 0
+  }
+}

@@ -12,8 +12,9 @@ import type { PersonId } from "../types.ts";
 import { opinionWord } from "./words.ts";
 import "./archive-base.css";
 import "./world-archive.css";
+import { RivalHistoryList } from "./RivalHistory.tsx";
 
-type Tab = "people" | "arcs" | "book" | "endings";
+type Tab = "people" | "arcs" | "book" | "endings" | "rival";
 
 const nameOf = (id: PersonId): string => PEOPLE.find(p => p.id === id)?.name ?? id;
 
@@ -26,9 +27,9 @@ function loadProgress(): WorldProgress {
   }
 }
 
-export function WorldArchive({ onBack }: { onBack: () => void }) {
+export function WorldArchive({ onBack, initialTab = "people", currentRun }: { onBack: () => void; initialTab?: Tab; currentRun?: string }) {
   const progress = useMemo(loadProgress, []);
-  const [tab, setTab] = useState<Tab>("people");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const metCount = progress.seen.length;
   const landedCount = ARC_PEOPLE.reduce((n, id) => n + (progress.arcEnds[id]?.length ?? 0), 0);
   const achievedCount = progress.endings.length;
@@ -43,6 +44,7 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
         <small>{tab === "people" ? `这层楼上见过 ${metCount} / ${PEOPLE.length} 位`
           : tab === "arcs" ? `几条线落过 ${landedCount} 处`
           : tab === "book" ? `本子上攒了 ${progress.clues.length} / ${CLUES.length} 条`
+          : tab === "rival" ? `留下 ${progress.rivalSeasons.length} 季交锋`
           : `散过场 ${achievedCount} / ${ENDINGS.length} 种`}</small>
       </div>
     </header>
@@ -51,9 +53,11 @@ export function WorldArchive({ onBack }: { onBack: () => void }) {
       <button type="button" className={tab === "arcs" ? "active" : ""} onClick={() => setTab("arcs")}>个人线</button>
       <button type="button" className={tab === "book" ? "active" : ""} onClick={() => setTab("book")}>本子</button>
       <button type="button" className={tab === "endings" ? "active" : ""} onClick={() => setTab("endings")}>结局</button>
+      <button type="button" className={tab === "rival" ? "active" : ""} onClick={() => setTab("rival")}>对手</button>
     </div>
 
     <MobileScroll className="archive-scroll world-archive-scroll">
+      {tab === "rival" && <RivalHistoryList records={progress.rivalSeasons} currentRun={currentRun} />}
       {tab === "people" && <section className="archive-list">{PEOPLE.map(person => {
         const seen = progress.seen.includes(person.id);
         return <article className={"archive-card" + (seen ? "" : " unmet")} key={person.id}>

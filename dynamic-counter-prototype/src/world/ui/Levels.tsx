@@ -93,7 +93,7 @@ export function GoalStrip({ world, lit, bump, onOpen }: { world: World; lit: boo
 }
 
 /** 点页顶那条弹出来：三条线各怎么算、眼下到哪、这周已经记上的是谁。周日只取最好的一条。 */
-export function RoutesSheet({ world, onClose }: { world: World; onClose: () => void }) {
+export function RoutesSheet({ world, onClose, onHistory }: { world: World; onClose: () => void; onHistory?: () => void }) {
   const live = weekResultOf(world);
   const lines = routeLines(world);
   const cared = weekCarePeople(world).map(nameOf), guarded = weekGuardedPeople(world).map(nameOf);
@@ -124,6 +124,7 @@ export function RoutesSheet({ world, onClose }: { world: World; onClose: () => v
           <small>有空位、有合适客人才约得成；刚在任一家买过的客人先用完再来。不会挤掉你已约好的人。</small>
         </section>
         <p className="routes-foot">周日打烊只取星最多的一条：过关柜位 +{WEEK_HIT_STANDING}。</p>
+        {onHistory && <button type="button" className="world-archive-entry" onClick={onHistory}>你和陆遥的交锋战绩</button>}
       </MobileScroll>
       <button className="routes-close" type="button" onClick={onClose}>知道了</button>
     </div>

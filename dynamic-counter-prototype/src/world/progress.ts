@@ -8,6 +8,7 @@ import { SEASON_WEEKS, WEEK_STARS_MAX, seasonStarsOf } from "./target.ts";
 import { CLUE_PREFIX } from "./engine.ts";
 import { CLUE_THREADS, PEOPLE, isClueId, isThreadId, threadKey } from "./content/index.ts";
 import type { PersonId, Storylet, World } from "./types.ts";
+import { closedRivalSeason, recordRivalSeason, validRivalSeason, type RivalSeason } from "./rival-history.ts";
 
 export const WORLD_PROGRESS_KEY = "last-order-world-progress-v1";
 export const WORLD_PROGRESS_VERSION = 2;
@@ -63,10 +64,12 @@ export type WorldProgress = {
   endingsAtHeat: Record<string, number>;
   /** 最好的一季拿到过几颗星（四关加起来，满 12）。只升不降；旧档案缺这个键按 0 读。 */
   bestSeasonStars: number;
+  /** 每段经历收季后的真实对局；缺失的旧季不推断、不补零。 */
+  rivalSeasons: RivalSeason[];
 };
 
 export const emptyWorldProgress = (): WorldProgress =>
-  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {}, bestSeasonStars: 0 });
+  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {}, bestSeasonStars: 0, rivalSeasons: [] });
 
 const clampOpinion = (v: number): number => Math.max(-100, Math.min(100, v));
 
@@ -141,6 +144,7 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     endings,
     endingsAtHeat,
     bestSeasonStars,
+    rivalSeasons: recordRivalSeason(progress.rivalSeasons, endingId && ENDING_IDS.has(endingId) ? closedRivalSeason(world) : null),
   };
 }
 
@@ -191,6 +195,11 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
   }
 
   const starsCap = SEASON_WEEKS * WEEK_STARS_MAX;
+  if (parsed.rivalSeasons !== undefined) {
+    if (!Array.isArray(parsed.rivalSeasons) || !parsed.rivalSeasons.every(validRivalSeason)) return null;
+    const keys = parsed.rivalSeasons.map(r => JSON.stringify([r.run, r.season]));
+    if (new Set(keys).size !== keys.length) return null;
+  }
   if (parsed.bestSeasonStars !== undefined
     && !(Number.isInteger(parsed.bestSeasonStars) && (parsed.bestSeasonStars as number) >= 0 && (parsed.bestSeasonStars as number) <= starsCap)) return null;
 
@@ -212,6 +221,7 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     endings: [...parsed.endings as string[]],
     endingsAtHeat: { ...(parsed.endingsAtHeat as Record<string, number> ?? {}) },
     bestSeasonStars: (parsed.bestSeasonStars as number | undefined) ?? 0,
+    rivalSeasons: ((parsed.rivalSeasons as RivalSeason[] | undefined) ?? []).map(r => ({ ...r })),
   };
 }
 

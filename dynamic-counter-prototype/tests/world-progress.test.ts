@@ -3,6 +3,7 @@ import test from "node:test";
 import { newWorld } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { World } from "../src/world/types.ts";
+import { closedRivalSeason, recordRivalSeason, rivalReply, rivalStreak, rivalYearResult, type RivalSeason } from "../src/world/rival-history.ts";
 import {
   ARC_PEOPLE, emptyWorldProgress, observeWorldProgress, parseWorldProgress,
   WORLD_PROGRESS_KEY, WORLD_PROGRESS_VERSION,
@@ -11,6 +12,73 @@ import {
 
 // 造一份只改了关心字段的世界读数：present / opinion / qualities。
 const at = (patch: Partial<World>): World => ({ ...newWorld("t", PEOPLE), ...patch });
+
+const result = (season: number, money = 10000, rivalMoney = 8000, run = "t"): RivalSeason => ({ run, season, money, rivalMoney, heat: 0 });
+
+test("交锋只记真实收季：季中、季末前和未知结局不入账，刷新不重记", () => {
+  const empty = emptyWorldProgress();
+  for (const day of [1, 7, 28]) assert.deepEqual(observeWorldProgress(empty, at({ day }), "counter-empty").rivalSeasons, []);
+  const closed = at({ day: 29, money: 11000, rivalMoney: 9000, heat: ["thin-samples"] });
+  assert.equal(closedRivalSeason(at({ day: 28 })), null);
+  assert.deepEqual(observeWorldProgress(empty, closed).rivalSeasons, []);
+  assert.deepEqual(observeWorldProgress(empty, closed, "unknown").rivalSeasons, []);
+  const first = observeWorldProgress(empty, closed, "counter-empty");
+  assert.deepEqual(first.rivalSeasons, [{ ...result(1, 11000, 9000), heat: 1 }]);
+  assert.deepEqual(observeWorldProgress(first, closed, "counter-empty").rivalSeasons, first.rivalSeasons);
+  assert.deepEqual(observeWorldProgress(first, { ...closed, money: 99999 }, "counter-empty").rivalSeasons, first.rivalSeasons,
+    "同一段经历同一季的首次真实结算冻结，不因重开季末页刷胜场");
+  assert.deepEqual(empty.rivalSeasons, []);
+});
+
+test("交锋按新档区分，换季不丢比分，旧档缺季不补零", () => {
+  let p = observeWorldProgress(emptyWorldProgress(), at({ day: 29, season: 3, money: 400, rivalMoney: 680 }), "counter-empty");
+  p = observeWorldProgress(p, at({ seed: "new-life", day: 29, season: 1, money: 10000, rivalMoney: 8000 }), "counter-empty");
+  assert.equal(p.rivalSeasons.length, 2);
+  assert.deepEqual(p.rivalSeasons.map(r => [r.run, r.season]), [["t", 3], ["new-life", 1]]);
+  assert.deepEqual(observeWorldProgress(p, at({ season: 4, day: 1 })).rivalSeasons, p.rivalSeasons);
+  const old = { ...p } as Record<string, unknown>; delete old.rivalSeasons;
+  assert.deepEqual(parseWorldProgress(JSON.stringify(old))!.rivalSeasons, []);
+});
+
+test("四季交锋按同一段经历和年度算胜负，平局不算输，不同年不串账", () => {
+  const rows = [result(1), result(2, 8000, 8000), result(3, 5000, 8000), result(4), result(5, 1000, 8000), result(2, 1, 20000, "other")];
+  const year = rivalYearResult(rows, "t", 4);
+  assert.equal(year.year, 1); assert.equal(year.wins, 2); assert.equal(year.draws, 1); assert.equal(year.losses, 1);
+  assert.equal(year.complete, true); assert.equal(year.verdict, "你赢下这一年");
+  assert.equal(rivalYearResult(rows, "t", 5).losses, 1);
+  assert.equal(rivalYearResult(rows, "t", 5).wins, 0);
+  const tie = rivalYearResult([result(1), result(2), result(3, 0, 1), result(4, 0, 1)], "t", 4);
+  assert.equal(tie.verdict, "这一年打成平手");
+});
+
+test("提前锁定要有完整连续记录，旧比分缺失不能假装只剩一季", () => {
+  assert.equal(rivalYearResult([result(1), result(2), result(3)], "t", 3).locked, true);
+  assert.equal(rivalYearResult([result(1), result(2)], "t", 2).verdict, null);
+  assert.equal(rivalYearResult([result(1), result(2), result(3, 8000, 8000)], "t", 3).locked, true);
+  assert.equal(rivalYearResult([result(5), result(6), result(7)], "t", 7).verdict, "你赢下这一年");
+  const gap = rivalYearResult([result(2), result(3), result(4)], "t", 4);
+  assert.equal(gap.verdict, null); assert.equal(gap.locked, false); assert.deepEqual(gap.missing, [1]);
+});
+
+test("连胜、连败和扳回一局的回话来自连续实绩，缺季与平局都断开", () => {
+  assert.deepEqual(rivalStreak([result(1), result(2)], "t", 2), { outcome: "win", count: 2 });
+  assert.equal(rivalStreak([result(1), result(3)], "t", 3).count, 1);
+  assert.equal(rivalStreak([result(1, 1, 1), result(2)], "t", 2).count, 1);
+  assert.equal(rivalStreak([result(2, 0, 1), result(3, 0, 1)], "t", 3).count, 2);
+  assert.match(rivalReply(result(2), [result(1, 0, 1), result(2)]), /扳回来了/);
+  assert.match(rivalReply(result(2), [result(1), result(2)]), /连着 2 季/);
+  assert.match(rivalReply(result(1, 1, 1), [result(1, 1, 1)]), /一分都没分出来/);
+});
+
+test("战绩坏数据不进入档案：重复、新档标记、金额、季数与难度逐项校验", () => {
+  const p = { ...emptyWorldProgress(), rivalSeasons: [result(1)] };
+  assert.deepEqual(parseWorldProgress(JSON.stringify(p)), p);
+  for (const patch of [{ run: "" }, { season: 0 }, { season: 1.2 }, { money: "1000" }, { rivalMoney: null }, { heat: 6 }, { heat: -1 }])
+    assert.equal(parseWorldProgress(JSON.stringify({ ...p, rivalSeasons: [{ ...result(1), ...patch }] })), null);
+  assert.equal(parseWorldProgress(JSON.stringify({ ...p, rivalSeasons: [result(1), result(1)] })), null);
+  assert.equal(parseWorldProgress(JSON.stringify({ ...p, rivalSeasons: {} })), null);
+  assert.deepEqual(recordRivalSeason([], null), []);
+});
 
 test("档案用独立存档键，不与一季存档同名", () => {
   assert.equal(WORLD_PROGRESS_KEY, "last-order-world-progress-v1");

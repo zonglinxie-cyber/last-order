@@ -1,0 +1,5 @@
+{
+  "src/world/ui/WorldGame.tsx": true,
+  "src/world/ui/world-archive.css": true,
+  "src/world/rival-history.ts": true
+}

@@ -1,0 +1,72 @@
+[WebServer] (node:45468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:45582) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:45740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/world-rival-history.spec.ts:56:3 › 四季交锋 320×568 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 (6.2s)
+(node:46779) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/world-rival-history.spec.ts:56:3 › 四季交锋 390×844 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 (5.9s)
+
+
+  1) tests/world-rival-history.spec.ts:56:3 › 四季交锋 320×568 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 ─────────
+
+    Error: expect(locator).toHaveCSS(expected) failed
+
+    Locator: locator('.world-archive-page')
+    Expected pattern: /radial-gradient/
+    Received string:  "none"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toHaveCSS" with timeout 5000ms
+      - waiting for locator('.world-archive-page')
+        14 × locator resolved to <div class="app-screen archive-page world-archive-page">…</div>
+           - unexpected value "none"
+
+
+      66 |     expect((await progress(page)).rivalSeasons).toEqual(recorded.rivalSeasons);
+      67 |     await page.getByRole("button", { name: "翻看交锋战绩", exact: true }).click();
+    > 68 |     await expect(page.locator(".world-archive-page")).toHaveCSS("background-image", /radial-gradient/);
+         |                                                       ^
+      69 |     const archive = page.getByLabel("交锋战绩"); await expect(archive).toContainText("第 3 季 · 你赢了");
+      70 |     await readable(archive); await shot(page, `history-${width}`);
+      71 |     await page.getByRole("button", { name: "返回", exact: true }).click();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-history.spec.ts:68:55
+
+    Error Context: test-results/world-rival-history-四季交锋-3-15377-打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩/error-context.md
+
+  2) tests/world-rival-history.spec.ts:56:3 › 四季交锋 390×844 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 ─────────
+
+    Error: expect(locator).toHaveCSS(expected) failed
+
+    Locator: locator('.world-archive-page')
+    Expected pattern: /radial-gradient/
+    Received string:  "none"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toHaveCSS" with timeout 5000ms
+      - waiting for locator('.world-archive-page')
+        14 × locator resolved to <div class="app-screen archive-page world-archive-page">…</div>
+           - unexpected value "none"
+
+
+      66 |     expect((await progress(page)).rivalSeasons).toEqual(recorded.rivalSeasons);
+      67 |     await page.getByRole("button", { name: "翻看交锋战绩", exact: true }).click();
+    > 68 |     await expect(page.locator(".world-archive-page")).toHaveCSS("background-image", /radial-gradient/);
+         |                                                       ^
+      69 |     const archive = page.getByLabel("交锋战绩"); await expect(archive).toContainText("第 3 季 · 你赢了");
+      70 |     await readable(archive); await shot(page, `history-${width}`);
+      71 |     await page.getByRole("button", { name: "返回", exact: true }).click();
+        at /Users/derekfly3/Documents/ChatGPT/AI公司大乱斗/dynamic-counter-prototype/tests/world-rival-history.spec.ts:68:55
+
+    Error Context: test-results/world-rival-history-四季交锋-3-62117-打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩/error-context.md
+
+  2 failed
+    tests/world-rival-history.spec.ts:56:3 › 四季交锋 320×568 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 ──────────
+    tests/world-rival-history.spec.ts:56:3 › 四季交锋 390×844 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 ──────────

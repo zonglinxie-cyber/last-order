@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: 交锋只记真实收季：季中、季末前和未知结局不入账，刷新不重记
+ok 1 - 交锋只记真实收季：季中、季末前和未知结局不入账，刷新不重记
+  ---
+  duration_ms: 1.918917
+  type: 'test'
+  ...
+# Subtest: 交锋按新档区分，换季不丢比分，旧档缺季不补零
+ok 2 - 交锋按新档区分，换季不丢比分，旧档缺季不补零
+  ---
+  duration_ms: 0.368
+  type: 'test'
+  ...
+# Subtest: 四季交锋按同一段经历和年度算胜负，平局不算输，不同年不串账
+ok 3 - 四季交锋按同一段经历和年度算胜负，平局不算输，不同年不串账
+  ---
+  duration_ms: 0.135042
+  type: 'test'
+  ...
+# Subtest: 提前锁定要有完整连续记录，旧比分缺失不能假装只剩一季
+ok 4 - 提前锁定要有完整连续记录，旧比分缺失不能假装只剩一季
+  ---
+  duration_ms: 0.067042
+  type: 'test'
+  ...
+# Subtest: 连胜、连败和扳回一局的回话来自连续实绩，缺季与平局都断开
+ok 5 - 连胜、连败和扳回一局的回话来自连续实绩，缺季与平局都断开
+  ---
+  duration_ms: 0.179625
+  type: 'test'
+  ...
+# Subtest: 战绩坏数据不进入档案：重复、新档标记、金额、季数与难度逐项校验
+ok 6 - 战绩坏数据不进入档案：重复、新档标记、金额、季数与难度逐项校验
+  ---
+  duration_ms: 0.259458
+  type: 'test'
+  ...
+# Subtest: 档案用独立存档键，不与一季存档同名
+ok 7 - 档案用独立存档键，不与一季存档同名
+  ---
+  duration_ms: 0.064417
+  type: 'test'
+  ...
+# Subtest: observe：在场过的人算见过，present 里的人逐个进 seen
+ok 8 - observe：在场过的人算见过，present 里的人逐个进 seen
+  ---
+  duration_ms: 0.072708
+  type: 'test'
+  ...
+# Subtest: observe：secret-known 旗认成秘密揭开，未知代号不进
+ok 9 - observe：secret-known 旗认成秘密揭开，未知代号不进
+  ---
+  duration_ms: 0.203917
+  type: 'test'
+  ...
+# Subtest: observe：看法取跨存档的最好与最差那一档，只增不减
+ok 10 - observe：看法取跨存档的最好与最差那一档，只增不减
+  ---
+  duration_ms: 0.261208
+  type: 'test'
+  ...
+# Subtest: observe：越界看法夹到 -100..100
+ok 11 - observe：越界看法夹到 -100..100
+  ---
+  duration_ms: 0.079666
+  type: 'test'
+  ...
+# Subtest: observe：个人线落点只认 arc:<id>:end，收场那一档进 arcEnds
+ok 12 - observe：个人线落点只认 arc:<id>:end，收场那一档进 arcEnds
+  ---
+  duration_ms: 0.047375
+  type: 'test'
+  ...
+# Subtest: observe：多季可累积同一人多个落点，重放同一季不重复
+ok 13 - observe：多季可累积同一人多个落点，重放同一季不重复
+  ---
+  duration_ms: 0.063125
+  type: 'test'
+  ...
+# Subtest: observe：结局 id 只认已知结局，未知整条丢
+ok 14 - observe：结局 id 只认已知结局，未知整条丢
+  ---
+  duration_ms: 0.1325
+  type: 'test'
+  ...
+# Subtest: parse：合法档往返，类型不对或 id 未知整份丢弃
+ok 15 - parse：合法档往返，类型不对或 id 未知整份丢弃
+  ---
+  duration_ms: 0.602083
+  type: 'test'
+  ...
+# Subtest: parse：个人线的 owner 都在，落点表按这些人收
+ok 16 - parse：个人线的 owner 都在，落点表按这些人收
+  ---
+  duration_ms: 0.034875
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 154.746292

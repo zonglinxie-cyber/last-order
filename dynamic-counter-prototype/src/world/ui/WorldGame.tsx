@@ -20,6 +20,7 @@ import { ta } from "../pronoun.ts";
 import { GoalStrip, LevelResult, RoutesSheet, SeasonLevels, weekGapWord } from "./Levels.tsx";
 import { CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, WEEK_EXCEED_RATE, weekDaysLeft, weekGuardedPeople, weekGoalWord, weekLevelWord, weekResultOf, weekStarsKey } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
+import { RivalSeasonRecap } from "./RivalHistory.tsx";
 import { openConsult, rememberConsult, restoreConsults, saveConsults, type Consult } from "../consult.ts";
 import { askCompanion, companionOptions } from "../companion.ts";
 import type { ShelfId } from "../shelf.ts";
@@ -383,6 +384,7 @@ export default function WorldGame() {
   const [receipt, setReceipt] = useState<{ person: Person; product: ShelfId; feedback: SaleFeedback } | null>(null);
   const [webOpen, setWebOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [rivalArchive, setRivalArchive] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [muted, setMuted] = useState(sfxMuted());
   const [reqSeenDay, setReqSeenDay] = useState(boot?.ui.reqSeen ?? 0);
@@ -794,6 +796,8 @@ export default function WorldGame() {
         <h1 className="recap-ending">{ending.title}</h1>
         <p className="recap-ending-body">{ending.body}</p>
         <SeasonLevels world={world} prevBest={prevBest} />
+        <RivalSeasonRecap world={world} records={readWorldProgress().rivalSeasons}
+          onHistory={() => { setRivalArchive(true); setArchiveOpen(true); }} />
 
         <section className="recap-block">
           <h2>这一季的高光</h2>
@@ -880,7 +884,8 @@ export default function WorldGame() {
           <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
         </div>
       </div>
-      {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
+      {archiveOpen && <WorldArchive initialTab={rivalArchive ? "rival" : "people"} currentRun={world.seed}
+        onBack={() => { setArchiveOpen(false); setRivalArchive(false); }} />}
     </div>;
   }
 
@@ -1102,7 +1107,10 @@ export default function WorldGame() {
 
     {reqCardOpen && <RequestsCard world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqSeenDay(world.day)} />}
-    {routesOpen && <RoutesSheet world={world} onClose={() => setRoutesOpen(false)} />}
+    {routesOpen && <RoutesSheet world={world} onClose={() => setRoutesOpen(false)}
+      onHistory={() => { setRoutesOpen(false); setRivalArchive(true); setArchiveOpen(true); }} />}
+    {archiveOpen && <WorldArchive initialTab="rival" currentRun={world.seed}
+      onBack={() => { setArchiveOpen(false); setRivalArchive(false); }} />}
     {weekendOpen && weekendPerson && <WeekendOrderSheet world={world} person={weekendPerson} people={PEOPLE}
       onPrepare={sponsor => setWorld(prepareWeekendOrder(world, PEOPLE, sponsor))} onClose={() => setWeekendOpen(false)} />}
     {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
@@ -1125,6 +1133,6 @@ export default function WorldGame() {
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
-    {!reqCardOpen && !reqPanelOpen && !routesOpen && !weekendOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
+    {!reqCardOpen && !reqPanelOpen && !routesOpen && !weekendOpen && !archiveOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
   </div>;
 }

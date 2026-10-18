@@ -1,0 +1,32 @@
+[WebServer] (node:38859) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:38892) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 21 tests using 1 worker
+
+(node:38923) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-archive.spec.ts:39:3 › 档案 · 空档 › 封面进档案：空档时全是剪影、一句「还没在这层楼上碰到过」 (450ms)
+  ✓   2 tests/world-archive.spec.ts:57:5 › 档案 390×844 › 见过的人出卡片：立绘、descriptor、最好与最差那一档的说法 (258ms)
+  ✓   3 tests/world-archive.spec.ts:73:5 › 档案 390×844 › 个人线：走到过的落点亮起，没走到的压成？？？ (438ms)
+  ✓   4 tests/world-archive.spec.ts:90:5 › 档案 390×844 › 本子：攒到的线索念得出，没攒到的压成？？？，拧过的收法亮起 (289ms)
+  ✓   5 tests/world-archive.spec.ts:106:5 › 档案 390×844 › 结局：按 rank 排好，拿到的认标题、没拿到的只给不剧透提示 (265ms)
+  ✓   6 tests/world-archive.spec.ts:121:5 › 档案 390×844 › 正文 ≥12px、页签与返回 ≥44px、不横向溢出 (254ms)
+  ✓   7 tests/world-archive.spec.ts:144:5 › 档案 390×844 › 返回键收起档案、回到封面 (263ms)
+  ✓   8 tests/world-archive.spec.ts:57:5 › 档案 320×568 › 见过的人出卡片：立绘、descriptor、最好与最差那一档的说法 (247ms)
+  ✓   9 tests/world-archive.spec.ts:73:5 › 档案 320×568 › 个人线：走到过的落点亮起，没走到的压成？？？ (423ms)
+  ✓  10 tests/world-archive.spec.ts:90:5 › 档案 320×568 › 本子：攒到的线索念得出，没攒到的压成？？？，拧过的收法亮起 (282ms)
+  ✓  11 tests/world-archive.spec.ts:106:5 › 档案 320×568 › 结局：按 rank 排好，拿到的认标题、没拿到的只给不剧透提示 (271ms)
+  ✓  12 tests/world-archive.spec.ts:121:5 › 档案 320×568 › 正文 ≥12px、页签与返回 ≥44px、不横向溢出 (239ms)
+  ✓  13 tests/world-archive.spec.ts:144:5 › 档案 320×568 › 返回键收起档案、回到封面 (261ms)
+  ✓  14 tests/world-archive.spec.ts:168:5 › 档案 · 第 4 幕那一栏 390×844 › 第 6 条线索与总表那一格都亮着，没落过的收法还是？？？ (284ms)
+  ✓  15 tests/world-archive.spec.ts:168:5 › 档案 · 第 4 幕那一栏 320×568 › 第 6 条线索与总表那一格都亮着，没落过的收法还是？？？ (276ms)
+  ✓  16 tests/world-rival-history.spec.ts:56:3 › 四季交锋 320×568 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 (2.4s)
+  ✓  17 tests/world-rival-history.spec.ts:83:3 › 四季交锋 320×568 › 四季真实收官给年度胜负，七位金额不溢出，另一个新档不串账 (941ms)
+  ✓  18 tests/world-rival-history.spec.ts:98:3 › 四季交锋 320×568 › 旧档没有比分时先说明空白，第七季起记录也不能冒认前三季或年度冠军 (1.7s)
+  ✓  19 tests/world-rival-history.spec.ts:56:3 › 四季交锋 390×844 › 真实打烊、扳回一局、刷新和开下一季只记一次，楼层可翻回战绩 (2.2s)
+  ✓  20 tests/world-rival-history.spec.ts:83:3 › 四季交锋 390×844 › 四季真实收官给年度胜负，七位金额不溢出，另一个新档不串账 (931ms)
+  ✓  21 tests/world-rival-history.spec.ts:98:3 › 四季交锋 390×844 › 旧档没有比分时先说明空白，第七季起记录也不能冒认前三季或年度冠军 (1.7s)
+
+  21 passed (19.5s)
