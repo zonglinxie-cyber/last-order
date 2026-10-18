@@ -135,7 +135,7 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
               const tried = c.tried[pid];
               return <button key={pid} type="button" aria-pressed={product === pid}
                 className={`${product === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => onChange({ product: pid })}>
-                <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
+                <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]} · ${yuan(SHELF[pid].price)}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
             })}</div>
           </div>)}
           <p className="serve-note">{product ? priceWord(person, product) : servePickWord(ta(person), !hasOpenedSale(world))}</p>

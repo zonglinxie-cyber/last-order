@@ -158,7 +158,8 @@ function rankProducts(live: Person, c: Consult): ShelfId[] {
       if (veto && !tags.has(veto)) score -= 200;
       if (focus) score += tags.has(focus) ? 50 : -80;
       const tier = c.tried[id];
-      if (tier === "positive") score += 1000;
+      if (tier === "perfect") score += 1100;
+      else if (tier === "positive") score += 1000;
       else if (tier === "mixed") score += 50;
       else if (tier === "negative") score -= 1000;
       score += tags.size;
@@ -168,11 +169,13 @@ function rankProducts(live: Person, c: Consult): ShelfId[] {
     .map(x => x.id);
 }
 
-/** 这一单最后报哪支：试出点头就报它；只有犹豫就报犹豫的那支；试过全摇头就不卖。
+/** 这一单最后报哪支：试出认准或点头就报它（认准优先，她反应更实）；只有犹豫就报犹豫的那支；试过全摇头就不卖。
  *  blind 只给"完全不咨询的影子猜"用：一次没试也照样按标签报。 */
 function pickOffer(live: Person, c: Consult, blind = false): ShelfId | null {
   const ranked = rankProducts(live, c);
   if (!ranked.length) return null;
+  const perfect = ranked.find(id => c.tried[id] === "perfect");
+  if (perfect) return perfect;
   const positive = ranked.find(id => c.tried[id] === "positive");
   if (positive) return positive;
   const mixed = ranked.find(id => c.tried[id] === "mixed");
@@ -223,13 +226,13 @@ function ceilingOf(w: World, person: Person): { amount: number; product: ShelfId
 type ActionStats = {
   companion: number;
   look: number; blankLook: number; ask: number; shrug: number;
-  try: number; tryPositive: number; tryMixed: number; tryNegative: number;
+  try: number; tryPerfect: number; tryPositive: number; tryMixed: number; tryNegative: number;
   unitsAsk: number; patience: number; startPatience: number;
 };
 const emptyActions = (): ActionStats => ({
   companion: 0,
   look: 0, blankLook: 0, ask: 0, shrug: 0,
-  try: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0,
+  try: 0, tryPerfect: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0,
   startPatience: 0,
 });
 const infoKey = (c: Consult) => `${[...c.known].sort().join(",")}|${c.focusKnown ? c.focus : "-"}|${c.unitsKnown}|${c.vetoKnown}|${c.mood}`;
@@ -306,17 +309,18 @@ function runConsult(w: World, people: Person[], person: Person, stats: ActionSta
 
   while (c.patience > 0 && !c.matched) {
     const ranked = rankProducts(live, c);
-    if (ranked.some(id => c.tried[id] === "positive")) break;
+    if (ranked.some(id => c.tried[id] === "positive" || c.tried[id] === "perfect")) break;
     const nextId = ranked.find(id => !c.tried[id]);
     if (!nextId) break;
     const next = tryOn(c, live, nextId);
     if (next === c) break;
     apply(next); stats.try++;
     const tier = c.tried[nextId];
-    if (tier === "positive") stats.tryPositive++;
+    if (tier === "perfect") stats.tryPerfect++;
+    else if (tier === "positive") stats.tryPositive++;
     else if (tier === "mixed") stats.tryMixed++;
     else stats.tryNegative++;
-    if (tier === "positive") break;
+    if (tier === "positive" || tier === "perfect") break;
   }
 
   stats.patience += start - c.patience;
@@ -607,9 +611,9 @@ const freePerfect = attempts.filter(a => a.freePerfect).length;
 const stats = attempts.reduce((s, a) => {
   const x = a.actions;
   s.look += x.look; s.blankLook += x.blankLook; s.ask += x.ask; s.shrug += x.shrug;
-  s.try += x.try; s.tryPositive += x.tryPositive; s.tryMixed += x.tryMixed; s.tryNegative += x.tryNegative;
+  s.try += x.try; s.tryPerfect += x.tryPerfect; s.tryPositive += x.tryPositive; s.tryMixed += x.tryMixed; s.tryNegative += x.tryNegative;
   s.unitsAsk += x.unitsAsk; s.patience += x.patience; s.startPatience += x.startPatience; return s;
-}, { look: 0, blankLook: 0, ask: 0, shrug: 0, try: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0, startPatience: 0 });
+}, { look: 0, blankLook: 0, ask: 0, shrug: 0, try: 0, tryPerfect: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0, startPatience: 0 });
 const outcomeCount = (o: Outcome) => attempts.filter(a => a.outcome === o).length;
 const seasonMoney = runs.map(r => r.money);
 const serveOnly = runs.map(r => sum(r.attempts.map(a => a.actual)));
@@ -620,7 +624,7 @@ const captureOf = (r: SeasonRun) => {
 const medianCapture = median(runs.map(captureOf));
 const nonServe = runs.map(r => r.money - sum(r.attempts.map(a => a.actual)));
 const zeroTryOffers = attempts.filter(a => a.actions.startPatience > 0 && a.actions.try === 0 && a.product).length;
-const positiveUnsold = attempts.filter(a => a.actions.tryPositive > 0 && a.actual === 0).length;
+const positiveUnsold = attempts.filter(a => a.actions.tryPositive + a.actions.tryPerfect > 0 && a.actual === 0).length;
 const focusAttempts = attempts.filter(a => a.hasFocus);
 const focusAtStart = focusAttempts.filter(a => a.focusKnownAtStart).length;
 const focusDiscovered = focusAttempts.filter(a => !a.focusKnownAtStart && a.focusKnownAtEnd).length;
@@ -668,7 +672,7 @@ console.log("\n二、接待与信息");
 console.log(`接待机会 ${attempts.length} 次：卖成 ${outcomeCount("sold")} / 试过全摇头不卖 ${outcomeCount("declined")} / 推错货 ${outcomeCount("wrong")} / 超预算 ${outcomeCount("price")} / 被挡 ${outcomeCount("blocked")} / 其它 ${outcomeCount("no-sale")}`);
 console.log(`每单开局已知 ${avg(attempts.map(a => a.freeKnown)).toFixed(2)} 条诉求，谈完 ${avg(attempts.map(a => a.paidKnown)).toFixed(2)} 条 · 问出件数 ${stats.unitsAsk} 次`);
 console.log(`看 ${stats.look} 次（${stats.blankLook} 次没带来新信息） · 问 ${stats.ask} 次（${stats.shrug} 次没问出新信息）`);
-console.log(`试 ${stats.try} 支（点头 ${stats.tryPositive} / 犹豫 ${stats.tryMixed} / 摇头 ${stats.tryNegative}） · 每单平均花 ${(stats.patience / Math.max(1, attempts.length)).toFixed(2)} 次耐心`);
+console.log(`试 ${stats.try} 支（认准 ${stats.tryPerfect} / 点头 ${stats.tryPositive} / 犹豫 ${stats.tryMixed} / 摇头 ${stats.tryNegative}） · 每单平均花 ${(stats.patience / Math.max(1, attempts.length)).toFixed(2)} 次耐心`);
 console.log(`今天的重点：${focusAttempts.length} 次有 · 开局已知 ${focusAtStart}（手写线索覆盖不到的老写法） · 谈完知道 ${focusAttempts.length - focusMissed}（新揭开 ${focusDiscovered}） · 没摸清 ${focusMissed}`);
 console.log(`完美命中：实卖 ${perfect} 单 / 影子猜 ${freePerfect} 单；实际成交率 ${pct(sold.length, attempts.length)}`);
 console.log("关系        单数  开局已知  谈完已知  看/问/试        成交率  捕获   重点摸清");

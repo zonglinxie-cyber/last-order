@@ -24,6 +24,10 @@ export type ConsultSpot = { key: string; label: string; finding: string; reveals
 /** trait = 按诉求生成的问话；line = 手写的问话（reply 是她的原话）；units / push 两句人人都有。 */
 export type ConsultQuestion = { key: string; label: string; kind: "trait" | "line" | "units" | "push"; trait?: Trait; reply?: string; reveals?: Trait[] };
 
+/** 试用留在格子上的字比货架三档多一格：正中（每条都接得住）单独记下，
+ *  开单前才分得清「这个可以」与「就是这个感觉」；结账仍按 FitTier 三档走。 */
+export type TrialTier = FitTier | "perfect";
+
 export type Consult = {
   person: PersonId;
   stage: "listen" | "offer";
@@ -42,7 +46,7 @@ export type Consult = {
   focusKnown: boolean;
   vetoKnown: boolean;
   unitsKnown: boolean;
-  tried: Partial<Record<ShelfId, FitTier>>;
+  tried: Partial<Record<ShelfId, TrialTier>>;
   /** 试到了她每条都接得住的那一支：没说出口的那几条也就不用再摸了 */
   matched: boolean;
   /** 这一单里你看到的、她说出口的，按先后 */
@@ -266,8 +270,9 @@ export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
     : tier === "positive" ? `${lead}点点头：「这个可以。」`
     : tier === "mixed" ? `${lead}犹豫了一下：「还行吧，不是最想要的。」`
     : `${lead}摇头：「这个解决不了我的事。」`;
-  return spend(c, person, line, { tried: { ...c.tried, [id]: tier }, vetoKnown: c.vetoKnown || hitVeto,
-    matched: c.matched || (!hitVeto && tier === "positive" && score >= PERFECT_MATCH) });
+  const mark: TrialTier = !hitVeto && tier === "positive" && score >= PERFECT_MATCH ? "perfect" : tier;
+  return spend(c, person, line, { tried: { ...c.tried, [id]: mark }, vetoKnown: c.vetoKnown || hitVeto,
+    matched: c.matched || mark === "perfect" });
 }
 
 /** 那句"她像是还有顾虑"还念不念：诉求没摸全、今天的重点没摸清，也还没试到正中那一支。 */
@@ -298,8 +303,8 @@ export function priceWord(person: Person, id: ShelfId): string {
   return n > 0 ? `${SHELF[id].note} · 这个价${ta(person)}的预算够 ${n} 件` : `${SHELF[id].note} · 这个价超出${ta(person)}的预算了`;
 }
 
-/** 试过的货在格子上留一个字。 */
-export const TRIED_MARK: Record<FitTier, string> = { positive: "点头", mixed: "犹豫", negative: "摇头" };
+/** 试过的货在格子上留一个字：正中那支与「这个可以」分开写，货架格子与开单提示共用这份措辞。 */
+export const TRIED_MARK: Record<TrialTier, string> = { perfect: "点头认准了", positive: "点头", mixed: "犹豫", negative: "摇头" };
 
 // 客情笔记是玩家实际听见的事实，不存预算与试用的最优答案。人物表变动时按当前需求过滤。
 export const CLIENT_NOTE_PREFIX = "client-note:";
@@ -367,7 +372,7 @@ export function restoreConsults(data: unknown, world: World, people: Person[]): 
       && (!TRAIT_ORDER.includes(v.focus as Trait) || !live.skin!.demands.some(d => d.trait === v.focus))) continue;
     if (v.focusKnown !== undefined && typeof v.focusKnown !== "boolean") continue;
     if (!v.looked.every(k => spotsOf(live).some(s => s.key === k)) || !v.asked.every(k => questionsOf(live).some(q => q.key === k)) || !v.known.every(t => live.skin!.demands.some(d => d.trait === t))) continue;
-    if (!record(v.tried) || !Object.entries(v.tried).every(([k, tier]) => Object.hasOwn(SHELF, k) && ["positive", "mixed", "negative"].includes(String(tier)))) continue;
+    if (!record(v.tried) || !Object.entries(v.tried).every(([k, tier]) => Object.hasOwn(SHELF, k) && ["perfect", "positive", "mixed", "negative"].includes(String(tier)))) continue;
     if (typeof v.mood !== "number" || !Number.isFinite(v.mood) || v.mood > 0 || v.mood < -30) continue;
     out[id] = { ...v, focus: (v.focus as Trait | null | undefined) ?? null,
       focusKnown: v.focusKnown === true && !!v.focus } as Consult;
