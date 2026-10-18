@@ -1,0 +1,129 @@
+{
+  "scope": "完整需求用于规则验证；两位顾客表现出保留多件成交与省精力的不同取舍，不是玩家预测",
+  "scenarios": [
+    {
+      "person": "anjie",
+      "product": "mask",
+      "units": 3,
+      "input": {
+        "seed": "handoff-decision",
+        "season": 1,
+        "day": 7,
+        "slot": 1,
+        "money": 0,
+        "rivalMoney": 0,
+        "rivalWins": 0,
+        "standing": 50,
+        "compliance": 55,
+        "energy": 20,
+        "samples": 8,
+        "opinion": {
+          "suman": 16,
+          "anjie": 10
+        },
+        "bonds": {},
+        "bondKinds": {},
+        "memories": [],
+        "qualities": {
+          "client-note:anjie:soothe": 1,
+          "client-note:anjie:units": 1
+        },
+        "present": {
+          "suman": "counter",
+          "anjie": "counter"
+        },
+        "touched": [],
+        "rngCalls": 0,
+        "appointments": [],
+        "requests": [],
+        "fired": {},
+        "log": [],
+        "opinionAtSeasonStart": {},
+        "statsAtSeasonStart": {
+          "standing": 50,
+          "compliance": 55
+        },
+        "heat": []
+      },
+      "auto": {
+        "money": 2280,
+        "energy": 14
+      },
+      "direct": {
+        "money": 6840,
+        "energy": 8
+      },
+      "autoThenServe": {
+        "money": 2280,
+        "additionalIncome": 0,
+        "energy": 2
+      },
+      "watchThenServeExpected": {
+        "money": 6840,
+        "energy": 2
+      }
+    },
+    {
+      "person": "zhao",
+      "product": "repair",
+      "units": 1,
+      "input": {
+        "seed": "handoff-decision",
+        "season": 1,
+        "day": 7,
+        "slot": 1,
+        "money": 0,
+        "rivalMoney": 0,
+        "rivalWins": 0,
+        "standing": 50,
+        "compliance": 55,
+        "energy": 20,
+        "samples": 8,
+        "opinion": {
+          "suman": 16,
+          "zhao": 10
+        },
+        "bonds": {},
+        "bondKinds": {},
+        "memories": [],
+        "qualities": {
+          "client-note:zhao:steady": 1,
+          "client-note:zhao:units": 1
+        },
+        "present": {
+          "suman": "counter",
+          "zhao": "counter"
+        },
+        "touched": [],
+        "rngCalls": 0,
+        "appointments": [],
+        "requests": [],
+        "fired": {},
+        "log": [],
+        "opinionAtSeasonStart": {},
+        "statsAtSeasonStart": {
+          "standing": 50,
+          "compliance": 55
+        },
+        "heat": []
+      },
+      "auto": {
+        "money": 1680,
+        "energy": 14
+      },
+      "direct": {
+        "money": 1680,
+        "energy": 8
+      },
+      "autoThenServe": {
+        "money": 1680,
+        "additionalIncome": 0,
+        "energy": 2
+      },
+      "watchThenServeExpected": {
+        "money": 1680,
+        "energy": 2
+      }
+    }
+  ]
+}

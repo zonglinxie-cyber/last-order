@@ -32,6 +32,8 @@ import { CONTACT_INVITE_ENERGY, contactInviteBlock, inviteContact, planContactIn
 import { rivalBookingNow } from "../rival-business.ts";
 import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
 import { WeekendOrderSheet, WeekendReview } from "./WeekendOrder.tsx";
+import { HandoffSheet } from "./HandoffSheet.tsx";
+import type { HandoffMode } from "../handoff.ts";
 import { returnPoint } from "./return-context.ts";
 import { BACKROOM_CHIP, ZONE_LABEL, ZONE_SPOTS, ZONE_STAFF_SPOTS, type Spot } from "./zones.ts";
 import { PersonCard, type ContactInvitation } from "./PersonCard.tsx";
@@ -378,6 +380,8 @@ export default function WorldGame() {
   const [dayBase, setDayBase] = useState<DayBase | null>(boot?.ui.dayBase ?? null);
   const [selected, setSelected] = useState<PersonId | null>(null);
   const [pick, setPick] = useState<{ verb: Verb; calls: VerbCall[] } | null>(null);
+  // 托单先选好同事+客人，再在表单里明确选"只照看"或"合适就代卖"；这里只存已定的目标，点开不扣精力。
+  const [handoffTargets, setHandoffTargets] = useState<PersonId[] | null>(null);
   const [serving, setServing] = useState(false);
   // 这一时段柜上谈到一半的接待：关掉抽屉再点回来接着谈，翻时段清空（她走了，话也就断了）。
   const [consults, setConsults] = useState<Record<PersonId, Consult>>(() => boot ? restoreConsults(boot.ui.consults, boot.world, PEOPLE) : {});
@@ -504,7 +508,7 @@ export default function WorldGame() {
   const topMoment = moments.length ? byPriority(moments)[0]! : null;
   // 人走了（被请去对面、故事卡里离开）就把抽屉收掉；够不着的留着卡给人看。
   useEffect(() => {
-    if (selected && !(selected in world.present)) { setSelected(null); setServing(false); setPick(null); }
+    if (selected && !(selected in world.present)) { setSelected(null); setServing(false); setPick(null); setHandoffTargets(null); }
   }, [world.present, selected]);
 
   // —— 开局 / 继续 ——
@@ -550,7 +554,7 @@ export default function WorldGame() {
     if (next.drawn) sfx("card");
   };
   const nextTurn = () => {
-    setSelected(null); setPick(null); setServing(false); setResult(null); setConsults({});
+    setSelected(null); setPick(null); setServing(false); setResult(null); setConsults({}); setHandoffTargets(null);
     let closed = Object.values(consults).filter(c => c.begun).reduce((w, c) => leaveServe(w, PEOPLE, c.person, c.mood), world);
     // 可以不接待直接往下玩，但先把这时段的故事讲完，不暗中丢掉首张卡。
     if (openingPending) {
@@ -605,11 +609,24 @@ export default function WorldGame() {
     setWorld(next); setPick(null);
     setResult(next.log.at(-1)?.text ?? null);
   };
+  // 托单确认：带着已定的同事+客人与所选模式走一次 doVerb，只在真的发生时扣一次费、念一次结果。
+  const confirmHandoff = (mode: HandoffMode) => {
+    if (!handoffTargets) return;
+    const next = doVerb(world, PEOPLE, "handoff", handoffTargets, { handoffMode: mode });
+    setHandoffTargets(null);
+    if (next === world) return;
+    setWorld(next);
+    setResult(next.log.at(-1)?.text ?? null);
+  };
   const tapPerson = (id: PersonId) => {
     sfx("tap");
     if (pick) {
       const call = pick.calls.find(c => c.targets.includes(id));
-      if (call) { apply(call); return; }
+      if (call) {
+        // 托单不再点一下就自动代卖：先定好同事+客人，再到表单里明确选"只照看"或"合适就代卖"。
+        if (pick.verb === "handoff") { setPick(null); setHandoffTargets(call.targets); return; }
+        apply(call); return;
+      }
       setPick(null); // 点的不是目标：退出选人，照常开她的卡
     }
     setSelected(id); setServing(false);
@@ -1113,6 +1130,9 @@ export default function WorldGame() {
       onBack={() => { setArchiveOpen(false); setRivalArchive(false); }} />}
     {weekendOpen && weekendPerson && <WeekendOrderSheet world={world} person={weekendPerson} people={PEOPLE}
       onPrepare={sponsor => setWorld(prepareWeekendOrder(world, PEOPLE, sponsor))} onClose={() => setWeekendOpen(false)} />}
+    {handoffTargets && <HandoffSheet world={world} people={PEOPLE} targets={handoffTargets}
+      draftPaid={consults[handoffTargets[1]]?.begun ?? false}
+      onConfirm={confirmHandoff} onClose={() => setHandoffTargets(null)} />}
     {reqPanelOpen && <RequestsPanel world={world} people={PEOPLE} onAnswer={answerRequest}
       onClose={() => setReqPanelOpen(false)} />}
 

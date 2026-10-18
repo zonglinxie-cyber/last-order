@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, spotsOf, stillHolding, tryOn,
+  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, TRIED_MARK, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, spotsOf, stillHolding, tryOn,
   clientNotes, offerEvidence, rememberConsult, restoreConsults, saveConsults,
 } from "../src/world/consult.ts";
 import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
@@ -12,11 +12,12 @@ import { existsSync } from "node:fs";
 import {
   ENERGY_PER_DAY, OVER_ASK_OPINION, VERB_ENERGY, beginServe, leaveServe, newWorld, nextSeason, opinionOf, parseWorld, resolveServe, serializeWorld, settleServe,
 } from "../src/world/engine.ts";
-import { SHELF, SHELF_IDS, bestShelf, fitOfPerson, shelfFitTier } from "../src/world/shelf.ts";
+import { PERFECT_MATCH, SHELF, SHELF_IDS, bestShelf, fitOfPerson, shelfFitTier } from "../src/world/shelf.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { Person, World } from "../src/world/types.ts";
 import { saleFeedback } from "../src/world/sales-feedback.ts";
 import { visitPerson } from "../src/world/visits.ts";
+import { ta } from "../src/world/pronoun.ts";
 import { askCompanion, companionOptions } from "../src/world/companion.ts";
 
 const companionScene = (): World => ({ ...atCounter(["anjie", "liangxia"]), day: 7, slot: 1,
@@ -282,18 +283,26 @@ test("看与问把诉求摆上台面；问件数才知道上限；推销味那�
   }
 });
 
-test("试出来的档位就是开单那一档；碰到忌讳，忌讳也露出来", () => {
+test("试出来的档位就是开单那一档，正中单独留字不升格；碰到忌讳，忌讳也露出来", () => {
   for (const p of skinned) {
     const base = { ...openConsult(atCounter([p.id]), p), patience: 99 };
     for (const id of SHELF_IDS) {
       const c = tryOn(base, p, id);
-      assert.equal(c.tried[id], shelfFitTier(fitOfPerson(p, id)), `${p.id} 试${id}`);
-      const veto = p.skin!.veto;
-      if (veto && SHELF[id].traits[veto.trait] < veto.below) assert.equal(c.vetoKnown, true, `${p.id} 试${id}碰到忌讳没露出来`);
+      const score = fitOfPerson(p, id), tier = shelfFitTier(score), veto = p.skin!.veto;
+      const hitVeto = !!veto && SHELF[id].traits[veto.trait] < veto.below;
+      const expected = !hitVeto && tier === "positive" && score >= PERFECT_MATCH ? "perfect" : tier;
+      assert.equal(c.tried[id], expected, `${p.id} 试${id}`);
+      if (c.tried[id] === "perfect") assert.equal(tier, "positive", `${p.id} 试${id}：认准仍属于点头那档结账`);
+      assert.ok(Object.hasOwn(TRIED_MARK, c.tried[id]!), `${p.id} 试${id} 的格子要有字可留`);
+      if (hitVeto) assert.equal(c.vetoKnown, true, `${p.id} 试${id}碰到忌讳没露出来`);
     }
     // 试到她最准的那一支：那句"还有顾虑"可以收了
     const best = bestShelf(p);
-    if (fitOfPerson(p, best) >= 0.95) assert.equal(stillHolding(tryOn(base, p, best), p), false, p.id);
+    if (fitOfPerson(p, best) >= 0.95) {
+      const hit = tryOn(base, p, best);
+      assert.equal(hit.tried[best], "perfect", p.id);
+      assert.equal(stillHolding(hit, p), false, p.id);
+    }
   }
 });
 
@@ -368,9 +377,38 @@ test("付过精力的接待完整恢复：耐心、坏脸色、试用、件数�
     { ...data, entries: { shen: { ...c, known: ["made-up"] } } },
     { ...data, entries: { shen: { ...c, focus: "wear" } } },
     { ...data, entries: { shen: { ...c, focusKnown: "yes" } } },
-    { ...data, entries: { shen: { ...c, tried: { plain: { positive: true } } } } }]) {
+    { ...data, entries: { shen: { ...c, tried: { plain: { positive: true } } } } },
+    { ...data, entries: { shen: { ...c, tried: { plain: "great" } } } },
+    { ...data, entries: { shen: { ...c, tried: { plain: ["perfect"] } } } },
+    { ...data, entries: { shen: { ...c, tried: { plain: "Perfect" } } } }]) {
     assert.deepEqual(restoreConsults(bad, w, PEOPLE), {});
   }
+});
+
+test("试用的四档字：正中单独记下、货架与开单提示共用同一措辞、旧档三档照旧恢复不升格、坏值仍拒", () => {
+  const p = who("shen"), w = beginServe(atCounter([p.id]), PEOPLE, p.id);
+  const perfect = SHELF_IDS.find(id => fitOfPerson(p, id) >= PERFECT_MATCH)!;
+  const positive = SHELF_IDS.find(id => { const s = fitOfPerson(p, id); return shelfFitTier(s) === "positive" && s < PERFECT_MATCH; })!;
+  const negative = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(p, id)) === "negative")!;
+  const c = tryOn(tryOn(tryOn(openConsult(w, p), p, perfect), p, positive), p, negative);
+  assert.equal(c.tried[perfect], "perfect");
+  assert.equal(TRIED_MARK.perfect, "认准了");
+  assert.notEqual(TRIED_MARK.perfect, TRIED_MARK.positive, "正中与「这个可以」不能留同一个字");
+  // 开单提示与货架格子共用 TRIED_MARK：同一支货说同一句话。
+  assert.ok(offerEvidence(c, p, perfect, 1).some(x => x === `试用反应：${ta(p)}${TRIED_MARK.perfect}。`));
+  assert.ok(offerEvidence(c, p, positive, 1).some(x => x === `试用反应：${ta(p)}${TRIED_MARK.positive}。`));
+  // 没试过的货只讲还没试过，不露反应、不露适配。
+  const untried = SHELF_IDS.find(id => !c.tried[id])!;
+  const hint = offerEvidence(c, p, untried, 1);
+  assert.ok(hint.some(x => x.includes("还没试过")));
+  assert.ok(!hint.some(x => Object.values(TRIED_MARK).some(mark => x.includes(`她${mark}`))),
+    "没试的货不能提前露试用反应");
+  // 存档：perfect 与三档一起回来；旧档的 positive 不凭分数升级成认准。
+  const data = JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: c })));
+  assert.deepEqual(restoreConsults(data, w, PEOPLE)[p.id]?.tried, c.tried);
+  const legacy = { ...c, tried: { [perfect]: "positive" as const } };
+  const restored = restoreConsults(JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: legacy }))), w, PEOPLE)[p.id];
+  assert.equal(restored!.tried[perfect], "positive", "旧档记下的点头要按当时的知道接着用，不凭全知分数补升");
 });
 
 test("售前提示只用已知信息：隐藏需求改变不会泄题；已问出的数量、底线与预算会提醒", () => {

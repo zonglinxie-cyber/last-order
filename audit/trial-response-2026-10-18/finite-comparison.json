@@ -1,0 +1,13 @@
+{
+  "command": "node --experimental-strip-types tests/consult-sim.ts 20 1 rebook",
+  "exitCode": 0,
+  "baseline": "c88dd4d isolated source",
+  "normalization": "仅把新认准和点头相加回旧点头一档",
+  "normalizedReportEqual": true,
+  "trials": 1829,
+  "perfect": 724,
+  "positive": 186,
+  "oldPositive": 910,
+  "normalizedSha256": "c6975a799397fd769cbb7fa67db79c5e1826a1eef9ea26b7c31cbe4e337be48c",
+  "scope": "20种子固定有限信息策略，非真人留存或趣味验证"
+}

@@ -1,0 +1,31 @@
+[WebServer] (node:65143) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:65194) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 20 tests using 1 worker
+
+(node:65195) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-handoff-choice.spec.ts:89:5 › 托单经营选择 320×568 › 两种发起方向都打开同一张托单表单，成本与目标念得清 (2.4s)
+  ✓   2 tests/world-handoff-choice.spec.ts:117:5 › 托单经营选择 320×568 › 取消不扣精力、不改变世界，同事当天仍可再托 (1.4s)
+  ✓   3 tests/world-handoff-choice.spec.ts:133:5 › 托单经营选择 320×568 › 只照看：确认后进账不变、只花精力占名额，同事当天不能再托 (1.4s)
+  ✓   4 tests/world-handoff-choice.spec.ts:152:5 › 托单经营选择 320×568 › 合适就代卖：确认后代卖一支进账并盖购买间隔 (1.4s)
+  ✓   5 tests/world-handoff-choice.spec.ts:167:5 › 托单经营选择 320×568 › 已付费草稿保留整单，刷新续谈后真实开单不重复收费 (4.6s)
+  ✓   6 tests/world-handoff-choice.spec.ts:216:5 › 托单经营选择 320×568 › 刷新不重复：托单已发生的当日不再给同一同事二次收费入口 (1.5s)
+  ✓   7 tests/world-handoff-choice.spec.ts:234:5 › 托单经营选择 320×568 › 没有已知需求时明确不能代卖，仍可只照看 (1.3s)
+  ✓   8 tests/world-handoff-choice.spec.ts:89:5 › 托单经营选择 390×844 › 两种发起方向都打开同一张托单表单，成本与目标念得清 (1.9s)
+  ✓   9 tests/world-handoff-choice.spec.ts:117:5 › 托单经营选择 390×844 › 取消不扣精力、不改变世界，同事当天仍可再托 (1.4s)
+  ✓  10 tests/world-handoff-choice.spec.ts:133:5 › 托单经营选择 390×844 › 只照看：确认后进账不变、只花精力占名额，同事当天不能再托 (1.4s)
+  ✓  11 tests/world-handoff-choice.spec.ts:152:5 › 托单经营选择 390×844 › 合适就代卖：确认后代卖一支进账并盖购买间隔 (1.4s)
+  ✓  12 tests/world-handoff-choice.spec.ts:167:5 › 托单经营选择 390×844 › 已付费草稿保留整单，刷新续谈后真实开单不重复收费 (4.6s)
+  ✓  13 tests/world-handoff-choice.spec.ts:216:5 › 托单经营选择 390×844 › 刷新不重复：托单已发生的当日不再给同一同事二次收费入口 (1.5s)
+  ✓  14 tests/world-handoff-choice.spec.ts:234:5 › 托单经营选择 390×844 › 没有已知需求时明确不能代卖，仍可只照看 (1.3s)
+  ✓  15 tests/world-trial-response.spec.ts:66:3 › 试用留字 320×568 › 同一接待两支对症货留两种字：认准与点头一眼分清、价位不藏、未试货无字 (2.6s)
+  ✓  16 tests/world-trial-response.spec.ts:100:3 › 试用留字 320×568 › 认准那支开一单结的是正中的账 (2.4s)
+  ✓  17 tests/world-trial-response.spec.ts:113:3 › 试用留字 320×568 › 刷新续谈两种字都还在、开单不重复扣接待的劲 (3.0s)
+  ✓  18 tests/world-trial-response.spec.ts:66:3 › 试用留字 390×844 › 同一接待两支对症货留两种字：认准与点头一眼分清、价位不藏、未试货无字 (2.7s)
+  ✓  19 tests/world-trial-response.spec.ts:100:3 › 试用留字 390×844 › 认准那支开一单结的是正中的账 (2.4s)
+  ✓  20 tests/world-trial-response.spec.ts:113:3 › 试用留字 390×844 › 刷新续谈两种字都还在、开单不重复扣接待的劲 (2.6s)
+
+  20 passed (47.7s)

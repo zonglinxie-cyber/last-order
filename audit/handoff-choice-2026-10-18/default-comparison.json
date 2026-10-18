@@ -1,0 +1,8 @@
+{
+  "baseline": "c88dd4d",
+  "testedRoot": "dynamic-counter-prototype",
+  "engineSha256": "0d1ef826b5ccb2d475768f1e74d48d0a9c7bbe122f27c6b34cf55ef90ad0e278",
+  "scenarios": 36,
+  "exactMatches": 36,
+  "differences": []
+}

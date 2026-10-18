@@ -1,0 +1,29 @@
+{
+  "rows": [
+    {
+      "person": "anjie",
+      "units": 3,
+      "watchThenPersonal": {
+        "money": 6840,
+        "energy": 2
+      },
+      "sell": {
+        "money": 2280,
+        "energy": 14
+      }
+    },
+    {
+      "person": "zhao",
+      "units": 1,
+      "watchThenPersonal": {
+        "money": 1680,
+        "energy": 2
+      },
+      "sell": {
+        "money": 1680,
+        "energy": 14
+      }
+    }
+  ],
+  "scope": "完整需求控制下的规则情境，不是对玩家收入预测"
+}

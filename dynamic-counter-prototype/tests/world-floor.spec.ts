@@ -101,8 +101,19 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".world-pick")).toBeVisible();
       await expect(feedback).toBeVisible();
       await page.locator(".pick-targets button", { hasText: "周姐" }).click();
+      // 点目标只打开托单表单，不立即执行、不扣精力：先选真正同事+客人，再明确选模式。
+      await expect(page.locator(".handoff-sheet")).toBeVisible();
+      const before: World = await page.evaluate(k => JSON.parse(localStorage.getItem(k)!).world, SAVE_KEY);
+      // 选目标这一步不该花托单的 6 精力：仍只扣了帮忙那一笔。
+      expect(before.energy).toBe(20 - VERB_ENERGY.help);
+      // 确认前仍是帮忙那条日志。
+      expect(before.log.at(-1)?.text).toContain("你帮方敏");
+      await page.locator('[data-handoff-mode="watch"]').click();
+      await expect(page.locator(".handoff-sheet")).toBeHidden();
       const world: World = await page.evaluate(k => JSON.parse(localStorage.getItem(k)!).world, SAVE_KEY);
       expect(world.log.at(-1)?.text).toContain("周姐");
+      // 确认托单才扣这一笔。
+      expect(world.energy).toBe(20 - VERB_ENERGY.help - VERB_ENERGY.handoff);
     });
 
     test("完成一次接待：选货、件数、开给她", async ({ page }) => {
@@ -164,7 +175,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("tab", { name: "挑货开单" }).click();
       await page.getByRole("button", { name: /精华/ }).click();
       await page.getByRole("button", { name: "试一下" }).click();
-      await expect(page.locator(".serve-products button.on small")).toHaveText(/她(点头|犹豫|摇头)/);
+      await expect(page.locator(".serve-products button.on small")).toHaveText(/她(认准了|点头|犹豫|摇头)/);
       await expect(page.getByRole("button", { name: "试一下" })).toBeDisabled();
       await expect.poll(saved).toBe(energy - 12);
       await page.locator(".pc-close").click();

@@ -1,0 +1,24 @@
+{
+  "sourceBaseline": "c88dd4d",
+  "swe2Commit": "cf8a317",
+  "rules": {
+    "command": "npm run test:rules",
+    "passed": 358,
+    "failed": 0
+  },
+  "browser": {
+    "passed": 108,
+    "failed": 0,
+    "includesNewFlows": 20,
+    "command": "MOBILE_RUNTIME_TEST_PORT=4187 npx playwright test tests/world-handoff-choice.spec.ts tests/world-trial-response.spec.ts tests/world-floor.spec.ts tests/world-consult.spec.ts tests/world-return-context.spec.ts tests/world-companion.spec.ts tests/world-header.spec.ts tests/world-season-smoke.spec.ts --workers=1 --max-failures=3"
+  },
+  "build": true,
+  "affectedTestTypes": true,
+  "runtimeProtectedFiles": 28,
+  "worldSim": "sim-comparison.json",
+  "finiteStrategy": "../trial-response-2026-10-18/finite-comparison.json",
+  "sourceAndOriginalWork": "preservation.json",
+  "publicTarget": "https://zonglinxie-cyber.github.io/last-order/m/",
+  "publication": "另由发布进度记录部署和公网读取回执，不把本地构建当作上线",
+  "humanPlaytest": "待真人反馈，不继续扩充玩法"
+}

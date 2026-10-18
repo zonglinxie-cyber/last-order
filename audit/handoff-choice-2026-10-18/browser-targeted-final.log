@@ -1,0 +1,27 @@
+[WebServer] (node:47335) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:47363) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 16 tests using 1 worker
+
+(node:47661) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/world-floor.spec.ts:86:5 › 人情场 390×844 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (2.7s)
+  ✓   2 tests/world-floor.spec.ts:86:5 › 人情场 320×568 › 动作结果不遮住下一步：帮忙后立刻能托同事照看 (2.3s)
+  ✓   3 tests/world-handoff-choice.spec.ts:89:5 › 托单经营选择 320×568 › 两种发起方向都打开同一张托单表单，成本与目标念得清 (2.2s)
+  ✓   4 tests/world-handoff-choice.spec.ts:117:5 › 托单经营选择 320×568 › 取消不扣精力、不改变世界，同事当天仍可再托 (1.4s)
+  ✓   5 tests/world-handoff-choice.spec.ts:133:5 › 托单经营选择 320×568 › 只照看：确认后进账不变、只花精力占名额，同事当天不能再托 (1.4s)
+  ✓   6 tests/world-handoff-choice.spec.ts:152:5 › 托单经营选择 320×568 › 合适就代卖：确认后代卖一支进账并盖购买间隔 (1.4s)
+  ✓   7 tests/world-handoff-choice.spec.ts:167:5 › 托单经营选择 320×568 › 已付费草稿保留整单，刷新续谈后真实开单不重复收费 (4.7s)
+  ✓   8 tests/world-handoff-choice.spec.ts:216:5 › 托单经营选择 320×568 › 刷新不重复：托单已发生的当日不再给同一同事二次收费入口 (1.5s)
+  ✓   9 tests/world-handoff-choice.spec.ts:234:5 › 托单经营选择 320×568 › 没有已知需求时明确不能代卖，仍可只照看 (1.3s)
+  ✓  10 tests/world-handoff-choice.spec.ts:89:5 › 托单经营选择 390×844 › 两种发起方向都打开同一张托单表单，成本与目标念得清 (2.0s)
+  ✓  11 tests/world-handoff-choice.spec.ts:117:5 › 托单经营选择 390×844 › 取消不扣精力、不改变世界，同事当天仍可再托 (1.4s)
+  ✓  12 tests/world-handoff-choice.spec.ts:133:5 › 托单经营选择 390×844 › 只照看：确认后进账不变、只花精力占名额，同事当天不能再托 (1.4s)
+  ✓  13 tests/world-handoff-choice.spec.ts:152:5 › 托单经营选择 390×844 › 合适就代卖：确认后代卖一支进账并盖购买间隔 (1.3s)
+  ✓  14 tests/world-handoff-choice.spec.ts:167:5 › 托单经营选择 390×844 › 已付费草稿保留整单，刷新续谈后真实开单不重复收费 (4.5s)
+  ✓  15 tests/world-handoff-choice.spec.ts:216:5 › 托单经营选择 390×844 › 刷新不重复：托单已发生的当日不再给同一同事二次收费入口 (1.4s)
+  ✓  16 tests/world-handoff-choice.spec.ts:234:5 › 托单经营选择 390×844 › 没有已知需求时明确不能代卖，仍可只照看 (1.3s)
+
+  16 passed (37.8s)

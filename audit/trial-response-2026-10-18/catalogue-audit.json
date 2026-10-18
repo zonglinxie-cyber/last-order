@@ -1,0 +1,1721 @@
+{
+  "scope": "32位原始人物、固定看法10、全知选货与上限。仅用于判断既有结算是否提供收入与关系取舍，不是玩家可见信息或真人策略。",
+  "customers": 32,
+  "profitable": 32,
+  "moneyTrustTradeoffs": [
+    {
+      "person": "miduo",
+      "name": "米朵",
+      "frontier": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 680,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        }
+      ]
+    },
+    {
+      "person": "tangtang",
+      "name": "唐糖",
+      "frontier": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.8333333333333334,
+          "amount": 680,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ]
+    },
+    {
+      "person": "liangxia",
+      "name": "梁夏",
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.8333333333333334,
+          "amount": 1960,
+          "opinion": 8
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ]
+    },
+    {
+      "person": "heqing",
+      "name": "何清",
+      "frontier": [
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 1280,
+          "opinion": 8
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        }
+      ]
+    },
+    {
+      "person": "caiaiyi",
+      "name": "蔡阿姨",
+      "frontier": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8,
+          "amount": 880,
+          "opinion": 8
+        }
+      ]
+    },
+    {
+      "person": "dongayi",
+      "name": "董阿姨",
+      "frontier": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 680,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        }
+      ]
+    },
+    {
+      "person": "suxiao",
+      "name": "苏晓",
+      "frontier": [
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8333333333333334,
+          "amount": 880,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.6666666666666666,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ]
+    },
+    {
+      "person": "cenning",
+      "name": "岑宁",
+      "frontier": [
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 1280,
+          "opinion": 8
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "person": "shen",
+      "name": "沈薇",
+      "units": 3,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.8333333333333334,
+          "amount": 1200,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 2940,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 2360,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 2940,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "mei",
+      "name": "梅女士",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.8333333333333334,
+          "amount": 680,
+          "opinion": 8
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.5833333333333334,
+          "amount": 880,
+          "opinion": 4
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 0.75,
+          "amount": 1180,
+          "opinion": 4
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.5833333333333334,
+          "amount": 380,
+          "opinion": 4
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 0.8333333333333334,
+          "amount": 580,
+          "opinion": 8
+        },
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 0.75,
+          "amount": 1450,
+          "opinion": 4
+        }
+      ],
+      "frontier": [
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "xiaoyu",
+      "name": "小雨",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.8333333333333334,
+          "amount": 400,
+          "opinion": 8
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8333333333333334,
+          "amount": 880,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.8333333333333334,
+          "amount": 380,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 0.8333333333333334,
+          "amount": 580,
+          "opinion": 8
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "zhao",
+      "name": "赵女士",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.7,
+          "amount": 680,
+          "opinion": 4
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "anjie",
+      "name": "安姐",
+      "units": 4,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.6666666666666666,
+          "amount": 680,
+          "opinion": 4
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.9166666666666666,
+          "amount": 6720,
+          "opinion": 8
+        },
+        {
+          "product": "mask",
+          "price": 2280,
+          "fit": 1,
+          "amount": 6840,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 0.8333333333333334,
+          "amount": 2320,
+          "opinion": 8
+        }
+      ],
+      "frontier": [
+        {
+          "product": "mask",
+          "price": 2280,
+          "fit": 1,
+          "amount": 6840,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "zhou",
+      "name": "周姐",
+      "units": 2,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.6666666666666666,
+          "amount": 400,
+          "opinion": 4
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.9166666666666666,
+          "amount": 1960,
+          "opinion": 8
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 0.75,
+          "amount": 1180,
+          "opinion": 4
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.9166666666666666,
+          "amount": 1960,
+          "opinion": 8
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "duan",
+      "name": "段小姐",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.8333333333333334,
+          "amount": 400,
+          "opinion": 8
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.6666666666666666,
+          "amount": 880,
+          "opinion": 4
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.6666666666666666,
+          "amount": 380,
+          "opinion": 4
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 0.6666666666666666,
+          "amount": 580,
+          "opinion": 4
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "miduo",
+      "name": "米朵",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 680,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 680,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "tangtang",
+      "name": "唐糖",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.8333333333333334,
+          "amount": 680,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.8333333333333334,
+          "amount": 680,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "liangxia",
+      "name": "梁夏",
+      "units": 2,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.8333333333333334,
+          "amount": 800,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.8333333333333334,
+          "amount": 1960,
+          "opinion": 8
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.8333333333333334,
+          "amount": 1960,
+          "opinion": 8
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "baijie",
+      "name": "白姐",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "zhaoning",
+      "name": "赵宁",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.7,
+          "amount": 680,
+          "opinion": 4
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "heqing",
+      "name": "何清",
+      "units": 1,
+      "offers": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.5833333333333334,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 1280,
+          "opinion": 8
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 1280,
+          "opinion": 8
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "ruanxiaoman",
+      "name": "阮小满",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.8333333333333334,
+          "amount": 400,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.8333333333333334,
+          "amount": 980,
+          "opinion": 8
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "caiaiyi",
+      "name": "蔡阿姨",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8,
+          "amount": 880,
+          "opinion": 8
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.8,
+          "amount": 380,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 0.8,
+          "amount": 580,
+          "opinion": 8
+        }
+      ],
+      "frontier": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8,
+          "amount": 880,
+          "opinion": 8
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "linyi",
+      "name": "林姨",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "wulaoshi",
+      "name": "吴老师",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.8,
+          "amount": 680,
+          "opinion": 8
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 1680,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "dongayi",
+      "name": "董阿姨",
+      "units": 1,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 680,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 680,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "guyan",
+      "name": "顾言",
+      "units": 4,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 1600,
+          "opinion": 12
+        },
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.7,
+          "amount": 680,
+          "opinion": 4
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 1,
+          "amount": 3520,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 3920,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 3540,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.6,
+          "amount": 1680,
+          "opinion": 4
+        },
+        {
+          "product": "mask",
+          "price": 2280,
+          "fit": 0.6,
+          "amount": 2280,
+          "opinion": 4
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 1,
+          "amount": 1520,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 2320,
+          "opinion": 12
+        },
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 1,
+          "amount": 2900,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 3920,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "jiangning",
+      "name": "江宁",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.8,
+          "amount": 380,
+          "opinion": 8
+        }
+      ],
+      "frontier": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "suxiao",
+      "name": "苏晓",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.6666666666666666,
+          "amount": 400,
+          "opinion": 4
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8333333333333334,
+          "amount": 880,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.6666666666666666,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.8333333333333334,
+          "amount": 380,
+          "opinion": 8
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.8333333333333334,
+          "amount": 880,
+          "opinion": 8
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.6666666666666666,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 580,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "songjie",
+      "name": "宋姐",
+      "units": 4,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 1600,
+          "opinion": 12
+        },
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 1,
+          "amount": 2720,
+          "opinion": 12
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 1,
+          "amount": 3520,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 3920,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 4720,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 1,
+          "amount": 1520,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 2320,
+          "opinion": 12
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 3040,
+          "opinion": 12
+        },
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 1,
+          "amount": 5800,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 1,
+          "amount": 5800,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "hanlei",
+      "name": "韩磊",
+      "units": 4,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 1600,
+          "opinion": 12
+        },
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.75,
+          "amount": 680,
+          "opinion": 4
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 1,
+          "amount": 3520,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 3920,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 4720,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 1,
+          "amount": 1520,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 2320,
+          "opinion": 12
+        },
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 1,
+          "amount": 5800,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 1,
+          "amount": 5800,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "chendao",
+      "name": "陈导",
+      "units": 2,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.6666666666666666,
+          "amount": 400,
+          "opinion": 4
+        },
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.75,
+          "amount": 680,
+          "opinion": 4
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 1,
+          "amount": 1760,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.6666666666666666,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 0.8333333333333334,
+          "amount": 1680,
+          "opinion": 8
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 1160,
+          "opinion": 12
+        },
+        {
+          "product": "essence",
+          "price": 1450,
+          "fit": 1,
+          "amount": 1450,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 1,
+          "amount": 1760,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "yenushi",
+      "name": "叶女士",
+      "units": 2,
+      "offers": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.5833333333333334,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 2560,
+          "opinion": 8
+        },
+        {
+          "product": "mask",
+          "price": 2280,
+          "fit": 0.75,
+          "amount": 2280,
+          "opinion": 4
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 0.8333333333333334,
+          "amount": 1520,
+          "opinion": 8
+        }
+      ],
+      "frontier": [
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 2560,
+          "opinion": 8
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "lina",
+      "name": "李娜",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 0.8333333333333334,
+          "amount": 400,
+          "opinion": 8
+        },
+        {
+          "product": "balm",
+          "price": 880,
+          "fit": 0.5833333333333334,
+          "amount": 880,
+          "opinion": 4
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "wash",
+          "price": 380,
+          "fit": 0.5833333333333334,
+          "amount": 380,
+          "opinion": 4
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 0.5833333333333334,
+          "amount": 580,
+          "opinion": 4
+        }
+      ],
+      "frontier": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "yinxiaojie",
+      "name": "尹小姐",
+      "units": 2,
+      "offers": [
+        {
+          "product": "mist",
+          "price": 680,
+          "fit": 0.8,
+          "amount": 1360,
+          "opinion": 8
+        },
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 3360,
+          "opinion": 12
+        },
+        {
+          "product": "mask",
+          "price": 2280,
+          "fit": 1,
+          "amount": 2280,
+          "opinion": 12
+        },
+        {
+          "product": "sheet",
+          "price": 580,
+          "fit": 1,
+          "amount": 1160,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "repair",
+          "price": 1680,
+          "fit": 1,
+          "amount": 3360,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "qianjie",
+      "name": "钱姐",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "gaoyuan",
+      "name": "高远",
+      "units": 2,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 800,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 1960,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 2360,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 2360,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "cenning",
+      "name": "岑宁",
+      "units": 1,
+      "offers": [
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 0.75,
+          "amount": 980,
+          "opinion": 4
+        },
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 1280,
+          "opinion": 8
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "glow",
+          "price": 1280,
+          "fit": 0.8333333333333334,
+          "amount": 1280,
+          "opinion": 8
+        },
+        {
+          "product": "cushion",
+          "price": 760,
+          "fit": 1,
+          "amount": 760,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": true
+    },
+    {
+      "person": "chenke",
+      "name": "陈柯",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    },
+    {
+      "person": "tanwan",
+      "name": "谭晚",
+      "units": 1,
+      "offers": [
+        {
+          "product": "plain",
+          "price": 400,
+          "fit": 1,
+          "amount": 400,
+          "opinion": 12
+        },
+        {
+          "product": "soft",
+          "price": 980,
+          "fit": 1,
+          "amount": 980,
+          "opinion": 12
+        },
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "frontier": [
+        {
+          "product": "base",
+          "price": 1180,
+          "fit": 1,
+          "amount": 1180,
+          "opinion": 12
+        }
+      ],
+      "hasMoneyTrustTradeoff": false
+    }
+  ]
+}

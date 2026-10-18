@@ -48,6 +48,7 @@
 .serve-products button.on { border-color:#f0c978; background:#f0c97826; box-shadow:inset 0 0 0 1px #f0c978; }
 .serve-products b { font:600 14px 'Noto Serif SC',serif; }
 .serve-products small,.serve-products em { font:12px/1.4 sans-serif; color:#d2b99a; }
+.serve-products .tried-perfect small { color:#9adff0; }
 .serve-products .tried-positive small { color:#a8dcb0; }
 .serve-products .tried-mixed small { color:#e8cf8a; }
 .serve-products .tried-negative small { color:#e8a6a6; }

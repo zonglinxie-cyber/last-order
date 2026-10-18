@@ -209,8 +209,8 @@ const trustedCare = (world: World, people: Person[], id: PersonId): World => {
   return opinionOf(w, id) >= CARE_TRUST_MIN && weekCareDaysOf(w, id) >= CARE_DAYS_MIN ? markWeekCare(w, id) : w;
 };
 const sampleDayKey = (day: number, id: PersonId) => `sample-given:${day}:${id}`;
-const handoffDayKey = (day: number, staff: PersonId) => `handoff-duty:${day}:${staff}`;
-const handoffSaleDayKey = (day: number) => `handoff-sale-day:${day}`;
+export const handoffDayKey = (day: number, staff: PersonId) => `handoff-duty:${day}:${staff}`;
+export const handoffSaleDayKey = (day: number) => `handoff-sale-day:${day}`;
 const RIVAL_COMPARE_NEXT = "rival:compare-next";
 /** 只读本时段开场公开的目标，行动后不会临时补人或换人。 */
 export const rivalTargets = (world: World): PersonId[] =>
@@ -1156,7 +1156,9 @@ export const choiceVisible = (world: World, people: Person[], drawn: DrawnStoryl
 
 // —— 玩家动作 ——
 
-export type VerbArgs = { product?: ShelfId; units?: number; force?: boolean };
+export type VerbArgs = { product?: ShelfId; units?: number; force?: boolean;
+  /** 托单方式：省略=旧自动行为；"watch"=只照看、留本人亲自成交的机会；"sell"=沿用旧门槛尝试代卖一件。 */
+  handoffMode?: "watch" | "sell" };
 
 const greetCountToday = (w: World, id: PersonId) =>
   w.memories.filter(m => m.holder === id && m.act === "greeted" && m.day === w.day).length;
@@ -1238,6 +1240,9 @@ function witnessed(w: World, people: Person[], targets: PersonId[], act: string,
 
 export function doVerb(world: World, people: Person[], verb: Verb, targets: PersonId[], args: VerbArgs = {}): World {
   if (!availableVerbs(world, people, targets).includes(verb)) return world;
+  // 托单的模式只认 watch/sell/省略；拼错或别的值在扣费之前就挡回去，一分精力也不动。
+  if (verb === "handoff" && args.handoffMode !== undefined
+    && args.handoffMode !== "watch" && args.handoffMode !== "sell") return world;
   const [aId, bId] = targets;
   const a = personOf(people, aId)!;
   const b = bId ? personOf(people, bId) : undefined;
@@ -1350,7 +1355,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       const gate = handoffSaleDayKey(w.day);
       const knowsNeed = !!b?.skin && (b.skin.demands.some(d => qualityOf(w, `client-note:${b.id}:${d.trait}`) === 1)
         || qualityOf(w, `bought:${b.id}`) > 0);
-      if (b?.skin && opinionOf(w, aId) >= HANDOFF_SALE_MIN_OPINION && !qualityOf(w, gate)
+      if (b?.skin && args.handoffMode !== "watch" && opinionOf(w, aId) >= HANDOFF_SALE_MIN_OPINION && !qualityOf(w, gate)
         && knowsNeed
         && !recentlyPurchased(w, b.id)) {
         const profile = visitPerson(w, b);
@@ -1366,7 +1371,11 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
           return w;
         }
       }
-      w = say(w, `你请${a.name}先照看${b!.name}，自己腾出手来。`, targets);
+      if (args.handoffMode === "watch") {
+        w = say(w, `你请${a.name}这一时段先照看${b!.name}，自己腾出手来亲自接。照看只守当口，人不替你留到下个时段。`, targets);
+      } else {
+        w = say(w, `你请${a.name}先照看${b!.name}，自己腾出手来。`, targets);
+      }
       return w;
     }
     case "help": {

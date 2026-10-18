@@ -1,0 +1,28 @@
+[
+  {
+    "coach": "know",
+    "day": 4,
+    "slot": 0,
+    "screen": "floor",
+    "elapsedMs": 244584,
+    "steps": 157,
+    "actions": 326,
+    "notes": 0,
+    "errors": 0,
+    "noise": 0,
+    "rawFields": 0
+  },
+  {
+    "coach": "skip",
+    "day": 4,
+    "slot": 0,
+    "screen": "floor",
+    "elapsedMs": 294816,
+    "steps": 156,
+    "actions": 332,
+    "notes": 0,
+    "errors": 0,
+    "noise": 0,
+    "rawFields": 0
+  }
+]

@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: 默认托单沿用旧自动行为：省略参数与 sell 逐位相同，且确实代卖一支
+ok 1 - 默认托单沿用旧自动行为：省略参数与 sell 逐位相同，且确实代卖一支
+  ---
+  duration_ms: 1.250625
+  type: 'test'
+  ...
+# Subtest: 只照看：不代卖、不写任何成交账，留本人亲自接多件的机会
+ok 2 - 只照看：不代卖、不写任何成交账，留本人亲自接多件的机会
+  ---
+  duration_ms: 0.161709
+  type: 'test'
+  ...
+# Subtest: watch 之后亲自开 3 支成交（对照默认托单被冷却挡住）
+ok 3 - watch 之后亲自开 3 支成交（对照默认托单被冷却挡住）
+  ---
+  duration_ms: 0.513083
+  type: 'test'
+  ...
+# Subtest: 含已付 12 精力的接待草稿：watch 不清草稿、开单时不重复收费
+ok 4 - 含已付 12 精力的接待草稿：watch 不清草稿、开单时不重复收费
+  ---
+  duration_ms: 0.167875
+  type: 'test'
+  ...
+# Subtest: sell 守全柜一天一笔与同事每天一客：第二单照看不再自动成交
+ok 5 - sell 守全柜一天一笔与同事每天一客：第二单照看不再自动成交
+  ---
+  duration_ms: 0.242666
+  type: 'test'
+  ...
+# Subtest: sell 不凭空保证成交：门槛不够或没问出需求时只花精力照看
+ok 6 - sell 不凭空保证成交：门槛不够或没问出需求时只花精力照看
+  ---
+  duration_ms: 0.320542
+  type: 'test'
+  ...
+# Subtest: 只照看照样守住对面邀客，比货仍要求本人对症成交
+ok 7 - 只照看照样守住对面邀客，比货仍要求本人对症成交
+  ---
+  duration_ms: 0.150375
+  type: 'test'
+  ...
+# Subtest: 取消/过期/传错模式一律不收费
+ok 8 - 取消/过期/传错模式一律不收费
+  ---
+  duration_ms: 0.073583
+  type: 'test'
+  ...
+# Subtest: 纯预览复用公开条件：门槛认托单 +4 后的值，柜台代卖名额已用仍可只照看
+ok 9 - 纯预览复用公开条件：门槛认托单 +4 后的值，柜台代卖名额已用仍可只照看
+  ---
+  duration_ms: 0.385792
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 161.187625

@@ -1,0 +1,9 @@
+{
+  "command": "node --experimental-strip-types tests/world-sim.ts 20 2",
+  "exitCode": 0,
+  "baseline": "c88dd4d / audit/rival-history-2026-10-18/world-sim.log",
+  "reportByteEqual": true,
+  "sha256": "6f7c0c1ba76f950e18113f74d335b508d77e160f375609a08ab8bfa2cd25a87d",
+  "snapshotFiles": 50,
+  "sourceChangesSinceSnapshot": []
+}

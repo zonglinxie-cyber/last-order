@@ -1,0 +1,3875 @@
+[
+  {
+    "label": {
+      "staffOpinion": 0,
+      "knows": false,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 0,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {},
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 4,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 0,
+      "knows": false,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 0,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 4,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 0,
+      "knows": false,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 0,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 4,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 0,
+      "knows": true,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 0,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 4,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 0,
+      "knows": true,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 0,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 4,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 0,
+      "knows": true,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 0,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 4,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 15,
+      "knows": false,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 15,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {},
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 19,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 15,
+      "knows": false,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 15,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 19,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 15,
+      "knows": false,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 15,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 19,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 15,
+      "knows": true,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 15,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 19,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 15,
+      "knows": true,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 15,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 19,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 15,
+      "knows": true,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 15,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 19,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 16,
+      "knows": false,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 16,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {},
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 16,
+      "knows": false,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 16,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 16,
+      "knows": false,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 16,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 16,
+      "knows": true,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 16,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 2280,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7,
+        "handoff-sale-day:7": 1,
+        "bought:anjie": 7,
+        "sold:7": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓照看安姐，她替你开出了一支夜兰密集修护面霜，进账 ¥2280。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 16,
+      "knows": true,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 16,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 16,
+      "knows": true,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 16,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 20,
+      "knows": false,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {},
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 20,
+      "knows": false,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 20,
+      "knows": false,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 20,
+      "knows": true,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 2280,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7,
+        "handoff-sale-day:7": 1,
+        "bought:anjie": 7,
+        "sold:7": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓照看安姐，她替你开出了一支夜兰密集修护面霜，进账 ¥2280。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 20,
+      "knows": true,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 20,
+      "knows": true,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 40,
+      "knows": false,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 40,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {},
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 44,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 40,
+      "knows": false,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 40,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 44,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 40,
+      "knows": false,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 40,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 44,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 40,
+      "knows": true,
+      "bought": "none"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 40,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 2280,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 44,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7,
+        "handoff-sale-day:7": 1,
+        "bought:anjie": 7,
+        "sold:7": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓照看安姐，她替你开出了一支夜兰密集修护面霜，进账 ¥2280。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 40,
+      "knows": true,
+      "bought": "own"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 40,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 44,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "staffOpinion": 40,
+      "knows": true,
+      "bought": "rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 40,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 44,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "rival-bought:anjie": 6,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "edge": "invite"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": [],
+      "rivalPlan": {
+        "day": 7,
+        "slot": 1,
+        "targets": [
+          "anjie"
+        ],
+        "tactic": "invite"
+      }
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 2280,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7,
+        "guard-commit:7:1:anjie": 1,
+        "rival:compare-next": 1,
+        "handoff-sale-day:7": 1,
+        "bought:anjie": 7,
+        "sold:7": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "陆遥看你托了单：下一时段会拿货来比，得亲自对症成交才能守住客人。",
+          "who": [
+            "anjie"
+          ]
+        },
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓照看安姐，她替你开出了一支夜兰密集修护面霜，进账 ¥2280。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": [],
+      "rivalPlan": {
+        "day": 7,
+        "slot": 1,
+        "targets": [
+          "anjie"
+        ],
+        "tactic": "invite"
+      }
+    }
+  },
+  {
+    "label": {
+      "edge": "compare"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": [],
+      "rivalPlan": {
+        "day": 7,
+        "slot": 1,
+        "targets": [
+          "anjie"
+        ],
+        "tactic": "compare"
+      }
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 2280,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7,
+        "handoff-sale-day:7": 1,
+        "bought:anjie": 7,
+        "sold:7": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓照看安姐，她替你开出了一支夜兰密集修护面霜，进账 ¥2280。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": [],
+      "rivalPlan": {
+        "day": 7,
+        "slot": 1,
+        "targets": [
+          "anjie"
+        ],
+        "tactic": "compare"
+      }
+    }
+  },
+  {
+    "label": {
+      "edge": "staff-used"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-duty:7:suman": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "edge": "sale-used"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-sale-day:7": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 34,
+      "samples": 8,
+      "opinion": {
+        "suman": 24,
+        "anjie": 12
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [
+        {
+          "day": 7,
+          "holder": "anjie",
+          "subject": "player",
+          "act": "looked-after",
+          "valence": 1
+        }
+      ],
+      "qualities": {
+        "client-note:anjie:soothe": 1,
+        "handoff-sale-day:7": 1,
+        "handoff-duty:7:suman": 1,
+        "last-met:anjie": 7
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [
+        "suman",
+        "anjie"
+      ],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [
+        {
+          "day": 7,
+          "slot": 1,
+          "text": "你请苏蔓先照看安姐，自己腾出手来。",
+          "who": [
+            "suman",
+            "anjie"
+          ]
+        }
+      ],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "edge": "low-energy"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 5,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 5,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "counter"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  },
+  {
+    "label": {
+      "edge": "guest-at-rival"
+    },
+    "input": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "rival"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    },
+    "output": {
+      "seed": "handoff-baseline",
+      "season": 1,
+      "day": 7,
+      "slot": 1,
+      "money": 0,
+      "rivalMoney": 0,
+      "rivalWins": 0,
+      "standing": 50,
+      "compliance": 55,
+      "energy": 40,
+      "samples": 8,
+      "opinion": {
+        "suman": 20,
+        "anjie": 10
+      },
+      "bonds": {},
+      "bondKinds": {},
+      "memories": [],
+      "qualities": {
+        "client-note:anjie:soothe": 1
+      },
+      "present": {
+        "suman": "counter",
+        "anjie": "rival"
+      },
+      "touched": [],
+      "rngCalls": 0,
+      "appointments": [],
+      "requests": [],
+      "fired": {},
+      "log": [],
+      "opinionAtSeasonStart": {},
+      "statsAtSeasonStart": {
+        "standing": 50,
+        "compliance": 55
+      },
+      "heat": []
+    }
+  }
+]

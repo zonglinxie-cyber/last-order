@@ -393,6 +393,17 @@ async function doOneAction(page: Page, rnd: () => number, wantServe: boolean): P
       return { note: `${actor.name}的「${word}」没有可选的对象` };
     }
     await targets.first().click({ timeout: STEP_MS });
+    // 托单先定同事+客人，再到表单里明确选模式，不再点一下就自动代卖。
+    if (word.startsWith("托")) {
+      const sheet = page.locator(".handoff-sheet");
+      if (!(await visible(sheet))) return { note: "", problem: `${actor.name}：点托单目标之后没出模式选择` };
+      const watch = sheet.locator('[data-handoff-mode="watch"]');
+      const sell = sheet.locator('[data-handoff-mode="sell"]');
+      const pickMode = (await watch.isEnabled().catch(() => false)) ? watch : sell;
+      await pickMode.click({ timeout: STEP_MS }).catch(() => undefined);
+      await sheet.waitFor({ state: "hidden", timeout: STEP_MS }).catch(() => undefined);
+      return { note: `对${actor.name}做「${word}」 · 选模式确认` };
+    }
     await pair.waitFor({ state: "hidden", timeout: STEP_MS }).catch(() => undefined);
     return { note: `对${actor.name}做「${word}」` };
   }

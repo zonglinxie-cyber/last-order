@@ -1,0 +1,13 @@
+[WebServer] (node:38327) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:38406) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:38539) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/world-handoff-choice.spec.ts:84:5 › 托单经营选择 320×568 › 两种发起方向都打开同一张托单表单，成本与目标念得清 (1.3s)
+  ✓  2 tests/world-handoff-choice.spec.ts:84:5 › 托单经营选择 390×844 › 两种发起方向都打开同一张托单表单，成本与目标念得清 (1.2s)
+
+  2 passed (7.0s)
