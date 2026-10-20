@@ -375,6 +375,7 @@
 .report-level .rl-checks { display:flex; flex-direction:column; gap:4px; margin:0 auto 12px; padding:0; max-width:260px; list-style:none; text-align:left; }
 .report-level .rl-checks li { color:#8f7c70; font-size:13px; }
 .report-level .rl-checks li.ok { color:#ffe8b6; }
+.report-level .rl-near { margin:0 auto 10px; max-width:280px; color:#e6c7a0; font-size:12px; line-height:1.55; text-align:left; }
 .report-level .rl-versus { display:flex; flex-direction:column; gap:6px; margin:0 0 10px; }
 .report-level .rl-versus p { display:grid; grid-template-columns:36px 1fr auto; align-items:center; gap:8px; margin:0; }
 .report-level .rl-versus span { color:#c7a993; font-size:12px; text-align:left; }

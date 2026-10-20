@@ -72,6 +72,25 @@ export const weekGuardThreatsOf = (w: Books): number => peopleAt(w, `week-guard-
 export const weekGuardStopsOf = (w: Books): number => peopleAt(w, `week-guard-stop:${weekNoOf(w.day)}:`).length;
 export const weekGuardRateOf = (w: Books): number => weekGuardThreatsOf(w) ? weekGuardStopsOf(w) / weekGuardThreatsOf(w) : 0;
 export const weekCareDaysOf = (w: Books, person: string): number => peopleAt(w, `week-care-day:${weekNoOf(w.day)}:${person}:`).length;
+/** 本周只亲自照应过一天、还没算进客情的人。下周会重新从零记两天，
+ *  所以周报不能把「只差一天」说成「下周再点一次就补完」。 */
+export const weekCareNearPeople = (w: Books): PersonId[] => {
+  const n = weekNoOf(w.day), prefix = `week-care-day:${n}:`;
+  const days = new Map<PersonId, number>();
+  for (const [key, value] of Object.entries(w.qualities)) {
+    if (value !== 1 || !key.startsWith(prefix)) continue;
+    const rest = key.slice(prefix.length);
+    const sep = rest.lastIndexOf(":");
+    if (sep <= 0) continue;
+    const id = rest.slice(0, sep);
+    days.set(id, (days.get(id) ?? 0) + 1);
+  }
+  return [...days.entries()]
+    .filter(([id, count]) => count === 1 && !w.qualities[weekCareKey(n, id)]
+      && (w.opinion === undefined || (w.opinion[id] ?? 0) >= CARE_TRUST_MIN))
+    .map(([id]) => id);
+};
+export const weekCareNearOf = (w: Books): number => weekCareNearPeople(w).length;
 /** 同一顾客本周只算一次，打招呼和被动围观不算。 */
 export const markWeekCare = <W extends Books>(w: W, person: string): W =>
   ({ ...w, qualities: { ...w.qualities, [weekCareKey(weekNoOf(w.day), person)]: 1 } });
@@ -126,11 +145,14 @@ export function nextWeekHint(w: Books & { season?: number }): string {
   const ruleWord = rule ? ` · ${last ? "下季" : "下周"}${rule.word}` : "";
   const prefix = last ? `下季第 1 关 ¥${nextTarget.toLocaleString("zh-CN")}` : `下周目标 ¥${nextTarget.toLocaleString("zh-CN")}`;
   if (s.stars) return `${prefix}${ruleWord}。这周凭${ROUTE_WORD[s.route]}过关，可以继续，也可以换一条更稳的。`;
+  const near = weekCareNearOf(w);
   const gaps = [
     { ratio: (s.target - s.made) / s.target,
       line: `先追业绩：还差 ¥${(s.target - s.made).toLocaleString("zh-CN")}，先接住有预算的公开目标。` },
     { ratio: (CARE_STEPS[0] - s.care) / CARE_STEPS[0],
-      line: `先补客情：还差 ${CARE_STEPS[0] - s.care} 位；同一位客人要在两个不同日子亲自办过事才算，先约回本周只照应过一天的人。` },
+      line: near > 0
+        ? `先补客情：还差 ${CARE_STEPS[0] - s.care} 位；本周有 ${near} 位只差一天，但下周要从头记两天，先给他们排两次见面。`
+        : `先补客情：还差 ${CARE_STEPS[0] - s.care} 位；同一位客人要在两个不同日子亲自办过事才算，先找能见两次的人。` },
     { ratio: (GUARD_STEPS[0] - s.guard) / GUARD_STEPS[0],
       line: `先守客：还差 ${GUARD_STEPS[0] - s.guard} 位；开场先看对面盯上谁，接待或托同事照看都算。` },
   ];

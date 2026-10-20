@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { beginSlot, endDay, newWorld } from "../src/world/engine.ts";
 import {
-  CARE_STEPS, GUARD_STEPS, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_ROMAN, WEEK_HIT_STANDING, WEEK_MISS_ROMAN, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS,
-  markWeekCare, markWeekGuard, markWeekThreat, seasonStarsOf, weekCareOf, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekMoneyOf,
+  CARE_STEPS, CARE_TRUST_MIN, GUARD_STEPS, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_ROMAN, WEEK_HIT_STANDING, WEEK_MISS_ROMAN, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS,
+  markWeekCare, markWeekGuard, markWeekThreat, seasonStarsOf, weekCareOf, weekCareDayKey, weekCareNearOf, weekCareNearPeople, weekCareKey, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekMoneyOf,
   weekResultOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf, nextWeekHint,
 } from "../src/world/target.ts";
 import { worldMoments } from "../src/world/ui/cues.ts";
@@ -22,6 +22,9 @@ const books = (day: number, money: number, rivalMoney: number, money0 = 0, rival
 };
 
 const careFor = (w: World, id: string): World => markWeekCare({ ...w, opinion: { ...w.opinion, [id]: 10 } }, id);
+const careDay = (w: World, id: string, day = 7): World => ({ ...w,
+  qualities: { ...w.qualities, [weekCareDayKey(1, id, day)]: 1 },
+  opinion: { ...w.opinion, [id]: CARE_TRUST_MIN } });
 const careIds = (n: number) => Array.from({ length: n }, (_, i) => `guest-${i}`);
 
 test("一季四关，目标数与天数对得上", () => {
@@ -192,4 +195,25 @@ test("下一周先改什么：从这一周离门槛最近的一条里挑一句�
   const last = nextWeekHint({ ...books(28, 50_000, 10_000), season: 1 });
   assert.match(last, /下季第 1 关 ¥13,000/);
   assert.match(last, /下季品牌培训周/);
+});
+
+test("客情只差一天：单独读出人数，下周提示不说「再点一次就补完」", () => {
+  // 1 位已记（两天 + week-care）+ 8 位本周只照应过一天；业绩/守客都离得更远，客情应被选中。
+  let w = books(7, 1_000, 9_000);
+  w = careDay(careDay(w, "guest-0", 6), "guest-0", 7);
+  w = careFor(w, "guest-0");
+  for (const id of careIds(9).slice(1)) w = careDay(w, id);
+  assert.equal(weekCareOf(w), 1);
+  assert.equal(weekCareNearOf(w), 8);
+  assert.deepEqual(weekCareNearPeople(w).sort(), careIds(9).slice(1).sort());
+  // 信任不到门槛、或只有上周那一天的，不算进来。
+  const lowTrust = { ...w, opinion: { ...w.opinion, "guest-3": CARE_TRUST_MIN - 1 } };
+  assert.equal(weekCareNearOf(lowTrust), 7);
+  const otherWeek = { ...w, qualities: { ...w.qualities, [weekCareDayKey(2, "guest-9", 8)]: 1 },
+    opinion: { ...w.opinion, "guest-9": CARE_TRUST_MIN } };
+  assert.equal(weekCareNearOf(otherWeek), 8);
+  assert.doesNotMatch(nextWeekHint(w), /先约回本周只照应过一天的人/);
+  assert.match(nextWeekHint(w), /先补客情：还差 8 位/);
+  assert.match(nextWeekHint(w), /8 位只差一天/);
+  assert.match(nextWeekHint(w), /下周要从头记两天/);
 });

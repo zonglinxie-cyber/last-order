@@ -3,7 +3,7 @@
 import {
   CARE_DAYS_MIN, CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_STANDING, WEEK_STARS_MAX, WEEK_TARGETS,
   routeFromCode, seasonStarsOf, starWords, nextWeekHint, weekGoalTail, weekGoalWord, weekLevelWord, weekMadeKey, weekMoneyOf, weekRivalKey,
-  weekCareCountKey, weekCarePeople, weekGuardedPeople, weekResultOf, weekRivalOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf,
+  weekCareCountKey, weekCareNearOf, weekCarePeople, weekGuardedPeople, weekResultOf, weekRivalOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf,
 } from "../target.ts";
 import { WEEK_RULES, weekRuleOf } from "../weeks.ts";
 import type { World } from "../types.ts";
@@ -97,6 +97,7 @@ export function RoutesSheet({ world, onClose, onHistory }: { world: World; onClo
   const live = weekResultOf(world);
   const lines = routeLines(world);
   const cared = weekCarePeople(world).map(nameOf), guarded = weekGuardedPeople(world).map(nameOf);
+  const near = weekCareNearOf(world);
   const [sales, care, guard] = lines;
   const bookingSlots = rivalBookingSlots(world);
   const head = (x: typeof sales) => <h3><b>{ROUTE_WORD[x.route]}线 {starRow(x.stars)}</b><span>{x.short}</span></h3>;
@@ -111,7 +112,7 @@ export function RoutesSheet({ world, onClose, onHistory }: { world: World; onClo
             <small>{RIVAL_NAME}本周 {yuan(live.rival)}</small></li>
           <li className={care.stars ? "done" : ""}>{head(care)}
             <p>本周在 {CARE_DAYS_MIN} 个不同的日子亲自为同一位客人办过实事（送小样、介绍熟人、打圆场、加微信、替人保密或对症成交），而且到对账时仍信得过你，就记一位。关系掉回去会被划掉；托同事照看不算；同一人一周只算一次。</p>
-            <small>{CARE_STEPS.join(" / ")} 位各一颗星{cared.length ? ` · 已记：${cared.join("、")}` : ""}</small></li>
+            <small>{CARE_STEPS.join(" / ")} 位各一颗星{cared.length ? ` · 已记：${cared.join("、")}` : ""}{near ? ` · 还差一天 ${near} 位（下周从头记两天）` : ""}</small></li>
           <li className={guard.stars ? "done" : ""}>{head(guard)}
             <p>{RIVAL_NAME}每个时段开场公开目标，页顶亮出名字和手法。首季第一周只盯一位，此后最多同时盯两位，先顾谁由你决定。招揽：本时段接待或托同事照看就接住；比货：要亲自对症成交。时段结束逐人结算，同一人一周只算一次。</p>
             <small>{guardStepWords.join("；")}</small>
@@ -141,6 +142,7 @@ export function LevelResult({ world, day }: { world: World; day: number }) {
   const stars = world.qualities[weekStarsKey(n)] ?? s.stars;
   const route = routeFromCode(world.qualities[weekRouteKey(n)] ?? 1);
   const scored = weekResultOf({ ...world, day });
+  const near = weekCareNearOf({ ...world, day });
   // 客情人数按当下信任动态过滤；对账那一刻冻结的人数才是这一关真正算的数（旧档没有就退回现算）。
   const care = world.qualities[weekCareCountKey(n)] ?? scored.care;
   const passed = stars > 0;
@@ -162,6 +164,7 @@ export function LevelResult({ world, day }: { world: World; day: number }) {
     <ul className="rl-checks">
       {words.map((word, i) => <li key={word} className={checks[i] ? "ok" : ""}>{checks[i] ? "✓" : "✗"} {word}</li>)}
     </ul>
+    {near > 0 && <p className="rl-near" role="status">客情这周有 {near} 位只亲自照应过一天，没算进人数；下周要从头记两天。</p>}
     <div className="rl-versus">
       <p><span>你</span><i style={{ width: `${(made / max) * 100}%` }} /><b>{yuan(made)}</b></p>
       <p className="rival"><span>对面</span><i style={{ width: `${(rival / max) * 100}%` }} /><b>{yuan(rival)}</b></p>

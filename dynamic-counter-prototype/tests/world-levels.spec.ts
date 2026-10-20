@@ -1,11 +1,15 @@
 // 每周一关在屏幕上：楼层页顶那条进度、周日打烊点「下一时段」以后那一屏结算、季末那排四关战绩。
 // 规则（起点、对账、星）在 tests/world-target.test.ts；这里钉玩家看得见的那一面。
 import { expect, test, type Page } from "@playwright/test";
+import { mkdirSync } from "node:fs";
 import { beginSlot, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
-import { CARE_STEPS, CARE_TRUST_MIN, GUARD_RATE_STEPS, GUARD_STEPS, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS, weekCareKey, weekGuardPersonKey, weekGuardStopKey, weekGuardThreatKey, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
+import { CARE_STEPS, CARE_TRUST_MIN, GUARD_RATE_STEPS, GUARD_STEPS, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS, weekCareDayKey, weekCareKey, weekGuardPersonKey, weekGuardStopKey, weekGuardThreatKey, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
 import type { World } from "../src/world/types.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
+
+const audit = "../audit/care-near-2026-10-20";
+mkdirSync(audit, { recursive: true });
 
 const open = async (page: Page, world: World, screen: "play" | "season" = "play") => {
   await page.addInitScript(([k, v]) => window.localStorage.setItem(k, v),
@@ -125,6 +129,37 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(next).toContainText("先追业绩");
       await expect(next).toContainText(`下周目标 ¥${WEEK_TARGETS[2].toLocaleString("zh-CN")}`);
       await expect(next).toContainText("下周商场巡查周");
+    });
+
+    test("客情只差一天：周结算单独读出人数，并说清下周要从头记两天", async ({ page }) => {
+      const w = lateIn(7, 1_000, 9_000);
+      const customers = PEOPLE.filter(p => p.role === "customer");
+      const counted = customers[0]!.id, near = customers.slice(1, 9).map(p => p.id);
+      const qualities = { ...w.qualities }, opinion = { ...w.opinion };
+      qualities[weekCareKey(1, counted)] = 1;
+      qualities[weekCareDayKey(1, counted, 6)] = 1;
+      qualities[weekCareDayKey(1, counted, 7)] = 1;
+      opinion[counted] = CARE_TRUST_MIN;
+      for (const id of near) { qualities[weekCareDayKey(1, id, 7)] = 1; opinion[id] = CARE_TRUST_MIN; }
+      await open(page, { ...w, qualities, opinion });
+      // 三条线抽屉在楼层上：先看客情旁那句，再进周结算。
+      await page.locator(".world-goal").click();
+      const sheet = page.getByRole("dialog", { name: "三条过关线" });
+      await expect(sheet.locator(".routes-scroll")).toContainText("还差一天 8 位");
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `${audit}/routes-${width}.png`, animations: "disabled" });
+      await sheet.getByRole("button", { name: "知道了" }).click();
+      await page.locator(".world-next").click();
+      const level = page.locator(".report-level");
+      await expect(level.locator(".rl-near")).toContainText("8 位只亲自照应过一天");
+      await expect(level.locator(".rl-near")).toContainText("下周要从头记两天");
+      const next = level.locator(".rl-next");
+      await expect(next).toContainText("先补客情");
+      await expect(next).toContainText("8 位只差一天");
+      await expect(next).toContainText("下周要从头记两天");
+      await expect(next).not.toContainText("先约回本周只照应过一天的人");
+      await level.locator(".rl-near").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${audit}/report-${width}.png`, animations: "disabled" });
     });
 
     test("季末那排四关战绩：每关几颗星、一共几颗", async ({ page }) => {
