@@ -1,0 +1,11 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 tests/world-second-try.spec.ts:49:3 › 换支风险 320×568 › 周姐点头后换支失败：开单前看见 -3，试完再收少 3 点人情，小票说明反复从哪来 (2.6s)
+  ✓  2 tests/world-second-try.spec.ts:75:3 › 换支风险 320×568 › 梁夏点头后换到正中：风险提前可见，但试到正中不罚，收 +12 (2.4s)
+  ✓  3 tests/world-second-try.spec.ts:91:3 › 换支风险 320×568 › 刷新续谈保留换支结果与“只罚一次”，结账仍按真实人情 (2.5s)
+  ✓  4 tests/world-second-try.spec.ts:49:3 › 换支风险 390×844 › 周姐点头后换支失败：开单前看见 -3，试完再收少 3 点人情，小票说明反复从哪来 (2.6s)
+  ✓  5 tests/world-second-try.spec.ts:75:3 › 换支风险 390×844 › 梁夏点头后换到正中：风险提前可见，但试到正中不罚，收 +12 (2.5s)
+  ✓  6 tests/world-second-try.spec.ts:91:3 › 换支风险 390×844 › 刷新续谈保留换支结果与“只罚一次”，结账仍按真实人情 (2.5s)
+
+  6 passed (16.0s)

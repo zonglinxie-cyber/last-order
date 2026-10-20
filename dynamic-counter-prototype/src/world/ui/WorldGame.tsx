@@ -660,7 +660,7 @@ export default function WorldGame() {
     setWorld(next); setServing(false);
     setConsults(m => { const { [selected]: _, ...rest } = m; return rest; });
     setResult(next.log.at(-1)?.text ?? null);
-    setReceipt({ person: salePerson, product: serveProduct, feedback: saleFeedback(world, next, salePerson, serveProduct, serveUnits, c?.mood ?? 0) });
+    setReceipt({ person: salePerson, product: serveProduct, feedback: saleFeedback(world, next, salePerson, serveProduct, serveUnits, c?.mood ?? 0, c?.risked === true) });
   };
   const stopServe = () => {
     if (!person || !consult) return;

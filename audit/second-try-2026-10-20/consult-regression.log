@@ -1,0 +1,23 @@
+
+Running 18 tests using 1 worker
+
+  ✓   1 tests/world-consult.spec.ts:47:3 › 接待决策 320×568 › 探问、报价、放弃各有明确成本；不卖也留下真实笔记 (1.8s)
+  ✓   2 tests/world-consult.spec.ts:73:3 › 接待决策 320×568 › 最后一次试用仍显示真实反应，开单复盘与实际账本一致 (2.0s)
+  ✓   3 tests/world-consult.spec.ts:101:3 › 接待决策 320×568 › 按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开 (1.2s)
+  ✓   4 tests/world-consult.spec.ts:47:3 › 接待决策 390×844 › 探问、报价、放弃各有明确成本；不卖也留下真实笔记 (1.6s)
+  ✓   5 tests/world-consult.spec.ts:73:3 › 接待决策 390×844 › 最后一次试用仍显示真实反应，开单复盘与实际账本一致 (2.2s)
+  ✓   6 tests/world-consult.spec.ts:101:3 › 接待决策 390×844 › 按诉求生成的熟客：今天的重点开场不白送，看到那一处才揭开 (1.2s)
+  ✓   7 tests/world-second-try.spec.ts:49:3 › 换支风险 320×568 › 周姐点头后换支失败：开单前看见 -3，试完再收少 3 点人情，小票说明反复从哪来 (2.5s)
+  ✓   8 tests/world-second-try.spec.ts:75:3 › 换支风险 320×568 › 梁夏点头后换到正中：风险提前可见，但试到正中不罚，收 +12 (2.4s)
+  ✓   9 tests/world-second-try.spec.ts:91:3 › 换支风险 320×568 › 刷新续谈保留换支结果与“只罚一次”，结账仍按真实人情 (2.5s)
+  ✓  10 tests/world-second-try.spec.ts:49:3 › 换支风险 390×844 › 周姐点头后换支失败：开单前看见 -3，试完再收少 3 点人情，小票说明反复从哪来 (2.5s)
+  ✓  11 tests/world-second-try.spec.ts:75:3 › 换支风险 390×844 › 梁夏点头后换到正中：风险提前可见，但试到正中不罚，收 +12 (2.4s)
+  ✓  12 tests/world-second-try.spec.ts:91:3 › 换支风险 390×844 › 刷新续谈保留换支结果与“只罚一次”，结账仍按真实人情 (2.5s)
+  ✓  13 tests/world-trial-response.spec.ts:66:3 › 试用留字 320×568 › 同一接待两支对症货留两种字：认准与点头一眼分清、价位不藏、未试货无字 (2.6s)
+  ✓  14 tests/world-trial-response.spec.ts:100:3 › 试用留字 320×568 › 认准那支开一单结的是正中的账 (2.3s)
+  ✓  15 tests/world-trial-response.spec.ts:113:3 › 试用留字 320×568 › 刷新续谈两种字都还在、开单不重复扣接待的劲 (2.5s)
+  ✓  16 tests/world-trial-response.spec.ts:66:3 › 试用留字 390×844 › 同一接待两支对症货留两种字：认准与点头一眼分清、价位不藏、未试货无字 (2.6s)
+  ✓  17 tests/world-trial-response.spec.ts:100:3 › 试用留字 390×844 › 认准那支开一单结的是正中的账 (2.4s)
+  ✓  18 tests/world-trial-response.spec.ts:113:3 › 试用留字 390×844 › 刷新续谈两种字都还在、开单不重复扣接待的劲 (2.5s)
+
+  18 passed (40.8s)

@@ -4,7 +4,7 @@ import { asset } from "../../base.ts";
 import { hasOpenedSale, VERB_ENERGY } from "../engine.ts";
 import {
   TRAIT_LABEL, TRIED_MARK, askHer, budgetWord, lookAt, offerEvidence, patienceWord, plateOf,
-  priceWord, questionsOf, spotsOf, stillHolding, tryOn, type Consult,
+  priceWord, questionsOf, secondTryRisk, spotsOf, stillHolding, tryOn, type Consult,
 } from "../consult.ts";
 import { SHELF, SHELF_LINES, type ShelfId } from "../shelf.ts";
 import type { Person, World } from "../types.ts";
@@ -42,6 +42,7 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
     return next;
   });
   const evidence = product ? offerEvidence(c, person, product, c.units) : [];
+  const risk = product ? secondTryRisk(c, person, product) : null;
   // 最后一次探问后会追加「该开单了」，反应仍显示真正的回答。
   const lastReply = c.lines.at(c.patience === 0 && c.begun ? -2 : -1);
   useEffect(() => {
@@ -139,6 +140,7 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
             })}</div>
           </div>)}
           <p className="serve-note">{product ? priceWord(person, product) : servePickWord(ta(person), !hasOpenedSale(world))}</p>
+          {risk && <p className="offer-risk" role="status">{risk.line}</p>}
           {product && <ul className="offer-evidence" aria-label="开单前的判断">{evidence.map(line => <li key={line}>{line}</li>)}</ul>}
           <p className="consult-force-note">硬推多出的货会伤人情、扣台账，之后还可能退货。</p>
           <details className="consult-history"><summary>翻看这次谈话</summary>{said}</details>
@@ -147,7 +149,7 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
       <div className="serve-foot">
         {offer ? <>
           <p className="offer-total">{product ? `${SHELF[product].short} × ${c.units} · 报价 ${yuan(SHELF[product].price * c.units)}` : "先挑一支，再决定带几件"}</p>
-          {product && <p className="offer-signal" role="status">{evidence[0]}</p>}
+          {product && <p className={`offer-signal${risk ? " is-risk" : ""}`} role="status">{risk?.line ?? evidence[0]}</p>}
           <div className="serve-units" role="group" aria-label="推荐件数">{[1, 2, 3, 4].map(u => <button key={u} type="button" aria-pressed={c.units === u}
             className={c.units === u ? "on" : ""} onClick={() => onChange({ units: u })}>{u} 件</button>)}</div>
           <div className="serve-actions">

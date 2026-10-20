@@ -6,7 +6,7 @@ import { beginSlot, endDay, newWorld } from "../src/world/engine.ts";
 import {
   CARE_STEPS, GUARD_STEPS, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_ROMAN, WEEK_HIT_STANDING, WEEK_MISS_ROMAN, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS,
   markWeekCare, markWeekGuard, markWeekThreat, seasonStarsOf, weekCareOf, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekMoneyOf,
-  weekResultOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf,
+  weekResultOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf, nextWeekHint,
 } from "../src/world/target.ts";
 import { worldMoments } from "../src/world/ui/cues.ts";
 import { emptyWorldProgress, observeWorldProgress, parseWorldProgress } from "../src/world/progress.ts";
@@ -166,4 +166,30 @@ test("档案记最好的一季（四关星数加起来），只在收季那一�
   const { bestSeasonStars: _, ...legacy } = end;
   assert.equal(parseWorldProgress(JSON.stringify(legacy))?.bestSeasonStars, 0);
   assert.equal(parseWorldProgress(JSON.stringify({ ...end, bestSeasonStars: 13 })), null, "超过满星整份拒收");
+});
+
+test("下一周先改什么：从这一周离门槛最近的一条里挑一句能做的事", () => {
+  const nearSales = books(7, 11_800, 9_000);
+  assert.match(nextWeekHint(nearSales), /下周目标 ¥16,000/, "第 2 关目标");
+  assert.match(nextWeekHint(nearSales), /先追业绩：还差 ¥1,200/);
+  assert.doesNotMatch(nextWeekHint(nearSales), /先补客情|先守客/);
+
+  let care = books(7, 8_000, 9_000);
+  for (const id of careIds(8)) care = careFor(care, id);
+  assert.match(nextWeekHint(care), /先补客情：还差 1 位/);
+  assert.match(nextWeekHint(care), /同一位客人要在两个不同日子/);
+
+  let guard = books(7, 8_000, 9_000);
+  for (const id of careIds(2)) guard = markWeekGuard(guard, id);
+  assert.match(nextWeekHint(guard), /先守客：还差 1 位/);
+
+  const passed = books(7, WEEK_TARGETS[0] + 500, 1_000);
+  const hint = nextWeekHint(passed);
+  assert.match(hint, /下周目标 ¥16,000/);
+  assert.match(hint, /凭业绩过关/);
+  assert.match(hint, /下周品牌培训周/, "下一周的规矩提前进复盘");
+
+  const last = nextWeekHint({ ...books(28, 50_000, 10_000), season: 1 });
+  assert.match(last, /下季第 1 关 ¥13,000/);
+  assert.match(last, /下季品牌培训周/);
 });

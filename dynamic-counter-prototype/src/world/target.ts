@@ -114,6 +114,30 @@ export function weekResultOf(w: Books): WeekResult {
   return { route, stars: best, made, rival, target, care, guard, guardThreats, guardStops, guardRate, sales, careStars, guardStars };
 }
 
+/** 周日结算屏那句「下一周先改什么」：只从这一周的实际差距里挑离门槛最近的一条，
+ *  给一句下周能直接做的动作；不新增状态，也不替玩家许诺。 */
+export function nextWeekHint(w: Books & { season?: number }): string {
+  const n = weekNoOf(w.day), s = weekResultOf(w);
+  const last = n >= SEASON_WEEKS;
+  const nextSeason = (w.season ?? 1) + (last ? 1 : 0);
+  const nextDay = last ? 1 : w.day + 1;
+  const nextTarget = last ? WEEK_TARGETS[0] : WEEK_TARGETS[n];
+  const rule = WEEK_RULES.find(r => r.id === weekRuleOf(nextSeason, nextDay));
+  const ruleWord = rule ? ` · ${last ? "下季" : "下周"}${rule.word}` : "";
+  const prefix = last ? `下季第 1 关 ¥${nextTarget.toLocaleString("zh-CN")}` : `下周目标 ¥${nextTarget.toLocaleString("zh-CN")}`;
+  if (s.stars) return `${prefix}${ruleWord}。这周凭${ROUTE_WORD[s.route]}过关，可以继续，也可以换一条更稳的。`;
+  const gaps = [
+    { ratio: (s.target - s.made) / s.target,
+      line: `先追业绩：还差 ¥${(s.target - s.made).toLocaleString("zh-CN")}，先接住有预算的公开目标。` },
+    { ratio: (CARE_STEPS[0] - s.care) / CARE_STEPS[0],
+      line: `先补客情：还差 ${CARE_STEPS[0] - s.care} 位；同一位客人要在两个不同日子亲自办过事才算，先约回本周只照应过一天的人。` },
+    { ratio: (GUARD_STEPS[0] - s.guard) / GUARD_STEPS[0],
+      line: `先守客：还差 ${GUARD_STEPS[0] - s.guard} 位；开场先看对面盯上谁，接待或托同事照看都算。` },
+  ];
+  const best = gaps.reduce((a, b) => b.ratio < a.ratio ? b : a);
+  return `${prefix}${ruleWord}；${best.line}`;
+}
+
 /** 周日打烊结账：落三格、动柜位、罗曼说一句。返回给引擎拼进日志的那句话。 */
 export function settleWeek<W extends Books & { standing: number; opinion: Record<string, number> }>(w: W): { world: W; line: string } {
   const n = weekNoOf(w.day);

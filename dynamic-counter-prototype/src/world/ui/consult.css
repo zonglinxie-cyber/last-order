@@ -58,6 +58,7 @@
 .serve-note,.offer-evidence { color:#decbb4; }
 .offer-evidence { padding:10px 12px 10px 26px; background:#ffffff06; border-radius:10px; }
 .offer-evidence li + li { margin-top:5px; }
+.offer-risk { margin:0 0 8px; padding:8px 10px; border:1px solid #ffb4a238; border-radius:10px; background:#ffb4a210; color:#ffd2bf; font-size:12px; line-height:1.55; }
 .consult-history { color:#c6af99; font-size:12px; margin:10px 0; }
 .consult-history summary { min-height:44px; display:flex; align-items:center; text-decoration:underline; cursor:pointer; }
 .consult-companion { margin:10px 0; padding:10px 12px; border:1px solid #bda16b44; border-radius:10px; background:#ffffff06; color:#f2e6d8; scroll-margin:8px; }
@@ -68,6 +69,7 @@
 .serve-foot { flex:none; padding:8px 14px max(8px,env(safe-area-inset-bottom)); background:#281b16; border-top:1px solid #bda16b44; }
 .offer-total { margin:0 0 6px; color:#f1d39b; font-size:13px; }
 .offer-signal { margin:0 0 6px; color:#dec1a0; font-size:12px; line-height:1.4; }
+.offer-signal.is-risk { color:#ffc9b5; }
 .serve-units,.serve-actions { display:flex; gap:6px; }
 .serve-units button { flex:1; min-height:44px; border:1px solid #bda16b44; border-radius:10px; background:transparent; color:#ffe8b6; font-size:13px; }
 .serve-units button.on { border-color:#f0c978; background:#f0c97820; }

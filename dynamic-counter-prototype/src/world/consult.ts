@@ -18,6 +18,11 @@ export const CONSULT_PATIENCE = 4;
 export const CONSULT_WARM_OPINION = 10;
 /** 推销味的那一问，开单时一起结的看法。 */
 export const PUSH_QUESTION_MOOD = -3;
+/** 她已经点过头，再换一支却没试到正中：普通人觉得你拿不准，好胜/多疑/急性的人更介意。
+ *  只在第一次换支时结一次；这是「继续摸」的真实代价，不是每多试一支都叠一层。 */
+export const SECOND_TRY_MOOD = -2;
+export const SECOND_TRY_HARD_MOOD = -3;
+const SECOND_TRY_HARD_TEMPERS = new Set(["proud", "hasty", "wary"]);
 
 /** at：落在近景横幅上的位置（百分比），只有手写那几位有。 */
 export type ConsultSpot = { key: string; label: string; finding: string; reveals: Trait[]; at?: { x: number; y: number } };
@@ -49,6 +54,8 @@ export type Consult = {
   tried: Partial<Record<ShelfId, TrialTier>>;
   /** 试到了她每条都接得住的那一支：没说出口的那几条也就不用再摸了 */
   matched: boolean;
+  /** 已经为「点头后又换一支」结过一次人情代价：同一单不再叠罚。旧档缺省按 false。 */
+  risked: boolean;
   /** 这一单里你看到的、她说出口的，按先后 */
   lines: string[];
   /** 攒着开单时一起结的看法 */
@@ -195,6 +202,7 @@ export function openConsult(world: World, person: Person): Consult {
     unitsKnown: notes.unitsKnown || (world.qualities[`bought:${person.id}`] ?? 0) > 0,
     tried: {},
     matched: false,
+    risked: false,
     lines,
     mood: 0,
   };
@@ -256,6 +264,23 @@ export function askHer(c: Consult, person: Person, key: string): Consult {
   });
 }
 
+/** 她已经点头/认准之后，第一次换一支试的风险：只在换的那支没试到正中时结。
+ *  普通人 -2，好胜/多疑/急性的人 -3；文案在点上「试一下」之前就能看见，不藏。 */
+export type SecondTryRisk = { mood: number; line: string };
+export function secondTryRisk(c: Consult, person: Person, id: ShelfId): SecondTryRisk | null {
+  if (!person.skin || c.patience <= 0 || c.tried[id] || c.risked) return null;
+  const prior = Object.entries(c.tried);
+  if (!prior.length) return null;
+  const [triedId, tier] = prior[prior.length - 1]!;
+  if (tier !== "positive" && tier !== "perfect") return null;
+  const hard = person.tempers.some(t => SECOND_TRY_HARD_TEMPERS.has(t));
+  const mood = hard ? SECOND_TRY_HARD_MOOD : SECOND_TRY_MOOD;
+  const she = ta(person);
+  return { mood, line: tier === "perfect"
+    ? `${she}已经认准${SHELF[triedId as ShelfId].short}。再换一支若没试到正中，${she}会觉得你不信自己的判断（人情 ${mood}）。`
+    : `${she}已经点过头。再换一支若没试到正中，${she}会觉得你拿不准（人情 ${mood}）。` };
+}
+
 /** 试一支在她手背上：她的反应把这一支落在哪一档说出来。碰到她的忌讳，忌讳也一起露出来。 */
 export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
   if (!person.skin || c.patience <= 0 || c.tried[id]) return c;
@@ -271,7 +296,11 @@ export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
     : tier === "mixed" ? `${lead}犹豫了一下：「还行吧，不是最想要的。」`
     : `${lead}摇头：「这个解决不了我的事。」`;
   const mark: TrialTier = !hitVeto && tier === "positive" && score >= PERFECT_MATCH ? "perfect" : tier;
-  return spend(c, person, line, { tried: { ...c.tried, [id]: mark }, vetoKnown: c.vetoKnown || hitVeto,
+  const risk = secondTryRisk(c, person, id);
+  const risky = !!risk && mark !== "perfect";
+  const reacted = risky ? `${line} ${she}把话收回去：「刚才那支不是挺好吗？」` : line;
+  return spend(c, person, reacted, { tried: { ...c.tried, [id]: mark }, vetoKnown: c.vetoKnown || hitVeto,
+    mood: c.mood + (risky ? risk!.mood : 0), risked: c.risked || risky,
     matched: c.matched || mark === "perfect" });
 }
 
@@ -334,6 +363,8 @@ export function rememberConsult(world: World, person: Person, consult: Consult):
 export function offerEvidence(c: Consult, person: Person, id: ShelfId, units: number): string[] {
   if (!person.skin) return [];
   const item = SHELF[id], lines: string[] = [];
+  const risk = secondTryRisk(c, person, id);
+  if (risk) lines.push(risk.line);
   const missed = c.known.filter(t => item.traits[t] === 0);
   if (missed.length) lines.push(`已知缺口：这支接不住「${missed.map(t => TRAIT_LABEL[t]).join("、")}」。`);
   const veto = person.skin.veto;
@@ -367,6 +398,7 @@ export function restoreConsults(data: unknown, world: World, people: Person[]): 
     if (!Number.isInteger(v.units) || Number(v.units) < 1 || Number(v.units) > 4 || !Number.isInteger(v.patience) || Number(v.patience) < 0 || Number(v.patience) > CONSULT_PATIENCE + 1) continue;
     if (typeof v.begun !== "boolean" || v.begun && !world.touched.includes(id)) continue;
     if (![v.vetoKnown, v.unitsKnown, v.matched].every(x => typeof x === "boolean") || !strList(v.looked) || !strList(v.asked) || !strList(v.known) || !strList(v.lines)) continue;
+    if (v.risked !== undefined && typeof v.risked !== "boolean") continue;
     // 旧存档没有 focus / focusKnown：按"这一单没有今天的重点"接上，不丢整段接待。
     if (v.focus !== undefined && v.focus !== null
       && (!TRAIT_ORDER.includes(v.focus as Trait) || !live.skin!.demands.some(d => d.trait === v.focus))) continue;
@@ -376,7 +408,7 @@ export function restoreConsults(data: unknown, world: World, people: Person[]): 
       && typeof tier === "string" && ["perfect", "positive", "mixed", "negative"].includes(tier))) continue;
     if (typeof v.mood !== "number" || !Number.isFinite(v.mood) || v.mood > 0 || v.mood < -30) continue;
     out[id] = { ...v, focus: (v.focus as Trait | null | undefined) ?? null,
-      focusKnown: v.focusKnown === true && !!v.focus } as Consult;
+      focusKnown: v.focusKnown === true && !!v.focus, risked: v.risked === true } as Consult;
   }
   return out;
 }

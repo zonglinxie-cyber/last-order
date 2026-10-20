@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, TRIED_MARK, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, spotsOf, stillHolding, tryOn,
+  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, SECOND_TRY_HARD_MOOD, SECOND_TRY_MOOD, TRIED_MARK, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, secondTryRisk, spotsOf, stillHolding, tryOn,
   clientNotes, offerEvidence, rememberConsult, restoreConsults, saveConsults,
 } from "../src/world/consult.ts";
 import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
@@ -409,6 +409,72 @@ test("试用的四档字：正中单独记下、货架与开单提示共用同�
   const legacy = { ...c, tried: { [perfect]: "positive" as const } };
   const restored = restoreConsults(JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: legacy }))), w, PEOPLE)[p.id];
   assert.equal(restored!.tried[perfect], "positive", "旧档记下的点头要按当时的知道接着用，不凭全知分数补升");
+});
+
+test("点头后再换一支：第一次换支没试到正中才结人情，好胜/多疑更重；试到正中不罚", () => {
+  // 周姐：多疑 · 好胜；粉底是点头，粉霜是犹豫 —— 换支失败要结 -3。
+  const zhou = who("zhou"), zw = beginServe(atCounter([zhou.id]), PEOPLE, zhou.id);
+  const nod = tryOn(openConsult(zw, zhou), zhou, "soft");
+  assert.equal(nod.tried.soft, "positive");
+  assert.equal(nod.mood, 0);
+  const risk = secondTryRisk(nod, zhou, "base");
+  assert.ok(risk, "点头后换支要在按下试用前看得见代价");
+  assert.equal(risk!.mood, SECOND_TRY_HARD_MOOD);
+  assert.match(risk!.line, /拿不准/);
+  assert.match(risk!.line, /-3/);
+  assert.ok(offerEvidence(nod, zhou, "base", 1).includes(risk!.line), "选货提示要带同一句风险");
+  const failed = tryOn(nod, zhou, "base");
+  assert.equal(failed.tried.base, "mixed");
+  assert.equal(failed.mood, SECOND_TRY_HARD_MOOD);
+  assert.equal(failed.risked, true);
+  assert.match(failed.lines.at(-1)!, /刚才那支不是挺好吗/);
+  // 只在第一次换支时结；再换一支不再叠罚（但照样花耐心）。
+  assert.equal(secondTryRisk(failed, zhou, "mist"), null);
+  assert.equal(tryOn(failed, zhou, "mist").mood, SECOND_TRY_HARD_MOOD);
+  // 先试过别的、再点头，换支仍要结 —— 风险认的是「最近一次点头」。
+  const mixedFirst = tryOn(openConsult(zw, zhou), zhou, "base");
+  const thenNod = tryOn(mixedFirst, zhou, "soft");
+  assert.equal(thenNod.tried.soft, "positive");
+  assert.ok(secondTryRisk(thenNod, zhou, "mist"), "先试过犹豫货，再点头后换支同样有代价");
+  // 沈薇：粉底点头、粉霜正中 —— 换到正中不罚，换支的代价和收益是同一枚硬币。
+  const shen = who("shen"), sw = beginServe(atCounter([shen.id]), PEOPLE, shen.id);
+  const first = tryOn(openConsult(sw, shen), shen, "plain");
+  assert.equal(first.tried.plain, "positive");
+  const perfect = tryOn(first, shen, "base");
+  assert.equal(perfect.tried.base, "perfect");
+  assert.equal(perfect.mood, 0);
+  assert.match(perfect.lines.at(-1)!, /就是这个感觉/);
+  // 普通人（不犯这三条脾气）是 -2。
+  const liang = who("liangxia"), lw = beginServe(atCounter([liang.id]), PEOPLE, liang.id);
+  const liangNod = tryOn(openConsult(lw, liang), liang, "soft");
+  assert.equal(secondTryRisk(liangNod, liang, "mist")!.mood, SECOND_TRY_MOOD);
+});
+
+test("换支人情按实际结算进账：同一位客人的两种收法差 3 点看法", () => {
+  const zhou = who("zhou");
+  const base = beginServe(atCounter([zhou.id]), PEOPLE, zhou.id);
+  const nod = tryOn(openConsult(base, zhou), zhou, "soft");
+  const closedNow = settleServe(base, PEOPLE, zhou.id, "soft", 1, false, nod.mood);
+  const triedAgain = tryOn(nod, zhou, "base");
+  const closedAfter = settleServe(base, PEOPLE, zhou.id, "soft", 1, false, triedAgain.mood);
+  assert.equal(opinionOf(closedNow, zhou.id), 8);
+  assert.equal(opinionOf(closedAfter, zhou.id), 5, "多试一支没中，同样的货少 3 点人情");
+  assert.equal(closedAfter.money, closedNow.money, "这笔风险不改成交金额，只改人情");
+  const fb = saleFeedback(base, closedAfter, zhou, "soft", 1, triedAgain.mood, true);
+  assert.match(fb.explanation, /反复/, "小票要解释少掉的人情从哪来");
+  assert.match(fb.lesson, /点头后/);
+  assert.doesNotMatch(saleFeedback(base, closedNow, zhou, "soft", 1, nod.mood).explanation, /反复/);
+});
+
+test("旧接待没有 risked 按 false 恢复；坏值只丢这一段接待", () => {
+  const p = who("shen"), w = beginServe(atCounter([p.id]), PEOPLE, p.id);
+  const c = tryOn(openConsult(w, p), p, "plain");
+  const data = JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: c })));
+  delete data.entries[p.id].risked;
+  assert.equal(restoreConsults(data, w, PEOPLE)[p.id]?.risked, false);
+  const bad = JSON.parse(JSON.stringify(data));
+  bad.entries[p.id].risked = "yes";
+  assert.deepEqual(restoreConsults(bad, w, PEOPLE), {});
 });
 
 test("售前提示只用已知信息：隐藏需求改变不会泄题；已问出的数量、底线与预算会提醒", () => {

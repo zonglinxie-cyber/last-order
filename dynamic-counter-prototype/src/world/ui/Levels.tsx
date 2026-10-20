@@ -2,7 +2,7 @@
 // 判据全在 target.ts，这里只摆。
 import {
   CARE_DAYS_MIN, CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_STANDING, WEEK_STARS_MAX, WEEK_TARGETS,
-  routeFromCode, seasonStarsOf, starWords, weekGoalTail, weekGoalWord, weekLevelWord, weekMadeKey, weekMoneyOf, weekRivalKey,
+  routeFromCode, seasonStarsOf, starWords, nextWeekHint, weekGoalTail, weekGoalWord, weekLevelWord, weekMadeKey, weekMoneyOf, weekRivalKey,
   weekCareCountKey, weekCarePeople, weekGuardedPeople, weekResultOf, weekRivalOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf,
 } from "../target.ts";
 import { WEEK_RULES, weekRuleOf } from "../weeks.ts";
@@ -167,6 +167,7 @@ export function LevelResult({ world, day }: { world: World; day: number }) {
       <p className="rival"><span>对面</span><i style={{ width: `${(rival / max) * 100}%` }} /><b>{yuan(rival)}</b></p>
     </div>
     <p className="rl-note">{passed ? `柜位 +${WEEK_HIT_STANDING} · 罗曼记了你一笔` : "罗曼记着这一周"}{n < SEASON_WEEKS ? ` · 下一关业绩线 ${yuan(WEEK_TARGETS[n])}` : " · 这是这一季最后一关"}</p>
+    <p className="rl-next" aria-label="下一周先改什么"><b>下一周先改什么</b>{nextWeekHint({ ...world, day })}</p>
   </section>;
 }
 

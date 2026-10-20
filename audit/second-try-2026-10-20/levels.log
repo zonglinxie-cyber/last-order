@@ -1,0 +1,21 @@
+
+Running 16 tests using 1 worker
+
+  ✓   1 tests/world-levels.spec.ts:30:5 › 每周一关 390×844 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (256ms)
+  ✓   2 tests/world-levels.spec.ts:43:5 › 每周一关 390×844 › 过了这一关，页顶那条变色并亮星 (225ms)
+  ✓   3 tests/world-levels.spec.ts:50:5 › 每周一关 390×844 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (330ms)
+  ✓   4 tests/world-levels.spec.ts:62:5 › 每周一关 390×844 › 钱没达标也能凭客情过关，结算写明获胜路线 (259ms)
+  ✓   5 tests/world-levels.spec.ts:80:5 › 每周一关 390×844 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓   6 tests/world-levels.spec.ts:108:5 › 每周一关 390×844 › 没到数：结算屏盖「没过」，零颗星 (230ms)
+  ✓   7 tests/world-levels.spec.ts:120:5 › 每周一关 390×844 › 没过时写出下一周先改哪条：离门槛最近的一条 + 下周规矩 (250ms)
+  ✓   8 tests/world-levels.spec.ts:130:5 › 每周一关 390×844 › 季末那排四关战绩：每关几颗星、一共几颗 (218ms)
+  ✓   9 tests/world-levels.spec.ts:30:5 › 每周一关 320×568 › 楼层页顶三条路线同时可见，对面进账与尺寸仍清楚 (226ms)
+  ✓  10 tests/world-levels.spec.ts:43:5 › 每周一关 320×568 › 过了这一关，页顶那条变色并亮星 (207ms)
+  ✓  11 tests/world-levels.spec.ts:50:5 › 每周一关 320×568 › 周日晚高峰点「下一时段」：结算屏盖「过关」、星、三条、跟对面比 (233ms)
+  ✓  12 tests/world-levels.spec.ts:62:5 › 每周一关 320×568 › 钱没达标也能凭客情过关，结算写明获胜路线 (263ms)
+  ✓  13 tests/world-levels.spec.ts:80:5 › 每周一关 320×568 › 守客高星要人数也要挡住比例：人数够第二颗、比例不够只给一颗 (1.2s)
+  ✓  14 tests/world-levels.spec.ts:108:5 › 每周一关 320×568 › 没到数：结算屏盖「没过」，零颗星 (230ms)
+  ✓  15 tests/world-levels.spec.ts:120:5 › 每周一关 320×568 › 没过时写出下一周先改哪条：离门槛最近的一条 + 下周规矩 (230ms)
+  ✓  16 tests/world-levels.spec.ts:130:5 › 每周一关 320×568 › 季末那排四关战绩：每关几颗星、一共几颗 (221ms)
+
+  16 passed (6.7s)

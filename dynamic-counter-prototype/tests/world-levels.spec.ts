@@ -117,6 +117,16 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
         `✗ 业绩 ¥2,000 / ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`, `✗ 客情 0 / ${CARE_STEPS[0]} 位`, `✗ 守客 0 / ${GUARD_STEPS[0]} 位`]);
     });
 
+    test("没过时写出下一周先改哪条：离门槛最近的一条 + 下周规矩", async ({ page }) => {
+      await open(page, lateIn(14, 2_000, 9_000));
+      await page.locator(".world-next").click();
+      const next = page.locator(".rl-next");
+      await expect(next).toContainText("下一周先改什么");
+      await expect(next).toContainText("先追业绩");
+      await expect(next).toContainText(`下周目标 ¥${WEEK_TARGETS[2].toLocaleString("zh-CN")}`);
+      await expect(next).toContainText("下周商场巡查周");
+    });
+
     test("季末那排四关战绩：每关几颗星、一共几颗", async ({ page }) => {
       const w = newWorld("levels-season", PEOPLE);
       const stars = [3, 1, 0, 2];
