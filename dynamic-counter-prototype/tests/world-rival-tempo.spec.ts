@@ -31,7 +31,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
 
   test("上午提前知道两场安排，傍晚只提醒晚高峰，帮助和关闭按钮都可读可点", async ({ page }) => {
     for (const slot of [0, 2] as const) {
-      const w = beginSlot({ ...newWorld("tempo", PEOPLE), day: 22, slot }, PEOPLE);
+      const w = beginSlot({ ...newWorld("tempo", PEOPLE), day: 9, slot }, PEOPLE);
       await enter(page, w);
       await expect(page.locator(".wg-schedule")).toHaveText(slot === 0
         ? "接下来：对面午后、晚高峰约客" : "接下来：对面晚高峰约客");
@@ -63,6 +63,24 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await expect(page.locator(".wg-schedule")).toHaveCount(0);
   });
 
+  test("对面忙碌周：上午只看见她午后约一场，晚高峰没有她的预约", async ({ page }) => {
+    // 第 22 天是第 1 季第 4 周，正轮到「对面忙碌周」：她这周只在午后见一位。
+    const busy = (slot: 0 | 1 | 3) => beginSlot({ ...newWorld("tempo-busy", PEOPLE), day: 22, slot }, PEOPLE);
+    await enter(page, busy(0));
+    await expect(page.locator(".wg-schedule")).toHaveText("接下来：对面午后约客");
+    await page.locator(".world-goal").click();
+    const schedule = page.getByLabel("对面的约客安排");
+    await expect(schedule).toContainText("这周对面忙着整理客情");
+    await expect(schedule).toContainText("晚高峰她不排单");
+    await hit(page.getByRole("button", { name: "知道了", exact: true }));
+    await page.getByRole("button", { name: "知道了", exact: true }).click();
+    // 午后的那一场照旧约上；晚高峰她不排单，那一格是玩家的。
+    await enter(page, busy(1));
+    await expect(page.locator(".world-rival-booking")).toContainText("对面预约");
+    await enter(page, busy(3));
+    await expect(page.locator(".world-rival-booking")).toHaveCount(0);
+  });
+
   test("已经确认的周末单预告去自己柜台，按承诺到场不再扣邀请成本", async ({ page }) => {
     const friday = beginSlot({ ...newWorld("tempo-weekend", PEOPLE), day: 26 }, PEOPLE);
     const prepared = prepareWeekendOrder(friday, PEOPLE);
@@ -87,7 +105,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
   });
 
   test("晚高峰普通预约刷新仍在，支付邀请与接待后成交并计入当天账", async ({ page }) => {
-    const w = beginSlot({ ...newWorld("booking-test", PEOPLE), day: 22, slot: 3 }, PEOPLE), booking = w.rivalBooking!;
+    const w = beginSlot({ ...newWorld("booking-test", PEOPLE), day: 9, slot: 3 }, PEOPLE), booking = w.rivalBooking!;
     expect(booking).toBeTruthy(); expect(booking.weekend).not.toBe(true);
     await enter(page, w);
     await hit(page.locator(".world-rival-booking"));
@@ -119,7 +137,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
   });
 
   test("从傍晚真实推进到晚高峰会出现普通预约，放弃后按报价结账", async ({ page }) => {
-    const w = beginSlot({ ...newWorld("tempo-progress", PEOPLE), day: 22, slot: 2 }, PEOPLE);
+    const w = beginSlot({ ...newWorld("tempo-progress", PEOPLE), day: 9, slot: 2 }, PEOPLE);
     await enter(page, w); await page.locator(".world-next").click();
     await expect.poll(async () => (await state(page)).slot).toBe(3);
     const story = page.locator(".world-story");

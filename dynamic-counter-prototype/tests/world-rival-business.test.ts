@@ -10,7 +10,8 @@ import { bestShelf, SHELF } from "../src/world/shelf.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import type { World } from "../src/world/types.ts";
 
-const opening = (over: Partial<World> = {}) => beginSlot({ ...newWorld("booking-test", PEOPLE), day: 22, slot: 1, ...over }, PEOPLE);
+// 第 9 天在第 1 季第 2 周（培训周），对面照旧两场；「对面忙碌周」另立一条测。
+const opening = (over: Partial<World> = {}) => beginSlot({ ...newWorld("booking-test", PEOPLE), day: 9, slot: 1, ...over }, PEOPLE);
 const isolated = (slot: 1 | 3 = 1) => {
   const w = opening({ slot }); const b = rivalBookingNow(w)!;
   assert.ok(b);
@@ -32,22 +33,40 @@ test("独立预约从首季第二周起分午后与晚高峰两场，报价公�
     assert.ok(guests.length <= MAX_PRESENT_CUSTOMERS);
     for (const [zone, max] of Object.entries(ZONE_GUEST_CAPACITY)) assert.ok(guests.filter(p => w.present[p.id] === zone).length <= max);
     assert.ok(w.log.some(l => l.text.includes(`预计这单 ¥${b.amount}`)));
-    assert.ok(w.log.some(l => l.text.includes(slot === 1 ? "第 22 天午后" : "第 22 天晚高峰")));
+    assert.ok(w.log.some(l => l.text.includes(slot === 1 ? "第 9 天午后" : "第 9 天晚高峰")));
     assert.deepEqual(parseWorld(serializeWorld(w))!.rivalBooking, b);
   }
 });
 
 test("约客时段按日历公示，不随比分变；上午与傍晚留给其他经营", () => {
   for (const day of [1, 5, 7]) assert.deepEqual(rivalBookingSlots({ season: 1, day }), []);
-  for (const [season, day] of [[1, 8], [1, 28], [2, 1]]) {
-    assert.deepEqual(rivalBookingSlots({ season, day }), [1, 3]);
+  // 第 1 季第 4 周与第 2 季第 3 周轮到「对面忙碌周」：她只排午后那一场。
+  for (const [season, day, slots] of [[1, 8, [1, 3]], [1, 28, [1]], [2, 1, [1, 3]]] as const) {
+    assert.deepEqual(rivalBookingSlots({ season, day }), slots);
     for (const slot of [0, 2] as const) assert.equal(rivalBookingNow(opening({ season, day, slot })), undefined);
-    for (const slot of [1, 3] as const) {
+    for (const slot of slots) {
       const a = opening({ season, day, slot, money: 0, rivalMoney: 100000 });
       const b = opening({ season, day, slot, money: 100000, rivalMoney: 0 });
       assert.deepEqual(a.rivalBooking, b.rivalBooking, "领先落后不暗改约客人选或报价");
     }
   }
+});
+
+test("对面忙碌周：她忙起来一天只约一位，晚高峰那一格空出来归你", () => {
+  for (const [season, day] of [[1, 22], [2, 15]] as const) {
+    assert.deepEqual(rivalBookingSlots({ season, day }), [1], "忙碌周她只排午后那一场");
+    const noon = opening({ season, day, slot: 1 });
+    assert.ok(noon.rivalBooking, "午后的那一单照旧约");
+    const afterNoon = ambient(noon, PEOPLE);
+    const evening = beginSlot({ ...afterNoon, slot: 3 }, PEOPLE);
+    assert.equal(rivalBookingNow(evening), undefined, "晚高峰她不排单，这一格归你");
+    const afterEvening = ambient(evening, PEOPLE);
+    assert.equal(afterEvening.rivalMoney, afterNoon.rivalMoney, "这一天她只开了一单");
+  }
+  // 别的周她还是两场：这一刀只落在「对面忙碌周」那几周。
+  assert.deepEqual(rivalBookingSlots({ season: 1, day: 9 }), [1, 3]);
+  assert.deepEqual(rivalBookingSlots({ season: 2, day: 8 }), [1, 3]);
+  assert.ok(opening({ season: 1, day: 9, slot: 3 }).rivalBooking, "别的周晚高峰照旧有一场");
 });
 
 test("晚高峰的普通预约可邀来争取，真实结账且刷新不重收；午后买过的人不会连买两场", () => {
@@ -70,13 +89,13 @@ test("晚高峰的普通预约可邀来争取，真实结账且刷新不重收�
 test("两场都让位于玩家预约与客位上限，周末最后一单不叠加一场普通预约", () => {
   const ids = PEOPLE.filter(p => p.role === "customer").slice(0, MAX_PRESENT_CUSTOMERS).map(p => p.id);
   for (const slot of [1, 3] as const) {
-    const full = opening({ slot, appointments: ids.map(person => ({ person, day: 22, slot, reason: "visit" })) });
+    const full = opening({ slot, appointments: ids.map(person => ({ person, day: 9, slot, reason: "visit" })) });
     assert.equal(rivalBookingNow(full), undefined);
     assert.ok(ids.every(id => id in full.present));
-    const bought = opening({ slot, qualities: Object.fromEntries(PEOPLE.map(p => [`bought:${p.id}`, 21])) });
+    const bought = opening({ slot, qualities: Object.fromEntries(PEOPLE.map(p => [`bought:${p.id}`, 8])) });
     assert.equal(rivalBookingNow(bought), undefined);
   }
-  const weekend = opening({ day: 28, slot: 3, weekendOrder: { due: 28, person: "shen", prepared: false } });
+  const weekend = opening({ day: 9, slot: 3, weekendOrder: { due: 9, person: "shen", prepared: false } });
   assert.equal(weekend.rivalBooking?.person, "shen");
   assert.equal(weekend.rivalBooking?.weekend, true);
   assert.equal(weekend.log.filter(l => l.text.startsWith("陆遥约了")).length, 0);
@@ -84,9 +103,9 @@ test("两场都让位于玩家预约与客位上限，周末最后一单不叠�
 
 test("新增晚场只使用剩余客位，不挤掉原本自然来访的人或改掉其站位", () => {
   for (let i = 0; i < 20; i++) {
-    const world: World = { ...newWorld(`evening-space-${i}`, PEOPLE), day: 22, slot: 3 };
+    const world: World = { ...newWorld(`evening-space-${i}`, PEOPLE), day: 9, slot: 3 };
     // 同时段已经结清的预约关闭追加入口，作为同一份来访排布的对照；不改人员或随机数。
-    const without = beginSlot({ ...world, rivalBooking: { day: 22, slot: 3, person: "shen", product: "plain",
+    const without = beginSlot({ ...world, rivalBooking: { day: 9, slot: 3, person: "shen", product: "plain",
       units: 1, amount: SHELF.plain.price, invited: false, outcome: "missed" } }, PEOPLE);
     const withBooking = beginSlot(world, PEOPLE);
     for (const [id, zone] of Object.entries(without.present)) assert.equal(withBooking.present[id], zone, `种子 ${i} 原来会来的人 ${id} 不该被夜场挤掉`);
@@ -96,7 +115,7 @@ test("新增晚场只使用剩余客位，不挤掉原本自然来访的人或�
 
 test("即使全场已建立信任，对手仍可经营自己的预约，不偷抢忠诚客人", () => {
   const opinion = Object.fromEntries(PEOPLE.map(p => [p.id, 100]));
-  const w = opening({ opinion, appointments: [{ day: 22, slot: 1, person: "shen", reason: "visit" }] });
+  const w = opening({ opinion, appointments: [{ day: 9, slot: 1, person: "shen", reason: "visit" }] });
   assert.ok(rivalBookingNow(w));
   assert.notEqual(w.rivalBooking!.person, "shen");
   assert.deepEqual(rivalTargets(w), []);

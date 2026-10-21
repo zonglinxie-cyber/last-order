@@ -67,7 +67,8 @@ export function GoalStrip({ world, lit, bump, onOpen }: { world: World; lit: boo
   const ownWeekend = !!weekend?.prepared && !weekend.outcome && weekend.due === world.day;
   const rivalTimes = upcoming.filter(slot => !(slot === 3 && ownWeekend)).map(slot => SLOT_WORD[slot]);
   const plans = [rivalTimes.length ? `对面${rivalTimes.join("、")}约客` : "",
-    ownWeekend && upcoming.includes(3) ? "晚高峰接周末约单" : ""].filter(Boolean).join("；");
+    // 周末那一单是玩家自己的安排：对面排不排单都得提醒。
+    ownWeekend && world.slot < 3 ? "晚高峰接周末约单" : ""].filter(Boolean).join("；");
   const schedule = (world.slot === 0 || world.slot === 2) && plans ? `接下来：${plans}` : "";
   return <button type="button" className={`world-goal${live.stars ? " is-passed" : ""}${lit ? " is-hit" : ""}`}
     aria-label={`本周目标：${weekLevelWord(world)}，${lines.map(x => x.short).join("，")}。${schedule ? `${schedule}。` : ""}点开看三条过关线`} onClick={onOpen}>
@@ -100,6 +101,7 @@ export function RoutesSheet({ world, onClose, onHistory }: { world: World; onClo
   const near = weekCareNearOf(world);
   const [sales, care, guard] = lines;
   const bookingSlots = rivalBookingSlots(world);
+  const busyWeek = weekRuleOf(world.season, world.day) === "rival-off";
   const head = (x: typeof sales) => <h3><b>{ROUTE_WORD[x.route]}线 {starRow(x.stars)}</b><span>{x.short}</span></h3>;
   // 用现成的 BottomSheet：Escape、焦点圈定、下滑关闭都是它的；正文在 MobileScroll 里滚，320×568 也够得着「知道了」。
   return <BottomSheet open title="三条过关线" description={`${weekLevelWord(world)} · 任选一条到线就过关`} snap={0.86}
@@ -125,7 +127,9 @@ export function RoutesSheet({ world, onClose, onHistory }: { world: World; onClo
         </ul>
         <section className="routes-booking" aria-label="对面的约客安排">
           <h3>对面也在约客</h3>
-          <p>{bookingSlots.length ? `每天${bookingSlots.map(slot => SLOT_WORD[slot]).join("、")}各有一次约客机会。` : "首季第一周先熟悉柜台；从第 8 天起，每天午后、晚高峰各有一次约客机会。"}周末最后一单占用当晚这一场；提前确认过的周末客人直接来你柜前。</p>
+          <p>{busyWeek ? "这周对面忙着整理客情：每天只在午后约一位客人，晚高峰她不排单。"
+            : bookingSlots.length ? `每天${bookingSlots.map(slot => SLOT_WORD[slot]).join("、")}各有一次约客机会。`
+            : "首季第一周先熟悉柜台；从第 8 天起，每天午后、晚高峰各有一次约客机会。"}周末最后一单占用当晚这一场；提前确认过的周末客人直接来你柜前。</p>
           <p>客人到场才公开姓名和报价，本时段结束结账。邀来比货花 {RIVAL_INVITE_ENERGY} 精力、{RIVAL_INVITE_SAMPLES} 份小样，接待另花 12 精力；也可以把精力留给自己约好的客人。</p>
           <small>有空位、有合适客人才约得成；刚在任一家买过的客人先用完再来。不会挤掉你已约好的人。</small>
         </section>

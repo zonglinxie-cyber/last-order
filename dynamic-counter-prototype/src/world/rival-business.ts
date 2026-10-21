@@ -1,12 +1,16 @@
 import { SHELF } from "./shelf.ts";
+import { weekRuleOf } from "./weeks.ts";
 import type { Slot, World } from "./types.ts";
 
 export const RIVAL_INVITE_ENERGY = 6;
 export const RIVAL_INVITE_SAMPLES = 1;
 const BOOKING_SLOTS: readonly Slot[] = [1, 3];
-/** 固定营业安排，不读玩家比分。首季第一周只保留原有周末单。 */
-export const rivalBookingSlots = (world: Pick<World, "season" | "day">): readonly Slot[] =>
-  world.season > 1 || world.day > 7 ? BOOKING_SLOTS : [];
+/** 固定营业安排，不读玩家比分。首季第一周只保留原有周末单。
+ *  「对面忙碌周」她忙起来一天只约一位：只排午后那一场，晚高峰那一格空出来。 */
+export const rivalBookingSlots = (world: Pick<World, "season" | "day">): readonly Slot[] => {
+  if (!(world.season > 1 || world.day > 7)) return [];
+  return weekRuleOf(world.season, world.day) === "rival-off" ? [BOOKING_SLOTS[0]!] : BOOKING_SLOTS;
+};
 export const rivalBookingNow = (world: World) => world.rivalBooking?.day === world.day
   && world.rivalBooking.slot === world.slot ? world.rivalBooking : undefined;
 
