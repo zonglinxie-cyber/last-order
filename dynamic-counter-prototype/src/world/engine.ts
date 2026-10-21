@@ -11,8 +11,8 @@ import {
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { isHeatId, type HeatId } from "./heat.ts";
-import { CARE_DAYS_MIN, CARE_TRUST_MIN, dryWeekNote, guardCommitKey, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf, weekTargetOfWeek } from "./target.ts";
-import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
+import { CARE_DAYS_MIN, CARE_TRUST_MIN, dryWeekNote, guardCommitKey, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf, weekShakeCountOf, weekShakeKey, weekShakeTotalKey, weekShakeTotalOf, weekTargetOfWeek } from "./target.ts";
+import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekNoOf, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
   Appointment, Arrival, BondKind, Cond, Effect, Festival, LogEntry, Memory, Person, PersonId, Ref, Slot,
@@ -215,10 +215,40 @@ const RIVAL_COMPARE_NEXT = "rival:compare-next";
 /** 只读本时段开场公开的目标，行动后不会临时补人或换人。 */
 export const rivalTargets = (world: World): PersonId[] =>
   world.rivalPlan?.day === world.day && world.rivalPlan.slot === world.slot ? world.rivalPlan.targets : [];
+/** 撬客：她抢不到能买的客人时，改去撬你信得过的人。
+ *  门槛与客情同一条（信得过 = 看法 >= CARE_TRUST_MIN）：守客要守的，正是客情攒下来的那几位。 */
+export const SHAKE_OPINION = -3;
+/** 同一个人这一周被她撬的上限；超了她换人，名单才铺得开。 */
+export const SHAKE_MAX_PER_WEEK = 1;
+/** 一天她只挑一个人聊两句；一周最多撬这么多个。 */
+export const SHAKE_MAX_PER_DAY = 1;
+export const SHAKE_MAX_TOTAL = 7;
+/** 这一格她要撬的人：信得过你、在柜上或收银、没被你接走、这周还没被她撬满。 */
+export function rivalShakeCandidates(world: World, people: Person[]): Person[] {
+  if (!people.some(p => p.role === "rival" && p.id in world.present)) return [];
+  if (weekShakeTotalOf(world) >= SHAKE_MAX_TOTAL) return [];
+  return people.filter(p => p.role === "customer" && POACH_ZONES.includes(world.present[p.id])
+    && !world.touched.includes(p.id)
+    && opinionOf(world, p.id) >= CARE_TRUST_MIN
+    && weekShakeCountOf(world, p.id) < SHAKE_MAX_PER_WEEK)
+    .sort((a, b) => weekShakeCountOf(world, a.id) - weekShakeCountOf(world, b.id)
+      || opinionOf(world, b.id) - opinionOf(world, a.id)
+      || a.id.localeCompare(b.id));
+}
+/** 本时段她公开盯着的所有人（抢客 + 撬客）：界面与模拟器都按这一份看。 */
+export const rivalThreats = (world: World): PersonId[] =>
+  [...new Set([...rivalTargets(world), ...rivalShakes(world)])];
+/** 本时段公开的撬客目标；和抢客目标一样，开场定死，结算不临时换人。 */
+export const rivalShakes = (world: World): PersonId[] =>
+  world.rivalPlan?.day === world.day && world.rivalPlan.slot === world.slot ? (world.rivalPlan.shakes ?? []) : [];
 /** 招揽时接手即可；比货时要亲自开出正向成交，每位客人单独记。 */
-export const rivalGuarded = (world: World, person: PersonId): boolean => rivalTargets(world).includes(person)
+export const rivalGuarded = (world: World, person: PersonId): boolean =>
+  (rivalTargets(world).includes(person) || rivalShakes(world).includes(person))
   && qualityOf(world, guardCommitKey(world.day, world.slot, person)) > 0;
 export function rivalPlanWord(world: World): { title: string; howTo: string } | null {
+  // 抢客和撬客互斥：她抢得到能买的人就抢，抢不到才去撬熟客（beginSlot 里二选一）。
+  if (rivalShakes(world).length)
+    return { title: "陆遥改去撬你的熟客", howTo: "本时段亲自接住她点名的这位；托单不算" };
   if (!rivalTargets(world).length) return null;
   return world.rivalPlan?.tactic === "compare"
     ? { title: "陆遥拿货来比", howTo: "本时段亲自对症成交才挡得住；托单或只聊聊不够" }
@@ -804,7 +834,17 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   // 首季第一周只盯一人；此后最多两人，同样公开、同时结算，让精力与托单名额产生取舍。
   const targets = rivalCandidates(w, people).slice(0, w.season === 1 && w.day <= 7 ? 1 : 2).map(p => p.id);
   for (const id of targets) w = markWeekThreat(w, id);
-  return { ...w, rivalPlan: { day: w.day, slot: w.slot, targets,
+  // 抢不到能买的人时，她改去撬你信得过的人 —— 旱周里能买的都被十天间隔锁住，这一格她照样有戏。
+  const shookToday = qualityOf(w, `rival-shake-day:${w.day}`) > 0;
+  const shakes = (targets.length === 0 && !shookToday)
+    ? rivalShakeCandidates(w, people).slice(0, SHAKE_MAX_PER_DAY).map(p => p.id) : [];
+  for (const id of shakes) {
+    w = markWeekThreat(w, id);
+    w = setQuality(w, weekShakeKey(weekNoOf(w.day), id), weekShakeCountOf(w, id) + 1);
+    w = setQuality(w, weekShakeTotalKey(weekNoOf(w.day)), weekShakeTotalOf(w) + 1);
+    w = setQuality(w, `rival-shake-day:${w.day}`, 1);
+  }
+  return { ...w, rivalPlan: { day: w.day, slot: w.slot, targets, shakes,
     tactic: qualityOf(w, RIVAL_COMPARE_NEXT) ? "compare" : "invite" } };
 }
 
@@ -883,6 +923,23 @@ export function ambient(world: World, people: Person[]): World {
           }
         }
       }
+    }
+  }
+
+  // 撬客结算：她点名的熟客，这一格你接住就守住了；没接住，她把人带走，你对他的信任掉一截。
+  if (rival) {
+    for (const id of rivalShakes(w)) {
+      const mark = personOf(people, id);
+      if (!mark) continue;
+      const resolved = `rival-shake-resolved:${w.day}:${w.slot}:${id}`;
+      if (qualityOf(w, resolved)) continue;
+      w = setQuality(w, resolved, 1);
+      w = markWeekThreat(w, id);
+      if (rivalGuarded(w, id)) { w = markWeekGuard(w, id); continue; }
+      w = { ...w, present: { ...w.present, [mark.id]: "rival" } };
+      w = addOpinion(w, mark.id, SHAKE_OPINION);
+      w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
+      w = say(w, `${rival.name}把${ta(mark)}叫到一边聊了两句；${ta(mark)}对你的信任掉了一截，今天不会再回你的柜前。`, [rival.id, mark.id]);
     }
   }
 
@@ -1486,7 +1543,8 @@ export function beginServe(world: World, people: Person[], personId: PersonId): 
   // 台账或柜位见底，开不了单。
   if (world.compliance <= SERVE_STAT_FLOOR || world.standing <= SERVE_STAT_FLOOR) return world;
   let committed = markMet(world, personId);
-  if (rivalTargets(world).includes(personId) && world.rivalPlan?.tactic !== "compare")
+  if ((rivalTargets(world).includes(personId) && world.rivalPlan?.tactic !== "compare")
+    || rivalShakes(world).includes(personId))
     committed = setQuality(committed, guardCommitKey(world.day, world.slot, personId), 1);
   return { ...committed, energy: world.energy - VERB_ENERGY.serve,
     touched: [...new Set([...world.touched, personId])] };
@@ -1843,6 +1901,10 @@ export function parseWorld(data: unknown): World | null {
     && isStrArray(w.rivalPlan.targets) && w.rivalPlan.targets.length <= 2
     && new Set(w.rivalPlan.targets).size === w.rivalPlan.targets.length
     && w.rivalPlan.targets.every(id => id.length > 0)
+    && (w.rivalPlan.shakes === undefined
+      || (isStrArray(w.rivalPlan.shakes) && w.rivalPlan.shakes.length <= 2
+        && new Set(w.rivalPlan.shakes).size === w.rivalPlan.shakes.length
+        && w.rivalPlan.shakes.every(id => id.length > 0)))
     && (w.rivalPlan.tactic === "invite" || w.rivalPlan.tactic === "compare"))) return null;
   if (!isRecord(w.present) || !Object.values(w.present).every(v => isStr(v) && ZONES.includes(v as Zone))) return null;
   if (!Array.isArray(w.memories) || !w.memories.every((m: unknown) => isRecord(m)

@@ -221,7 +221,7 @@ export type World = {
   /** 本时段玩家已经接触过的人；公开抢客意图另外按 rivalPlan 与守客承诺结算。 */
   touched: PersonId[];
   /** 陆遥开时段锁定的目标；空数组表示这时段没有目标，结算时不临时换人。旧档可缺。 */
-  rivalPlan?: { day: number; slot: Slot; targets: PersonId[]; tactic: RivalTactic };
+  rivalPlan?: { day: number; slot: Slot; targets: PersonId[]; tactic: RivalTactic; shakes?: PersonId[] };
   /** 对面自己约来的客人：本时段公开报价，实际结账一次；不是从玩家柜前偷抢。 */
   rivalBooking?: {
     day: number; slot: Slot; person: PersonId; product: import("./shelf.ts").ShelfId;

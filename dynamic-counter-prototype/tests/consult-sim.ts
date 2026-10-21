@@ -12,7 +12,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   ambient, beginServe, beginSlot, doVerb, endDay, leaveServe, newWorld,
-  nextSeason, qualityOf, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
+  nextSeason, qualityOf, rivalShakes, rivalTargets, rivalGuarded, SERVE_REFUSE_OPINION, settleServe, verbOptions,
   VERB_ENERGY,
   inviteRivalGuest, prepareWeekendOrder, weekendSponsors, contactInviteBlock, inviteContact, planContactInvite,
 } from "../src/world/engine.ts";
@@ -417,8 +417,16 @@ function choseCustomer(w: World, people: Person[], failed: Set<PersonId>): Perso
     const live = visitPerson(w, p);
     return SHELF_IDS.some(id => SHELF[id].price <= (live.skin?.budget ?? 0));
   });
-  const target = candidates.find(p => rivalTargets(w).includes(p.id) && !rivalGuarded(w, p.id));
+  const target = candidates.find(p => [...rivalTargets(w), ...rivalShakes(w)].includes(p.id) && !rivalGuarded(w, p.id));
   if (target) return target;
+  // 生意优先：能开的单先开。这一格没有能开的单时，她要撬的熟客你亲自接住就算守住
+  // （旱周里能卖的都被十天间隔锁住，客人才是那周唯一的战场）。
+  const shaken = people.find(p => p.role === "customer" && !!p.skin && !failed.has(p.id)
+    && rivalShakes(w).includes(p.id) && !rivalGuarded(w, p.id)
+    && p.id in w.present && w.present[p.id] !== "rival"
+    && !w.touched.includes(p.id) && w.energy >= VERB_ENERGY.serve
+    && (w.opinion[p.id] ?? 0) > SERVE_REFUSE_OPINION);
+  if (!candidates.length && shaken) return shaken;
   candidates.sort((a, b) => (w.opinion[b.id] ?? 0) - (w.opinion[a.id] ?? 0) || a.id.localeCompare(b.id));
   return candidates[0] ?? null;
 }
@@ -768,6 +776,15 @@ if (SEASONS > 1) {
         return `${String(hit).padStart(2)}/${String(three).padStart(2)}`;
       }).join("   ");
       console.log(`  ${xs[0]!.week}   ${row}`);
+    }
+  }
+
+  console.log("\n四之六、按季按周的过关路线（哪条线真的在扛这一关；旱周那格要看得见）");
+  for (let season = 1; season <= SEASONS; season++) {
+    for (const list of weeksByNo) {
+      const xs = list.filter(x => x.season === season);
+      if (!xs.length) continue;
+      console.log(`  第${season}季第${xs[0]!.week}周  ${routes(xs)}  守客人数中位 ${median(xs.map(x => x.guard))}  威胁中位 ${median(xs.map(x => x.threats))}`);
     }
   }
 }

@@ -69,6 +69,23 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(warning).toContainText(plan.title);
     });
 
+    test("撬客：她改撬熟客时，楼层写明要亲自接住，接住才算守住", async ({ page }) => {
+      const w: World = { ...marked(), opinion: { shen: 20, mei: -8 },
+        rivalPlan: { day: 2, slot: 1, targets: [], tactic: "invite", shakes: ["shen"] } };
+      await open(page, w);
+      const warning = page.locator(".world-rival-plan");
+      await expect(warning).toHaveClass(/is-shake/);
+      await expect(warning).toContainText("陆遥改去撬你的熟客 · 沈薇");
+      await expect(warning).toContainText("本时段亲自接住她点名的这位");
+      await warning.click();
+      await expect(page.getByRole("region", { name: "这一关" })).toContainText("陆遥改去撬你的熟客");
+      await page.getByRole("button", { name: /^接待/ }).click();
+      await page.locator(".world-serve").getByRole("button", { name: /^看她的/ }).first().click();
+      await page.locator(".world-serve").getByRole("button", { name: "关闭人物卡" }).click();
+      await expect(warning).toContainText("✓ 已接住 · 沈薇");
+      await expect(warning).toContainText("时段结束守客 +1");
+    });
+
     test("双目标在小屏完整显示，点第二位只守第二位；读档保留选择", async ({ page }) => {
       const w = marked();
       await open(page, { ...w, day: 8, slot: 0, energy: 20,

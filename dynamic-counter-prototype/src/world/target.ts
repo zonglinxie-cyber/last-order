@@ -43,7 +43,9 @@ export const weekTargetOfWeek = (season: number, week: number): number =>
 export const WEEK_EXCEED_RATE = 1.3;
 export const WEEK_STARS_MAX = 3;
 export const CARE_STEPS = [9, 12, 15] as const;
-export const GUARD_STEPS = [3, 5, 8] as const;
+/** 守客三星线从 8 落到 7：她一周最多撬七个（SHAKE_MAX_TOTAL），旱周抢客威胁中位只有 0，
+ *  8 那条线在旱周根本够不着，守客这一格只能出两星。7 = 她撬满的名单刚好被你一格不落地守住。 */
+export const GUARD_STEPS = [3, 5, 7] as const;
 /** 高星要持续守住公开威胁；无目标的时段不进分母。 */
 export const GUARD_RATE_STEPS = [0, 0.5, 0.75] as const;
 export const CARE_TRUST_MIN = 10;
@@ -78,6 +80,12 @@ export const weekGuardThreatKey = (n: number, day: number, slot: number, person:
 export const weekGuardStopKey = (n: number, day: number, slot: number, person: string) => `week-guard-stop:${n}:${day}:${slot}:${person}`;
 export const weekCareDayKey = (n: number, person: string, day: number) => `week-care-day:${n}:${person}:${day}`;
 export const guardCommitKey = (day: number, slot: number, person: string) => `guard-commit:${day}:${slot}:${person}`;
+export const weekShakeKey = (n: number, person: string) => `week-shake:${n}:${person}`;
+export const weekShakeTotalKey = (n: number) => `week-shake-total:${n}`;
+/** 这一周她撬过这个人几次；超上限她换人，名单才铺得开。 */
+export const weekShakeCountOf = (w: Books, person: string): number => w.qualities[weekShakeKey(weekNoOf(w.day), person)] ?? 0;
+/** 这一周她一共撬了几个人。 */
+export const weekShakeTotalOf = (w: Books): number => w.qualities[weekShakeTotalKey(weekNoOf(w.day))] ?? 0;
 
 type Books = { day: number; season?: number; money: number; rivalMoney: number; qualities: Record<string, number>; opinion?: Record<string, number> };
 

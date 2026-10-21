@@ -373,6 +373,7 @@
 .world-rival-plan span { overflow:hidden; color:#e8c8b6; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .world-rival-plan.is-guarded { background:#213a2d; }
 .world-rival-plan.is-compare:not(.is-guarded) { background:#4a2238; }
+.world-rival-plan.is-shake:not(.is-guarded) { background:#4a3a1c; }
 .pc-section .pc-rival { color:#e8b6c0; }
 .pc-section .pc-rival.is-held { color:#a8dcb0; }
 .world-rival-plan.is-guarded span { color:#a8dcb0; }

@@ -9,7 +9,7 @@ import { drawIndex } from "../src/world/rng.ts";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, bestFit, choiceVisible, clueIds, doVerb, drawStorylet, endDay,
   HARD_SELL_COMPLIANCE, SERVE_REFUSE_OPINION, resolveServe,
-  newWorld, nextSeason, qualityOf, rivalTargets, rivalGuarded, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
+  newWorld, nextSeason, qualityOf, rivalShakes, rivalTargets, rivalGuarded, seasonSummary, storyDeck, verbOptions, VERB_ENERGY, type VerbArgs, type VerbCall,
 } from "../src/world/engine.ts";
 import { ENDINGS, rank, seasonEnding } from "../src/world/ending.ts";
 import { CLUES, CLUE_THREADS, MAINLINE_ACTS, MAINLINE_ACT_KEY, threadLanding } from "../src/world/content/clues.ts";
@@ -94,6 +94,15 @@ function pickAction(style: Style, w: World, people: Person[]): [{ call: VerbCall
         const serve = first("serve", c => c.targets[0] === plan && untouched(c));
         if (serve) {
           const profile = visitPerson(w, personOf(people, plan));
+          return [{ call: serve, args: { product: bestFit(profile), units: profile.skin!.maxUnits } }, w];
+        }
+      }
+      // 撬客只有亲自接住才算守住（托单挡不住）：熟客被撬走，客情那一栏就掉人。
+      const shaken = rivalShakes(w).find(id => !rivalGuarded(w, id));
+      if (shaken) {
+        const serve = first("serve", c => c.targets[0] === shaken && untouched(c));
+        if (serve) {
+          const profile = visitPerson(w, personOf(people, shaken));
           return [{ call: serve, args: { product: bestFit(profile), units: profile.skin!.maxUnits } }, w];
         }
       }

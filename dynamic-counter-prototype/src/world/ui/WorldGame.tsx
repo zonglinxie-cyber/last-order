@@ -8,7 +8,7 @@ import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb, inviteRivalGuest, rivalInviteBlock, prepareWeekendOrder,
   beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
-  verbOptions, verbEnergyNow, singleVerbReason, energyCeiling, rivalTargets, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  verbOptions, verbEnergyNow, singleVerbReason, energyCeiling, rivalTargets, rivalShakes, rivalThreats, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { seasonRecap } from "../recap.ts";
@@ -982,10 +982,11 @@ export default function WorldGame() {
     && reqSeenDay !== world.day && askedToday(world).length > 0;
   // 陆遥这一时段公开盯上的人：开场就亮出来，点一下直接开她的卡。挡没挡住、记不记分都按引擎的判据念。
   const rivalWord = rivalPlanWord(world);
-  const rivalMarks = rivalTargets(world).flatMap(id => {
+  const rivalMarks = rivalThreats(world).flatMap(id => {
     const person = PEOPLE.find(p => p.id === id && p.id in world.present);
     return person ? [person] : [];
   });
+  const rivalShakeIds = new Set(rivalShakes(world));
 
   const booking = rivalBookingNow(world);
   const bookingPerson = booking && !booking.outcome && booking.person in world.present ? PEOPLE.find(p => p.id === booking.person) : undefined;
@@ -1014,7 +1015,8 @@ export default function WorldGame() {
       {rivalMarks.map(mark => {
         const held = rivalGuarded(world, mark.id);
         const counted = weekGuardedPeople(world).includes(mark.id);
-        return <button key={mark.id} type="button" className={`world-rival-plan${held ? " is-guarded" : ""}${world.rivalPlan?.tactic === "compare" ? " is-compare" : ""}`}
+        const shake = rivalShakeIds.has(mark.id);
+        return <button key={mark.id} type="button" className={`world-rival-plan${held ? " is-guarded" : ""}${world.rivalPlan?.tactic === "compare" ? " is-compare" : ""}${shake ? " is-shake" : ""}`}
           onClick={() => tapPerson(mark.id)} aria-label={`${rivalWord.title}：${mark.name}。${held ? "已接住" : rivalWord.howTo}`}>
           <b>{held ? "✓ 已接住" : rivalMarks.length > 1 ? world.rivalPlan?.tactic === "compare" ? "比货" : "邀客" : rivalWord.title} · {mark.name}</b>
           <span>{held ? counted ? `本周已记过${ta(mark)}，不重复加` : "时段结束守客 +1" : rivalMarks.length > 1 ? world.rivalPlan?.tactic === "compare" ? "亲自对症成交" : "接待或托同事照看" : rivalWord.howTo.split("；")[0]}</span>
@@ -1110,7 +1112,7 @@ export default function WorldGame() {
       <PersonCard person={person} world={world} people={PEOPLE} feedback={result}
         invitation={invitationFor(person)}
         booking={booking && bookingPerson?.id === person.id ? { amount: booking.amount, invited: booking.invited, won: bookingWon, blocked: bookingBlock, weekend: booking.weekend } : undefined}
-        rival={rivalWord && rivalTargets(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
+        rival={rivalWord && rivalThreats(world).includes(person.id) ? { title: rivalWord.title, howTo: rivalWord.howTo, held: rivalGuarded(world, person.id) } : undefined}
         onClose={() => { setSelected(null); setServing(false); setPick(null); }} />
       {pick ? <div className="world-pick">
         <p>{pickHint(pick.verb, person)}</p>
