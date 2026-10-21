@@ -3,7 +3,7 @@ import { newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { WEEK_TARGETS } from "../src/world/target.ts";
-import { TRAIT_LABEL, spotsOf } from "../src/world/consult.ts";
+import { TRAIT_LABEL, questionsOf, spotsOf } from "../src/world/consult.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
 import { ta } from "../src/world/pronoun.ts";
@@ -44,6 +44,32 @@ const generatedGuest = PEOPLE.find(p => p.skin && !p.skin.buysFor && !HAND_CONSU
 
 for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`接待决策 ${width}×${height}`, () => {
   test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+  test("看/问没有新事实不扣耐心；问偏的诉求进排除", async ({ page }) => {
+    await enter(page);
+    await expect(page.locator(".consult-status")).toContainText("还可探 4 次");
+    await page.getByRole("button", { name: "看她的眼下", exact: true }).click();
+    await expect(page.locator(".probe-reply")).toContainText("不算一次探问");
+    await expect(page.locator(".consult-status")).toContainText("还可探 4 次");
+    await page.getByRole("button", { name: "预算大概多少？", exact: true }).click();
+    await expect(page.locator(".probe-reply")).toContainText("没问出新的事实");
+    await expect(page.locator(".consult-status")).toContainText("还可探 4 次");
+  });
+
+  test("问偏的诉求进「排除」，也不扣耐心", async ({ page }) => {
+    const world: World = { ...newWorld("consult-excluded-ui", PEOPLE), day: 2, slot: 1, energy: 20,
+      opinion: { [generatedGuest.id]: 40 }, present: { [generatedGuest.id]: "counter", luyao: "rival" },
+      qualities: { [`visit-context-day:${generatedGuest.id}`]: 2, [`visit-context-code:${generatedGuest.id}`]: 1 } };
+    const live = visitPerson(world, generatedGuest);
+    const wrong = questionsOf(live).find(q => q.kind === "trait" && !live.skin!.demands.some(d => d.trait === q.trait))!;
+    expect(wrong.trait).toBeTruthy();
+    await openPerson(page, world, generatedGuest.name);
+    await page.getByRole("button", { name: "接待 12 精力", exact: true }).click();
+    await page.getByRole("button", { name: wrong.label, exact: true }).click();
+    await expect(page.locator(".consult-notes")).toContainText("排除");
+    await expect(page.locator(".consult-notes")).toContainText(TRAIT_LABEL[wrong.trait!]);
+    await expect(page.locator(".consult-status")).toContainText("还可探 5 次");
+  });
+
   test("探问、报价、放弃各有明确成本；不卖也留下真实笔记", async ({ page }) => {
     await enter(page);
     await expect(page.locator(".serve-products")).toHaveCount(0);
@@ -72,7 +98,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
 
   test("最后一次试用仍显示真实反应，开单复盘与实际账本一致", async ({ page }) => {
     await enter(page);
-    for (const name of ["带妆久了会不会闷痘？", "这一次大概想带几支？", "你最怕镜头看到什么？"]) {
+    for (const name of ["带妆久了会不会闷痘？", "这一次大概想带几支？", "要不要直接看套装？"]) {
       await page.getByRole("button", { name, exact: true }).click();
     }
     await page.getByRole("tab", { name: "挑货开单" }).click();

@@ -235,7 +235,7 @@ test("旧版手写的 7 位：诉求表与手写线索对得上，大图在盘�
   assert.equal(plateOf(skinned.find(p => !HAND_CONSULT[p.id])!), null, "没有手写的人不出大图");
 });
 
-test("每一下都花一句耐心；花完了看 / 问 / 试都按不动", () => {
+test("有信息才花一句耐心；没信息仍记下问过，但不扣耐心；花完了都按不动", () => {
   const p = who("shen");
   let c = openConsult(atCounter(["shen"]), p);
   assert.equal(c.patience, consultPatience(p, 0));
@@ -248,12 +248,81 @@ test("每一下都花一句耐心；花完了看 / 问 / 试都按不动", () =>
     const before = c.patience;
     const next = step(c);
     if (before <= 0) { assert.equal(next, c, "耐心花完还能动"); continue; }
-    assert.equal(next.patience, before - 1);
     assert.equal(next.begun, true);
+    assert.ok(next.patience === before || next.patience === before - 1, "一次最多花一句");
+    if (next.patience === before) assert.match(next.lines.at(-1)!, /不算一次探问/);
+    else assert.doesNotMatch(next.lines.at(-1)!, /不算一次探问/);
     c = next;
   }
-  assert.equal(c.patience, 0);
-  assert.equal(tryOn(c, p, "soft"), c);
+  const spent = { ...c, patience: 0 };
+  assert.equal(lookAt(spent, p, spotsOf(p)[0]!.key), spent);
+  assert.equal(askHer(spent, p, questionsOf(p)[0]!.key), spent);
+  assert.equal(tryOn(spent, p, "soft"), spent);
+});
+
+test("没带来新信息的看/问不扣耐心，并说明为什么；推销问句仍要付耐心和人情", () => {
+  const shen = who("shen");
+  let c = openConsult(atCounter(["shen"]), shen);
+  assert.ok(c.known.includes("natural"), "她的开场已经说了轻薄自然");
+  const knownSpot = spotsOf(shen).find(s => s.reveals.includes("natural"))!;
+  const lookedKnown = lookAt(c, shen, knownSpot.key);
+  assert.equal(lookedKnown.patience, c.patience, "看已经知道的诉求不扣耐心");
+  assert.ok(lookedKnown.known.includes("natural"));
+  assert.match(lookedKnown.lines.at(-1)!, /不算一次探问/);
+
+  const budget = questionsOf(shen).find(q => q.kind === "line" && !q.reveals?.length)!;
+  c = askHer(c, shen, budget.key);
+  assert.equal(c.patience, lookedKnown.patience, "问偏的句子不扣耐心");
+  assert.match(c.lines.at(-1)!, /没问出新的事实/);
+
+  const units = questionsOf(shen).find(q => q.kind === "units")!;
+  c = askHer(c, shen, units.key);
+  assert.equal(c.patience, lookedKnown.patience - 1, "第一次问件数是有用的");
+  const again = { ...c, asked: c.asked.filter(k => k !== units.key) };
+  const repeated = askHer(again, shen, units.key);
+  assert.equal(repeated.patience, again.patience, "件数已经知道，再问不扣耐心");
+  assert.match(repeated.lines.at(-1)!, /件数你已经知道/);
+
+  const push = questionsOf(shen).find(q => q.kind === "push")!;
+  const pushed = askHer(c, shen, push.key);
+  assert.equal(pushed.patience, c.patience - 1, "推销问句仍要付耐心");
+  assert.equal(pushed.mood, PUSH_QUESTION_MOOD);
+});
+
+test("问偏的诉求进「排除」；旧档没有排除字段按空接上，坏值拒收", () => {
+  const p = PEOPLE.find(x => x.skin && !x.skin.buysFor && !HAND_CONSULT[x.id])!;
+  const base = openConsult(atCounter([p.id]), p);
+  const wrong = questionsOf(p).find(q => q.kind === "trait" && !p.skin!.demands.some(d => d.trait === q.trait))!;
+  assert.ok(wrong, "按诉求生成的客人要有一句问偏的");
+  const asked = askHer(base, p, wrong.key);
+  assert.equal(asked.patience, base.patience, "问偏不扣耐心");
+  assert.deepEqual(asked.excluded, [wrong.trait]);
+  assert.match(asked.lines.at(-1)!, /排除了一个方向/);
+  assert.ok(!asked.known.includes(wrong.trait!), "排除的不是她的诉求");
+
+  const w = beginServe(atCounter([p.id]), PEOPLE, p.id);
+  const data = JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: asked })));
+  assert.deepEqual(restoreConsults(data, w, PEOPLE)[p.id]?.excluded, [wrong.trait]);
+  const legacy = { ...asked } as Partial<typeof asked>;
+  delete legacy.excluded;
+  assert.deepEqual(restoreConsults(JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: legacy as typeof asked }))), w, PEOPLE)[p.id]?.excluded, []);
+  const bad = JSON.parse(JSON.stringify(data));
+  bad.entries[p.id].excluded = ["made-up"];
+  assert.deepEqual(restoreConsults(bad, w, PEOPLE), {});
+  const clash = JSON.parse(JSON.stringify(data));
+  clash.entries[p.id].excluded = [p.skin!.demands[0]!.trait];
+  assert.deepEqual(restoreConsults(clash, w, PEOPLE), {});
+});
+
+test("底线不是「她不在意」：问到忌讳记底线，不混进排除", () => {
+  const p = PEOPLE.find(x => x.skin?.veto && !HAND_CONSULT[x.id])!;
+  const c = openConsult(atCounter([p.id]), p);
+  const q = questionsOf(p).find(q => q.kind === "trait" && q.trait === p.skin!.veto!.trait)!;
+  assert.ok(q);
+  const asked = askHer(c, p, q.key);
+  assert.equal(asked.vetoKnown, true);
+  assert.ok(!asked.excluded.includes(p.skin!.veto!.trait));
+  assert.equal(asked.patience, c.patience - 1, "知道底线是新事实，要花一句");
 });
 
 test("急性子少一句，熟起来的人多一句", () => {

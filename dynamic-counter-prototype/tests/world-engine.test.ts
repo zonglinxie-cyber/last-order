@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   ambient, applyChoice, availableVerbs, beginSlot, doVerb, drawStorylet, endDay,
   evalCond, hasOpenedSale, isReturningGuest, kindOf, MAX_PRESENT_CUSTOMERS, newWorld, nextSeason, opinionOf, parseWorld, poachSale,
-  related, resolveServe, seasonSummary, serializeWorld, setQuality, verbOptions,
+  related, resolveServe, seasonSummary, serializeWorld, setQuality, singleVerbReason, verbOptions,
   warmthOf, VERB_ENERGY, SAVE_KEY, STAFF_COUNTER_MAX, WORLD_SAVE_VERSION, ZONE_GUEST_CAPACITY,
   ARC_CHAPTERS_PER_DAY, ENERGY_PER_DAY, ENERGY_PER_SLOT, energyCeiling,
 } from "../src/world/engine.ts";
@@ -412,6 +412,12 @@ test("精力是硬门槛：差一点不够一单接待（VERB_ENERGY.serve）就
   let w = stage(newWorld("t2", PEOPLE), ["mei"], "counter");
   w = { ...w, energy: VERB_ENERGY.serve - 1 };
   assert.ok(!availableVerbs(w, PEOPLE, ["mei"]).includes("serve"));
+  assert.equal(singleVerbReason(w, PEOPLE, "mei", "serve"), `还差 ${VERB_ENERGY.serve - w.energy} 精力`);
+  assert.equal(singleVerbReason(w, PEOPLE, "mei", "greet"), null, "够得着的动作不报原因");
+  assert.equal(singleVerbReason({ ...w, energy: 40, samples: 0 }, PEOPLE, "mei", "sample"), "小样用完了");
+  assert.equal(singleVerbReason({ ...w, energy: 40 }, PEOPLE, "mei", "serve"), null);
+  const closed = { ...w, energy: 40, standing: 0 };
+  assert.match(singleVerbReason(closed, PEOPLE, "mei", "serve")!, /柜位|台账/);
   const frozen = resolveServe(w, PEOPLE, "mei", "soft", 1);
   assert.equal(frozen.money, 0, "没精力开不了单");
 });

@@ -19,6 +19,7 @@
 .consult-notes { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:10px; font-size:12px; }
 .consult-notes > span { color:#c6af99; margin-right:3px; }
 .consult-notes b { font-weight:500; padding:3px 8px; border:1px solid #7fa99555; color:#b9ddc7; border-radius:6px; }
+.consult-notes b.is-excluded { border-style:dashed; border-color:#a9968955; color:#a99689; font-weight:400; }
 .serve-veto { flex-basis:100%; margin:2px 0; color:#ecc1b7; }
 .serve-focus { flex-basis:100%; margin:2px 0; color:#f0cf8b; }
 .serve-focus.is-unknown { color:#c0a590; }

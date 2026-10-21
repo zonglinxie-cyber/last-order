@@ -1198,6 +1198,39 @@ export function availableVerbs(world: World, people: Person[], targets: PersonId
   return out;
 }
 
+/** 单人动作付不起/做不了时的那一句。界面把动作常驻，只靠这句禁用，
+ *  不再让「接待」在精力不够时直接消失（玩家看不出是缺钱、缺货还是人不在）。
+ *  只覆盖单人动作；两人动作仍由 verbOptions 过滤。返回 null 表示此刻可以做。 */
+export function singleVerbReason(world: World, people: Person[], personId: PersonId, verb: Verb): string | null {
+  if (availableVerbs(world, people, [personId]).includes(verb)) return null;
+  const p = personOf(people, personId);
+  if (!p) return "这个人不在这层楼上";
+  const cost = verbEnergyNow(world, verb);
+  if (world.energy < cost) return `还差 ${cost - world.energy} 精力`;
+  const she = ta(p);
+  if (verb === "serve") {
+    if (p.role !== "customer" || !p.skin) return `${she}今天不是来买货的`;
+    if (!reachable(world, p.id)) return world.present[p.id] === "rival" ? `${she}被请去了对面` : `${she}现在不在柜前`;
+    if (world.compliance <= SERVE_STAT_FLOOR || world.standing <= SERVE_STAT_FLOOR) return "柜位或台账太低，接待开不了";
+  }
+  if (verb === "sample") {
+    if (p.role !== "customer") return `${she}不是客人`;
+    if (world.samples <= 0) return "小样用完了";
+    if (qualityOf(world, sampleDayKey(world.day, p.id))) return "今天已经给过小样";
+    if (!reachable(world, p.id)) return `${she}现在不在柜前`;
+  }
+  if (verb === "wechat") {
+    if (p.role !== "customer") return `${she}不是客人`;
+    if (!wechatAllowed(world.heat)) return "这一季不许加微信";
+    if (qualityOf(world, `wechat:${p.id}`)) return "已经加过微信";
+    if (opinionOf(world, p.id) < WECHAT_MIN_OPINION) return `${she}还没到愿意加微信的程度`;
+  }
+  if (verb === "greet" && !reachable(world, p.id)) return `${she}现在不在柜前`;
+  if (verb === "help" && !isPresent(world, p.id)) return `${she}现在不在柜前`;
+  if (verb === "keep" && qualityOf(world, `secret-kept:${p.id}`)) return `已经替${she}保密过`;
+  return "现在做不了";
+}
+
 export type VerbCall = { verb: Verb; targets: PersonId[] };
 
 /** 枚举此刻全部合法动作，给模拟器和"能做些什么"的界面列表用。 */

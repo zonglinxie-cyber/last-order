@@ -21,7 +21,7 @@ const floor = (over: Partial<World> = {}): World => ({
   ...over,
 });
 const view = (over: Partial<CoachView> = {}): CoachView => ({
-  screen: "floor", storyOpen: false, webOpen: false, cardOpen: false, acted: false, ...over,
+  screen: "floor", webOpen: false, cardOpen: false, acted: false, ...over,
 });
 
 test("开局那个上午：指着柜前顾客，教一次判断并允许不卖", () => {
@@ -52,15 +52,6 @@ test("第一次花过精力：指着「下一时段」", () => {
   assert.equal(tip.text, "每做一件事都花精力。想让时间往前走，就点右上角的「下一时段」。");
   assert.deepEqual(tip.anchor, { kind: "nextSlot" });
   assert.equal(tip.side, "below");
-});
-
-test("故事卡摊着的时候只说卡那句，楼层上的提示都让路", () => {
-  const tip = coachTip(view({ storyOpen: true, cardOpen: true, acted: true }), floor({ energy: 50 }), PEOPLE, []);
-  assert.equal(tip?.step, "story");
-  assert.equal(tip.text, "这种事没有标准答案，她们会记住你怎么选。");
-  assert.deepEqual(tip.anchor, { kind: "storyChoices" });
-  // 卡那句看过以后，卡还摊着 —— 楼层上的提示也不许隔着卡冒出来
-  assert.equal(coachTip(view({ storyOpen: true, acted: true }), floor({ energy: 50 }), PEOPLE, ["story"]), null);
 });
 
 test("有人被陆遥请走：指着被请到对面的那个人", () => {
@@ -101,18 +92,17 @@ test("一次只说一句：看过的不再出现，全部看过就什么也不�
   seen = skipCoachSeen();
   assert.deepEqual(new Set(seen), new Set(COACH_STEPS));
   assert.equal(coachTip(view({ acted: true }), w, PEOPLE, seen), null);
-  assert.equal(coachTip(view({ cardOpen: true, storyOpen: true, webOpen: true, acted: true }), w, PEOPLE, seen), null);
+  assert.equal(coachTip(view({ cardOpen: true, webOpen: true, acted: true }), w, PEOPLE, seen), null);
 });
 
-test("先后序：人情网 > 故事卡 > 被请走 > 人物卡 > 花过精力 > 开局", () => {
+test("先后序：人情网 > 被请走 > 人物卡 > 花过精力 > 开局", () => {
   const w = floor({
     energy: 60,
     present: { shen: "counter", mei: "rival", luyao: "rival" },
     qualities: { "away:mei": 1 },
   });
-  const busy = view({ storyOpen: true, webOpen: true, cardOpen: true, acted: true });
+  const busy = view({ webOpen: true, cardOpen: true, acted: true });
   assert.equal(coachTip(busy, w, PEOPLE, [])?.step, "web"); // 网整屏压在卡上面
-  assert.equal(coachTip(view({ storyOpen: true, cardOpen: true, acted: true }), w, PEOPLE, [])?.step, "story");
   assert.equal(coachTip(view({ cardOpen: true, acted: true }), w, PEOPLE, [])?.step, "poach");
   assert.equal(coachTip(view({ cardOpen: true, acted: true }), floor({ energy: 60 }), PEOPLE, [])?.step, "card");
   assert.equal(coachTip(view({ acted: true }), floor({ energy: 60 }), PEOPLE, [])?.step, "action");
@@ -124,8 +114,6 @@ test("正在念的那句什么时候收：卡关了、动过手、卡收了、�
   assert.equal(coachAlive(card, view({ cardOpen: false })), false);
   // 「下面那排是你能做的事」使命在她真的做过一件事之后就完成 —— 让位给「下一时段」那句
   assert.equal(coachAlive(card, view({ cardOpen: true, acted: true })), false);
-  const story = { step: "story" as const, text: "", anchor: { kind: "storyChoices" as const }, side: "above" as const };
-  assert.equal(coachAlive(story, view({ storyOpen: false })), false);
   const web = { step: "web" as const, text: "", anchor: { kind: "webBar" as const }, side: "below" as const };
   assert.equal(coachAlive(web, view({ webOpen: false })), false);
 });
@@ -134,7 +122,6 @@ test("锚点选择器：人靠 data-pid，其余是界面固定的一处", () =>
   assert.equal(coachAnchorSelector({ kind: "actor", id: "mei" }), '[data-pid="mei"]');
   assert.equal(coachAnchorSelector({ kind: "verbs" }), ".world-verbs");
   assert.equal(coachAnchorSelector({ kind: "nextSlot" }), ".world-next");
-  assert.equal(coachAnchorSelector({ kind: "storyChoices" }), ".story-choices");
   assert.equal(coachAnchorSelector({ kind: "webBar" }), ".world-web-bar button");
   assert.equal(coachAnchorSelector({ kind: "reportFoot" }), ".report-foot button");
 });
@@ -151,7 +138,7 @@ test("柜前挑人：柜前顾客优先，都被请走就没有开局那句", ()
 
 test("看过记录落盘：往返一致，坏数据按什么都没看过处理", () => {
   assert.equal(COACH_KEY, "last-order-world-coach-v1");
-  assert.deepEqual(parseCoachSeen(serializeCoachSeen(["open", "story"])), ["open", "story"]);
+  assert.deepEqual(parseCoachSeen(serializeCoachSeen(["open", "web"])), ["open", "web"]);
   assert.deepEqual(parseCoachSeen(null), []);
   assert.deepEqual(parseCoachSeen(""), []);
   assert.deepEqual(parseCoachSeen("not json"), []);

@@ -70,7 +70,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
   });
   test("最后一次试用后切回问话不冒认旧问题，耐心用完仍可读取反应并开单", async ({ page }) => {
     await enter(page);
-    for (const name of ["这一次大概想带几支？", "带妆久了会不会闷痘？", "你最怕镜头看到什么？"])
+    for (const name of ["这一次大概想带几支？", "带妆久了会不会闷痘？", "要不要直接看套装？"])
       await page.getByRole("button", { name, exact: true }).click();
     await page.getByRole("tab", { name: "挑货开单" }).click();
     await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();

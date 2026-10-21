@@ -116,6 +116,16 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(world.energy).toBe(20 - VERB_ENERGY.help - VERB_ENERGY.handoff);
     });
 
+    test("精力不够时接待仍可见，并写明还差多少", async ({ page }) => {
+      await enter(page, envelope({ energy: 8, present: { mei: "counter", luyao: "rival" } }));
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      const serve = page.locator(".world-verbs button", { hasText: "接待" });
+      await expect(serve).toBeVisible();
+      await expect(serve).toBeDisabled();
+      await expect(serve).toContainText("还差 4 精力");
+      await expect(page.locator(".world-verbs button", { hasText: "招呼" })).toBeEnabled();
+    });
+
     test("完成一次接待：选货、件数、开给她", async ({ page }) => {
       await enter(page, envelope());
       await page.getByRole("button", { name: /查看梅女士/ }).click();
@@ -544,5 +554,23 @@ test.describe("新手引导 390×844", () => {
     await enter(page, envelope({ day: 1, slot: 0 }), false);
     await expect(page.locator(".world-coach")).toContainText("先接一位客人。看一处、问一句");
     expect(await hitNext()).toBe(true);
+  });
+
+  test("故事卡打开时苏蔓引导不压在上面，正文和选项都能读", async ({ page }) => {
+    await saveWorld(page, cardEnvelope(), false);
+    await page.goto("/?mode=world");
+    await page.getByRole("button", { name: /继续/ }).click();
+    await expect(page.locator(".world-story")).toBeVisible();
+    await expect(page.locator(".world-coach")).toHaveCount(0);
+    await expect(page.locator(".story-text")).toBeVisible();
+    const choices = page.locator(".story-choices button");
+    expect(await choices.count()).toBeGreaterThan(0);
+    for (const choice of await choices.all()) {
+      await expect(choice).toBeInViewport({ ratio: 1 });
+      expect(await choice.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      })).toBe(true);
+    }
   });
 });

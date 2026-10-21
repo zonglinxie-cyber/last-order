@@ -235,7 +235,7 @@ const emptyActions = (): ActionStats => ({
   try: 0, tryPerfect: 0, tryPositive: 0, tryMixed: 0, tryNegative: 0, unitsAsk: 0, patience: 0,
   startPatience: 0,
 });
-const infoKey = (c: Consult) => `${[...c.known].sort().join(",")}|${c.focusKnown ? c.focus : "-"}|${c.unitsKnown}|${c.vetoKnown}|${c.mood}`;
+const infoKey = (c: Consult) => `${[...c.known].sort().join(",")}|${[...c.excluded].sort().join(",")}|${c.focusKnown ? c.focus : "-"}|${c.unitsKnown}|${c.vetoKnown}|${c.mood}`;
 
 /** 看 / 问 / 试的顺序：先确认件数；再看一处、问一句；剩下的耐心必须留给试。
  *  和柜台一致：看/问/试用当天来访的那位（熟客的诉求和预算会变），不拿原始人物硬套。 */

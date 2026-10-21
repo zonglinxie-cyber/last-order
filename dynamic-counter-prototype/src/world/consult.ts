@@ -46,6 +46,8 @@ export type Consult = {
   asked: string[];
   /** 已经摆上台面的诉求 */
   known: Trait[];
+  /** 问过、看过后确认她不在意的方向。只在本单里有效：下一位客人、下一单都可能不同。 */
+  excluded: Trait[];
   /** 今天最要紧的那一条。存在不等于已经知道是哪条：老客的长期偏好可能全在 `known` 里，今天的重点仍要问。 */
   focus: Trait | null;
   focusKnown: boolean;
@@ -196,6 +198,7 @@ export function openConsult(world: World, person: Person): Consult {
     begun: false,
     looked: [], asked: [],
     known: [...new Set([...notes.known, ...said.map(d => d.trait)])],
+    excluded: [],
     focus: context?.focus ?? null,
     focusKnown: !!context && (!revealable || vetoLeaksFocus),
     vetoKnown: notes.vetoKnown || !!talk.vetoNote,
@@ -215,23 +218,42 @@ export function consultPatience(person: Person, opinion: number): number {
     + (opinion >= CONSULT_WARM_OPINION ? 1 : 0);
 }
 
-const spend = (c: Consult, person: Person, line: string, patch: Partial<Consult> = {}): Consult => {
-  const next = { ...c, ...patch, begun: true, patience: c.patience - 1, lines: [...c.lines, line] };
-  return next.patience <= 0 ? { ...next, lines: [...next.lines, outOfPatienceWord(person)] } : next;
+/** 没有新事实的那一下不扣耐心：玩家仍然花掉一次提问/观察的机会，但不该为「已经知道」再付一次钱。 */
+const spend = (c: Consult, person: Person, line: string, patch: Partial<Consult> = {}, cost = true): Consult => {
+  const next = { ...c, ...patch, begun: true, patience: c.patience - (cost ? 1 : 0), lines: [...c.lines, line] };
+  return cost && next.patience <= 0 ? { ...next, lines: [...next.lines, outOfPatienceWord(person)] } : next;
 };
 export const outOfPatienceWord = (person: Person) => `${ta(person)}看了眼表：「你直接说吧，开哪支？」`;
 
-export function lookAt(c: Consult, person: Person, key: string): Consult {
-  const spot = spotsOf(person).find(s => s.key === key);
-  if (!spot || c.patience <= 0 || c.looked.includes(key)) return c;
-  return spend(c, person, `你看${ta(person)}的${spot.label}：${spot.finding}`, {
-    looked: [...c.looked, key], known: learn(c, person, spot.reveals),
-    focusKnown: c.focusKnown || (!!c.focus && spot.reveals.includes(c.focus)) });
-}
+const NO_NEW_FACT = "（这条你已经知道，不算一次探问。）";
+const NOTHING_SEEN = "（没看出新的，不算一次探问。）";
+const NOTHING_ASKED = "（这句话没问出新的事实，不算一次探问。）";
+const ALREADY_UNITS = "（件数你已经知道，不算一次探问。）";
+const SHE_DOES_NOT_CARE = "（她不在意这一条；你排除了一个方向，不算一次探问。）";
+const SHE_DOES_NOT_CARE_AGAIN = "（她不在意这一条，也不算一次探问。）";
 
 /** 摆上台面的诉求只认她真有的那几条。 */
 const learn = (c: Consult, person: Person, traits: Trait[]): Trait[] =>
   [...new Set([...c.known, ...traits.filter(t => person.skin?.demands.some(d => d.trait === t))])];
+
+/** 问/看里确认「不是她」的方向。只记她真没有的诉求，已经知道的不能再算排除。
+ *  底线也是一条「她有意见」的方向，不能混进「她不在意」。 */
+const exclude = (c: Consult, person: Person, traits: Trait[]): Trait[] => {
+  const mine = new Set(person.skin?.demands.map(d => d.trait) ?? []);
+  if (person.skin?.veto) mine.add(person.skin.veto.trait);
+  return [...new Set([...c.excluded, ...traits.filter(t => !mine.has(t) && !c.known.includes(t))])];
+};
+
+export function lookAt(c: Consult, person: Person, key: string): Consult {
+  const spot = spotsOf(person).find(s => s.key === key);
+  if (!spot || c.patience <= 0 || c.looked.includes(key)) return c;
+  const known = learn(c, person, spot.reveals);
+  const focusKnown = c.focusKnown || (!!c.focus && spot.reveals.includes(c.focus));
+  const progress = known.length > c.known.length || focusKnown !== c.focusKnown;
+  const note = progress ? "" : (spot.reveals.some(t => c.known.includes(t)) ? NO_NEW_FACT : NOTHING_SEEN);
+  return spend(c, person, `你看${ta(person)}的${spot.label}：${spot.finding}${note}`, {
+    looked: [...c.looked, key], known, focusKnown }, progress);
+}
 
 const SHRUGS = ["「这个我倒不太在意。」", "「还好，这不是我的事。」", "「没有，你问偏了。」"];
 
@@ -240,28 +262,41 @@ export function askHer(c: Consult, person: Person, key: string): Consult {
   if (!q || !person.skin || c.patience <= 0 || c.asked.includes(key)) return c;
   const asked = [...c.asked, key];
   if (q.kind === "units") {
-    return spend(c, person, `「${person.skin.maxUnits === 1 ? "一支就够，多了用不完" : `最多 ${person.skin.maxUnits} 支，再多就用不完了`}。」`,
-      { asked, unitsKnown: true });
+    const progress = !c.unitsKnown;
+    return spend(c, person, `「${person.skin.maxUnits === 1 ? "一支就够，多了用不完" : `最多 ${person.skin.maxUnits} 支，再多就用不完了`}。」${progress ? "" : ALREADY_UNITS}`,
+      { asked, unitsKnown: true }, progress);
   }
   if (q.kind === "push") {
     return spend(c, person, `「${q.reply ?? person.voice.hurt}」`, { asked, mood: c.mood + PUSH_QUESTION_MOOD });
   }
   if (q.kind === "line") {
     const veto = person.skin.veto && q.reveals?.includes(person.skin.veto.trait) ? person.skin.veto : undefined;
-    return spend(c, person, `「${q.reply}」${veto && !c.vetoKnown ? `（底线：${veto.note}）` : ""}`, {
-      asked, known: learn(c, person, q.reveals ?? []), vetoKnown: c.vetoKnown || !!veto,
-      focusKnown: c.focusKnown || (!!c.focus && !!q.reveals?.includes(c.focus)) });
+    const known = learn(c, person, q.reveals ?? []);
+    const vetoKnown = c.vetoKnown || !!veto;
+    const focusKnown = c.focusKnown || (!!c.focus && !!q.reveals?.includes(c.focus));
+    const excluded = exclude(c, person, q.reveals ?? []);
+    // 只有「她真有这条 / 今天重点 / 底线」才花耐心；只排除一个方向不算一次探问。
+    const cost = known.length > c.known.length || vetoKnown !== c.vetoKnown || focusKnown !== c.focusKnown;
+    const note = cost ? "" : excluded.length > c.excluded.length ? "（这句话排除了一个方向，不算一次探问。）" : NOTHING_ASKED;
+    return spend(c, person, `「${q.reply}」${veto && !c.vetoKnown ? `（底线：${veto.note}）` : ""}${note}`, {
+      asked, known, vetoKnown, focusKnown, excluded }, cost);
   }
   const demand = person.skin.demands.find(d => d.trait === q.trait);
-  if (!demand) return spend(c, person, SHRUGS[hash(`${person.id}:${key}`) % SHRUGS.length], { asked });
+  if (!demand) {
+    const excluded = exclude(c, person, [q.trait!]);
+    const added = excluded.length > c.excluded.length;
+    return spend(c, person, `${SHRUGS[hash(`${person.id}:${key}`) % SHRUGS.length]}${added ? SHE_DOES_NOT_CARE : SHE_DOES_NOT_CARE_AGAIN}`,
+      { asked, excluded }, false);
+  }
   const veto = person.skin.veto?.trait === q.trait ? person.skin.veto : undefined;
   const line = `「${demandWords(person.id, demand)}${veto ? `。${veto.note}` : ""}。」`;
-  return spend(c, person, line, {
-    asked,
-    known: c.known.includes(demand.trait) ? c.known : [...c.known, demand.trait],
-    vetoKnown: c.vetoKnown || !!veto,
-    focusKnown: c.focusKnown || (!!c.focus && q.trait === c.focus),
-  });
+  const known = c.known.includes(demand.trait) ? c.known : [...c.known, demand.trait];
+  const vetoKnown = c.vetoKnown || !!veto;
+  const focusKnown = c.focusKnown || (!!c.focus && q.trait === c.focus);
+  const progress = known.length > c.known.length || vetoKnown !== c.vetoKnown || focusKnown !== c.focusKnown;
+  return spend(c, person, `${line}${progress ? "" : NO_NEW_FACT}`, {
+    asked, known, vetoKnown, focusKnown,
+  }, progress);
 }
 
 /** 她已经点头/认准之后，第一次换一支试的风险：只在换的那支没试到正中时结。
@@ -404,10 +439,15 @@ export function restoreConsults(data: unknown, world: World, people: Person[]): 
       && (!TRAIT_ORDER.includes(v.focus as Trait) || !live.skin!.demands.some(d => d.trait === v.focus))) continue;
     if (v.focusKnown !== undefined && typeof v.focusKnown !== "boolean") continue;
     if (!v.looked.every(k => spotsOf(live).some(s => s.key === k)) || !v.asked.every(k => questionsOf(live).some(q => q.key === k)) || !v.known.every(t => live.skin!.demands.some(d => d.trait === t))) continue;
+    // 旧存档没有 excluded：按「还没排除过」接上；有这一格就必须是真的诉求词，且不能和她真有的需求打架。
+    const excluded = v.excluded === undefined ? [] : Array.isArray(v.excluded) && v.excluded.every(t => TRAIT_ORDER.includes(t as Trait))
+      ? [...new Set(v.excluded as Trait[])] : null;
+    if (!excluded || excluded.some(t => live.skin!.demands.some(d => d.trait === t)
+      || live.skin!.veto?.trait === t || (v.known as string[]).includes(t))) continue;
     if (!record(v.tried) || !Object.entries(v.tried).every(([k, tier]) => Object.hasOwn(SHELF, k)
       && typeof tier === "string" && ["perfect", "positive", "mixed", "negative"].includes(tier))) continue;
     if (typeof v.mood !== "number" || !Number.isFinite(v.mood) || v.mood > 0 || v.mood < -30) continue;
-    out[id] = { ...v, focus: (v.focus as Trait | null | undefined) ?? null,
+    out[id] = { ...v, excluded, focus: (v.focus as Trait | null | undefined) ?? null,
       focusKnown: v.focusKnown === true && !!v.focus, risked: v.risked === true } as Consult;
   }
   return out;

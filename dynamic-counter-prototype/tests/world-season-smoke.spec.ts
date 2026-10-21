@@ -695,7 +695,7 @@ const openSeasonScreen = async (page: Page, world: World) => {
   await page.addInitScript(([k, v]) => window.localStorage.setItem(k, v),
     [SAVE_KEY, JSON.stringify({ version: WORLD_SAVE_VERSION, world, ui: { screen: "season" } })] as [string, string]);
   await page.addInitScript(([k, v]) => window.localStorage.setItem(k, v),
-    [COACH_KEY, JSON.stringify(["open", "card", "action", "story", "poach", "web", "report"])] as [string, string]);
+    [COACH_KEY, JSON.stringify(["open", "card", "action", "poach", "web", "report"])] as [string, string]);
   await page.goto("/?mode=world");
   await page.getByRole("button", { name: /继续/ }).click({ timeout: 10_000 });
   await expect(page.locator(".world-recap")).toBeVisible({ timeout: 10_000 });

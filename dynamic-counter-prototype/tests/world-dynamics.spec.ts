@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { newWorld, rivalPlanWord, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
-import { CARE_DAYS_MIN, CARE_STEPS, CARE_TRUST_MIN, GUARD_STEPS, weekCareDayKey, weekCareKey, weekGuardPersonKey } from "../src/world/target.ts";
+import { CARE_DAYS_MIN, CARE_STEPS, CARE_TRUST_MIN, GUARD_STEPS, guardCommitKey, weekCareDayKey, weekCareKey, weekGuardPersonKey } from "../src/world/target.ts";
 import type { RivalTactic, World } from "../src/world/types.ts";
 
 const open = async (page: Page, w: World) => {
@@ -101,6 +101,15 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await page.getByRole("button", { name: /继续/ }).click();
       await expect(warnings.nth(0)).not.toContainText("已接住");
       await expect(warnings.nth(1)).toContainText("✓ 已接住 · 梅女士");
+    });
+
+    test("守客已记过的那一句把名字念出来，不露出字段字面量", async ({ page }) => {
+      const w = marked(undefined, { [weekGuardPersonKey(1, "shen")]: 1, [guardCommitKey(2, 1, "shen")]: 1 });
+      await open(page, w);
+      await page.locator(".world-rival-plan").click();
+      const section = page.getByRole("region", { name: "这一关" });
+      await expect(section).toContainText("本周守客已记过她");
+      await expect(section).not.toContainText("${");
     });
 
     test("点页顶那条看三条线的算法；人物卡写本周照应了几天", async ({ page }) => {

@@ -88,7 +88,7 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
       {customer && <section className="pc-section" aria-label="这一关">
         <h3>这一关</h3>
         {rival && <p className={`pc-rival${rival.held ? " is-held" : ""}`}>{rival.held
-          ? `已接住${ta(person)}，陆遥这一时段带不走${ta(person)}。${guarded ? "本周守客已记过${ta(person)}，不重复加。" : "时段结束守客 +1。"}`
+          ? `已接住${ta(person)}，陆遥这一时段带不走${ta(person)}。${guarded ? `本周守客已记过${ta(person)}，不重复加。` : "时段结束守客 +1。"}`
           : `${rival.title}：${rival.howTo}。`}</p>}
         <p>{cared ? `本周客情已记上${ta(person)}，同一人一周只算一次。`
           : `客情：本周亲自照应 ${careDays} / ${CARE_DAYS_MIN} 天${careDays >= CARE_DAYS_MIN && (world.opinion[person.id] ?? 0) < CARE_TRUST_MIN ? `，${ta(person)}还要再信你一些` : ""}。送小样、介绍熟人、打圆场、加微信、保密或对症成交都算；托同事照看不算。`}</p>

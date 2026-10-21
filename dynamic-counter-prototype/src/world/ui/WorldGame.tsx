@@ -8,7 +8,7 @@ import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
 import {
   advanceSlot, ambient, applyChoice, availableVerbs, beginSlot, choiceVisible, doVerb, inviteRivalGuest, rivalInviteBlock, prepareWeekendOrder,
   beginServe, drawStorylet, endDay, isReturningGuest, leaveServe, newWorld, nextSeason, parseWorld, resolveServe, settleServe, substitute,
-  verbOptions, verbEnergyNow, energyCeiling, rivalTargets, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
+  verbOptions, verbEnergyNow, singleVerbReason, energyCeiling, rivalTargets, rivalGuarded, rivalPlanWord, SAVE_KEY, VERB_ENERGY, WORLD_SAVE_VERSION,
   type DrawnStorylet, type VerbCall,
 } from "../engine.ts";
 import { seasonRecap } from "../recap.ts";
@@ -415,6 +415,21 @@ export default function WorldGame() {
     [world, selected]);
   const verbs = selected ? availableVerbs(world, PEOPLE, [selected]) : [];
   const pairVerbs = TWO_TARGET.filter(v => calls.some(c => c.verb === v));
+  // 单人动作常驻：付不起/今天做不了的也留着，用一句原因把「接待为什么不见了」说清楚。
+  const singleVerbs = useMemo(() => {
+    if (!person) return [] as Verb[];
+    if (person.role === "customer") return [
+      "greet" as const,
+      ...(person.skin ? ["sample" as const, "serve" as const] : []),
+      "wechat" as const,
+      ...(world.qualities[`secret-known:${person.id}`] ? ["keep" as const] : []),
+    ];
+    if (person.role === "staff") return ["help" as const];
+    return [] as Verb[];
+  }, [person, world.qualities]);
+  const verbRows = useMemo(() => person
+    ? singleVerbs.map(v => ({ verb: v, reason: singleVerbReason(world, PEOPLE, person.id, v) }))
+    : [], [person, singleVerbs, world]);
   // 接待那一屏：看 / 问 / 试 的判定全在 consult.ts；没摸出来的诉求照样参与 fitScore。
   const consult = serving && person?.skin ? consults[person.id] ?? null : null;
   const midConsult = person ? consults[person.id]?.begun ?? false : false;
@@ -946,7 +961,7 @@ export default function WorldGame() {
         </section>}
       </main></MobileScroll>
       <div className="report-foot"><button className="world-primary" type="button" onClick={startNextDay}>进入第 {world.day} 天</button></div>
-      <CoachLayer world={world} view={{ screen: "report", reportDay: report.day, storyOpen: false, webOpen: false, cardOpen: false, acted: false }} />
+      <CoachLayer world={world} view={{ screen: "report", reportDay: report.day, webOpen: false, cardOpen: false, acted: false }} />
     </div>;
   }
 
@@ -1101,7 +1116,10 @@ export default function WorldGame() {
           <b>邀来比货</b><small>6 精力 · 1 份小样</small>
         </button>}
         {midConsult && <button type="button" className="resume" onClick={() => openServe()}><b>接着谈</b><small>这一单的劲已经花过</small></button>}
-        {verbs.filter(v => !(midConsult && v === "serve")).map(v => <button key={v} type="button" onClick={() => v === "serve" ? openServe() : apply({ verb: v, targets: [person.id] })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力</small></button>)}
+        {verbRows.filter(row => !(midConsult && row.verb === "serve")).map(row => <button key={row.verb} type="button" disabled={!!row.reason}
+          onClick={() => { if (row.reason) return; if (row.verb === "serve") openServe(); else apply({ verb: row.verb, targets: [person.id] }); }}>
+          <b>{verbWord(row.verb, person)}</b><small>{row.reason ?? `${verbEnergyNow(world, row.verb)} 精力`}</small>
+        </button>)}
         {pairVerbs.map(v => <button key={v} type="button" className="pair" onClick={() => setPick({ verb: v, calls: calls.filter(c => c.verb === v) })}><b>{verbWord(v, person)}</b><small>{verbEnergyNow(world, v)} 精力 · 再点一人</small></button>)}
         {!midConsult && bookingPerson?.id !== person.id && verbs.length + pairVerbs.length === 0 && <p className="verbs-empty">{verbsEmptyWord(person, world.energy < VERB_ENERGY.greet, world.present[person.id] === "rival")}</p>}
       </div>}
@@ -1153,6 +1171,6 @@ export default function WorldGame() {
     </div>}
 
     {/* 委托卡/进度面板开着时引导先等着：同一屏只让一层东西说话。 */}
-    {!reqCardOpen && !reqPanelOpen && !routesOpen && !weekendOpen && !archiveOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", storyOpen: !!pending, webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
+    {!pending && !reqCardOpen && !reqPanelOpen && !routesOpen && !weekendOpen && !archiveOpen && !serving && !receipt && <CoachLayer onServe={openServe} world={world} view={{ screen: "floor", webOpen, cardOpen: !!person, acted: world.energy < energyCeiling(world.slot) }} />}
   </div>;
 }

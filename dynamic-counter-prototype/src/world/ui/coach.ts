@@ -6,13 +6,13 @@ import type { Person, PersonId, World } from "../types.ts";
 
 export const COACH_KEY = "last-order-world-coach-v1";
 
-export type CoachStep = "open" | "card" | "action" | "story" | "poach" | "web" | "report";
-export const COACH_STEPS: CoachStep[] = ["open", "card", "action", "story", "poach", "web", "report"];
+export type CoachStep = "open" | "card" | "action" | "poach" | "web" | "report";
+export const COACH_STEPS: CoachStep[] = ["open", "card", "action", "poach", "web", "report"];
 
 /** 气泡指着的东西：actor 是地图上某个人，其余是界面固定的一处。 */
 export type CoachAnchor =
   | { kind: "actor"; id: PersonId }
-  | { kind: "verbs" | "nextSlot" | "storyChoices" | "webBar" | "reportFoot" };
+  | { kind: "verbs" | "nextSlot" | "webBar" | "reportFoot" };
 
 export type CoachTip = {
   step: CoachStep;
@@ -28,7 +28,6 @@ export type CoachView = {
   screen: "floor" | "report";
   /** 小结页是第几天收工；不在小结页给 undefined。 */
   reportDay?: number;
-  storyOpen: boolean;
   webOpen: boolean;
   cardOpen: boolean;
   /** 今天已经花过精力 —— 做过至少一个动作。 */
@@ -39,7 +38,6 @@ const TEXT: Record<CoachStep, string> = {
   open: "先接一位客人。看一处、问一句，再挑货试试；卖不合适，也可以先不卖。周末，业绩、客情、守客任选一条过关。",
   card: "想了解她要什么，就点「接待」。看一处、问一句才开始花精力；也可以先做别的事。",
   action: "每做一件事都花精力。想让时间往前走，就点右上角的「下一时段」。",
-  story: "这种事没有标准答案，她们会记住你怎么选。",
   poach: "没顾上的人，对面会请走。",
   web: "这一屏把整层的关系画给你看：谁跟谁近，谁听了你什么。",
   report: "打烊这张账每天收工都有：谁近了、谁远了，明天谁说要来。",
@@ -58,8 +56,9 @@ export const coachPoached = (world: World, people: Person[]): PersonId | undefin
     && (world.qualities[`away:${p.id}`] ?? 0) === world.day)?.id;
 
 /**
- * 此刻该冒出哪一句。一次只说一句：故事卡压着楼层时只说卡那句，人情网开着时只说网那句；
+ * 此刻该冒出哪一句。一次只说一句：人情网开着时只说网那句；
  * 看过的（seen）一律跳过。顺序就是优先级 —— 越贴当下的事越先开口。
+ * 故事卡不归引导管：卡本身要占满阅读层，界面在卡开着时不渲染这一层（见 WorldGame）。
  */
 export function coachTip(view: CoachView, world: World, people: Person[], seen: CoachStep[]): CoachTip | null {
   const fresh = (step: CoachStep) => !seen.includes(step);
@@ -68,8 +67,6 @@ export function coachTip(view: CoachView, world: World, people: Person[], seen: 
       ? { step: "report", text: TEXT.report, anchor: { kind: "reportFoot" }, side: "above" } : null;
   if (view.webOpen)
     return fresh("web") ? { step: "web", text: TEXT.web, anchor: { kind: "webBar" }, side: "below" } : null;
-  if (view.storyOpen)
-    return fresh("story") ? { step: "story", text: TEXT.story, anchor: { kind: "storyChoices" }, side: "above" } : null;
   const poached = coachPoached(world, people);
   if (poached && fresh("poach"))
     return { step: "poach", text: TEXT.poach, anchor: { kind: "actor", id: poached }, side: "above" };
@@ -88,14 +85,13 @@ export function coachTip(view: CoachView, world: World, people: Person[], seen: 
     就该收掉（收掉即算看过）。动作那句一旦动过手就完成使命。 */
 export const coachAlive = (tip: CoachTip, view: CoachView): boolean => {
   if (tip.anchor.kind === "verbs") return view.cardOpen && !view.acted;
-  if (tip.anchor.kind === "storyChoices") return view.storyOpen;
   if (tip.anchor.kind === "webBar") return view.webOpen;
   return true;
 };
 
 /** 越贴当下的事越先开口：正在念的会被排序更靠前的新句顶掉。report 单独一屏不参战。 */
 export const coachUrgency = (step: CoachStep): number => {
-  const order: CoachStep[] = ["web", "story", "poach", "card", "action", "open"];
+  const order: CoachStep[] = ["web", "poach", "card", "action", "open"];
   const i = order.indexOf(step);
   return i < 0 ? order.length : i;
 };
@@ -106,7 +102,6 @@ export const coachAnchorSelector = (anchor: CoachAnchor): string => {
     case "actor": return `[data-pid="${anchor.id}"]`;
     case "verbs": return ".world-verbs";
     case "nextSlot": return ".world-next";
-    case "storyChoices": return ".story-choices";
     case "webBar": return ".world-web-bar button";
     case "reportFoot": return ".report-foot button";
   }
