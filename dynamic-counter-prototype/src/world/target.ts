@@ -10,9 +10,12 @@ import { WEEK_RULES, weekNoOf, weekRuleOf } from "./weeks.ts";
 import type { PersonId } from "./types.ts";
 
 /** 一季四关各要多少：第一关是新手那七天，往后一关比一关高。
- *  数值按 2026-10-17 的有限信息盲策重定：旧 8k/9k/10k/11k 对会接待的玩家是 80/80 周三星，
- *  现在取盲策周进账分位数之间，见 docs/人情场设计.md「按盲策重定周目标、把今天的重点藏起来」。 */
-export const WEEK_TARGETS = [13_000, 16_000, 19_000, 22_000] as const;
+ *  2026-10-21 按当前 20 种子盲策重定（旧 13k/16k/19k/22k 是 10-17 那版读数）：
+ *  周进账 P25/中位/P75 = 17.6/18.8/19.4k、10.0/12.3/16.1k、10.0/12.4/17.1k、13.6/17.1/19.4k。
+ *  旧第 3 关 19k 在 P75 之上，销售线 0/20 过；第 4 关 22k 只有 3/20。
+ *  现在第 2–4 关取 14/16/18k：销售线分别约 7/8/9 过（20 副牌），第一关 13k 仍低于 P25，留作新手关。
+ *  目标值只改判星；来访、对手和结算不跟着变。 */
+export const WEEK_TARGETS = [13_000, 14_000, 16_000, 18_000] as const;
 export const SEASON_WEEKS = WEEK_TARGETS.length;
 /** 第三颗星：到目标的这个倍数。 */
 export const WEEK_EXCEED_RATE = 1.3;

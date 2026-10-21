@@ -173,7 +173,7 @@ test("档案记最好的一季（四关星数加起来），只在收季那一�
 
 test("下一周先改什么：从这一周离门槛最近的一条里挑一句能做的事", () => {
   const nearSales = books(7, 11_800, 9_000);
-  assert.match(nextWeekHint(nearSales), /下周目标 ¥16,000/, "第 2 关目标");
+  assert.match(nextWeekHint(nearSales), new RegExp(`下周目标 ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`), "第 2 关目标");
   assert.match(nextWeekHint(nearSales), /先追业绩：还差 ¥1,200/);
   assert.doesNotMatch(nextWeekHint(nearSales), /先补客情|先守客/);
 
@@ -188,12 +188,12 @@ test("下一周先改什么：从这一周离门槛最近的一条里挑一句�
 
   const passed = books(7, WEEK_TARGETS[0] + 500, 1_000);
   const hint = nextWeekHint(passed);
-  assert.match(hint, /下周目标 ¥16,000/);
+  assert.match(hint, new RegExp(`下周目标 ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`));
   assert.match(hint, /凭业绩过关/);
   assert.match(hint, /下周品牌培训周/, "下一周的规矩提前进复盘");
 
   const last = nextWeekHint({ ...books(28, 50_000, 10_000), season: 1 });
-  assert.match(last, /下季第 1 关 ¥13,000/);
+  assert.match(last, new RegExp(`下季第 1 关 ¥${WEEK_TARGETS[0].toLocaleString("zh-CN")}`));
   assert.match(last, /下季品牌培训周/);
 });
 
