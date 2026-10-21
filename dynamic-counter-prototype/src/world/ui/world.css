@@ -340,6 +340,12 @@
 .world-routes { display:flex; flex:1; flex-direction:column; min-height:0; min-width:0; font:13px/1.55 'Noto Serif SC',serif; }
 .routes-scroll.mobile-page { position:relative; inset:auto; flex:1; min-height:0; height:auto; width:100%; }
 .routes-scroll .mobile-scroll-content { padding:4px 14px 10px; }
+.routes-summary { display:flex; flex-direction:column; gap:4px; margin:0 0 8px; padding:0; list-style:none; }
+.routes-summary li { display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:baseline; gap:8px; padding:7px 9px; border:1px solid #f0cf9126; border-radius:8px; background:#ffffff06; }
+.routes-summary b { color:#f0c978; font:700 13px 'Noto Serif SC',serif; }
+.routes-summary li.done b { color:#a8dcb0; }
+.routes-summary span { min-width:0; color:#f2e6d8; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.routes-summary em { color:#f0c978; font-size:12px; font-style:normal; letter-spacing:.04em; white-space:nowrap; }
 .routes-list { display:flex; flex-direction:column; gap:8px; margin:0; padding:0; list-style:none; }
 .routes-list li { padding:9px 12px; border:1px solid #f0cf9126; border-radius:12px; background:#ffffff06; }
 .routes-list li.done { border-color:#8fb98f66; }
@@ -353,6 +359,13 @@
 .routes-foot { margin:10px 0 0; color:#b99b7f; font-size:12px; }
 .routes-close { flex:0 0 auto; min-height:48px; margin:8px 14px calc(12px + env(safe-area-inset-bottom)); border:1px solid #f0cf9177; border-radius:12px; background:linear-gradient(160deg,#f0c978,#d8a24f); color:#2a1713; font:700 14px 'Noto Serif SC',serif; }
 .routes-close:focus-visible { outline:2px solid #ffe2a9; outline-offset:2px; }
+@media (max-height:640px) {
+  .bottom-sheet:has(.world-routes) { height:94%; }
+  .bottom-sheet:has(.world-routes) .sheet-handle-zone { height:10px; }
+  .routes-list li { padding:7px 10px; }
+  .routes-list p { font-size:12px; line-height:1.5; }
+  .routes-list h3 { font-size:12px; }
+}
 .world-rival-plans { flex:0 0 auto; z-index:29; }
 .world-rival-choice { margin:0; padding:3px 12px; background:#34211e; color:#ffe8b6; font-size:12px; }
 .world-rival-plan { flex:0 0 auto; z-index:29; display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; padding:5px 12px; border:0; border-bottom:1px solid #f0cf9133; background:#442a24; color:#ffe8b6; text-align:left; }

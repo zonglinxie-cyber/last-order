@@ -44,6 +44,17 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
     });
 
+    test("三条线先给一览：三行都在首屏，不必滚到第三张卡", async ({ page }) => {
+      await open(page, lateIn(3, 3_000, 4_500));
+      await page.locator(".world-goal").click();
+      const summary = page.locator(".routes-summary");
+      await expect(summary.locator("li")).toHaveCount(3);
+      await expect(summary).toContainText("业绩");
+      await expect(summary).toContainText("客情");
+      await expect(summary).toContainText("守客");
+      await expect(summary).toBeInViewport({ ratio: 1 });
+    });
+
     test("过了这一关，页顶那条变色并亮星", async ({ page }) => {
       await open(page, lateIn(4, WEEK_TARGETS[0] + 200, 1_000));
       const strip = page.locator(".world-goal");

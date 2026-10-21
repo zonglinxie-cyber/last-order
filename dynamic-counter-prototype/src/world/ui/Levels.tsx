@@ -106,6 +106,11 @@ export function RoutesSheet({ world, onClose, onHistory }: { world: World; onClo
     onOpenChange={open => { if (!open) onClose(); }}>
     <div className="world-routes">
       <MobileScroll className="routes-scroll">
+        <ul className="routes-summary" aria-label="三条线一览">
+          {lines.map(x => <li key={x.route} className={x.stars ? "done" : ""}>
+            <b>{ROUTE_WORD[x.route]}</b><span>{x.short}</span><em>{starRow(x.stars)}</em>
+          </li>)}
+        </ul>
         <ul className="routes-list">
           <li className={sales.stars ? "done" : ""}>{head(sales)}
             <p>本周进账到 {yuan(live.target)} 过关；比{RIVAL_NAME}多一颗星；到 {yuan(Math.ceil(live.target * WEEK_EXCEED_RATE))} 再一颗。</p>

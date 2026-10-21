@@ -16,7 +16,7 @@
 .consult-tabs button[aria-selected=true] { color:#ffdf9d; background:#c699402b; border-color:#d8ad5d; }
 .consult-scroll.mobile-page,.receipt-scroll.mobile-page { position:relative; inset:auto; flex:1; min-height:0; height:auto; width:100%; }
 .consult-scroll .mobile-scroll-content,.receipt-scroll .mobile-scroll-content { padding:6px 14px 14px; }
-.consult-notes { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:10px; font-size:12px; }
+.consult-notes { position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:0 0 8px; padding:6px 0; background:#241713f2; border-bottom:1px solid #f0cf9118; font-size:12px; }
 .consult-notes > span { color:#c6af99; margin-right:3px; }
 .consult-notes b { font-weight:500; padding:3px 8px; border:1px solid #7fa99555; color:#b9ddc7; border-radius:6px; }
 .consult-notes b.is-excluded { border-style:dashed; border-color:#a9968955; color:#a99689; font-weight:400; }
@@ -35,7 +35,7 @@
 .serve-probe button { min-height:44px; border:1px solid #bda16b55; border-radius:10px; padding:8px 10px; background:#ffffff06; color:#f3dfc1; font-size:13px; }
 .serve-probe button:disabled { opacity:.45; }
 .serve-probe button.probe-active:disabled { opacity:1; color:#eed3a9; border-color:#bda16b88; }
-.probe-reply { flex:0 0 100%; box-sizing:border-box; min-width:0; padding:9px 11px; margin:2px 0 6px; scroll-margin-block:8px; border-left:2px solid #d8ad5d; border-radius:10px; background:#f0c97812; }
+.probe-reply { flex:0 0 100%; box-sizing:border-box; min-width:0; padding:9px 11px; margin:2px 0 6px; scroll-margin-block-start:84px; scroll-margin-block-end:8px; border-left:2px solid #d8ad5d; border-radius:10px; background:#f0c97812; }
 .probe-reply b { display:block; color:#c9b49a; font-size:11px; font-weight:500; margin-bottom:3px; }
 .probe-reply p { margin:0; color:#ffe1a3; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
 .probe-reply small { display:block; margin-top:4px; color:#c6af99; font-size:12px; }
@@ -98,8 +98,18 @@
 .receipt-lesson b { font-size:12px; color:#b9ddc7; }
 .receipt-lesson p { margin:4px 0 0; }
 @media (max-height:640px) {
+  .bottom-sheet:has(.world-serve),.bottom-sheet:has(.sale-receipt) { height:96%; }
+  .bottom-sheet:has(.world-serve) .sheet-handle-zone,.bottom-sheet:has(.sale-receipt) .sheet-handle-zone { height:10px; }
+  .bottom-sheet:has(.world-serve) .sheet-header,.bottom-sheet:has(.sale-receipt) .sheet-header { padding:0 12px 4px; }
+  .bottom-sheet:has(.world-serve) .sheet-title,.bottom-sheet:has(.sale-receipt) .sheet-title { font-size:18px; }
   .bottom-sheet:has(.world-serve) .sheet-description { display:none; }
+  .consult-status { padding:0 10px; }
   .consult-status span { display:none; }
-  .serve-meta { margin-bottom:4px; }
-  .consult-tabs { margin-bottom:2px; }
+  .consult-status strong { font-size:14px; }
+  .serve-meta { padding:0 10px; margin-bottom:4px; }
+  .consult-tabs { margin:0 10px 4px; }
+  .consult-scroll .mobile-scroll-content { padding:4px 10px 10px; }
+  .serve-foot { padding:6px 10px max(6px,env(safe-area-inset-bottom)); }
+  .offer-total { margin-bottom:4px; }
+  .serve-actions button { min-height:44px; }
 }
