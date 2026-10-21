@@ -353,14 +353,17 @@ async function doOneAction(page: Page, rnd: () => number, wantServe: boolean): P
   const actor = picked[picked.length - 1];
 
   const verbs = drawer.locator(".world-verbs button");
-  const words = await verbs.allTextContents().catch(() => [] as string[]);
-  const labelled = words
-    .map(w => w.replace(/\s*\d+\s*精力\s*/, "").replace(/\s*·\s*再点一人\s*/, "").trim())
-    .map((w, i) => ({ w, i }))
+  // 动作排里按不动的那些（还差几把劲、没有对象）也排在同一列里；真人点不动它，工具也不该去点。
+  const rows = await verbs.evaluateAll(els => els.map((el, i) => ({ i, text: el.textContent ?? "", off: (el as HTMLButtonElement).disabled })))
+    .catch(() => [] as Array<{ i: number; text: string; off: boolean }>);
+  const labelled = rows
+    .filter(r => !r.off)
+    .map(r => ({ w: r.text.replace(/\s*\d+\s*精力\s*/, "").replace(/\s*·\s*再点一人\s*/, "").trim(), i: r.i }))
     .filter(x => x.w);
   if (!labelled.length) {
     const emptyText = (await drawer.locator(".verbs-empty").textContent({ timeout: READ_MS }).catch(() => ""))?.trim() ?? "";
-    return { note: `${actor.name}这会儿没动作可做${emptyText ? `（${emptyText}）` : ""}` };
+    const offText = rows.filter(r => r.off).map(r => r.text.trim()).filter(Boolean).join("、");
+    return { note: `${actor.name}这会儿没动作可做${emptyText ? `（${emptyText}）` : ""}${offText ? `（${offText} 都按不动）` : ""}` };
   }
 
   const serve = labelled.find(x => wantServe && x.w === "接待");
