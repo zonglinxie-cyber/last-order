@@ -20,6 +20,7 @@ import type {
 } from "./types.ts";
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
+import { lifeArriveChance, lifeBringChance, lifePerson, lifeReferChance } from "./life-sales.ts";
 import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
 import { appointmentTime, arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
 import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, rivalBookingSlots, validRivalBooking } from "./rival-business.ts";
@@ -756,7 +757,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
         && !w.appointments.some(a => a.day === w.day && (a.person === p.id || a.bring?.includes(p.id)))
         && !recentlyPurchased(w, p.id)
         && !(weekend && !weekend.outcome && weekend.person === p.id)
-        && poachSale(p).units > 0);
+        && poachSale(lifePerson(w, p)).units > 0);
       if (pool.length) {
         // 独立确定性抽签，不挪动既有抽数流；场上多一位仍会自然参与后续互动。
         const guest = pool[drawIndex(`${w.seed}:booking:${w.season}:${w.day}${w.slot === 1 ? "" : `:${w.slot}`}`, 0, pool.length)];
@@ -784,7 +785,8 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     if (v.fromDay !== undefined && w.day < v.fromDay) continue;
     if (v.festivals && (!w.festival || !v.festivals.includes(w.festival))) continue;
     let r: number; [r, w] = roll(w);
-    if (r < visitChance(v, w.festival)) candidates.push({ id: person.id, r });
+    // 上一步怎么落的改她来不来： bias 叠在既有概率上，抽数照旧一人一次。
+    if (r < lifeArriveChance(w, person.id, visitChance(v, w.festival))) candidates.push({ id: person.id, r });
   }
   // 超出上限时谁留下由抽数排序决定 —— 同一个种子挑出同一批人。
   candidates.sort((x, y) => x.r - y.r);
@@ -799,9 +801,9 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     const pool = people.filter(p => p.role === "customer" && !(p.id in present) && !awayToday(w, p.id)
       && (p.visits.fromDay === undefined || w.day >= p.visits.fromDay)
       && (!p.visits.festivals || (!!w.festival && p.visits.festivals.includes(w.festival)))
-      && visitChance(p.visits, w.festival) > 0);
+      && lifeArriveChance(w, p.id, visitChance(p.visits, w.festival)) > 0);
     if (!pool.length) break;
-    const i = drawWeighted(w.seed, w.rngCalls, pool.map(p => visitChance(p.visits, w.festival)));
+    const i = drawWeighted(w.seed, w.rngCalls, pool.map(p => lifeArriveChance(w, p.id, visitChance(p.visits, w.festival))));
     w = { ...w, rngCalls: w.rngCalls + 1 };
     if (i < 0) break;
     placeCustomer(pool[i].id, drawGuestZone()); customerCount++;
@@ -1729,7 +1731,7 @@ export function endDay(world: World, people: Person[]): World {
     let bring: PersonId[] | undefined;
     if (friends.length) {
       let f: number; [f, w] = roll(w);
-      if (f < WECHAT_BRING_CHANCE) {
+      if (f < lifeBringChance(w, person.id, WECHAT_BRING_CHANCE)) {
         let fi: number; [fi, w] = [drawIndex(w.seed, w.rngCalls, friends.length), { ...w, rngCalls: w.rngCalls + 1 }];
         bring = [friends[fi].id];
       }
@@ -1748,7 +1750,7 @@ export function endDay(world: World, people: Person[]): World {
       && Math.max(warmthOf(w, people, person.id, q.id), warmthOf(w, people, q.id, person.id)) >= WECHAT_BRING_MIN_WARMTH);
     if (!friends.length) continue;
     let r: number; [r, w] = roll(w);
-    if (r >= REFERRAL_CHANCE) continue;
+    if (r >= lifeReferChance(w, person.id, REFERRAL_CHANCE)) continue;
     let fi: number; [fi, w] = [drawIndex(w.seed, w.rngCalls, friends.length), { ...w, rngCalls: w.rngCalls + 1 }];
     const friend = friends[fi];
     const slots = friend.visits.slots.length ? friend.visits.slots : [1 as Slot];

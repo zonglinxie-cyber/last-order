@@ -141,4 +141,17 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await expect(page.locator(".serve-focus")).toContainText(`今天的重点：${TRAIT_LABEL.correct}`);
     await expect(page.getByLabel("已知需求")).toContainText("当天见效");
   });
+
+  test("人生那一步改过的钱和件数，人物卡念的是走到今天的她", async ({ page }) => {
+    // 白姐第 4 步：预算 1200→1900、件数上限 1→2；第 1 步给她添上的头等事是「当天见效」。
+    // 卡上若还念原始人物，就会写成「最多带 1 件」、把当天见效从笔记里漏掉，今天的来意也会念成 ¥1,800。
+    const world: World = { ...newWorld("consult-life-ui", PEOPLE), day: 2, slot: 1, energy: 20,
+      present: { baijie: "counter", luyao: "rival" },
+      qualities: { "life:baijie": 4, "client-note:baijie:correct": 1, "client-note:baijie:units": 1,
+        "visit-context-day:baijie": 2, "visit-context-code:baijie": 1 } };
+    await openPerson(page, world, "白姐");
+    await expect(page.getByRole("region", { name: "今天的来意" })).toContainText("预算是 ¥2,850");
+    await expect(page.getByLabel("客情笔记")).toContainText("一次最多带 2 件");
+    await expect(page.getByLabel("客情笔记")).toContainText(TRAIT_LABEL.correct);
+  });
 });

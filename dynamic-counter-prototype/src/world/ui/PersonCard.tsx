@@ -4,6 +4,7 @@ import { ta } from "../pronoun.ts";
 import { clientNotes, TRAIT_LABEL } from "../consult.ts";
 import { purchaseCooldownOf } from "../purchases.ts";
 import { visitContext } from "../visits.ts";
+import { lifePerson } from "../life-sales.ts";
 import { currentArrival } from "../arrivals.ts";
 import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCarePeople, weekGuardedPeople } from "../target.ts";
 import { ageAtSeason } from "../content/people.ts";
@@ -32,7 +33,9 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
   useEffect(() => {
     if (feedback) cardRef.current?.querySelector(".pc-scroll .mobile-scroll")?.scrollTo({ top: 0 });
   }, [feedback]);
-  const notes = clientNotes(world, person);
+  // 「你记得的事」按走到今天这一步的她来念：人生那一步添上的头等事、抬高过的件数上限都算记住了；当天情境临时添的那一条不算。
+  const live = lifePerson(world, person);
+  const notes = clientNotes(world, live);
   const today = visitContext(world, person);
   const arrival = currentArrival(world, person.id, people);
   const customer = person.role === "customer";
@@ -104,8 +107,8 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
       {(notes.known.length > 0 || notes.vetoKnown || notes.unitsKnown) && <section className="pc-section" aria-label="客情笔记">
         <h3>你记得的事</h3>
         {notes.known.length > 0 && <p>{notes.known.map(t => TRAIT_LABEL[t]).join(" · ")}</p>}
-        {notes.vetoKnown && <p>底线：{person.skin?.veto?.note}</p>}
-        {notes.unitsKnown && <p>一次最多带 {person.skin?.maxUnits} 件</p>}
+        {notes.vetoKnown && <p>底线：{live.skin?.veto?.note}</p>}
+        {notes.unitsKnown && <p>一次最多带 {live.skin?.maxUnits} 件</p>}
       </section>}
       <section className="pc-section">
         <h3>{ta(person)}的熟人</h3>

@@ -1,5 +1,6 @@
 // 熟客每次回来有眼下的用途。旧笔记仍是真的，但这次哪一条最要紧会变。
 // 来访情境在开时段时定下，当天不因一次问话/成交突然换口径；不额外消耗随机数。
+import { lifePerson } from "./life-sales.ts";
 import { POSITIVE_FIT, SHELF, bestShelf, fitOfPerson } from "./shelf.ts";
 import { SEASON_DAYS, type Demand, type Person, type PersonId, type Trait, type World } from "./types.ts";
 
@@ -31,17 +32,19 @@ function variantPerson(person: Person, code: number): Person {
   return { ...person, skin: { ...person.skin, demands, budget: budgetOf(person, variant.kind) } };
 }
 
-/** 只从有买得起的对症货的情境中选；优先让旧首选不再是今天的首选。 */
+/** 只从有买得起的对症货的情境中选；优先让旧首选不再是今天的首选。
+ *  基线是"走到第几步的她"：人生那一步改过的诉求和预算，就是今天情境要对照的旧首选。 */
 function chooseCode(world: World, person: Person): number {
   if (!person.skin) return 0;
   const week = Math.floor((world.day - 1) / 7);
   const kind = (hash(person.id) + world.season + week) % 2 ? "event" : "recovery";
-  const oldBest = bestShelf(person);
-  const viable = VARIANTS.map((v, i) => ({ v, code: i + 1, p: variantPerson(person, i + 1) }))
+  const base = lifePerson(world, person);
+  const oldBest = bestShelf(base);
+  const viable = VARIANTS.map((v, i) => ({ v, code: i + 1, p: variantPerson(base, i + 1) }))
     .filter(x => x.v.kind === kind)
     .map(x => ({ ...x, best: bestShelf(x.p) }))
     .filter(x => SHELF[x.best].price <= x.p.skin!.budget && fitOfPerson(x.p, x.best) >= POSITIVE_FIT);
-  const options = viable.length ? viable : VARIANTS.map((v, i) => ({ v, code: i + 1, p: variantPerson(person, i + 1) }))
+  const options = viable.length ? viable : VARIANTS.map((v, i) => ({ v, code: i + 1, p: variantPerson(base, i + 1) }))
     .filter(x => x.v.kind === "recovery")
     .map(x => ({ ...x, best: bestShelf(x.p) }))
     .filter(x => SHELF[x.best].price <= x.p.skin!.budget && fitOfPerson(x.p, x.best) >= POSITIVE_FIT);
@@ -73,7 +76,7 @@ export function visitContext(world: World, person: Person): VisitContext | null 
   const code = world.qualities[CONTEXT_CODE(person.id)] ?? 0;
   const variant = VARIANTS[code - 1];
   if (!variant) return null;
-  const budget = budgetOf(person, variant.kind).toLocaleString("zh-CN");
+  const budget = budgetOf(lifePerson(world, person), variant.kind).toLocaleString("zh-CN");
   return { ...variant,
     line: variant.kind === "event"
       ? `今天要赶一个场合，预算是 ¥${budget}；有件最要紧的事，你帮我看看先顾哪一头。`
@@ -83,10 +86,12 @@ export function visitContext(world: World, person: Person): VisitContext | null 
       : `今天想先把状态稳住；这次最在意${variant.word}。以前的偏好还在，先按今天的事挑货。` };
 }
 
+/** 今天进门的她：先叠「人生走到第几步」，再叠当天的来访情境。
+ *  卖货侧所有读数（适配、预算、件数、诉求条数）都读这一层，不在界面拼句子。 */
 export const visitPerson = (world: World, person: Person): Person => {
   const code = world.qualities[CONTEXT_DAY(person.id)] === absoluteDay(world)
     ? world.qualities[CONTEXT_CODE(person.id)] ?? 0 : 0;
-  return variantPerson(person, code);
+  return variantPerson(lifePerson(world, person), code);
 };
 
 /** 日志与接待只记玩家真的接触过的人。 */

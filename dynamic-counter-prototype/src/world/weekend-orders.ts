@@ -1,6 +1,7 @@
 import { drawIndex } from "./rng.ts";
 import { BUY_INTERVAL_DAYS, lastPurchaseDay } from "./purchases.ts";
 import { bestShelf, POSITIVE_FIT, fitOfPerson, SHELF } from "./shelf.ts";
+import { lifePerson } from "./life-sales.ts";
 import { SEASON_DAYS, type Person, type PersonId, type WeekendOrder, type WeekendOutcome, type WeekendSale, type World } from "./types.ts";
 
 export const WEEKEND_PREP_ENERGY = 6;
@@ -33,11 +34,15 @@ export function planWeekendOrder(world: World, people: Person[]): WeekendOrder |
   if (world.slot !== 0 || world.day % 7 !== 5) return undefined;
   const due = world.day + 2;
   if (due > SEASON_DAYS || world.weekendOrder?.due === due) return undefined;
-  const pool = people.filter(p => p.role === "customer" && p.skin && p.id !== world.weekendOrder?.person
-    && (p.visits.fromDay ?? 1) <= world.day && !p.visits.festivals
-    && !world.appointments.some(a => a.day >= world.day && a.day <= due && (a.person === p.id || a.bring?.includes(p.id)))
-    && (lastPurchaseDay(world, p.id) <= 0 || due - lastPurchaseDay(world, p.id) >= BUY_INTERVAL_DAYS)
-    && SHELF[bestShelf(p)].price <= p.skin.budget && fitOfPerson(p, bestShelf(p)) >= POSITIVE_FIT)
+  const pool = people.filter(p => {
+    if (!(p.role === "customer" && p.skin && p.id !== world.weekendOrder?.person
+      && (p.visits.fromDay ?? 1) <= world.day && !p.visits.festivals
+      && !world.appointments.some(a => a.day >= world.day && a.day <= due && (a.person === p.id || a.bring?.includes(p.id)))
+      && (lastPurchaseDay(world, p.id) <= 0 || due - lastPurchaseDay(world, p.id) >= BUY_INTERVAL_DAYS))) return false;
+    // 走到第几步的她才是周五那天的她：买不买得起按叠过人生那一步的预算算。
+    const lp = lifePerson(world, p);
+    return SHELF[bestShelf(lp)].price <= lp.skin!.budget && fitOfPerson(lp, bestShelf(lp)) >= POSITIVE_FIT;
+  }).map(p => lifePerson(world, p))
     .sort((a, b) => b.skin!.budget - a.skin!.budget || a.id.localeCompare(b.id)).slice(0, 8);
   if (!pool.length) return undefined;
   const person = pool[drawIndex(`${world.seed}:weekend:${world.season}:${due}`, 0, pool.length)]!;

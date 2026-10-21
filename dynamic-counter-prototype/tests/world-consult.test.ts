@@ -491,64 +491,102 @@ test("贵的全接住仍只是点头，正中那支是买得起、全接住里�
 });
 
 test("没有正中的客人说清楚：最接近的一支也只是对症，不让人一直摸下去", () => {
-  const p = who("zhou"), c = openConsult(atCounter([p.id]), p);
-  assert.equal(perfectShelf(p), null);
-  assert.ok(offerEvidence(c, p, "soft", 1).some(x => x.includes("没有一支能全接住")));
+  // 赶场那天周姐最要紧的换成撑妆：四条诉求一起要，货架上没有哪一支全接得住 —— 这时要当场说清楚。
+  const p = who("zhou");
+  const w: World = { ...atCounter([p.id]), day: 2,
+    qualities: { [`visit-context-day:${p.id}`]: 2, [`visit-context-code:${p.id}`]: 2 } };
+  const live = visitPerson(w, p), c = openConsult(w, p);
+  assert.equal(perfectShelf(live), null, "赶场那天的周姐没有正中");
+  assert.ok(offerEvidence(c, live, "soft", 1).some(x => x.includes("没有一支能全接住")));
 });
 
+// 「换支要结人情」这两条要的是三种档位各一支，不是哪三支货：按当下的货架现挑，
+// 档位重排（见设计文档「货架尾部那一刀」）以后不用跟着改名单。
+const trialTierOf = (w: World, p: Person, id: (typeof SHELF_IDS)[number]) =>
+  tryOn({ ...openConsult(w, p), patience: 99 }, p, id).tried[id];
+/** 点头一支 + 犹豫一支 + 随便再一支（用来验「只在第一次换支时结」）。挑不出来返回 null。 */
+function switchCase(p: Person) {
+  const w = beginServe(atCounter([p.id]), PEOPLE, p.id);
+  const nod = SHELF_IDS.find(id => trialTierOf(w, p, id) === "positive");
+  const mixed = SHELF_IDS.find(id => trialTierOf(w, p, id) === "mixed");
+  const other = SHELF_IDS.find(id => id !== nod && id !== mixed);
+  return nod && other ? { w, nod, mixed, other } : null;
+}
+/** 32 位客人个个都带两条脾气，没有"没脾气"的那种，所以普通人只能按"不犯那三条"来挑
+ *  （那三条在 src/world/consult.ts 的 SECOND_TRY_HARD_TEMPERS 里，改了就红在这）。
+ *  急性子那一档（-3）要点头与犹豫都齐；普通人（-2）只要点头一支就够。 */
+const HARD_TEMPERS = ["proud", "hasty", "wary"] as const;
+const switchSubject = (hard: boolean) => {
+  const found = PEOPLE.find(p => p.role === "customer" && p.skin
+    && p.tempers.some(t => (HARD_TEMPERS as readonly string[]).includes(t)) === hard
+    && switchCase(p) && (!hard || !!switchCase(p)!.mixed));
+  assert.ok(found, `挑不出一位${hard ? "犯那三条脾气" : "不犯那三条脾气"}的客人来验换支的代价`);
+  return { person: found!, ...switchCase(found!)! };
+};
+
 test("点头后再换一支：第一次换支没试到正中才结人情，好胜/多疑更重；试到正中不罚", () => {
-  // 周姐：多疑 · 好胜；粉底是点头，粉霜是犹豫 —— 换支失败要结 -3。
-  const zhou = who("zhou"), zw = beginServe(atCounter([zhou.id]), PEOPLE, zhou.id);
-  const nod = tryOn(openConsult(zw, zhou), zhou, "soft");
-  assert.equal(nod.tried.soft, "positive");
-  assert.equal(nod.mood, 0);
-  const risk = secondTryRisk(nod, zhou, "base");
+  const hard = switchSubject(true);
+  const mei = hard.person, mw = hard.w, nod = hard.nod, other = hard.other;
+  const mixed = hard.mixed!;   // switchSubject(true) 保证挑得到犹豫那一支
+  const nodded = tryOn(openConsult(mw, mei), mei, nod);
+  assert.equal(nodded.tried[nod], "positive");
+  assert.equal(nodded.mood, 0);
+  const risk = secondTryRisk(nodded, mei, mixed);
   assert.ok(risk, "点头后换支要在按下试用前看得见代价");
   assert.equal(risk!.mood, SECOND_TRY_HARD_MOOD);
   assert.match(risk!.line, /拿不准/);
   assert.match(risk!.line, /-3/);
-  assert.ok(offerEvidence(nod, zhou, "base", 1).includes(risk!.line), "选货提示要带同一句风险");
-  const failed = tryOn(nod, zhou, "base");
-  assert.equal(failed.tried.base, "mixed");
+  assert.ok(offerEvidence(nodded, mei, mixed, 1).includes(risk!.line), "选货提示要带同一句风险");
+  const failed = tryOn(nodded, mei, mixed);
+  assert.equal(failed.tried[mixed], "mixed");
   assert.equal(failed.mood, SECOND_TRY_HARD_MOOD);
   assert.equal(failed.risked, true);
   assert.match(failed.lines.at(-1)!, /刚才那支不是挺好吗/);
   // 只在第一次换支时结；再换一支不再叠罚（但照样花耐心）。
-  assert.equal(secondTryRisk(failed, zhou, "mist"), null);
-  assert.equal(tryOn(failed, zhou, "mist").mood, SECOND_TRY_HARD_MOOD);
+  assert.equal(secondTryRisk(failed, mei, other), null);
+  assert.equal(tryOn(failed, mei, other).mood, SECOND_TRY_HARD_MOOD);
+  const alreadyRisked = { ...nodded, risked: true, mood: -3 };
+  assert.equal(secondTryRisk(alreadyRisked, mei, mixed), null, "仍有耐心且上支点头，也不能重复扣人情");
+  assert.equal(tryOn(alreadyRisked, mei, mixed).mood, -3);
   // 先试过别的、再点头，换支仍要结 —— 风险认的是「最近一次点头」。
-  const mixedFirst = tryOn(openConsult(zw, zhou), zhou, "base");
-  const thenNod = tryOn(mixedFirst, zhou, "soft");
-  assert.equal(thenNod.tried.soft, "positive");
-  assert.ok(secondTryRisk(thenNod, zhou, "mist"), "先试过犹豫货，再点头后换支同样有代价");
-  // 沈薇：隔离点头、粉底正中 —— 换到正中不罚，换支的代价和收益是同一枚硬币。
-  const shen = who("shen"), sw = beginServe(atCounter([shen.id]), PEOPLE, shen.id);
-  const first = tryOn(openConsult(sw, shen), shen, "plain");
-  assert.equal(first.tried.plain, "positive");
-  const perfect = tryOn(first, shen, "soft");
-  assert.equal(perfect.tried.soft, "perfect");
+  const mixedFirst = tryOn(openConsult(mw, mei), mei, mixed);
+  const thenNod = tryOn(mixedFirst, mei, nod);
+  assert.equal(thenNod.tried[nod], "positive");
+  assert.ok(secondTryRisk(thenNod, mei, other), "先试过犹豫货，再点头后换支同样有代价");
+  // 换到正中不罚：换支的代价和收益是同一枚硬币。
+  const shen = PEOPLE.find(p => p.role === "customer" && p.skin && perfectShelf(p)
+    && SHELF_IDS.some(id => trialTierOf(beginServe(atCounter([p.id]), PEOPLE, p.id), p, id) === "positive"));
+  assert.ok(shen, "挑不出一位既有正中、又有一支只是点头的客人");
+  const sw = beginServe(atCounter([shen!.id]), PEOPLE, shen!.id);
+  const shenNod = SHELF_IDS.find(id => trialTierOf(sw, shen!, id) === "positive")!;
+  const first = tryOn(openConsult(sw, shen!), shen!, shenNod);
+  assert.equal(first.tried[shenNod], "positive");
+  const perfect = tryOn(first, shen!, perfectShelf(shen!)!);
+  assert.equal(perfect.tried[perfectShelf(shen!)!], "perfect");
   assert.equal(perfect.mood, 0);
   assert.match(perfect.lines.at(-1)!, /就是这个感觉/);
-  // 普通人（不犯这三条脾气）是 -2。
-  const liang = who("liangxia"), lw = beginServe(atCounter([liang.id]), PEOPLE, liang.id);
-  const liangNod = tryOn(openConsult(lw, liang), liang, "soft");
-  assert.equal(secondTryRisk(liangNod, liang, "mist")!.mood, SECOND_TRY_MOOD);
+  // 一点脾气都没有的普通人是 -2。
+  const liang = switchSubject(false);
+  const lw = beginServe(atCounter([liang.person.id]), PEOPLE, liang.person.id);
+  const liangNod = tryOn(openConsult(lw, liang.person), liang.person, liang.nod);
+  assert.equal(secondTryRisk(liangNod, liang.person, liang.other)!.mood, SECOND_TRY_MOOD);
 });
 
 test("换支人情按实际结算进账：同一位客人的两种收法差 3 点看法", () => {
-  const zhou = who("zhou");
-  const base = beginServe(atCounter([zhou.id]), PEOPLE, zhou.id);
-  const nod = tryOn(openConsult(base, zhou), zhou, "soft");
-  const closedNow = settleServe(base, PEOPLE, zhou.id, "soft", 1, false, nod.mood);
-  const triedAgain = tryOn(nod, zhou, "base");
-  const closedAfter = settleServe(base, PEOPLE, zhou.id, "soft", 1, false, triedAgain.mood);
-  assert.equal(opinionOf(closedNow, zhou.id), 8);
-  assert.equal(opinionOf(closedAfter, zhou.id), 5, "多试一支没中，同样的货少 3 点人情");
+  const hard = switchSubject(true);
+  const mei = hard.person, nod = hard.nod, mixed = hard.mixed!;
+  const base = beginServe(atCounter([mei.id]), PEOPLE, mei.id);
+  const nodded = tryOn(openConsult(base, mei), mei, nod);
+  const closedNow = settleServe(base, PEOPLE, mei.id, nod, 1, false, nodded.mood);
+  const triedAgain = tryOn(nodded, mei, mixed);
+  const closedAfter = settleServe(base, PEOPLE, mei.id, nod, 1, false, triedAgain.mood);
+  assert.equal(opinionOf(closedNow, mei.id) - opinionOf(closedAfter, mei.id), -SECOND_TRY_HARD_MOOD,
+    "多试一支没中，同样的货少 3 点人情");
   assert.equal(closedAfter.money, closedNow.money, "这笔风险不改成交金额，只改人情");
-  const fb = saleFeedback(base, closedAfter, zhou, "soft", 1, triedAgain.mood, true);
+  const fb = saleFeedback(base, closedAfter, mei, nod, 1, triedAgain.mood, true);
   assert.match(fb.explanation, /反复/, "小票要解释少掉的人情从哪来");
   assert.match(fb.lesson, /点头后/);
-  assert.doesNotMatch(saleFeedback(base, closedNow, zhou, "soft", 1, nod.mood).explanation, /反复/);
+  assert.doesNotMatch(saleFeedback(base, closedNow, mei, nod, 1, nodded.mood).explanation, /反复/);
 });
 
 test("旧接待没有 risked 按 false 恢复；坏值只丢这一段接待", () => {

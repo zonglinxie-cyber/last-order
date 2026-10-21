@@ -11,6 +11,7 @@ import type { Person, PersonId, Trait, World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { HAND_CONSULT, PLATE_CROP, PLATE_POINTS, PLATE_SIZE } from "./content/consult-lines.ts";
 import { visitContext, visitPerson } from "./visits.ts";
+import { lifePerson } from "./life-sales.ts";
 
 /** 她肯听你说几句。每看一处、问一句、试一支都花一句；花完了只剩开单。 */
 export const CONSULT_PATIENCE = 4;
@@ -389,11 +390,14 @@ export function clientNotes(world: World, person: Person): Pick<Consult, "known"
   };
 }
 
-/** 第一次实际观察/询问/试用后记笔记；只打开面板不能免费获知新事实。 */
+/** 第一次实际观察/询问/试用后记笔记；只打开面板不能免费获知新事实。
+ *  过滤按"她这个人"的长期诉求表（含人生那一步添上的），不按当天情境临时添的那一条 ——
+ *  否则她走到新一步以后多出来的头等事，玩家问出来了也记不住，明天又得重新问一遍。 */
 export function rememberConsult(world: World, person: Person, consult: Consult): World {
   if (!consult.begun || consult.person !== person.id) return world;
-  const facts = [...consult.known.filter(t => person.skin?.demands.some(d => d.trait === t)),
-    ...(consult.vetoKnown && person.skin?.veto ? ["veto"] : []), ...(consult.unitsKnown ? ["units"] : [])];
+  const permanent = lifePerson(world, person);
+  const facts = [...consult.known.filter(t => permanent.skin?.demands.some(d => d.trait === t)),
+    ...(consult.vetoKnown && permanent.skin?.veto ? ["veto"] : []), ...(consult.unitsKnown ? ["units"] : [])];
   const added = facts.filter(f => world.qualities[noteKey(person.id, f)] !== 1);
   return added.length ? { ...world, qualities: { ...world.qualities,
     ...Object.fromEntries(added.map(f => [noteKey(person.id, f), 1])) } } : world;
