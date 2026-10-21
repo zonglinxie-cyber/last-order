@@ -22,6 +22,7 @@ import { CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, WEEK_EXCEED_RATE
 import { readWorldProgress } from "../progress.ts";
 import { RivalSeasonRecap } from "./RivalHistory.tsx";
 import { openConsult, rememberConsult, restoreConsults, saveConsults, type Consult } from "../consult.ts";
+import { BUY_INTERVAL_DAYS, purchaseCooldownOf } from "../purchases.ts";
 import { askCompanion, companionOptions } from "../companion.ts";
 import type { ShelfId } from "../shelf.ts";
 import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
@@ -924,6 +925,9 @@ export default function WorldGame() {
   if (phase === "report" && report) {
     const allies = PEOPLE.filter(p => (world.opinion[p.id] ?? 0) >= 40);
     const enemies = PEOPLE.filter(p => (world.opinion[p.id] ?? 0) <= -30);
+    const cooling = PEOPLE.filter(p => p.role === "customer" && purchaseCooldownOf(world, p.id));
+    const coolingLeft = cooling.length
+      ? Math.min(...cooling.map(p => purchaseCooldownOf(world, p.id)!.left)) : 0;
     return <div className="app-screen world-app world-report-page">
       <MobileScroll className="world-report-scroll"><main className="world-report">
         <p className="report-eyebrow">第 {report.day} 天 · {report.week ? "周日对账" : "今日收工"}</p>
@@ -954,6 +958,10 @@ export default function WorldGame() {
               <strong>{t.name} · {SLOT_WORD[t.slot]}</strong><span>{typeof t.detail === "string" && t.detail ? t.detail : "说好了来看看"}</span>
             </p>)
             : <p>明天没人约好。谁肯替你约人，得看今晚这张网。</p>}
+          {cooling.length > 0 && <p className="report-cooldown">
+            还有 {cooling.length} 位客人还在 {BUY_INTERVAL_DAYS} 天购买间隔里，最早 {coolingLeft} 天后回来
+            {cooling.length <= 4 ? `（${cooling.map(p => p.name).join("、")}）` : ""}。
+          </p>}
         </section>
         {report.week && <section className="report-block">
           <h2>这一周的网</h2>

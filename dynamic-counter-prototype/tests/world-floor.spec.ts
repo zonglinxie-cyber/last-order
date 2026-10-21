@@ -144,6 +144,16 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(line).toContainText("还要 9 天");
     });
 
+    test("每日账写出还在购买间隔里的熟客，让下周排客有依据", async ({ page }) => {
+      await enter(page, envelope({ day: 7, slot: 3, present: { mei: "counter", luyao: "rival" },
+        qualities: { "bought:mei": 6 } }));
+      await page.getByRole("button", { name: /下一时段/ }).click();
+      const line = page.locator(".report-cooldown");
+      await expect(line).toContainText("还有 1 位客人");
+      await expect(line).toContainText("最早 8 天后回来");
+      await expect(line).toContainText("梅女士");
+    });
+
     test("完成一次接待：选货、件数、开给她", async ({ page }) => {
       await enter(page, envelope());
       await page.getByRole("button", { name: /查看梅女士/ }).click();

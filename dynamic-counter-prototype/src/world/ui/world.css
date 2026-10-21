@@ -183,6 +183,7 @@
 .report-block h2 { margin:0 0 6px; color:#f4dfbd; font:600 14px 'Noto Serif SC',serif; }
 .report-block p { margin:0 0 4px; color:#eee0d5; font-size:13px; line-height:1.6; }
 .report-block p b { color:#ffe8b6; margin-right:6px; }
+.report-block p.report-cooldown { margin:8px 0 0; padding-top:8px; border-top:1px dashed #f0cf9126; color:#b99b7f; font-size:12px; }
 .report-foot { flex:0 0 auto; padding:10px 14px calc(12px + env(safe-area-inset-bottom)); }
 
 /* —— 季末回顾：领奖时刻。金/奶油/酒红/深褐；时间轴从上往下讲这一季 —— */
