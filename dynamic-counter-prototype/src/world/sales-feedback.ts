@@ -1,7 +1,7 @@
 // 复盘只解释已经发生的结算，不查看预约队列中的未来退货结果。
 import { SERVE_REFUSE_OPINION } from "./engine.ts";
 import { recentlyPurchased } from "./purchases.ts";
-import { PERFECT_MATCH, SHELF, fitOfPerson, shelfFitTier, type ShelfId } from "./shelf.ts";
+import { PERFECT_MATCH, SHELF, fitOfPerson, isPerfectMatch, shelfFitTier, type ShelfId } from "./shelf.ts";
 import { ROUTE_WORD, weekMoneyOf, weekResultOf, weekTargetOf } from "./target.ts";
 import { PLAYER, type Person, type World } from "./types.ts";
 import { ta } from "./pronoun.ts";
@@ -18,12 +18,14 @@ export function saleFeedback(before: World, after: World, person: Person, produc
     .some(m => m.holder === person.id && m.subject === PLAYER && m.act === "hard-sell");
   const overAsk = amount > 0 && !hard && requestedUnits > (person.skin?.maxUnits ?? 0);
   const score = fitOfPerson(person, product), tier = shelfFitTier(score);
+  const perfect = tier === "positive" && isPerfectMatch(person, product);
   const refused = (before.opinion[person.id] ?? 0) + mood <= SERVE_REFUSE_OPINION;
-  const title = amount > 0 ? hard ? "单开了，人情有代价" : overAsk ? "这单开口多了" : tier === "positive" ? score >= PERFECT_MATCH ? "这一单，懂她" : "接住了这单" : "成交了，还有遗憾"
+  const title = amount > 0 ? hard ? "单开了，人情有代价" : overAsk ? "这单开口多了" : tier === "positive" ? perfect ? "这一单，懂她" : "接住了这单" : "成交了，还有遗憾"
     : refused ? "这次先修复关系" : recent ? "还没用完，先别急" : "这一单没成交";
   const baseExplanation = amount > 0 ? hard ? "账面进账了，但关系、柜位和台账都受了影响；多出来的货之后可能退回来。"
     : overAsk ? `你开口要 ${requestedUnits} 件，她最多只想带 ${person.skin!.maxUnits} 件。多要的部分没有增加成交，反而扣了人情。`
-    : tier === "positive" ? score >= PERFECT_MATCH ? "这支货接住了她的全部诉求。认对需求，也是在为下一次见面铺路。" : "选到的货符合需求，她愿意为这次推荐买单。"
+    : tier === "positive" ? perfect ? "这支货接住了她的全部诉求，也没有让她为不需要的东西多付。认对需求，也是在为下一次见面铺路。"
+    : score >= PERFECT_MATCH ? "这支也接住了她的全部诉求，但不是最省的那一支；正中那支更便宜。" : "选到的货符合需求，她愿意为这次推荐买单。"
     : "她勉强接受了，实际带走的件数以结算为准。试用里的犹豫值得留意。"
     : refused ? "眼下她不愿意接受你的推荐，产品合适也不能代替信任。"
     : recent ? "上次买的还没用完。换一支货推荐，也解决不了这个问题。"

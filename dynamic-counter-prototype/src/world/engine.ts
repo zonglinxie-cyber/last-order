@@ -6,7 +6,7 @@
 // 但货不进旧五日版，旧版那些钉死的路线金额不受影响。
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
 import {
-  bestShelf, PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, shelfFitTier, shelfUnits,
+  bestShelf, isPerfectMatch, PERFECT_MATCH_OPINION, SHELF, shelfFitTier, shelfUnits,
   fitOfPerson, type ShelfId,
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
@@ -1586,9 +1586,9 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
     w = say(w, `你开口要 ${units} 件，${person.name}皱了下眉：「用不了那么多。」`, [personId]);
   }
   if (tier === "positive") {
-    // 多支货里"过线"和"正中"是两件事：过线的那支也成交，但只有把她每一条诉求都接满的那支，
-    // 她才会觉得你懂她 —— 多给的这一笔看法决定她下次肯多说几条（serve-talk.ts 的两条门槛）。
-    const perfect = score >= PERFECT_MATCH;
+    // 多支货里"过线"和"正中"是两件事：过线的那支也成交，但只有买得起、把她每一条诉求都接满、
+    // 又没让她为不需要的东西多付的那一支，她才会觉得你懂她 —— 多给的这一笔看法决定她下次肯多说几条。
+    const perfect = isPerfectMatch(person, productId);
     w = addOpinion(w, personId, SERVE_GOOD_OPINION + (perfect ? PERFECT_MATCH_OPINION : 0));
     w = trustedCare(w, people, personId);
     if (rivalTargets(w).includes(personId) && w.rivalPlan?.tactic === "compare") {

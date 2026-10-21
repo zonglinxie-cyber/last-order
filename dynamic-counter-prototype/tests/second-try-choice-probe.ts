@@ -5,7 +5,7 @@
 import { beginServe, newWorld, settleServe, VERB_ENERGY } from "../src/world/engine.ts";
 import { openConsult, tryOn } from "../src/world/consult.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import { PERFECT_MATCH, SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPerson, shelfFitTier, type ShelfId } from "../src/world/shelf.ts";
+import { SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPerson, isPerfectMatch, shelfFitTier, type ShelfId } from "../src/world/shelf.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import type { Consult } from "../src/world/consult.ts";
 import type { Person, World } from "../src/world/types.ts";
@@ -15,10 +15,10 @@ const atCounter = (id: string): World => ({ ...newWorld(`choice-${id}`, PEOPLE),
   present: { [id]: "counter" }, opinion: { [id]: 0 } });
 const affordable = (p: Person, id: ShelfId) => !!p.skin && affordableUnits(p, id) >= 1;
 const tierOf = (p: Person, id: ShelfId) => shelfFitTier(fitOfPerson(p, id));
-const positiveButNotPerfect = (p: Person, id: ShelfId) => affordable(p, id) && tierOf(p, id) === "positive" && fitOfPerson(p, id) < PERFECT_MATCH;
+const positiveButNotPerfect = (p: Person, id: ShelfId) => affordable(p, id) && tierOf(p, id) === "positive" && !isPerfectMatch(p, id);
 const rank = (p: Person, id: ShelfId) => {
   const t = tierOf(p, id);
-  return t === "positive" && fitOfPerson(p, id) >= PERFECT_MATCH ? 4 : t === "positive" ? 3 : t === "mixed" ? 2 : 1;
+  return t === "positive" && isPerfectMatch(p, id) ? 4 : t === "positive" ? 3 : t === "mixed" ? 2 : 1;
 };
 
 /** 有限信息：只看她主动说出的需求、今天的重点、货架 tag 与价格；不读适配分。 */

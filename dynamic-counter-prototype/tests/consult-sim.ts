@@ -21,7 +21,7 @@ import {
   UNITS_QUESTION, type Consult,
 } from "../src/world/consult.ts";
 import {
-  PERFECT_MATCH, SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, shelfFitTier, shelfUnits,
+  SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, isPerfectMatch, shelfFitTier, shelfUnits,
   type FitTier, type ShelfId,
 } from "../src/world/shelf.ts";
 import { isSunday, weekNoOf } from "../src/world/weeks.ts";
@@ -356,7 +356,7 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
     opinion: w.opinion[person.id] ?? 0,
     freeGuess: freeFit?.amount ?? 0, freeProduct, freeUnits,
     oracle: oracle.amount, oracleProduct: oracle.product, oracleUnits: oracle.units,
-    freePerfect: !!freeFit && freeFit.amount > 0 && freeFit.score >= PERFECT_MATCH,
+    freePerfect: !!freeFit && freeFit.amount > 0 && !!freeProduct && isPerfectMatch(live, freeProduct),
     freeKnown: free.known.length, freeUnitsKnown: free.unitsKnown, freeVetoKnown: free.vetoKnown,
     hasFocus: free.focus !== null, focusKnownAtStart: free.focusKnown,
   };
@@ -395,7 +395,7 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
 
   return { world: after, rec: {
     ...base, actual, actualUnits, product,
-    actualPerfect: actual > 0 && !!actualFit && actualFit.score >= PERFECT_MATCH,
+    actualPerfect: actual > 0 && !!product && isPerfectMatch(liveAfter, product),
     actualScore: actualFit?.score ?? 0,
     outcome, actions: stats,
     paidKnown: c.known.length, paidUnitsKnown: c.unitsKnown, paidVetoKnown: c.vetoKnown,

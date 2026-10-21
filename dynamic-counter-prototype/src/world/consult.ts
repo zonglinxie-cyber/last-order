@@ -6,7 +6,7 @@
 // 这一层只管"你知道了她什么"和"她还肯听你说几句"，钱、看法、退货仍由 engine.ts 的
 // beginServe / settleServe 结账。界面只读这里的句子，不在 JSX 里拼。
 import { demandWords, serveTalk, SECRET_KNOWN_KEY } from "./serve-talk.ts";
-import { SHELF, PERFECT_MATCH, fitOfPerson, shelfFitTier, type FitTier, type ShelfId } from "./shelf.ts";
+import { SHELF, PERFECT_MATCH, fitOfPerson, perfectShelf, shelfFitTier, type FitTier, type ShelfId } from "./shelf.ts";
 import type { Person, PersonId, Trait, World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { HAND_CONSULT, PLATE_CROP, PLATE_POINTS, PLATE_SIZE } from "./content/consult-lines.ts";
@@ -323,14 +323,19 @@ export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
   const tier = shelfFitTier(score);
   const veto = person.skin.veto;
   const hitVeto = !!veto && SHELF[id].traits[veto.trait] < veto.below;
+  const best = perfectShelf(person);
+  const perfect = !hitVeto && tier === "positive" && best === id;
+  const cheaperPerfect = !hitVeto && !perfect && tier === "positive" && score >= PERFECT_MATCH
+    && !!best && SHELF[best].price < SHELF[id].price;
   const she = ta(person);
   const lead = `你把${SHELF[id].short}抹在${she}手背上，${she}`;
   const line = hitVeto ? `${lead}一下就缩回去了：「${veto!.note}。」`
-    : tier === "positive" && score >= PERFECT_MATCH ? `${lead}看了好一会儿：「就是这个感觉。」`
+    : perfect ? `${lead}看了好一会儿：「就是这个感觉。」`
+    : cheaperPerfect ? `${lead}点点头：「这个也可以，不过还有一支更省。」`
     : tier === "positive" ? `${lead}点点头：「这个可以。」`
     : tier === "mixed" ? `${lead}犹豫了一下：「还行吧，不是最想要的。」`
     : `${lead}摇头：「这个解决不了我的事。」`;
-  const mark: TrialTier = !hitVeto && tier === "positive" && score >= PERFECT_MATCH ? "perfect" : tier;
+  const mark: TrialTier = perfect ? "perfect" : tier;
   const risk = secondTryRisk(c, person, id);
   const risky = !!risk && mark !== "perfect";
   const reacted = risky ? `${line} ${she}把话收回去：「刚才那支不是挺好吗？」` : line;
@@ -410,6 +415,7 @@ export function offerEvidence(c: Consult, person: Person, id: ShelfId, units: nu
   if (c.tried[id]) lines.push(`试用反应：${ta(person)}${TRIED_MARK[c.tried[id]!] }。`);
   else lines.push("这支还没试过，可以花 1 次耐心验证，也可以直接开口推荐。");
   if (c.focus && !c.focusKnown) lines.push("今天的重点还没摸清：看一处或问一句，可能就在她今天的状态里。");
+  if (!perfectShelf(person)) lines.push("她今天没有一支能全接住；最接近的一支也只能到「对症」，不会到「正中」。");
   if (stillHolding(c, person)) lines.push("还有没说出的顾虑，已知线索对上也不保证成交。");
   return lines;
 }

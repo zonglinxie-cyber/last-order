@@ -12,7 +12,7 @@ import { existsSync } from "node:fs";
 import {
   ENERGY_PER_DAY, OVER_ASK_OPINION, VERB_ENERGY, beginServe, leaveServe, newWorld, nextSeason, opinionOf, parseWorld, resolveServe, serializeWorld, settleServe,
 } from "../src/world/engine.ts";
-import { PERFECT_MATCH, SHELF, SHELF_IDS, bestShelf, fitOfPerson, shelfFitTier } from "../src/world/shelf.ts";
+import { SHELF, SHELF_IDS, bestShelf, fitOfPerson, isPerfectMatch, perfectShelf, shelfFitTier } from "../src/world/shelf.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import type { Person, World } from "../src/world/types.ts";
 import { saleFeedback } from "../src/world/sales-feedback.ts";
@@ -359,17 +359,17 @@ test("试出来的档位就是开单那一档，正中单独留字不升格；�
       const c = tryOn(base, p, id);
       const score = fitOfPerson(p, id), tier = shelfFitTier(score), veto = p.skin!.veto;
       const hitVeto = !!veto && SHELF[id].traits[veto.trait] < veto.below;
-      const expected = !hitVeto && tier === "positive" && score >= PERFECT_MATCH ? "perfect" : tier;
+      const expected = !hitVeto && tier === "positive" && isPerfectMatch(p, id) ? "perfect" : tier;
       assert.equal(c.tried[id], expected, `${p.id} 试${id}`);
       if (c.tried[id] === "perfect") assert.equal(tier, "positive", `${p.id} 试${id}：认准仍属于点头那档结账`);
       assert.ok(Object.hasOwn(TRIED_MARK, c.tried[id]!), `${p.id} 试${id} 的格子要有字可留`);
       if (hitVeto) assert.equal(c.vetoKnown, true, `${p.id} 试${id}碰到忌讳没露出来`);
     }
-    // 试到她最准的那一支：那句"还有顾虑"可以收了
-    const best = bestShelf(p);
-    if (fitOfPerson(p, best) >= 0.95) {
-      const hit = tryOn(base, p, best);
-      assert.equal(hit.tried[best], "perfect", p.id);
+    // 试到正中那一支：那句"还有顾虑"可以收了
+    const perfect = perfectShelf(p);
+    if (perfect) {
+      const hit = tryOn(base, p, perfect);
+      assert.equal(hit.tried[perfect], "perfect", p.id);
       assert.equal(stillHolding(hit, p), false, p.id);
     }
   }
@@ -456,8 +456,8 @@ test("付过精力的接待完整恢复：耐心、坏脸色、试用、件数�
 
 test("试用的四档字：正中单独记下、货架与开单提示共用同一措辞、旧档三档照旧恢复不升格、坏值仍拒", () => {
   const p = who("shen"), w = beginServe(atCounter([p.id]), PEOPLE, p.id);
-  const perfect = SHELF_IDS.find(id => fitOfPerson(p, id) >= PERFECT_MATCH)!;
-  const positive = SHELF_IDS.find(id => { const s = fitOfPerson(p, id); return shelfFitTier(s) === "positive" && s < PERFECT_MATCH; })!;
+  const perfect = perfectShelf(p)!;
+  const positive = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(p, id)) === "positive" && !isPerfectMatch(p, id))!;
   const negative = SHELF_IDS.find(id => shelfFitTier(fitOfPerson(p, id)) === "negative")!;
   const c = tryOn(tryOn(tryOn(openConsult(w, p), p, perfect), p, positive), p, negative);
   assert.equal(c.tried[perfect], "perfect");
@@ -478,6 +478,22 @@ test("试用的四档字：正中单独记下、货架与开单提示共用同�
   const legacy = { ...c, tried: { [perfect]: "positive" as const } };
   const restored = restoreConsults(JSON.parse(JSON.stringify(saveConsults(w, { [p.id]: legacy }))), w, PEOPLE)[p.id];
   assert.equal(restored!.tried[perfect], "positive", "旧档记下的点头要按当时的知道接着用，不凭全知分数补升");
+});
+
+test("贵的全接住仍只是点头，正中那支是买得起、全接住里最省的", () => {
+  const p = who("shen"), w = atCounter([p.id]);
+  const base = tryOn(openConsult(w, p), p, "base");
+  assert.equal(base.tried.base, "positive");
+  assert.match(base.lines.at(-1)!, /还有一支更省/);
+  const soft = tryOn(base, p, "soft");
+  assert.equal(soft.tried.soft, "perfect");
+  assert.match(soft.lines.at(-1)!, /就是这个感觉/);
+});
+
+test("没有正中的客人说清楚：最接近的一支也只是对症，不让人一直摸下去", () => {
+  const p = who("zhou"), c = openConsult(atCounter([p.id]), p);
+  assert.equal(perfectShelf(p), null);
+  assert.ok(offerEvidence(c, p, "soft", 1).some(x => x.includes("没有一支能全接住")));
 });
 
 test("点头后再换一支：第一次换支没试到正中才结人情，好胜/多疑更重；试到正中不罚", () => {
@@ -505,12 +521,12 @@ test("点头后再换一支：第一次换支没试到正中才结人情，好�
   const thenNod = tryOn(mixedFirst, zhou, "soft");
   assert.equal(thenNod.tried.soft, "positive");
   assert.ok(secondTryRisk(thenNod, zhou, "mist"), "先试过犹豫货，再点头后换支同样有代价");
-  // 沈薇：粉底点头、粉霜正中 —— 换到正中不罚，换支的代价和收益是同一枚硬币。
+  // 沈薇：隔离点头、粉底正中 —— 换到正中不罚，换支的代价和收益是同一枚硬币。
   const shen = who("shen"), sw = beginServe(atCounter([shen.id]), PEOPLE, shen.id);
   const first = tryOn(openConsult(sw, shen), shen, "plain");
   assert.equal(first.tried.plain, "positive");
-  const perfect = tryOn(first, shen, "base");
-  assert.equal(perfect.tried.base, "perfect");
+  const perfect = tryOn(first, shen, "soft");
+  assert.equal(perfect.tried.soft, "perfect");
   assert.equal(perfect.mood, 0);
   assert.match(perfect.lines.at(-1)!, /就是这个感觉/);
   // 普通人（不犯这三条脾气）是 -2。

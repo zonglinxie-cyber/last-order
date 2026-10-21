@@ -148,18 +148,28 @@ export const fitOfPerson = (person: Person, id: ShelfId): number =>
 
 /** 她这一单的最高命中分。命中到这条线以上，她觉得你不只是"没推错"，而是懂她。 */
 export const PERFECT_MATCH = 0.95;
-/** 达到 PERFECT_MATCH 时在 SERVE_GOOD_OPINION 之外多给的看法。
+/** 正中那支在 SERVE_GOOD_OPINION 之外多给的看法。
  *  货一多光看"正解/勉强"两档不够用：同一个人可能三支都过线，只差在命中多少。
  *  这一笔把"钱多的那支"和"最懂她那支"拉开成两个选择。 */
 export const PERFECT_MATCH_OPINION = 4;
 
-/** 她最准的那一支：分数最高、并列时取货架上靠前的那支。 */
+/** 她最准的那一支：分数最高、并列时取货架上靠前的那支。对手与托单读它。 */
 export const bestShelf = (person: Person): ShelfId =>
   SHELF_IDS.reduce((x, y) => (fitOfPerson(person, y) > fitOfPerson(person, x) ? y : x));
 
 /** 她的预算和用量上限允许她带走几件（不看适配，界面那句"这价最多开几件"读它）。 */
 export const affordableUnits = (person: Person, id: ShelfId): number =>
   person.skin ? Math.min(person.skin.maxUnits, Math.floor(person.skin.budget / SHELF[id].price)) : 0;
+
+/** 正中：买得起、每条诉求都接住的最便宜那支；并列按货架顺序。
+ *  让「正中」不是一串都能拿的分，而是一支具体的货：贵的全接住仍是对症，但不拿正中那一笔；
+ *  她要的「每条都接住」也仍要真的买得起，不能让超预算的完美货占着正中。没有就是 null。 */
+export const perfectShelf = (person: Person): ShelfId | null => {
+  if (!person.skin) return null;
+  const fit = SHELF_IDS.filter(id => fitOfPerson(person, id) >= PERFECT_MATCH && affordableUnits(person, id) > 0);
+  return fit.length ? fit.reduce((x, y) => (SHELF[y].price < SHELF[x].price ? y : x)) : null;
+};
+export const isPerfectMatch = (person: Person, id: ShelfId): boolean => perfectShelf(person) === id;
 
 /** 预算与用量上限把件数削到这里。与 campaign.ts 的 unitsWanted 同一口径，只是价格查这张货架。
  *  勉强（mixed）只带一件，但那一件也得她买得起 —— 买不起就是 0，不是 1。 */

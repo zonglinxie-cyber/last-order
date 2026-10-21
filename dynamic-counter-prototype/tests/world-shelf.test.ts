@@ -9,11 +9,12 @@ import {
   ENERGY_PER_DAY, PRICE_MISS_OPINION, SERVE_GOOD_OPINION, newWorld, opinionOf, resolveServe,
 } from "../src/world/engine.ts";
 import {
-  PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPerson, shelfFitTier,
+  PERFECT_MATCH_OPINION, SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPerson, perfectShelf, shelfFitTier,
   type ShelfId,
 } from "../src/world/shelf.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import type { Person } from "../src/world/types.ts";
+import type { Person, World } from "../src/world/types.ts";
+import { saleFeedback } from "../src/world/sales-feedback.ts";
 
 const skinned = PEOPLE.filter(p => p.skin);
 /** 她买得起的正解（对症 + 预算够一支）。 */
@@ -57,23 +58,21 @@ test("十二支货没有死角也没有万能药", () => {
   assert.equal(Math.max(...heat), 9, `首选挤位读数变了：${heat.join("/")}`);
 });
 
-test("钱与懂不是同一格：八位客人的满分那支不是最赚的那支", () => {
+test("钱与懂不是同一格：二十二位客人的正中那支不是最赚的那支", () => {
   // 看法是这个人情的货币（她肯不肯多讲一条、回不回来、会不会被对面请走），
-  // 所以"多花一千块"和"她要的每条都被接住"必须真的能撞车，否则货架只是八个体价签。
+  // 所以"多花一千块"和"她要的每条都被接住"必须真的能撞车，否则货架只是十二个体价签。
+  // 正中按「买得起、全接住、最便宜」只留一支；贵的全接住仍是对症，但不拿正中那一笔。
   const same: string[] = [], conflict: string[] = [], noPerfect: string[] = [];
   for (const p of skinned) {
     const aff = affordablePositives(p);
-    const perfect = aff.filter(id => fitOfPerson(p, id) >= PERFECT_MATCH);
+    const per = perfectShelf(p);
     const money = [...aff].sort((a, b) => revenue(p, b) - revenue(p, a))[0];
-    const fit = perfect.length ? [...perfect].sort((a, b) => revenue(p, b) - revenue(p, a))[0] : null;
-    if (!perfect.length) noPerfect.push(p.id);
-    else if (fit === money) same.push(p.id);
+    if (!per) noPerfect.push(p.id);
+    else if (per === money) same.push(p.id);
     else conflict.push(p.id);
   }
-  // 十二支以后满分支多了（面膜接住唐糖、苏晓，气垫接住何晴、岑宁），而这几支恰好都比"过线但更贵"那支便宜 ——
-  // 钱与懂撞车的人从 4 位变成 8 位，这正是新货的用处。
-  assert.deepEqual([same.length, conflict.length, noPerfect.length], [22, 8, 2]);
-  assert.deepEqual(conflict, ["miduo", "tangtang", "liangxia", "heqing", "caiaiyi", "dongayi", "suxiao", "cenning"]);
+  assert.deepEqual([same.length, conflict.length, noPerfect.length], [8, 22, 2]);
+  assert.deepEqual(conflict, ["zhao", "miduo", "tangtang", "liangxia", "baijie", "zhaoning", "heqing", "caiaiyi", "linyi", "wulaoshi", "dongayi", "guyan", "suxiao", "songjie", "hanlei", "chendao", "yinxiaojie", "qianjie", "gaoyuan", "cenning", "chenke", "tanwan"]);
   assert.deepEqual(noPerfect, ["zhou", "yenushi"]);
   // 撞得最狠的一位：米朵 —— 修护 ¥1,680 只算"没推错"，喷雾 ¥680 才是她那两条都接住的那支。
   assert.ok(conflict.includes("miduo") && conflict.includes("dongayi"));
@@ -103,6 +102,19 @@ test("满分支：把她每条诉求都接住，比「没推错」多一笔看�
   assert.ok(good.log.some(l => l.text.includes("要的每条都被接住了")), "多出来的这一笔要在句子里念出来");
   assert.equal(serve("mist").money, SHELF.mist.price);
   assert.equal(opinionOf(serve("mist"), "mei"), SERVE_GOOD_OPINION, "过线只拿基础那笔");
+});
+
+test("贵的全接住仍成交，但正中那支多一笔看法：钱与懂真的分开结", () => {
+  const p = PEOPLE.find(x => x.id === "shen")!;
+  const w: World = { ...newWorld("shelf-perfect", PEOPLE), energy: ENERGY_PER_DAY, present: { shen: "counter" } };
+  const expensive = resolveServe(w, PEOPLE, "shen", "base", 1);
+  const perfect = resolveServe(w, PEOPLE, "shen", "soft", 1);
+  assert.equal(expensive.money, SHELF.base.price);
+  assert.equal(perfect.money, SHELF.soft.price);
+  assert.equal(opinionOf(perfect, "shen") - opinionOf(expensive, "shen"), PERFECT_MATCH_OPINION,
+    "贵的全接住只拿基础看法；正中那支多 4 点");
+  assert.match(saleFeedback(w, expensive, p, "base", 1).explanation, /不是最省/);
+  assert.doesNotMatch(saleFeedback(w, perfect, p, "soft", 1).explanation, /不是最省/);
 });
 
 test("对症却买不起 ≠ 推错：那句「这解决不了我的事」不能说给超预算的推荐", () => {
