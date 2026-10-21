@@ -27,6 +27,13 @@ const lateIn = (day: number, made: number, rival: number): World => {
     qualities: { ...w.qualities, [WEEK_START_MONEY]: 20_000, [WEEK_START_RIVAL]: 5_000 } };
 };
 
+/** 同一份盘，但人在第 season 季：那一季有自己的目标档。 */
+const lateInSeason = (season: number, day: number, made: number, rival: number): World => {
+  const w = beginSlot({ ...newWorld(`levels-s${season}-${day}`, PEOPLE), season, day, slot: 0 as const, energy: 0 }, PEOPLE);
+  return { ...w, slot: 3 as const, present: {}, money: 20_000 + made, rivalMoney: 5_000 + rival,
+    qualities: { ...w.qualities, [WEEK_START_MONEY]: 20_000, [WEEK_START_RIVAL]: 5_000 } };
+};
+
 for (const [width, height] of [[390, 844], [320, 568]] as const) {
   test.describe(`每周一关 ${width}×${height}`, () => {
     test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
@@ -53,6 +60,16 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(summary).toContainText("客情");
       await expect(summary).toContainText("守客");
       await expect(summary).toBeInViewport({ ratio: 1 });
+    });
+
+    test("第 2 季按那一季的档：第 1 关一条新线，旱周那周压到第三档", async ({ page }) => {
+      // 三条线写死：第 1 季第 1 关是学徒档 ¥13,000；第 2 季换正式档 ¥26,000；旱周那周压到 ¥9,000。
+      await open(page, lateInSeason(1, 3, 1_000, 500));
+      await expect(page.locator(".world-goal .wg-money")).toContainText("¥13,000");
+      await open(page, lateInSeason(2, 3, 1_000, 500));
+      await expect(page.locator(".world-goal .wg-money")).toContainText("¥26,000");
+      await open(page, lateInSeason(2, 17, 1_000, 500));
+      await expect(page.locator(".world-goal .wg-money")).toContainText("¥9,000");
     });
 
     test("过了这一关，页顶那条变色并亮星", async ({ page }) => {

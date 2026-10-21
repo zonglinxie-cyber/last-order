@@ -68,6 +68,14 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(overflow).toBeLessThanOrEqual(1);
     });
 
+    test("第 2 季第 3 周是旱周：早会把这周为什么线低念出来", async ({ page }) => {
+      const w = midweek(2, 3);
+      await openPlay(page, w);
+      const texts = await page.evaluate(key => (JSON.parse(window.localStorage.getItem(key) ?? "{}") as { world: { log: { text: string }[] } }).world.log.map(l => l.text), SAVE_KEY);
+      expect(texts.some(t => t.includes("十天间隔"))).toBe(true);
+      expect(texts.some(t => t.includes(`¥9,000`))).toBe(true);
+    });
+
     test("周日打烊之后：下一周换一条，旧的那句不留在周目标", async ({ page }) => {
       // 第 1 季第 1 周的最后一天（打烊前）与第 2 周的第一天：屏幕上念的是两条不同的规矩
       const sunday: World = { ...midweek(1, 1), day: 7, slot: 3 as const };

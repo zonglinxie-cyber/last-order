@@ -17,6 +17,28 @@ import type { PersonId } from "./types.ts";
  *  目标值只改判星；来访、对手和结算不跟着变。 */
 export const WEEK_TARGETS = [13_000, 14_000, 16_000, 18_000] as const;
 export const SEASON_WEEKS = WEEK_TARGETS.length;
+
+/** 每季一档目标线。第 1 季是学徒档（第 1 关 13k 低于那一关的 P25 ¥17,620，留给新手那七天）；
+ *  第 2 季起是正式档：客人的池子到那一季就饱和了（第 3 季的供给与第 2 季差在一成上下），
+ *  所以正式档只定一档，之后的季沿用它。
+ *  正式档按那一季的供给节奏分档（20 种子盲策，第 2 季各周销售线「过关/三星」）：
+ *  第 1 关开季客最多（进账 P25 ¥28,820）→ 26k（18/20 过，12 三星）；
+ *  第 2 关 20k（20/20 过，8 三星）；第 4 关 20k（19/20 过，11 三星）；
+ *  第 3 关是旱周（十天购买间隔把客人挡住，进账 P25 只有 ¥6,000）→ 压到 9k（6/20 过，3 三星），
+ *  旱周不再是墙，但业绩这条路还在那儿。
+ *  同一批线对「第 1 季没攒下微信网络」的打法也留得住业绩路（16/20、15/20、13/20）。 */
+export const SEASON_TARGETS: Record<number, readonly number[]> = {
+  1: WEEK_TARGETS,
+  2: [26_000, 20_000, 9_000, 20_000],
+};
+/** 第 2 季起沿用的正式档。 */
+export const SEASON_TARGETS_LATEST = SEASON_TARGETS[2]!;
+/** 某一季的四关目标线；没单独定过的季沿用正式档。 */
+export const seasonTargetsOf = (season: number): readonly number[] =>
+  SEASON_TARGETS[season] ?? SEASON_TARGETS_LATEST;
+/** 第 week 关（1..4）在那一季的目标线。 */
+export const weekTargetOfWeek = (season: number, week: number): number =>
+  seasonTargetsOf(season)[Math.min(SEASON_WEEKS, Math.max(1, week)) - 1]!;
 /** 第三颗星：到目标的这个倍数。 */
 export const WEEK_EXCEED_RATE = 1.3;
 export const WEEK_STARS_MAX = 3;
@@ -59,8 +81,22 @@ export const guardCommitKey = (day: number, slot: number, person: string) => `gu
 
 type Books = { day: number; season?: number; money: number; rivalMoney: number; qualities: Record<string, number>; opinion?: Record<string, number> };
 
-export const weekTargetOf = (day: number): number =>
-  WEEK_TARGETS[Math.min(SEASON_WEEKS, weekNoOf(day)) - 1];
+export const weekTargetOf = (day: number, season: number): number => weekTargetOfWeek(season, weekNoOf(day));
+
+/** 旱周：这一关的线比上一关低。第 2 季起第 3 关是旱周 —— 前两周把能买的都买了一遍，
+ *  十天购买间隔把客人挡住，地板上是空的，线要跟着这一周真有的客源走。 */
+export const isDryWeek = (season: number, day: number): boolean => {
+  const n = weekNoOf(day);
+  if (n <= 1) return false;
+  const targets = seasonTargetsOf(season);
+  return targets[n - 1]! < targets[n - 2]!;
+};
+/** 旱周早会上念的那一句；不是旱周就是空串。 */
+export const dryWeekNote = (season: number, day: number): string => {
+  if (!isDryWeek(season, day)) return "";
+  const target = weekTargetOf(day, season);
+  return `这周多数客人还在十天间隔里，业绩线只压到 ¥${target.toLocaleString("zh-CN")}；这几天把力气放在客情和守客上。`;
+};
 export const weekMoneyOf = (w: Books): number => w.money - (w.qualities[WEEK_START_MONEY] ?? 0);
 export const weekRivalOf = (w: Books): number => w.rivalMoney - (w.qualities[WEEK_START_RIVAL] ?? 0);
 const peopleAt = (w: Books, prefix: string): PersonId[] => Object.entries(w.qualities)
@@ -124,7 +160,7 @@ export type WeekResult = { route: WeekRoute; stars: number; made: number; rival:
   care: number; guard: number; guardThreats: number; guardStops: number; guardRate: number;
   sales: WeekStars; careStars: number; guardStars: number };
 export function weekResultOf(w: Books): WeekResult {
-  const made = weekMoneyOf(w), rival = weekRivalOf(w), target = weekTargetOf(w.day);
+  const made = weekMoneyOf(w), rival = weekRivalOf(w), target = weekTargetOf(w.day, w.season ?? 1);
   const care = weekCareOf(w), guard = weekGuardOf(w);
   const guardThreats = weekGuardThreatsOf(w), guardStops = weekGuardStopsOf(w), guardRate = weekGuardRateOf(w);
   const sales = weekStarsOf(made, rival, target);
@@ -143,7 +179,7 @@ export function nextWeekHint(w: Books & { season?: number }): string {
   const last = n >= SEASON_WEEKS;
   const nextSeason = (w.season ?? 1) + (last ? 1 : 0);
   const nextDay = last ? 1 : w.day + 1;
-  const nextTarget = last ? WEEK_TARGETS[0] : WEEK_TARGETS[n];
+  const nextTarget = weekTargetOfWeek(nextSeason, last ? 1 : n + 1);
   const rule = WEEK_RULES.find(r => r.id === weekRuleOf(nextSeason, nextDay));
   const ruleWord = rule ? ` · ${last ? "下季" : "下周"}${rule.word}` : "";
   const prefix = last ? `下季第 1 关 ¥${nextTarget.toLocaleString("zh-CN")}` : `下周目标 ¥${nextTarget.toLocaleString("zh-CN")}`;
@@ -196,7 +232,7 @@ export const weekLevelWord = (w: Books): string => {
   return `第 ${n} 关${rule ? ` · ${rule.word}` : ""}`;
 };
 export const weekGoalWord = (w: Books): string =>
-  `¥${weekMoneyOf(w).toLocaleString("zh-CN")} / ¥${weekTargetOf(w.day).toLocaleString("zh-CN")}`;
+  `¥${weekMoneyOf(w).toLocaleString("zh-CN")} / ¥${weekTargetOf(w.day, w.season ?? 1).toLocaleString("zh-CN")}`;
 export const weekGoalTail = (w: Books): string => {
   const left = weekDaysLeft(w.day);
   return `${left === 1 ? "今晚对账" : `还剩 ${left} 天`} · 对面本周 ¥${weekRivalOf(w).toLocaleString("zh-CN")}`;

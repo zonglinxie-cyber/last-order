@@ -1,9 +1,9 @@
 // 每周一关的三块界面：楼层页顶那条进度、周日打烊那一屏的结算、季末那一排四关战绩。
 // 判据全在 target.ts，这里只摆。
 import {
-  CARE_DAYS_MIN, CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_STANDING, WEEK_STARS_MAX, WEEK_TARGETS,
+  CARE_DAYS_MIN, CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_STANDING, WEEK_STARS_MAX,
   routeFromCode, seasonStarsOf, starWords, nextWeekHint, weekGoalTail, weekGoalWord, weekLevelWord, weekMadeKey, weekMoneyOf, weekRivalKey,
-  weekCareCountKey, weekCareNearOf, weekCarePeople, weekGuardedPeople, weekResultOf, weekRivalOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf,
+  weekCareCountKey, weekCareNearOf, weekCarePeople, weekGuardedPeople, weekResultOf, weekRivalOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf, weekTargetOfWeek,
 } from "../target.ts";
 import { WEEK_RULES, weekRuleOf } from "../weeks.ts";
 import type { World } from "../types.ts";
@@ -49,7 +49,7 @@ export const weekGapWord = (world: World): string | null =>
 
 /** 楼层页顶下面那一条：第几关、领先那条线到哪了、三条线各差多少；点开看每条线怎么算。 */
 export function GoalStrip({ world, lit, bump, onOpen }: { world: World; lit: boolean; bump: string | null; onOpen: () => void }) {
-  const made = weekMoneyOf(world), rival = weekRivalOf(world), target = weekTargetOf(world.day);
+  const made = weekMoneyOf(world), rival = weekRivalOf(world), target = weekTargetOf(world.day, world.season);
   const live = weekResultOf(world);
   const lines = routeLines(world);
   // 没过关时进度条跟离门槛最近的那条线；同比例先业绩、再客情、再守客。
@@ -146,7 +146,7 @@ export function LevelResult({ world, day }: { world: World; day: number }) {
   const n = Math.min(SEASON_WEEKS, Math.floor((day - 1) / 7) + 1);
   const made = world.qualities[weekMadeKey(n)] ?? 0;
   const rival = world.qualities[weekRivalKey(n)] ?? 0;
-  const target = WEEK_TARGETS[n - 1];
+  const target = weekTargetOfWeek(world.season, n);
   const s = weekStarsOf(made, rival, target);
   const stars = world.qualities[weekStarsKey(n)] ?? s.stars;
   const route = routeFromCode(world.qualities[weekRouteKey(n)] ?? 1);
@@ -178,7 +178,7 @@ export function LevelResult({ world, day }: { world: World; day: number }) {
       <p><span>你</span><i style={{ width: `${(made / max) * 100}%` }} /><b>{yuan(made)}</b></p>
       <p className="rival"><span>对面</span><i style={{ width: `${(rival / max) * 100}%` }} /><b>{yuan(rival)}</b></p>
     </div>
-    <p className="rl-note">{passed ? `柜位 +${WEEK_HIT_STANDING} · 罗曼记了你一笔` : "罗曼记着这一周"}{n < SEASON_WEEKS ? ` · 下一关业绩线 ${yuan(WEEK_TARGETS[n])}` : " · 这是这一季最后一关"}</p>
+    <p className="rl-note">{passed ? `柜位 +${WEEK_HIT_STANDING} · 罗曼记了你一笔` : "罗曼记着这一周"}{n < SEASON_WEEKS ? ` · 下一关业绩线 ${yuan(weekTargetOfWeek(world.season, n + 1))}` : " · 这是这一季最后一关"}</p>
     <p className="rl-next" aria-label="下一周先改什么"><b>下一周先改什么</b>{nextWeekHint({ ...world, day })}</p>
   </section>;
 }

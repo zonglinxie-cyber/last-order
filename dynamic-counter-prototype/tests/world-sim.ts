@@ -21,7 +21,7 @@ import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } 
 import { POSITIVE_FIT, SHELF, SHELF_IDS, fitOfPerson, shelfUnits } from "../src/world/shelf.ts";
 import { WEEK_IDS, isMonday, isSunday, weekNoOf, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
 import { batchStats, wordsOf } from "../src/world/content/batches.ts";
-import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, WEEK_TARGETS, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
+import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
@@ -564,7 +564,7 @@ for (const rule of WEEK_IDS) {
 
 // 每周一关：目标按这张表定 —— 会做生意的那一路大多数关过得去、最后一关要拼，乱来的多半过不去；
 // 也看"赢对面"那颗星是不是谁都拿得到（拿得到 100% 就是对面太弱，0% 就是那颗星是摆设）。
-console.log("\n每周一关（每格：这一关过关率 · 钱 P25/中位/P75 · 平均星；目标 " + WEEK_TARGETS.join(" / ") + "）:");
+console.log("\n每周一关（每格：这一关过关率 · 钱 P25/中位/P75 · 平均星；目标 第 1 季 " + seasonTargetsOf(1).join(" / ") + " · 第 2 季起 " + seasonTargetsOf(2).join(" / ") + "）:");
 for (const [style, season] of STYLES.flatMap(st => Array.from({ length: SEASON_COUNT }, (_, k) => [st, k + 1] as const))) {
   const cells = Array.from({ length: SEASON_WEEKS }, (_, i) => {
     const rs = levelRows.filter(r => r.style === style && r.season === season && r.week === i + 1);

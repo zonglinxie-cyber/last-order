@@ -11,7 +11,7 @@ import {
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { isHeatId, type HeatId } from "./heat.ts";
-import { CARE_DAYS_MIN, CARE_TRUST_MIN, guardCommitKey, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf } from "./target.ts";
+import { CARE_DAYS_MIN, CARE_TRUST_MIN, dryWeekNote, guardCommitKey, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf, weekTargetOfWeek } from "./target.ts";
 import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
@@ -512,7 +512,10 @@ function setWeekRule(world: World): World {
     else delete qualities[weekKey(other)];
   }
   // 这一关的起点也在这一刻记下：本周挣了多少 = 现在 − 起点（target.ts）。
-  return say(markWeekStart({ ...world, qualities }), WEEK_RULES.find(r => r.id === id)!.line, ["roman"]);
+  const rule = WEEK_RULES.find(r => r.id === id)!.line;
+  // 旱周（这关的线比上一关低）把原因一起念出来：玩家不用等开单失败才发现这周客少。
+  const note = dryWeekNote(world.season, world.day);
+  return say(markWeekStart({ ...world, qualities }), note ? `${rule} ${note}` : rule, ["roman"]);
 }
 /** 周日打烊把这一周的规矩清掉：留着它，下一周的早会就变成"改口"而不是"新一周"。 */
 function clearWeekRule(world: World): World {
@@ -1720,6 +1723,13 @@ export function endDay(world: World, people: Person[]): World {
 const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:", "client-note:", "last-met:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 
+/** 换季那句话：线换了档就说清楚为什么换（第 1 季是学徒档，第 2 季起按那一季的客流定）。 */
+function seasonStartWord(season: number): string {
+  const first = weekTargetOfWeek(season, 1), prev = weekTargetOfWeek(season - 1, 1);
+  return first === prev ? `第 ${season} 季开始。`
+    : `第 ${season} 季开始。这季的线按新一季的客流定：第 1 关 ¥${first.toLocaleString("zh-CN")}。`;
+}
+
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。
  *  账上的钱、手里的精力小样、还没赴的约都清零 —— 那是上一季的事。
  *  世界之外的人（名单里已经没有的 id）连同关于她的看法、关系和记忆一起放下。 */
@@ -1751,7 +1761,7 @@ export function nextSeason(world: World, people: Person[], heat?: readonly HeatI
       || a.weekendOutcome !== undefined && a.day === SEASON_DAYS + 1))
       .map(({ amount: _oldAmount, ...a }) => ({ ...a, reason: a.reason === "invited" ? "invited" as const : "weekend" as const,
         day: a.reason === "invited" ? a.day - SEASON_DAYS : 1 })), requests: [], fired: {},
-    log: [{ day: 1, slot: 0, text: `第 ${season} 季开始。` }],
+    log: [{ day: 1, slot: 0, text: seasonStartWord(season) }],
     // 季初快照记的是新季开局那一刻：看法收过一半之后的样子。
     opinionAtSeasonStart: { ...opinion },
     statsAtSeasonStart: { standing, compliance },

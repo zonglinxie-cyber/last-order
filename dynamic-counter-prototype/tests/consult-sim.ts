@@ -27,7 +27,7 @@ import {
 import { isSunday, weekNoOf } from "../src/world/weeks.ts";
 import {
   ROUTE_WORD, WEEK_TARGETS, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey,
-  weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, type WeekRoute,
+  weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, weekTargetOfWeek, type WeekRoute,
 } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { rivalBookingNow, RIVAL_INVITE_ENERGY } from "../src/world/rival-business.ts";
@@ -472,7 +472,7 @@ function weekRowOf(w: World, closingDay: number, seed: string, season: number, s
   return {
     seed, season, week, serve,
     made: qualityOf(w, weekMadeKey(week)), rival: qualityOf(w, weekRivalKey(week)),
-    target: WEEK_TARGETS[week - 1], stars: qualityOf(w, weekStarsKey(week)),
+    target: weekTargetOfWeek(season, week), stars: qualityOf(w, weekStarsKey(week)),
     route: routeFromCode(qualityOf(w, weekRouteKey(week))),
     care: qualityOf(w, weekCareCountKey(week)),
     guard: guardAt("guard-person"), threats: guardAt("guard-threat"), stops: guardAt("guard-stop"),
@@ -698,10 +698,10 @@ console.log(`全知顶与影子猜之间还隔着 ${yuan(oracle - freeGuess)}：
 console.log(`非接待进账（托单 / 回访等）中位 ${yuan(median(nonServe))}；每周目标按总进账算，接待单独看。`);
 
 console.log("\n四、每周（实际打出来的账）");
-console.log(`周  目标      总进账中位  接待中位    对面中位    星 0/1/2/3 计 ${N * SEASONS} 组        过关   路线`);
+console.log(`周  目标(第1季/第2季起)      总进账中位  接待中位    对面中位    星 0/1/2/3 计 ${N * SEASONS} 组        过关   路线`);
 for (const list of weeksByNo) {
   const n = list[0]?.week ?? 0;
-  console.log(`${n}   ${yuan(WEEK_TARGETS[n - 1]).padStart(7)}  ${yuan(median(list.map(x => x.made))).padStart(9)}  ${yuan(median(list.map(x => x.serve))).padStart(9)}  ${yuan(median(list.map(x => x.rival))).padStart(9)}   ${stars(list).padEnd(18)} ${String(list.filter(x => x.stars > 0).length).padStart(3)}/${list.length}  ${routes(list)}`);
+  console.log(`${n}   ${`${yuan(WEEK_TARGETS[n - 1])}/${yuan(weekTargetOfWeek(2, n))}`.padStart(15)}  ${yuan(median(list.map(x => x.made))).padStart(9)}  ${yuan(median(list.map(x => x.serve))).padStart(9)}  ${yuan(median(list.map(x => x.rival))).padStart(9)}   ${stars(list).padEnd(18)} ${String(list.filter(x => x.stars > 0).length).padStart(3)}/${list.length}  ${routes(list)}`);
 }
 console.log(`合计星 ${sum(weeks.map(x => x.stars))} / 满星 ${weeks.filter(x => x.stars === 3).length} / 过关 ${weeks.filter(x => x.stars > 0).length}（共 ${weeks.length} 周）`);
 console.log(`比分：领先 ${runs.filter(r => r.money > r.rival).length} / 打平 ${runs.filter(r => r.money === r.rival).length} / 落后 ${runs.filter(r => r.money < r.rival).length}；对面每季成交中位 ${median(runs.map(r => r.rivalWins))} 单`);
@@ -748,11 +748,26 @@ if (SEASONS > 1) {
     for (const list of weeksByNo) {
       const xs = list.filter(x => x.season === season);
       if (!xs.length) continue;
-      const target = WEEK_TARGETS[xs[0]!.week - 1];
+      const target = weekTargetOfWeek(season, xs[0]!.week);
       const made = xs.map(x => x.made), rival = xs.map(x => x.rival);
       const hit = made.filter(x => x >= target).length;
       const three = made.filter((x, i) => x >= Math.ceil(target * 1.3) && x > rival[i]!).length;
       console.log(`  第${xs[0]!.week}周 ¥${target.toLocaleString("zh-CN")} 进账 P25/中位/P75 ${yuan(quantile(made, .25))}/${yuan(median(made))}/${yuan(quantile(made, .75))} 销售线 ${hit}/${xs.length} 过 ${three} 三星`);
+    }
+    // 这一季每一周在各候选目标下的销售线：定这一季那档线时对着这张表挑。
+    console.log(`  —— 第 ${season} 季各候选目标的销售线（过关/三星）`);
+    const cands = [8_000, 10_000, 12_000, 14_000, 16_000, 18_000, 20_000, 22_000, 24_000, 26_000, 28_000, 30_000, 32_000, 34_000];
+    console.log(`  周   ${cands.map(t => `${Math.round(t / 1000)}k`).join("   ")}`);
+    for (const list of weeksByNo) {
+      const xs = list.filter(x => x.season === season);
+      if (!xs.length) continue;
+      const made = xs.map(x => x.made), rival = xs.map(x => x.rival);
+      const row = cands.map(t => {
+        const hit = made.filter(x => x >= t).length;
+        const three = made.filter((x, i) => x >= Math.ceil(t * 1.3) && x > rival[i]!).length;
+        return `${String(hit).padStart(2)}/${String(three).padStart(2)}`;
+      }).join("   ");
+      console.log(`  ${xs[0]!.week}   ${row}`);
     }
   }
 }
