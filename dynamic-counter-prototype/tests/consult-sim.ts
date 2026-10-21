@@ -740,6 +740,23 @@ for (const list of weeksByNo) {
   console.log(`${n}   ${band(list.map(x => x.care))}          ${band(list.map(x => x.guard))}          ${String(median(list.map(x => x.threats))).padStart(5)}      ${rates.length ? pct(median(rates), 1) : "—"}`);
 }
 
+if (SEASONS > 1) {
+  console.log("\n四之五、按季拆周（同一批种子；只读，不改决策）");
+  for (let season = 1; season <= SEASONS; season++) {
+    const seasonWeeks = weeks.filter(x => x.season === season);
+    console.log(`第 ${season} 季：星 ${sum(seasonWeeks.map(x => x.stars))} / 满星 ${seasonWeeks.filter(x => x.stars === 3).length} / 过关 ${seasonWeeks.filter(x => x.stars > 0).length}`);
+    for (const list of weeksByNo) {
+      const xs = list.filter(x => x.season === season);
+      if (!xs.length) continue;
+      const target = WEEK_TARGETS[xs[0]!.week - 1];
+      const made = xs.map(x => x.made), rival = xs.map(x => x.rival);
+      const hit = made.filter(x => x >= target).length;
+      const three = made.filter((x, i) => x >= Math.ceil(target * 1.3) && x > rival[i]!).length;
+      console.log(`  第${xs[0]!.week}周 ¥${target.toLocaleString("zh-CN")} 进账 P25/中位/P75 ${yuan(quantile(made, .25))}/${yuan(median(made))}/${yuan(quantile(made, .75))} 销售线 ${hit}/${xs.length} 过 ${three} 三星`);
+    }
+  }
+}
+
 console.log("\n五、货架（同一批机会里谁被报、谁真卖出去；后两列是次数，不是钱）");
 console.log("货      价     tag        报出  成交  完美  影子猜  全知首选");
 for (const p of productRows) {

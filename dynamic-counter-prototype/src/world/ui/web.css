@@ -37,6 +37,7 @@
 .pc-opinion { margin:12px 14px 0; color:#eee0d5; font-size:13px; line-height:1.6; }
 .pc-opinion strong { color:#edc779; font-weight:600; }
 .pc-tempers { margin:6px 14px 0; color:#c08a6a; font-size:12px; }
+.pc-cooldown { margin:6px 14px 0; padding:3px 8px; border-left:2px solid #d8ad5d66; background:#ffffff05; color:#e8c8b6; font-size:12px; line-height:1.5; }
 .pc-section { margin:13px 14px 0; padding-bottom:14px; }
 .pc-section h3 { margin:0 0 4px; color:#f4dfbd; font:600 13px 'Noto Serif SC',serif,serif; letter-spacing:.04em; }
 .pc-invitation p { color:#ddd0c2; font-size:12px; line-height:1.6; margin:6px 0; }

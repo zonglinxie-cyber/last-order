@@ -2,6 +2,7 @@
 // 看法与冷暖一律说成话（words.ts 唯一出处），不出现数字和进度条。
 import { ta } from "../pronoun.ts";
 import { clientNotes, TRAIT_LABEL } from "../consult.ts";
+import { purchaseCooldownOf } from "../purchases.ts";
 import { visitContext } from "../visits.ts";
 import { currentArrival } from "../arrivals.ts";
 import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCarePeople, weekGuardedPeople } from "../target.ts";
@@ -35,6 +36,7 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
   const today = visitContext(world, person);
   const arrival = currentArrival(world, person.id, people);
   const customer = person.role === "customer";
+  const cooldown = customer ? purchaseCooldownOf(world, person.id) : null;
   const cared = customer && weekCarePeople(world).includes(person.id);
   const careDays = customer ? Math.min(CARE_DAYS_MIN, weekCareDaysOf(world, person.id)) : 0;
   const guarded = customer && weekGuardedPeople(world).includes(person.id);
@@ -82,6 +84,11 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
       </section>}
       <p className="pc-opinion">{ta(person)}看你：<strong>{opinionWord(world.opinion[person.id])}</strong></p>
       <p className="pc-tempers">{person.tempers.map(t => TEMPER_WORD[t]).join(" · ")}</p>
+      {cooldown && <p className="pc-cooldown" role="status">
+        {cooldown.source === "you"
+          ? `上次在第 ${cooldown.day} 天在你这柜买过；还要 ${cooldown.left} 天才会再买。`
+          : `上次在第 ${cooldown.day} 天在对面买过；还要 ${cooldown.left} 天才会回来。`}
+      </p>}
       {today && <section className="pc-section" aria-label="今天的来意">
         <h3>今天的来意 · {today.title}</h3><p>{today.line}</p>
       </section>}

@@ -126,6 +126,24 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(page.locator(".world-verbs button", { hasText: "招呼" })).toBeEnabled();
     });
 
+    test("老客的购买间隔写在人物卡上：自己的柜与对面分开说", async ({ page }) => {
+      await enter(page, envelope({ day: 2, present: { mei: "counter", luyao: "rival" },
+        qualities: { "bought:mei": 1 } }));
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      const line = page.locator(".pc-cooldown");
+      await expect(line).toContainText("第 1 天在你这柜买过");
+      await expect(line).toContainText("还要 9 天");
+    });
+
+    test("老客在对面买过：人物卡说清来源，不冒认成自己的成交", async ({ page }) => {
+      await enter(page, envelope({ day: 2, present: { mei: "counter", luyao: "rival" },
+        qualities: { "rival-bought:mei": 1 } }));
+      await page.getByRole("button", { name: /查看梅女士/ }).click();
+      const line = page.locator(".pc-cooldown");
+      await expect(line).toContainText("第 1 天在对面买过");
+      await expect(line).toContainText("还要 9 天");
+    });
+
     test("完成一次接待：选货、件数、开给她", async ({ page }) => {
       await enter(page, envelope());
       await page.getByRole("button", { name: /查看梅女士/ }).click();

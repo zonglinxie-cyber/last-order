@@ -13,6 +13,7 @@ import { SHELF as PRODUCTS } from "../src/world/shelf.ts";
 import { PEOPLE as CONTENT_PEOPLE, festivalsFor } from "../src/world/content/index.ts";
 import { ZONE_SPOTS } from "../src/world/ui/zones.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
+import { purchaseCooldownOf } from "../src/world/purchases.ts";
 
 const PEOPLE = FIXTURE_PEOPLE;
 const person = (id: string) => PEOPLE.find(p => p.id === id)!;
@@ -288,6 +289,16 @@ test("卖货：判断对了入账记 honest-advice，推错的不强卖", () => 
   w = resolveServe(w, PEOPLE, "mei", "soft", 1);
   w = resolveServe(w, PEOPLE, "mei", "soft", 1);
   assert.equal(w.money, PRODUCTS.soft.price, "冷却期内不再开单");
+});
+
+test("购买间隔：读出最近一次、谁买的、还差几天；过期不念", () => {
+  const base = { ...newWorld("cooldown", PEOPLE), day: 12 };
+  assert.deepEqual(purchaseCooldownOf({ ...base, qualities: { "bought:mei": 5 } }, "mei"),
+    { day: 5, source: "you", left: 3 });
+  assert.deepEqual(purchaseCooldownOf({ ...base, qualities: { "bought:mei": 5, "rival-bought:mei": 9 } }, "mei"),
+    { day: 9, source: "rival", left: 7 }, "两笔都有时取最近一笔，来源写对面");
+  assert.equal(purchaseCooldownOf({ ...base, day: 15, qualities: { "bought:mei": 5 } }, "mei"), null, "满 10 天不再念");
+  assert.equal(purchaseCooldownOf(base, "mei"), null);
 });
 
 test("第一单认 bought: 那一枚章：没开过单才算第一单，推错没成交不算开过", () => {
