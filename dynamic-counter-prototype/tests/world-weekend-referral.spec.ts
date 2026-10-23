@@ -35,7 +35,7 @@ async function sell(page: Page, hard: boolean) {
   await expect(page.getByLabel("来访缘由")).toContainText("安姐介绍来的");
   await page.locator(".world-verbs button", { hasText: "接待" }).click();
   await page.getByRole("tab", { name: "挑货开单" }).click();
-  await page.getByRole("button", { name: `${product.short} ¥${product.price.toLocaleString("zh-CN")} ${product.tag}`, exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`^${product.short} ¥${product.price.toLocaleString("zh-CN")}`) }).click();
   await page.getByRole("button", { name: "试一下", exact: true }).click();
   await page.locator(hard ? ".serve-force" : ".serve-commit").click();
   await page.getByRole("button", { name: "回到楼层", exact: true }).click();

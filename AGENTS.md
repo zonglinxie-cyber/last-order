@@ -11,6 +11,7 @@
 - 规则单测：`npm run test:rules`
 - 模拟器：`node --experimental-strip-types tests/world-sim.ts 20 2`（20 种子 × 4 种打法 × 2 季，约 4 分钟）。改规则或内容以后，签名数不能降，也不能出现一种打法通吃。
 - 楼层 e2e：`npx playwright test tests/world-floor.spec.ts --workers=1`；整季冒烟：`tests/world-season-smoke.spec.ts`（约 7 分钟）。
+- **Playwright 用例一律用默认口径跑**（dev server 4174，`npm run test:runtime` 同款）。换成 preview 口径（`dist/`）时，service worker 的缓存名带内容哈希、`/tests/runtime-fixture.html` 也不在 `dist/` 里 —— 实测有 9 条会平白变红，看着像坏了，其实一条都没坏。判「有没有坏」必须用默认口径。
 - 构建：`npm run build`。它只做 `src` 的类型检查，Playwright 用例要另外单独跑一次 `tsc`。
 - 同一时间只跑一个 Playwright 套件，两个套件会互相停掉对方的资源服务器。本机预览绑定 `127.0.0.1`。
 

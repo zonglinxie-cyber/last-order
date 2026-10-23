@@ -32,7 +32,7 @@ async function offer(page: Page, product: ShelfId) {
   await page.getByRole("button", { name: "接待 12 精力", exact: true }).click();
   await page.getByRole("tab", { name: "挑货开单" }).click();
   const p = SHELF[product];
-  await page.getByRole("button", { name: `${p.short} ¥${p.price.toLocaleString("zh-CN")} ${p.tag}`, exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`^${p.short} ¥${p.price.toLocaleString("zh-CN")}`) }).click();
   await page.locator(".serve-commit").click();
   await page.getByRole("button", { name: "回到楼层", exact: true }).click();
 }

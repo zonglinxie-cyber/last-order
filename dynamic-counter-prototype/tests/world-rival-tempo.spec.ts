@@ -120,7 +120,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await page.getByRole("tab", { name: "挑货开单" }).click();
     const guest = PEOPLE.find(p => p.id === booking.person)!;
     const product = SHELF[bestShelf(visitPerson(w, guest))];
-    await page.getByRole("button", { name: `${product.short} ¥${product.price.toLocaleString("zh-CN")} ${product.tag}`, exact: true }).click();
+    await page.getByRole("button", { name: new RegExp(`^${product.short} ¥${product.price.toLocaleString("zh-CN")}`) }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     await hit(page.locator(".serve-commit")); await page.locator(".serve-commit").click();
     await page.getByRole("button", { name: "回到楼层", exact: true }).click();
