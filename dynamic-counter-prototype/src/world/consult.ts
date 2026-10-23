@@ -317,6 +317,19 @@ export function secondTryRisk(c: Consult, person: Person, id: ShelfId): SecondTr
     : `${she}已经点过头。再换一支若没试到正中，${she}会觉得你拿不准（人情 ${mood}）。` };
 }
 
+/** 这一支落在哪一档（不看她有没有试过）：「认准」与「点头」是分开的两档。
+ *  界面留字（TRIED_MARK）与用例都读它 —— 别各算一遍：需求表一改，
+ *  两边就会说出不同的话，用例还钉着一句旧台词等着人来看它红。 */
+export function trialTierOf(person: Person, id: ShelfId): TrialTier {
+  if (!person.skin) return "negative";
+  const tier = shelfFitTier(fitOfPerson(person, id));
+  const veto = person.skin.veto;
+  const hitVeto = !!veto && SHELF[id].traits[veto.trait] < veto.below;
+  const best = perfectShelf(person);
+  const perfect = !hitVeto && tier === "positive" && best === id;
+  return perfect ? "perfect" : tier;
+}
+
 /** 试一支在她手背上：她的反应把这一支落在哪一档说出来。碰到她的忌讳，忌讳也一起露出来。 */
 export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
   if (!person.skin || c.patience <= 0 || c.tried[id]) return c;
@@ -324,8 +337,9 @@ export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
   const tier = shelfFitTier(score);
   const veto = person.skin.veto;
   const hitVeto = !!veto && SHELF[id].traits[veto.trait] < veto.below;
+  const mark = trialTierOf(person, id);
+  const perfect = mark === "perfect";
   const best = perfectShelf(person);
-  const perfect = !hitVeto && tier === "positive" && best === id;
   const cheaperPerfect = !hitVeto && !perfect && tier === "positive" && score >= PERFECT_MATCH
     && !!best && SHELF[best].price < SHELF[id].price;
   const she = ta(person);
@@ -336,7 +350,6 @@ export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
     : tier === "positive" ? `${lead}点点头：「这个可以。」`
     : tier === "mixed" ? `${lead}犹豫了一下：「还行吧，不是最想要的。」`
     : `${lead}摇头：「这个解决不了我的事。」`;
-  const mark: TrialTier = perfect ? "perfect" : tier;
   const risk = secondTryRisk(c, person, id);
   const risky = !!risk && mark !== "perfect";
   const reacted = risky ? `${line} ${she}把话收回去：「刚才那支不是挺好吗？」` : line;

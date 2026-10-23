@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, SECOND_TRY_HARD_MOOD, SECOND_TRY_MOOD, TRIED_MARK, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, secondTryRisk, spotsOf, stillHolding, tryOn,
+  CONSULT_PATIENCE, PUSH_QUESTION_MOOD, SECOND_TRY_HARD_MOOD, SECOND_TRY_MOOD, TRIED_MARK, askHer, consultPatience, lookAt, openConsult, plateOf, questionsOf, secondTryRisk, spotsOf, stillHolding, tryOn, trialTierOf,
   clientNotes, offerEvidence, rememberConsult, restoreConsults, saveConsults,
 } from "../src/world/consult.ts";
 import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
@@ -357,13 +357,14 @@ test("试出来的档位就是开单那一档，正中单独留字不升格；�
     const base = { ...openConsult(atCounter([p.id]), p), patience: 99 };
     for (const id of SHELF_IDS) {
       const c = tryOn(base, p, id);
-      const score = fitOfPerson(p, id), tier = shelfFitTier(score), veto = p.skin!.veto;
-      const hitVeto = !!veto && SHELF[id].traits[veto.trait] < veto.below;
-      const expected = !hitVeto && tier === "positive" && isPerfectMatch(p, id) ? "perfect" : tier;
+      // 档位只有一处算法：trialTierOf（生产算的就是它）—— 这里不再抄一份。
+      // 抄的那份哪天跟生产走岔了，这条守卫会替错的那份背书，还一声不响。
+      const expected = trialTierOf(p, id);
       assert.equal(c.tried[id], expected, `${p.id} 试${id}`);
-      if (c.tried[id] === "perfect") assert.equal(tier, "positive", `${p.id} 试${id}：认准仍属于点头那档结账`);
+      if (c.tried[id] === "perfect") assert.equal(shelfFitTier(fitOfPerson(p, id)), "positive", `${p.id} 试${id}：认准仍属于点头那档结账`);
       assert.ok(Object.hasOwn(TRIED_MARK, c.tried[id]!), `${p.id} 试${id} 的格子要有字可留`);
-      if (hitVeto) assert.equal(c.vetoKnown, true, `${p.id} 试${id}碰到忌讳没露出来`);
+      const veto = p.skin!.veto;
+      if (veto && SHELF[id].traits[veto.trait] < veto.below) assert.equal(c.vetoKnown, true, `${p.id} 试${id}碰到忌讳没露出来`);
     }
     // 试到正中那一支：那句"还有顾虑"可以收了
     const perfect = perfectShelf(p);
@@ -502,13 +503,15 @@ test("没有正中的客人说清楚：最接近的一支也只是对症，不�
 
 // 「换支要结人情」这两条要的是三种档位各一支，不是哪三支货：按当下的货架现挑，
 // 档位重排（见设计文档「货架尾部那一刀」）以后不用跟着改名单。
-const trialTierOf = (w: World, p: Person, id: (typeof SHELF_IDS)[number]) =>
+// 这一版是「真跑一遍 tryOn」的那一档 —— 跟生产自己算的 trialTierOf 对照着，
+// 两处算法一旦走岔，界面留字与结账那一档就会说不同的话。
+const triedTierOf = (w: World, p: Person, id: (typeof SHELF_IDS)[number]) =>
   tryOn({ ...openConsult(w, p), patience: 99 }, p, id).tried[id];
 /** 点头一支 + 犹豫一支 + 随便再一支（用来验「只在第一次换支时结」）。挑不出来返回 null。 */
 function switchCase(p: Person) {
   const w = beginServe(atCounter([p.id]), PEOPLE, p.id);
-  const nod = SHELF_IDS.find(id => trialTierOf(w, p, id) === "positive");
-  const mixed = SHELF_IDS.find(id => trialTierOf(w, p, id) === "mixed");
+  const nod = SHELF_IDS.find(id => triedTierOf(w, p, id) === "positive");
+  const mixed = SHELF_IDS.find(id => triedTierOf(w, p, id) === "mixed");
   const other = SHELF_IDS.find(id => id !== nod && id !== mixed);
   return nod && other ? { w, nod, mixed, other } : null;
 }
@@ -555,10 +558,10 @@ test("点头后再换一支：第一次换支没试到正中才结人情，好�
   assert.ok(secondTryRisk(thenNod, mei, other), "先试过犹豫货，再点头后换支同样有代价");
   // 换到正中不罚：换支的代价和收益是同一枚硬币。
   const shen = PEOPLE.find(p => p.role === "customer" && p.skin && perfectShelf(p)
-    && SHELF_IDS.some(id => trialTierOf(beginServe(atCounter([p.id]), PEOPLE, p.id), p, id) === "positive"));
+    && SHELF_IDS.some(id => triedTierOf(beginServe(atCounter([p.id]), PEOPLE, p.id), p, id) === "positive"));
   assert.ok(shen, "挑不出一位既有正中、又有一支只是点头的客人");
   const sw = beginServe(atCounter([shen!.id]), PEOPLE, shen!.id);
-  const shenNod = SHELF_IDS.find(id => trialTierOf(sw, shen!, id) === "positive")!;
+  const shenNod = SHELF_IDS.find(id => triedTierOf(sw, shen!, id) === "positive")!;
   const first = tryOn(openConsult(sw, shen!), shen!, shenNod);
   assert.equal(first.tried[shenNod], "positive");
   const perfect = tryOn(first, shen!, perfectShelf(shen!)!);
