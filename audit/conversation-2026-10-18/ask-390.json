@@ -11,7 +11,7 @@
     "width": 360,
     "height": 81.4375
   },
-  "scrollTop": 56,
+  "scrollTop": 67,
   "saved": {
     "person": "shen",
     "stage": "listen",
@@ -26,12 +26,14 @@
     "known": [
       "natural"
     ],
+    "excluded": [],
     "focus": null,
     "focusKnown": false,
     "vetoKnown": false,
     "unitsKnown": true,
     "tried": {},
     "matched": false,
+    "risked": false,
     "lines": [
       "「一厚就假，我要看不出来化过」",
       "「最多 3 支，再多就用不完了。」"
