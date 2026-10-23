@@ -71,7 +71,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     for (const name of ["这一次大概想带几支？", "你最怕镜头看到什么？"])
       await page.getByRole("button", { name, exact: true }).click();
     await page.getByRole("tab", { name: "挑货开单" }).click();
-    await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+    await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
     await page.getByRole("button", { name: "3 件", exact: true }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     const before = await saved(page); await page.reload();

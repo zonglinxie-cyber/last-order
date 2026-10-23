@@ -62,7 +62,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await page.locator(".world-verbs button", { hasText: "接待" }).click();
     await expect(page.locator(".world-serve").getByLabel("来访缘由")).toContainText("不急着开单");
     await page.getByRole("tab", { name: "挑货开单" }).click();
-    await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+    await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     await page.locator(".serve-commit").click();
     await expect(page.locator(".sale-receipt")).toBeVisible();

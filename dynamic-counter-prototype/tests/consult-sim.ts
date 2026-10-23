@@ -21,7 +21,7 @@ import {
   UNITS_QUESTION, type Consult,
 } from "../src/world/consult.ts";
 import {
-  SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, isPerfectMatch, shelfFitTier, shelfUnits,
+  SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, isPerfectMatch, shelfCovers, shelfFitTier, shelfUnits,
   type FitTier, type ShelfId,
 } from "../src/world/shelf.ts";
 import { isSunday, weekNoOf } from "../src/world/weeks.ts";
@@ -143,26 +143,32 @@ function pickQuestion(person: Person, c: Consult) {
 }
 
 /** 公开信息下的候选排序。已知底线时只读它管哪条诉求，不读 below 那个阈值。
- *  今天的重点摸清以后，覆盖它的货往前排；它只是玩家听到的一句话，不是隐藏权重。 */
+ *  今天的重点摸清以后，覆盖它的货往前排；它只是玩家听到的一句话，不是隐藏权重。
+ *
+ *  第 51 轮起，货架格子对「她」说话：她说过的那几条，每支货都标着管（✓）还是不管（✗）。
+ *  盲策读的就是这一行 —— 它能读到的仍然是界面给的东西，读不到 fitOfPerson / 档位高低。
+ *  策略本身一个字没改（还是「接住的条数多者先上，同分按便宜的挑」），
+ *  所以这一版与上一版的差就是「玩家多看见了什么」那一条。 */
 function rankProducts(live: Person, c: Consult): ShelfId[] {
   const budget = live.skin?.budget ?? 0;
   const veto = c.vetoKnown ? live.skin?.veto?.trait : undefined;
   const focus = c.focusKnown ? c.focus : null;
+  // 界面上标出来的那几条：她说过的，减去她说不要的。
+  const wants = c.known.filter(t => !c.excluded.includes(t));
   return SHELF_IDS
     .filter(id => SHELF[id].price <= budget)
     .map(id => {
-      const tags = tagTraits(id);
-      const cover = c.known.filter(t => tags.has(t)).length;
+      const cover = wants.filter(t => shelfCovers(id, t)).length;
       let score = cover * 100;
-      if (c.known.length && cover === 0) score -= 40;
-      if (veto && !tags.has(veto)) score -= 200;
-      if (focus) score += tags.has(focus) ? 50 : -80;
+      if (wants.length && cover === 0) score -= 40;
+      if (veto && !shelfCovers(id, veto)) score -= 200;
+      if (focus) score += shelfCovers(id, focus) ? 50 : -80;
       const tier = c.tried[id];
       if (tier === "perfect") score += 1100;
       else if (tier === "positive") score += 1000;
       else if (tier === "mixed") score += 50;
       else if (tier === "negative") score -= 1000;
-      score += tags.size;
+      score += tagTraits(id).size;
       return { id, score, price: SHELF[id].price };
     })
     .sort((a, b) => b.score - a.score || a.price - b.price || SHELF_IDS.indexOf(a.id) - SHELF_IDS.indexOf(b.id))

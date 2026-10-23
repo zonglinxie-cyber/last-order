@@ -1,8 +1,9 @@
 // 人情网界面的中文说法唯一出处：act 代号、脾气、关系类型、看法与冷暖的成句。
 // 界面不许自己拼这些句子；引擎新增 act 代号时只在这里补一行。
 import { ta } from "../pronoun.ts";
+import { TRAIT_SHORT } from "../shelf.ts";
 import type { MomentKind } from "./cues.ts";
-import type { BondKind, Person, Slot, Temper } from "../types.ts";
+import type { BondKind, Person, Slot, Temper, Trait } from "../types.ts";
 
 export { PLAYER_NAME } from "../engine.ts";
 
@@ -367,8 +368,8 @@ export const momentWord = (kind: MomentKind, name?: string): string => {
  *  对不上的货 resolveServe 让她摇头不入账，硬推当天到账、过两天由 refund 预约退回来。
  *  开过单之后只留一句口径，别每单都念一遍课文。 */
 export const servePickWord = (she: "她" | "他", firstSale: boolean): string => firstSale
-  ? `第一单：把${she}的关键词跟货架小字对照，再试一支验证。对不上${she}摇头，钱到不了账。硬推可以当场开单，但会伤人情，多出的货之后可能退回来。`
-  : `看一处、问一句、试一支，都花${she}一句耐心；对症的常常不止一支，正中只算买得起、全接住、又最省的那一支。挑的时候对着每支货底下那行小字，价签会替你砍件数`;
+  ? `第一单：把${she}的关键词跟货架小字对照 —— ${she}说过的那几条，每支货底下标着管（✓）还是不管（✗）；对不上${she}摇头，钱到不了账。硬推可以当场开单，但会伤人情，多出的货之后可能退回来。`
+  : `看一处、问一句、试一支，都花${she}一句耐心；对症的常常不止一支，正中只算买得起、全接住、又最省的那一支。挑的时候对着每支货底下那行小字（✓管、✗不管），价签会替你砍件数`;
 
 /** 动作条空着时那一句 —— 只说真正的原因，不许「或者」把两条推给玩家自己猜。
  *  精力一个时段发一格（beginSlot 的 ENERGY_PER_SLOT），所以"没劲"的出路是翻时段，不是熬到明早。 */
@@ -376,3 +377,17 @@ export const verbsEmptyWord = (person: Person, outOfEnergy: boolean, atRival: bo
   atRival ? `${ta(person)}被请去了对面，这个时段够不着。`
     : outOfEnergy ? "这一时段你手上的劲用完了，点「下一时段」补一格。"
     : `这会儿对${ta(person)}做不了什么。`;
+
+/** 货架格子上「对她」那一行：她已经说出口的那几条，这一支各管不管。
+ *  同一支货对不同的人答案不同 —— 这一行是这支货对她说的话，上面那行标签是它自己的话。 */
+export const coversMark = (trait: Trait, covered: boolean): string =>
+  `${TRAIT_SHORT[trait]}${covered ? "✓" : "✗"}`;
+
+/** 同一行的整句（无障碍标签与说明用；格子上是一格一格分开摆的）。 */
+export const coversLine = (traits: readonly Trait[], covered: readonly boolean[]): string =>
+  traits.map((trait, i) => coversMark(trait, covered[i] ?? false)).join(" ");
+
+/** 挑货那一屏顶上那句话：这一行是干什么用的。
+ *  不解释「正中和过线的区别」—— 那是试用那一下的事；这里只说清楚怎么读格子。 */
+export const coversHintWord = (traits: readonly Trait[]): string =>
+  `她说过的那 ${traits.length} 条，每支货底下标着管（✓）还是不管（✗）：全 ✓ 的那一支才是她那支。`;

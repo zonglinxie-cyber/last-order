@@ -40,10 +40,10 @@ async function enter(page: Page) {
 }
 /** 点一下试用留的格子：粉底试过留「她点头」，粉霜试过留「她认准了」。 */
 async function tryBoth(page: Page) {
-  await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+  await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
   await page.getByRole("button", { name: "试一下", exact: true }).click();
   await expect(page.locator(".consult-reaction")).toContainText("这个可以");
-  await page.getByRole("button", { name: "粉霜 ¥1,180 薄·退红", exact: true }).click();
+  await page.getByRole("button", { name: /^粉霜 ¥1,180 薄·退红/ }).click();
   await page.getByRole("button", { name: "试一下", exact: true }).click();
   await expect(page.locator(".consult-reaction")).toContainText("就是这个感觉");
 }

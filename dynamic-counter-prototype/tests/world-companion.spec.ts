@@ -62,7 +62,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     expect(await page.getByLabel("请熟人搭话").evaluate(el => el.getBoundingClientRect().height)).toBeLessThanOrEqual(90);
     await page.getByRole("tab", { name: "挑货开单" }).click();
     const product = SHELF[bestShelf(PEOPLE.find(p => p.id === "anjie")!)];
-    await page.getByRole("button", { name: `${product.short} ¥${product.price.toLocaleString("zh-CN")} ${product.tag}`, exact: true }).click();
+    await page.getByRole("button", { name: new RegExp(`^${product.short} ¥${product.price.toLocaleString("zh-CN")}`) }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     expect((await state(page)).ui.consults.entries.anjie.patience).toBe(c.patience - 1);
     await hittable(page.locator(".serve-commit")); await page.locator(".serve-commit").click();
@@ -74,7 +74,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
   test("已经选货试用后搭话不丢草稿，刷新不重复扣费", async ({ page }) => {
     await enter(page);
     await page.getByRole("tab", { name: "挑货开单" }).click();
-    await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+    await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
     await page.getByRole("button", { name: "3 件", exact: true }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     const before = await state(page), c = before.ui.consults.entries.anjie;

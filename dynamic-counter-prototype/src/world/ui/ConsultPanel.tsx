@@ -6,12 +6,12 @@ import {
   TRAIT_LABEL, TRIED_MARK, askHer, budgetWord, lookAt, offerEvidence, patienceWord, plateOf,
   priceWord, questionsOf, secondTryRisk, spotsOf, stillHolding, tryOn, type Consult,
 } from "../consult.ts";
-import { SHELF, SHELF_LINES, type ShelfId } from "../shelf.ts";
+import { SHELF, SHELF_LINES, shelfCoversOf, type ShelfId } from "../shelf.ts";
 import type { Person, World } from "../types.ts";
 import type { SaleFeedback } from "../sales-feedback.ts";
 import { ta } from "../pronoun.ts";
 import { unsaidWord } from "../serve-talk.ts";
-import { servePickWord } from "./words.ts";
+import { coversHintWord, coversLine, coversMark, servePickWord } from "./words.ts";
 import { visitContext } from "../visits.ts";
 import type { ArrivalNote } from "../arrivals.ts";
 import { companionCost, companionUsed, COMPANION_ENERGY, type companionOptions } from "../companion.ts";
@@ -43,6 +43,8 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
   });
   const evidence = product ? offerEvidence(c, person, product, c.units) : [];
   const risk = product ? secondTryRisk(c, person, product) : null;
+  // 她说过要的那几条（排除掉的那些不算）：货架每一格按这几条标出管 / 不管。
+  const wants = c.known.filter(t => !c.excluded.includes(t));
   // 最后一次探问后会追加「该开单了」，反应仍显示真正的回答。
   const lastReply = c.lines.at(c.patience === 0 && c.begun ? -2 : -1);
   useEffect(() => {
@@ -132,12 +134,17 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
         </section> : <section id="consult-offer" role="tabpanel" aria-labelledby="consult-offer-tab">
           {c.begun && <p className="consult-reaction" aria-live="polite">{lastReply}</p>}
           {companion}
+          {wants.length > 0 && <p className="serve-covers-hint">{coversHintWord(wants)}</p>}
           {SHELF_LINES.map(line => <div key={line.word} className="serve-line" role="group" aria-label={line.word}>
             <span className="serve-line-word">{line.word}</span><div className="serve-products">{line.ids.map(pid => {
               const tried = c.tried[pid];
+              const covered = shelfCoversOf(pid, wants);
               return <button key={pid} type="button" aria-pressed={product === pid}
                 className={`${product === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => onChange({ product: pid })}>
-                <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]} · ${yuan(SHELF[pid].price)}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em></button>;
+                <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]} · ${yuan(SHELF[pid].price)}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em>
+                {wants.length > 0 && <i className="serve-covers">{wants.map((trait, i) =>
+                  <span key={trait} className={covered[i] ? "yes" : "no"}>{coversMark(trait, covered[i]!)} </span>)}</i>}
+              </button>;
             })}</div>
           </div>)}
           <p className="serve-note">{product ? priceWord(person, product) : servePickWord(ta(person), !hasOpenedSale(world))}</p>

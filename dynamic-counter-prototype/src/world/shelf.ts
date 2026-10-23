@@ -39,6 +39,27 @@ export const TAG_WORD: Record<string, Trait> = {
   温和: "steady", 舒缓: "soothe", 遮瑕: "correct", 提亮: "correct",
 };
 
+/** 一条诉求在货架格子上的短词：就是 TAG_WORD 里那五个主词。格子小，只放得下这两个字。 */
+export const TRAIT_SHORT: Record<Trait, string> = {
+  natural: "薄", correct: "见效", soothe: "退红", steady: "不闷", wear: "撑妆",
+};
+
+/** 这一支管不管她这一条：给上一档就算「管」。
+ *
+ *  这一条是第 51 轮加的：货架原来只给两句营销词，玩家扫一眼分不出「哪一支是她那一支」——
+ *  一位客人要四条（周姐：薄、见效、稳、撑妆），而任何一句标签都只写得下两个词，
+ *  十二支里只有一支给得起这四条，那一支却看不出来，只能靠一次次试用去撞。
+ *  所以货架格子改成对「她」说话：她已经说出口的那几条，每一支货都标出管 / 不管。
+ *
+ *  只分两档，不分档位：她要几档（want 1 还是 2）还没问出来，界面不能替她编；
+ *  档位高低留给试用去验（「认准了」= 每条都接满，「点头」= 对症）。
+ *  读的是同一张档位表（SHELF[id].traits），不是另抄一份 —— 抄的那份迟早跟货架脱节。 */
+export const shelfCovers = (id: ShelfId, trait: Trait): boolean => SHELF[id].traits[trait] > 0;
+
+/** 她已经说出口的那几条，这一支各管不管（顺序与给的顺序一致）。 */
+export const shelfCoversOf = (id: ShelfId, traits: readonly Trait[]): boolean[] =>
+  traits.map(trait => shelfCovers(id, trait));
+
 // 产品线照真实的顶奢专柜排（参考海蓝之谜 / 赫莲娜 / 肌肤之钥这一档的柜台）：一半底妆、一半护肤，
 // 价位梯度也照那一档的柜台价 —— 防晒隔离四五百、粉底一千上下、精华一千六七、面霜两千往上。
 // 名字是绮光自己的，不借真牌子的名。档位向量与价格沿用上一版（模拟器与货架测试钉着），

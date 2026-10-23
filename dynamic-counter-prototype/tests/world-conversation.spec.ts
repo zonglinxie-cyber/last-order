@@ -73,7 +73,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     for (const name of ["这一次大概想带几支？", "带妆久了会不会闷痘？", "要不要直接看套装？"])
       await page.getByRole("button", { name, exact: true }).click();
     await page.getByRole("tab", { name: "挑货开单" }).click();
-    await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+    await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     await expect(page.locator(".consult-reaction")).toContainText("就是这个感觉");
     const afterTry = await saved(page);

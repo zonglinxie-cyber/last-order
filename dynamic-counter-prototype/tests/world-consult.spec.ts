@@ -4,10 +4,15 @@ import { PEOPLE } from "../src/world/content/index.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { WEEK_TARGETS } from "../src/world/target.ts";
 import { TRAIT_LABEL, questionsOf, spotsOf } from "../src/world/consult.ts";
+import { SHELF, SHELF_LINES, TRAIT_SHORT } from "../src/world/shelf.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { HAND_CONSULT } from "../src/world/content/consult-lines.ts";
 import { ta } from "../src/world/pronoun.ts";
-import type { World } from "../src/world/types.ts";
+import type { Trait, World } from "../src/world/types.ts";
+
+/** 「已知需求」那几块牌上的长词反查成诉求代号。 */
+const TRAIT_BY_LABEL: Record<string, Trait> =
+  Object.fromEntries(Object.entries(TRAIT_LABEL).map(([trait, label]) => [label, trait as Trait]));
 
 const saved = (page: Page) => page.evaluate(key => JSON.parse(localStorage.getItem(key)!).world, SAVE_KEY);
 const openPerson = async (page: Page, world: World, name: string) => {
@@ -70,6 +75,26 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await expect(page.locator(".consult-status")).toContainText("还可探 5 次");
   });
 
+  test("货架对「她」说话：每一支货都标出她说过的那几条管还是不管，标的是货架自己的档位表", async ({ page }) => {
+    // 第 51 轮：货架原来只给两句营销标签，玩家扫一眼分不出「哪一支是她那一支」。
+    // 现在每一格底下按她已经说出口的那几条标出管（✓）/ 不管（✗）。
+    // 这条用例钉的是「标出来的跟货架那张档位表一致」—— 另抄一份迟早跟货架脱节。
+    await enter(page);
+    await page.getByRole("tab", { name: "挑货开单" }).click();
+    const labels = await page.locator(".consult-notes b:not(.is-excluded)").allTextContents();
+    const traits = labels.map(label => TRAIT_BY_LABEL[label]).filter((t): t is Trait => !!t);
+    expect(traits.length).toBeGreaterThan(0);
+    const order = SHELF_LINES.flatMap(line => line.ids);
+    const tiles = page.locator(".serve-products button");
+    expect(await tiles.count()).toBe(order.length);
+    for (const [i, id] of order.entries()) {
+      const marks = (await tiles.nth(i).locator(".serve-covers span").allTextContents()).map(m => m.trim());
+      expect(marks, `${SHELF[id].short} 那一行标错了`).toEqual(
+        traits.map(t => `${TRAIT_SHORT[t]}${SHELF[id].traits[t] > 0 ? "✓" : "✗"}`));
+    }
+    await expect(page.locator(".serve-covers-hint")).toContainText("管");
+  });
+
   test("探问、报价、放弃各有明确成本；不卖也留下真实笔记", async ({ page }) => {
     await enter(page);
     await expect(page.locator(".serve-products")).toHaveCount(0);
@@ -80,7 +105,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     await page.getByRole("button", { name: "这一次大概想带几支？", exact: true }).click();
     await expect(page.getByLabel("已知需求")).toContainText("温和不闷");
     await page.getByRole("tab", { name: "挑货开单" }).click();
-    await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+    await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
     await page.getByRole("button", { name: "4 件", exact: true }).click();
     await expect(page.locator(".offer-signal")).toContainText("超预算");
     await expect(page.locator(".offer-evidence")).toContainText("只想带 3 件");
@@ -102,7 +127,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
       await page.getByRole("button", { name, exact: true }).click();
     }
     await page.getByRole("tab", { name: "挑货开单" }).click();
-    await page.getByRole("button", { name: "粉底 ¥980 薄·撑妆", exact: true }).click();
+    await page.getByRole("button", { name: /^粉底 ¥980 薄·撑妆/ }).click();
     await page.getByRole("button", { name: "试一下", exact: true }).click();
     await expect(page.locator(".consult-status")).toContainText("现在做决定");
     await expect(page.locator(".consult-reaction")).toContainText("就是这个感觉");
