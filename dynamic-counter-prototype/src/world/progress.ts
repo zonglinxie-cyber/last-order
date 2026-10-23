@@ -4,6 +4,7 @@
 // 规则口径见 docs/人情场设计.md；读的是 engine 写进 World 的 quality 旗，不改引擎。
 import { ENDINGS } from "./ending.ts";
 import { HEAT_MAX } from "./heat.ts";
+import { careerRankOf } from "./career.ts";
 import { SEASON_WEEKS, WEEK_STARS_MAX, seasonStarsOf } from "./target.ts";
 import { CLUE_PREFIX } from "./engine.ts";
 import { CLUE_THREADS, PEOPLE, isClueId, isThreadId, threadKey } from "./content/index.ts";
@@ -66,10 +67,12 @@ export type WorldProgress = {
   bestSeasonStars: number;
   /** 每段经历收季后的真实对局；缺失的旧季不推断、不补零。 */
   rivalSeasons: RivalSeason[];
+  /** 到过的最高职级（职业阶梯：1 新人 BA / 2 正式 BA / 3 柜长）。只升不降；旧档案缺这个键按 1 读。 */
+  bestCareerRank?: number;
 };
 
 export const emptyWorldProgress = (): WorldProgress =>
-  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {}, bestSeasonStars: 0, rivalSeasons: [] });
+  ({ version: WORLD_PROGRESS_VERSION, seen: [], secretKnown: [], bestOpinion: {}, worstOpinion: {}, arcEnds: {}, clues: [], threadEnds: {}, endings: [], endingsAtHeat: {}, bestSeasonStars: 0, rivalSeasons: [], bestCareerRank: 1 });
 
 const clampOpinion = (v: number): number => Math.max(-100, Math.min(100, v));
 
@@ -145,6 +148,7 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     endingsAtHeat,
     bestSeasonStars,
     rivalSeasons: recordRivalSeason(progress.rivalSeasons, endingId && ENDING_IDS.has(endingId) ? closedRivalSeason(world) : null),
+    bestCareerRank: Math.max(progress.bestCareerRank ?? 1, careerRankOf(world)),
   };
 }
 
@@ -202,6 +206,9 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
   }
   if (parsed.bestSeasonStars !== undefined
     && !(Number.isInteger(parsed.bestSeasonStars) && (parsed.bestSeasonStars as number) >= 0 && (parsed.bestSeasonStars as number) <= starsCap)) return null;
+  // 职级：旧档案没有这一格，按 1 读；有这一格就得是目录里那一档。
+  if (parsed.bestCareerRank !== undefined
+    && !(Number.isInteger(parsed.bestCareerRank) && (parsed.bestCareerRank as number) >= 1 && (parsed.bestCareerRank as number) <= 3)) return null;
 
   const best = parsed.bestOpinion as Record<PersonId, number>;
   const worst = parsed.worstOpinion as Record<PersonId, number>;
@@ -222,6 +229,7 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     endingsAtHeat: { ...(parsed.endingsAtHeat as Record<string, number> ?? {}) },
     bestSeasonStars: (parsed.bestSeasonStars as number | undefined) ?? 0,
     rivalSeasons: ((parsed.rivalSeasons as RivalSeason[] | undefined) ?? []).map(r => ({ ...r })),
+    bestCareerRank: (parsed.bestCareerRank as number | undefined) ?? 1,
   };
 }
 

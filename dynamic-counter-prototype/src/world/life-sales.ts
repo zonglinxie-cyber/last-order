@@ -74,11 +74,26 @@ export const LIFE_HOW_BIAS: Record<1 | 2 | 3, { arrive: number; refer: number; b
 export const lifeStepOf = (world: Pick<World, "qualities">, id: PersonId): number =>
   world.qualities[`life:${id}`] ?? 0;
 
+/** 熟客流失的旗：她被冷落了一整季（这一季你没在她这儿开过单）。
+ *  落旗时 life:<id>:how 一起落到第三档 —— 她来得少了，也不替你带人。
+ *  再接待她一次就把旗清掉：这一步还挽回得了。 */
+export const lifeAwayKey = (id: PersonId) => `life:${id}:away`;
+export const lifeAwayOf = (world: Pick<World, "qualities">, id: PersonId): boolean =>
+  world.qualities[lifeAwayKey(id)] === 1;
+export const clearLifeAway = <W extends { qualities: Record<string, number> }>(world: W, id: PersonId): W => {
+  if (!world.qualities[lifeAwayKey(id)]) return world;
+  const qualities = { ...world.qualities };
+  delete qualities[lifeAwayKey(id)];
+  return { ...world, qualities };
+};
+
 export const lifeHowOf = (world: Pick<World, "qualities">, id: PersonId): number =>
   world.qualities[`life:${id}:how`] ?? 0;
 
 const biasOf = (world: Pick<World, "qualities">, id: PersonId) =>
-  LIFE_HOW_BIAS[lifeHowOf(world, id) as 1 | 2 | 3] ?? LIFE_HOW_BIAS[2];
+  // 被冷落了一整季：按第三档算（来得少、不替你带人）。这一条压过卡上写下的落点 ——
+  // 卡说「她还当自己人」，你整整一季没接住她，那就当不成了。
+  lifeAwayOf(world, id) ? LIFE_HOW_BIAS[3] : (LIFE_HOW_BIAS[lifeHowOf(world, id) as 1 | 2 | 3] ?? LIFE_HOW_BIAS[2]);
 
 const clamp01 = (p: number) => Math.min(1, Math.max(0, p));
 

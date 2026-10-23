@@ -20,7 +20,10 @@ import type {
 } from "./types.ts";
 import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
-import { lifeArriveChance, lifeBringChance, lifePerson, lifeReferChance } from "./life-sales.ts";
+import { lifeArriveChance, lifeBringChance, clearLifeAway, lifePerson, lifeReferChance } from "./life-sales.ts";
+import { applyYearScenes, isNewYear, YEAR_PREFIX, yearModsOf, yearOfSeason, yearWordOf } from "./years.ts";
+import { applyCareerAudit, careerAudit, careerAuditLines, careerModsOf, careerRankOf, markSeasonWin,
+  CAREER_RANK_KEY, CAREER_WINS_KEY, CAREER_YEARS_KEY } from "./career.ts";
 import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
 import { appointmentTime, arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
 import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, rivalBookingSlots, validRivalBooking } from "./rival-business.ts";
@@ -355,6 +358,10 @@ const heated = (heat: readonly HeatId[] | undefined, id: HeatId): boolean => hea
 export const startSamplesOf = (heat?: readonly HeatId[]): number => heated(heat, "thin-samples") ? START_SAMPLES / 2 : START_SAMPLES;
 /** 每晚品牌补几支。 */
 export const nightlySamplesOf = (heat?: readonly HeatId[]): number => heated(heat, "thin-samples") ? SAMPLES_PER_NIGHT / 2 : SAMPLES_PER_NIGHT;
+/** 这一刻起手有几支小样（年景「小样管得严」再少发一些）。 */
+export const startSamplesNow = (world: World): number => Math.max(0, startSamplesOf(world.heat) - yearModsOf(world).samples);
+/** 这一刻每晚补几支小样。 */
+export const nightlySamplesNow = (world: World): number => Math.max(0, nightlySamplesOf(world.heat) - yearModsOf(world).samples);
 /** 开局与换季往回折的那条基线台账。 */
 export const startComplianceOf = (heat?: readonly HeatId[]): number => heated(heat, "cold-ledger") ? COMPLIANCE_COLD_START : START_COMPLIANCE;
 /** 陆遥请走漏掉那一位的概率。 */
@@ -364,16 +371,19 @@ export const wechatAllowed = (heat?: readonly HeatId[]): boolean => !heated(heat
 
 export function newWorld(seed: string, _people: Person[], heat: readonly HeatId[] = []): World {
   const compliance = startComplianceOf(heat);
-  return {
+  const base: World = {
     seed, season: 1, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing: START_STANDING, compliance,
-    energy: 0, samples: startSamplesOf(heat),
+    energy: 0, samples: 0,
     opinion: {}, bonds: {}, bondKinds: {}, memories: [], qualities: {},
     present: {}, touched: [], rngCalls: 0, appointments: [], requests: [], fired: {}, log: [],
     opinionAtSeasonStart: {},
     statsAtSeasonStart: { standing: START_STANDING, compliance },
     heat: [...heat],
   };
+  // 第 1 年是教学年，不抽年景（years.ts 的 drawYearScenes 对第 1 年返回空）；这一步留着是为了口径统一。
+  const withYear = applyYearScenes(base);
+  return { ...withYear, samples: startSamplesNow(withYear) };
 }
 
 // —— 条件求值 ——
@@ -554,12 +564,16 @@ function clearWeekRule(world: World): World {
   for (const id of WEEK_IDS) delete qualities[weekKey(id)];
   return { ...world, qualities };
 }
-/** 这一刻的格值（培训周 15）。 */
-export const energySlotOf = (world: World): number => energyPerSlotOf(world.qualities, ENERGY_PER_SLOT);
-/** 这一刻硬推一次的台账扣分（巡查周翻倍）。 */
-export const hardSellComplianceNow = (world: World): number => hardSellComplianceOf(world.qualities, HARD_SELL_COMPLIANCE);
-/** 这一刻陆遥抢客的概率（只看自选加难那一档；本周规矩动的是她的**门槛**，见下一行）。 */
-export const poachChanceNow = (world: World): number => poachChanceOf(world.heat);
+/** 这一刻的格值（培训周 15；升到正式 BA 以后每格多 5 点 —— 一格接一位客人，还能再照应一个人）。 */
+export const energySlotOf = (world: World): number => energyPerSlotOf(world.qualities, ENERGY_PER_SLOT) + careerModsOf(world).energy;
+/** 这一刻硬推一次的台账扣分（巡查周翻倍；年景「今年商场查得严」也是翻倍）。 */
+export const hardSellComplianceNow = (world: World): number => hardSellComplianceOf(world.qualities, HARD_SELL_COMPLIANCE) * yearModsOf(world).hardSell;
+/** 这一刻陆遥抢客的概率（自选加难那一档 + 年景「陆遥升柜长」+0.05 − 柜长以后你有人盯着 −0.05）。 */
+export const poachChanceNow = (world: World): number =>
+  clamp(poachChanceOf(world.heat) + yearModsOf(world).poach - careerModsOf(world).poach, 0, 1);
+/** 这一刻同屏最多几位客人（周年庆多请了人 +1；柜长 +1）。 */
+export const maxPresentCustomers = (world: World): number =>
+  MAX_PRESENT_CUSTOMERS + yearModsOf(world).guests + careerModsOf(world).guests;
 /** 这一刻她请走"看法低于多少"的人（对面忙碌周收到 20）。 */
 export const poachMaxOpinionNow = (world: World): number => poachMaxOpinionOf(world.qualities, POACH_MAX_OPINION);
 /** 这格的抢客意图在开场时公开；同分按人物表顺序，存档往返也不变。 */
@@ -593,7 +607,7 @@ export function planContactInvite(world: World, person: Person): Appointment | u
     const guests = new Set(world.appointments.filter(a => a.day === day && a.slot === slot)
       .flatMap(a => [a.person, ...a.bring ?? []]));
     if (world.weekendOrder?.due === day && slot === 3 && !world.weekendOrder.outcome) guests.add(world.weekendOrder.person);
-    if (guests.size < MAX_PRESENT_CUSTOMERS) return { person: person.id, day, slot, reason: "invited" };
+    if (guests.size < maxPresentCustomers(world)) return { person: person.id, day, slot, reason: "invited" };
   }
   return undefined;
 }
@@ -633,6 +647,8 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   if (festivals) w = { ...w, festival: festivalOn(w.day, festivals) };
   const dayOfWeek = ((w.day - 1) % 7) + 1;
   const present: Record<PersonId, Zone> = {};
+  // 同屏客位：周年庆多请了人、升到柜长，柜前站得下的人更多。
+  const presentCap = maxPresentCustomers(w);
 
   // 过期的预约清掉（没来就是没来）；本时段的预约先在场内落位。
   const due = w.appointments.filter(a => a.day === w.day && a.slot === w.slot);
@@ -646,11 +662,14 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   // 客人落在哪一区：按权重抽，但只往还站得下的区派 —— 一个坐标站一个人，
   // 站满了还往里塞，界面上就是两个人叠在同一个点上，看不出是两个人。
+  // 年景「中庭封了半年」那一档不往中庭派：人都挤到柜台这一头。
   const drawGuestZone = (): Zone => {
     const used = new Map<Zone, number>();
     for (const [id, zone] of Object.entries(present))
       if (personOf(people, id)?.role === "customer") used.set(zone, (used.get(zone) ?? 0) + 1);
-    const pool = CUSTOMER_ZONE_WEIGHTS.filter(([zone]) => (used.get(zone) ?? 0) < ZONE_GUEST_CAPACITY[zone]);
+    const noAtrium = yearModsOf(w).noAtrium;
+    const pool = CUSTOMER_ZONE_WEIGHTS.filter(([zone]) => (used.get(zone) ?? 0) < ZONE_GUEST_CAPACITY[zone]
+      && !(noAtrium && zone === "atrium"));
     let r: number; [r, w] = roll(w);
     const total = pool.reduce((a, [, weight]) => a + weight, 0);
     let acc = 0;
@@ -675,7 +694,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   for (const ap of due) {
     const person = personOf(people, ap.person);
     if (!person || person.role !== "customer") continue;
-    if (customerCount >= MAX_PRESENT_CUSTOMERS && !(ap.person in present)) continue;
+    if (customerCount >= presentCap && !(ap.person in present)) continue;
     if (!(ap.person in present)) {
       const zone = appointmentZone(ap.person); if (!zone) continue;
       placeCustomer(ap.person, zone); customerCount++;
@@ -707,7 +726,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
     if (ap.reason === "refund" && ap.weekendOutcome) w = say(w, `${person.name}聊起周末那单：${WEEKEND_RESPONSE[ap.weekendOutcome]}`, [person.id]);
     for (const bid of ap.bring ?? []) {
       const bp = personOf(people, bid);
-      if (bp && bp.role === "customer" && !(bid in present) && customerCount < MAX_PRESENT_CUSTOMERS) {
+      if (bp && bp.role === "customer" && !(bid in present) && customerCount < presentCap) {
         const zone = appointmentZone(bid); if (!zone) continue;
         placeCustomer(bid, zone); customerCount++;
         const arrival: Arrival = { person: bid, kind: "companion", source: person.id };
@@ -718,7 +737,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
 
   // 两类预约共用实际客位、报价和结账；周末提前联系只把邀请成本挪到前几天。
   const startBooking = (guest: Person, weekend = false): boolean => {
-    if (!(guest.id in present) && customerCount >= MAX_PRESENT_CUSTOMERS) return false;
+    if (!(guest.id in present) && customerCount >= presentCap) return false;
     const prepared = weekend && !!w.weekendOrder?.prepared;
     const zone = prepared ? appointmentZone(guest.id) : "rival";
     if (!zone) return false;
@@ -750,7 +769,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   // 不占用玩家约好的人，不让十天内买过货的人重复掏钱；首季第一周保持原体验。
   const startOrdinaryBooking = () => {
     if (rivalBookingSlots(w).includes(w.slot) && !rivalBookingNow(w)
-      && customerCount < MAX_PRESENT_CUSTOMERS && people.some(p => p.role === "rival")) {
+      && customerCount < presentCap && people.some(p => p.role === "rival")) {
       const pool = people.filter(p => p.role === "customer" && p.skin && !(p.id in present)
         && !awayToday(w, p.id) && (p.visits.fromDay ?? 1) <= w.day
         && (!p.visits.festivals || !!w.festival && p.visits.festivals.includes(w.festival))
@@ -770,7 +789,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   // 开局那个上午：先到的两位站在柜台前。
   if (w.day === 1 && w.slot === 0) {
     for (const id of OPENING_GUESTS) {
-      if (customerCount >= MAX_PRESENT_CUSTOMERS || id in present) continue;
+      if (customerCount >= presentCap || id in present) continue;
       if (personOf(people, id)?.role === "customer") { placeCustomer(id, "counter"); customerCount++; }
     }
   }
@@ -791,7 +810,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   // 超出上限时谁留下由抽数排序决定 —— 同一个种子挑出同一批人。
   candidates.sort((x, y) => x.r - y.r);
   for (const c of candidates) {
-    if (customerCount >= MAX_PRESENT_CUSTOMERS) break;
+    if (customerCount >= presentCap) break;
     placeCustomer(c.id, drawGuestZone()); customerCount++;
   }
 
@@ -1577,6 +1596,8 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
       sold: (next.money - world.money) / price, reason,
     } } } : next;
   w = setQuality(w, `served:${personId}`, qualityOf(w, `served:${personId}`) + 1);
+  // 接待过就把「她被冷落了一整季」那一旗清掉 —— 这一步还挽回得了。
+  w = clearLifeAway(w, personId);
 
   // 看法坏到这份上，她连接待都不愿意：精力照花，单开不出来。
   if (opinionOf(w, personId) <= SERVE_REFUSE_OPINION && !force) {
@@ -1763,7 +1784,7 @@ export function endDay(world: World, people: Person[]): World {
   w = { ...w,
     // 过夜不回满：一天的劲改成四个时段各发一格（见 beginSlot），这里只把昨天没花完的清掉。
     energy: 0,
-    samples: Math.min(SAMPLES_MAX, w.samples + nightlySamplesOf(w.heat)),
+    samples: Math.min(SAMPLES_MAX, w.samples + nightlySamplesNow(w)),
     day: w.day + 1, slot: 0, present: {}, touched: [] };
   return say(w, `—— 第 ${w.day} 天 ——`);
 }
@@ -1779,8 +1800,10 @@ export function endDay(world: World, people: Person[]): World {
  * 而主线不能每开一季就从第一幕重讲一遍。落地那一季的记号（thread:<id>:landed）也一起带走：
  * 它说的是这句话在哪一季说完的，换季不该把它换成新的季号。
  * 「人生一步」那一批同样靠跨季：life:<id> 是她走到第几步、life:<id>:how 是上一步怎么落的，
- * 今年的那一步要认去年的那一步，清零就等于每年把她重置成刚认识的人。 */
-const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:", "client-note:", "last-met:"] as const;
+ * 今年的那一步要认去年的那一步，清零就等于每年把她重置成刚认识的人。
+ * 年景（year:*）与职业阶梯（career:*）也跨季带着：年景一年一换（新年份抽新的，engine 在换季时落），
+ * 阶梯只升不降，赢了的那一级不该在换季时收回去。 */
+const CARRIED_QUALITY = ["arc:", "wechat:", "secret-", "clue:", "thread:", "mainline:", "life:", "client-note:", "last-met:", YEAR_PREFIX, "career:"] as const;
 const carriedAcrossSeasons = (key: string) => CARRIED_QUALITY.some(p => key.startsWith(p));
 
 /** 换季那句话：线换了档就说清楚为什么换（第 1 季是学徒档，第 2 季起按那一季的客流定）。 */
@@ -1792,7 +1815,8 @@ function seasonStartWord(season: number): string {
 
 /** 下一季的开局：人和关系网带过去，但旧情会淡（看法往 0 收一半）、柜位台账往起点收一半。
  *  账上的钱、手里的精力小样、还没赴的约都清零 —— 那是上一季的事。
- *  世界之外的人（名单里已经没有的 id）连同关于她的看法、关系和记忆一起放下。 */
+ *  世界之外的人（名单里已经没有的 id）连同关于她的看法、关系和记忆一起放下。
+ *  年末那一季（第 4、8、12……季收工）会多两件事：抽这一年的年景、做一次年终评估。 */
 export function nextSeason(world: World, people: Person[], heat?: readonly HeatId[]): World {
   const nextHeat = [...heat ?? world.heat ?? []];
   const roster = new Set(people.map(p => p.id));
@@ -1810,23 +1834,50 @@ export function nextSeason(world: World, people: Person[], heat?: readonly HeatI
   const standing = Math.round(START_STANDING + (world.standing - START_STANDING) / 2);
   const complianceBase = startComplianceOf(nextHeat);
   const compliance = Math.round(complianceBase + (world.compliance - complianceBase) / 2);
-  return {
+
+  // 这一季的胜负先记上：年末评估要看「这一年赢过对面几季」。
+  const carried = markSeasonWin({ ...world, qualities }).qualities;
+  // 熟客流失：这一整季没接待过的熟客，下一年她来得少了，也不替你带人
+  // （life:<id>:away 这一旗，life-sales.ts 按第三档算它）。
+  // 卡上写下的落点 life:<id>:how 一个字不改 —— 那是她自己的事，这一旗只管「你冷落了她」。
+  for (const person of people) {
+    if (person.role !== "customer") continue;
+    if (!qualityOf(world, `life:${person.id}`)) continue;   // 她还没有人生那一步
+    if (qualityOf(world, `served:${person.id}`)) continue;   // 这一季接待过
+    if (carried[`life:${person.id}:away`]) continue;         // 已经落过旗
+    carried[`life:${person.id}:away`] = 1;
+  }
+  const freshYear = season > 1 && isNewYear(season);
+  // 年终评估读的是年末那一刻的柜位、台账与看法（还没折半的那些数）—— 玩家经历的就是那一年。
+  const yearEnd = { ...world, qualities: carried };
+  const audit = freshYear ? careerAudit(yearEnd) : null;
+  const audited = freshYear ? applyCareerAudit(yearEnd) : yearEnd;
+  const nextQualities = audited.qualities;
+  const withYear = freshYear ? applyYearScenes({ ...audited, season, qualities: nextQualities }) : audited;
+
+  const log: LogEntry[] = [{ day: 1, slot: 0, text: seasonStartWord(season) }];
+  if (freshYear && audit) {
+    log.push({ day: 1, slot: 0, text: yearWordOf({ ...withYear, season }) });
+    for (const line of careerAuditLines(audit)) log.push({ day: 1, slot: 0, text: line });
+  }
+  const next: World = {
     seed: world.seed, season, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,
     standing, compliance,
-    energy: 0, samples: startSamplesOf(nextHeat),
+    energy: 0, samples: 0,
     opinion, bonds, bondKinds,
     memories: world.memories.filter(m => roster.has(m.holder) && Math.abs(m.valence) === 2),
-    qualities, present: {}, touched: [], rngCalls: world.rngCalls,
+    qualities: withYear.qualities, present: {}, touched: [], rngCalls: world.rngCalls,
     appointments: world.appointments.filter(a => roster.has(a.person) && (a.reason === "invited" && a.day > SEASON_DAYS
       || a.weekendOutcome !== undefined && a.day === SEASON_DAYS + 1))
       .map(({ amount: _oldAmount, ...a }) => ({ ...a, reason: a.reason === "invited" ? "invited" as const : "weekend" as const,
         day: a.reason === "invited" ? a.day - SEASON_DAYS : 1 })), requests: [], fired: {},
-    log: [{ day: 1, slot: 0, text: seasonStartWord(season) }],
+    log,
     // 季初快照记的是新季开局那一刻：看法收过一半之后的样子。
     opinionAtSeasonStart: { ...opinion },
     statsAtSeasonStart: { standing, compliance },
     heat: nextHeat,
   };
+  return { ...next, samples: startSamplesNow(next) };
 }
 
 // —— 一季盘点 ——
