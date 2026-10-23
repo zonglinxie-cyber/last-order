@@ -75,7 +75,7 @@ export const lifeStepOf = (world: Pick<World, "qualities">, id: PersonId): numbe
   world.qualities[`life:${id}`] ?? 0;
 
 /** 熟客流失的旗：她被冷落了一整季（这一季你没在她这儿开过单）。
- *  落旗时 life:<id>:how 一起落到第三档 —— 她来得少了，也不替你带人。
+ *  落旗时按这一档算 —— 她来得少了，也不替你带人。
  *  再接待她一次就把旗清掉：这一步还挽回得了。 */
 export const lifeAwayKey = (id: PersonId) => `life:${id}:away`;
 export const lifeAwayOf = (world: Pick<World, "qualities">, id: PersonId): boolean =>
@@ -87,13 +87,20 @@ export const clearLifeAway = <W extends { qualities: Record<string, number> }>(w
   return { ...world, qualities };
 };
 
+/** 被冷落了一整季的那一档。**到访那一格是量出来的**，不借卡上落点那一档：
+ *  借第三档（−0.07）会把「压着人硬卖」那一路的晚期局面压平 —— 16 副牌里有两副撞成同一副
+ *  （签名的盟友/仇人名单一模一样）。−0.05 不会，而「不替你带人」那两档（−1）原样不动：
+ *  她去了别的柜的意思要留住，冷落的分量要轻到不把某一种打法压成一个形状。 */
+export const AWAY_BIAS: { arrive: number; refer: number; bring: number } =
+  { arrive: -0.05, refer: -1, bring: -1 };
+
 export const lifeHowOf = (world: Pick<World, "qualities">, id: PersonId): number =>
   world.qualities[`life:${id}:how`] ?? 0;
 
 const biasOf = (world: Pick<World, "qualities">, id: PersonId) =>
-  // 被冷落了一整季：按第三档算（来得少、不替你带人）。这一条压过卡上写下的落点 ——
+  // 被冷落了一整季：按 AWAY_BIAS 那一档算（来得少、不替你带人）。这一档压过卡上写下的落点 ——
   // 卡说「她还当自己人」，你整整一季没接住她，那就当不成了。
-  lifeAwayOf(world, id) ? LIFE_HOW_BIAS[3] : (LIFE_HOW_BIAS[lifeHowOf(world, id) as 1 | 2 | 3] ?? LIFE_HOW_BIAS[2]);
+  lifeAwayOf(world, id) ? AWAY_BIAS : (LIFE_HOW_BIAS[lifeHowOf(world, id) as 1 | 2 | 3] ?? LIFE_HOW_BIAS[2]);
 
 const clamp01 = (p: number) => Math.min(1, Math.max(0, p));
 

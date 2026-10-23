@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { newWorld, nextSeason, settleServe } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
-import { clearLifeAway, lifeArriveChance, lifeAwayOf, lifeReferChance } from "../src/world/life-sales.ts";
+import { AWAY_BIAS, LIFE_HOW_BIAS, clearLifeAway, lifeArriveChance, lifeAwayOf, lifeReferChance } from "../src/world/life-sales.ts";
 import type { World } from "../src/world/types.ts";
 
 // 挑人按条件找，不点名 —— 谁排在前面变了，这条守卫照样咬得住
@@ -49,16 +49,34 @@ test("再接住她一次，这一页翻回来", () => {
   assert.equal(clearLifeAway(away, person.id).qualities[`life:${person.id}:away`], undefined);
 });
 
+test("冷落是单独一档：到访减得比卡上落点轻，拉客与带人一样归零", () => {
+  // 冷落那一档不借卡上落点的第三档 —— 借了会把某一种打法的晚期局面压成一个形状
+  // （16 副牌里两副撞成同一副）。这一条把「比落点轻、但拉客带人一样归零」钉住。
+  assert.ok(AWAY_BIAS.arrive > LIFE_HOW_BIAS[3].arrive,
+    `冷落的到访减量不该跟卡上落点一样重：${AWAY_BIAS.arrive} 对 ${LIFE_HOW_BIAS[3].arrive}`);
+  assert.ok(AWAY_BIAS.arrive < 0, "冷落以后她还是该来得少一点");
+  assert.equal(AWAY_BIAS.refer, -1, "她不替你拉客");
+  assert.equal(AWAY_BIAS.bring, -1, "她不替你带人");
+  // 走真实读数：被冷落的那一位，减的正是冷落这一档，不是卡上落点那一档。
+  const flagged: World = { ...newWorld("away-tier", PEOPLE),
+    qualities: { [`life:${person.id}:away`]: 1 } };
+  assert.equal(lifeArriveChance(flagged, person.id, 0.5), 0.5 + AWAY_BIAS.arrive,
+    "被冷落以后到访减的是冷落那一档");
+});
+
 test("旗不重复落：已经落过的那一位，下一次换季不再多落一个", () => {
   const world = withLife(newWorld("away-hard", PEOPLE));
   const once = nextSeason(world, PEOPLE);
   assert.equal(once.qualities[`life:${person.id}:away`], 1);
   const twice = nextSeason(once, PEOPLE);
   assert.equal(twice.qualities[`life:${person.id}:away`], 1, "同一面旗，不叠");
-  // 第三档本来就不留人了，冷落她一整季不会让这一档再重一分。
+  // 第三档本来就不留人了；冷落她一整季不会让这一档再重一分 —— 冷落那一档是顶替，不是叠加。
   const base = withLife(newWorld("away-tier3", PEOPLE));
   const tier3: World = { ...base, qualities: { ...base.qualities, [`life:${person.id}:how`]: 3 } };
   const after = nextSeason(tier3, PEOPLE);
-  assert.equal(lifeArriveChance(after, person.id, 0.5), lifeArriveChance({ ...after, qualities: { ...after.qualities, [`life:${person.id}:away`]: undefined } }, person.id, 0.5),
-    "第三档与冷落一档是同一个效果，不叠");
+  const withFlag = lifeArriveChance(after, person.id, 0.5);
+  const withoutFlag = lifeArriveChance({ ...after, qualities: { ...after.qualities, [`life:${person.id}:away`]: undefined } }, person.id, 0.5);
+  assert.equal(withFlag, 0.5 + AWAY_BIAS.arrive, "冷落那一档顶替卡上的落点");
+  assert.equal(withoutFlag, 0.5 + LIFE_HOW_BIAS[3].arrive, "没有旗，就是卡上落点那一档");
+  assert.notEqual(withFlag, 0.5 + LIFE_HOW_BIAS[3].arrive + AWAY_BIAS.arrive, "不该两档叠着算");
 });
