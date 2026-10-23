@@ -23,8 +23,8 @@ import { WEEK_IDS, isMonday, isSunday, weekNoOf, weekRuleOf, type WeekId } from 
 import { batchStats, wordsOf } from "../src/world/content/batches.ts";
 import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
-import { yearScenesOf, yearOfSeason, YEAR_SCENES } from "../src/world/years.ts";
-import { careerRankOf, RANK_NAME } from "../src/world/career.ts";
+import { yearScenesOf, yearOfSeason, YEAR_SCENES, SEASONS_PER_YEAR } from "../src/world/years.ts";
+import { careerRankOf, RANK_NAME, careerEvalsOf, careerMaxPromotionsIn, careerCeiling, careerCeilingYear } from "../src/world/career.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -541,12 +541,15 @@ if (longRows.some(r => r.year >= 2)) {
   console.log(`  职级名字：${Object.entries(RANK_NAME).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
 
   // 长线的经验判据（第 49 轮「下一刀」里留的账：「同一副牌连玩十年，最多升几级」）：
-  // 年终评估一年只做一次 ⇒ 第 n 季最多经过 floor((n-1)/4) 次评估 ⇒ 最多升那么多级；
-  // 而且这个梯子要爬得上去 —— 四种打法里至少要有一种能升到正式 BA（第 2 级）。
+  // 「十年」是 40 季，不是 10 季 —— 上一版读数把这两个数混成了一件事，
+  // 于是「十年最多两次评估」这句其实说的是「两季半里两次评估」。年/季/评估三者的换算
+  // 一律读生产（career.ts 那三把尺），这里不再手抄 SEASONS_PER_YEAR —— 手抄的那份要是
+  // 跟生产对不上，读数就会替引擎撒谎。
+  // 而且这个梯子要爬得上去：四种打法里至少要有一种能升到正式 BA（第 2 级）。
   // 读数在上面那一段；量不过退出码非零（要跑到第 5 季以后才有评估，这一段才会出现）。
   const careerBad: string[] = [];
   for (const r of longRows) {
-    const evals = Math.floor((r.season - 1) / 4);
+    const evals = careerEvalsOf(r.season);
     if (r.rank - 1 > evals) careerBad.push(`${r.style} 第 ${r.season} 季职级 ${r.rank}：只经过 ${evals} 次评估却升了 ${r.rank - 1} 级`);
   }
   const climbed = [...new Set(longRows.filter(r => r.rank >= 2).map(r => r.style))];
@@ -554,8 +557,35 @@ if (longRows.some(r => r.year >= 2)) {
   console.log("\n  长线经验判据（同一副牌连玩十年，最多升几级）:");
   if (!careerBad.length) {
     const maxRank = Math.max(...longRows.map(r => r.rank));
-    console.log(`  最高第 ${maxRank} 级（评估一年一次 ⇒ 十年最多两次评估，最多升两级）；`
-      + `爬得上去的打法：${climbed.join("、")}`);
+    const seasonsRun = Math.max(...longRows.map(r => r.season));
+    // 「跑了几年」是整年加零头，不能拿 yearOfSeason 顶替 —— 那是「第几季属于哪一年」，
+    // 10 季属于第 3 年，可 10 季是 2 年零 2 季。上一版读数在这儿就说过一次「10 季 = 3 年」。
+    const fullYears = Math.floor(seasonsRun / SEASONS_PER_YEAR);
+    const extraSeasons = seasonsRun % SEASONS_PER_YEAR;
+    const yearsRun = extraSeasons === 0 ? `${fullYears} 年` : `${fullYears} 年零 ${extraSeasons} 季`;
+    const TEN_YEARS = 10;
+    const evalsTen = careerEvalsOf(SEASONS_PER_YEAR * TEN_YEARS);
+    const promoTen = careerMaxPromotionsIn(TEN_YEARS);
+    const ceilYear = careerCeilingYear();
+    // 撞顶以后，职级一格都不许再动 —— 这一段要是还动，读数里的「最高第 N 级」就不可信了。
+    const after = longRows.filter(r => r.year > (ceilYear ?? 0));
+    const afterMoved = after.filter(r => r.rank !== careerCeiling());
+    if (afterMoved.length) careerBad.push(`撞顶（第 ${ceilYear} 年）以后职级又动了 ${afterMoved.length} 次 —— 撞顶年算错了`);
+    // 推算和实测要对得上：按评估次数推的上限，不该比实测到的最高级低。
+    if (promoTen + 1 < maxRank) careerBad.push(`按评估次数推十年最多升 ${promoTen} 级，实测却升到了第 ${maxRank} 级 —— 推算漏了`);
+    if (careerBad.length) {
+      for (const line of careerBad) console.log(`  · ${line}`);
+      process.exitCode = 1;
+    } else {
+      console.log(`  这次跑了 ${seasonsRun} 季 = ${yearsRun}（一年 ${SEASONS_PER_YEAR} 季，十年 = ${SEASONS_PER_YEAR * TEN_YEARS} 季）`);
+      console.log(`  评估一年一次（第 1 年是教学年，没有评估）⇒ 十年里做 ${evalsTen} 次评估`);
+      console.log(`  职级表 ${careerCeiling()} 级（${Object.values(RANK_NAME).join(" → ")}）⇒ 最多升 ${promoTen} 级，按次数算撞顶在第 ${ceilYear} 年`);
+      console.log(`  实测最高第 ${maxRank} 级；爬得上去的打法：${climbed.join("、")}`);
+      const idle = evalsTen - (ceilYear ? careerEvalsOf(SEASONS_PER_YEAR * ceilYear) : 0);
+      if (idle > 0) {
+        console.log(`  ⇒ 第 ${(ceilYear ?? 0) + 1}~${TEN_YEARS} 年还有 ${idle} 次评估，职级一格不会再动 —— 这 ${idle} 次评估是空转`);
+      }
+    }
   } else {
     for (const line of careerBad) console.log(`  · ${line}`);
     process.exitCode = 1;

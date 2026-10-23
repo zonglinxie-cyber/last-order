@@ -9,8 +9,10 @@ import {
 import { PEOPLE } from "../src/world/content/index.ts";
 import {
   CAREER_GATE, CAREER_RANK_KEY, CAREER_WINS_KEY, RANK_NAME, applyCareerAudit, careerAudit,
-  careerModsOf, careerRankOf, careerWinsOf, markSeasonWin,
+  careerCeiling, careerCeilingYear, careerEvalsOf, careerMaxPromotionsIn, careerModsOf, careerRankOf,
+  careerWinsOf, markSeasonWin,
 } from "../src/world/career.ts";
+import { SEASONS_PER_YEAR, isNewYear, yearOfSeason } from "../src/world/years.ts";
 import type { World } from "../src/world/types.ts";
 
 const withRank = (rank: number, world: World): World =>
@@ -111,4 +113,55 @@ test("档位旗认得：存档往返以后职级还在，脏值按新人读", ()
   assert.equal(careerRankOf(back), 3);
   const dirty = { ...world, qualities: { ...world.qualities, [CAREER_RANK_KEY]: 99 } };
   assert.equal(careerRankOf(dirty), 1, "不认识的值按新人读");
+});
+
+/* ── 长线那把尺（第 51 轮·尾） ─────────────────────────────────────────
+   「连玩十年最多升几级」这句话以前是在读数里手写的（还把 10 季说成了 10 年），
+   现在改由 career.ts 那三把尺算出来。这里钉的是**尺子跟引擎对得上**，
+   不是钉「第几年升到几级」那种内容。 */
+
+test("尺子跟引擎对得上：数出来的评估次数，就是引擎真的做了几次评估", () => {
+  const world = newWorld("rank-meter", PEOPLE);
+  let w: World = { ...world, standing: 90, compliance: 80,
+    opinion: { suman: 60 }, qualities: { ...world.qualities, [CAREER_WINS_KEY]: 4 } };
+  let audits = 0;
+  for (let s = 2; s <= SEASONS_PER_YEAR * 3; s++) {
+    w = nextSeason(w, PEOPLE);
+    audits += w.log.filter(l => l.text.includes("年终评估")).length;
+  }
+  assert.equal(audits, careerEvalsOf(SEASONS_PER_YEAR * 3),
+    "尺子数出来的评估次数跟引擎实际做的对不上 —— 读数会替引擎撒谎");
+});
+
+test("第 1 年是教学年：一次评估都没有，也就一级都升不上", () => {
+  assert.equal(careerEvalsOf(SEASONS_PER_YEAR), 0, "第 1 年不该有评估");
+  assert.equal(careerMaxPromotionsIn(1), 0, "教学年里升不上一级");
+  assert.ok(careerEvalsOf(SEASONS_PER_YEAR + 1) >= 1, "进了第 2 年就该有第一次评估");
+});
+
+test("年/季的换算只有一处：尺子的增量只在新年份开季那一季发生", () => {
+  for (let s = 1; s <= SEASONS_PER_YEAR * 4; s++) {
+    const grew = careerEvalsOf(s) - careerEvalsOf(s - 1);
+    assert.equal(grew, isNewYear(s) && s > 1 ? 1 : 0,
+      `第 ${s} 季的评估次数对不上新年份的换算`);
+    assert.equal(yearOfSeason(s), Math.floor((s - 1) / SEASONS_PER_YEAR) + 1,
+      `第 ${s} 季属于哪一年，换算跟年份表对不上`);
+  }
+});
+
+test("撞顶以后不再列考核：那一年的评估要明说「到顶了」", () => {
+  const base = newWorld("rank-top", PEOPLE);
+  const audit = careerAudit(withRank(careerCeiling(), base));
+  assert.equal(audit.next, null, "到顶了就没有下一级");
+  assert.equal(audit.checks.length, 0, "到顶了不该再拿四项考核压人");
+  assert.ok(audit.gap.includes("到顶"), `要说清是到顶了，不是没过线：${audit.gap}`);
+});
+
+test("撞顶落在第 2 年到第 10 年之间：不是一开局就满，也不是十年都爬不上去", () => {
+  const year = careerCeilingYear();
+  assert.ok(year !== null, "总得有个撞顶的年");
+  assert.ok(year >= 2, `第 ${year} 年就撞顶了 —— 第 1 年是教学年，不该升得上去`);
+  assert.ok(year <= 10, `第 ${year} 年才撞顶 —— 十年之内爬不满，梯子太长了`);
+  assert.equal(careerMaxPromotionsIn(10), careerCeiling() - 1,
+    "十年之内最多升的级数，等于职级表减去起点那一级");
 });

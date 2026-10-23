@@ -4,6 +4,7 @@
 //
 // 评估在年末（新年份开季那一刻）做一次，四项考核：柜位、台账、这一年的比分、客情。
 // 判据只用已有的读数，不新开状态：柜位与台账在 World 上，比分按季记，客情读看法。
+import { SEASONS_PER_YEAR, isNewYear } from "./years.ts";
 import type { PersonId, World } from "./types.ts";
 
 export const CAREER_RANKS = [1, 2, 3] as const;
@@ -47,6 +48,35 @@ export const careerRankOf = (world: Pick<World, "qualities">): CareerRank => {
 /** 这一年赢过几季。 */
 export const careerWinsOf = (world: Pick<World, "qualities">): number =>
   world.qualities[CAREER_WINS_KEY] ?? 0;
+
+/* ── 长线读数用的三把尺 ──────────────────────────────────────────────
+   「连玩十年最多升几级」这句话，只能从这三把尺上算出来，不能在文档和读数里
+   各手写一遍 —— 上一版读数就是手抄了个「4」，把 10 季说成了 10 年，
+   读数替引擎撒了谎。这三把尺都从 years.ts 的换算数出来，改一年几季、
+   改评估频率，三把尺自己跟着变。 */
+
+/** 到第 season 季为止做过几次年终评估（第 1 年是教学年，没有评估）。
+ *  评估在新年份开季那一刻做（引擎里的 freshYear），所以次数只能从 isNewYear 数。 */
+export const careerEvalsOf = (season: number): number => {
+  let n = 0;
+  for (let s = 2; s <= season; s++) if (isNewYear(s)) n++;
+  return n;
+};
+
+/** 最高能到第几级 —— 职级表就那么长，到顶就停在顶。 */
+export const careerCeiling = (): CareerRank => CAREER_RANKS[CAREER_RANKS.length - 1];
+
+/** 连玩 years 年最多升几级：评估次数够不够是一头，职级表有多长是另一头，取小的。 */
+export const careerMaxPromotionsIn = (years: number): number =>
+  Math.min(careerEvalsOf(years * SEASONS_PER_YEAR), CAREER_RANKS.length - 1);
+
+/** 撞顶在第几年（第 N 次评估落在第 N 个新年份开局）。还没撞顶就是 null。 */
+export const careerCeilingYear = (): number | null => {
+  const need = CAREER_RANKS.length - 1;
+  for (let year = 1; ; year++) {
+    if (careerEvalsOf(year * SEASONS_PER_YEAR) >= need) return year;
+  }
+};
 
 /** 升一级以后动哪几颗旋钮。只写差量，底数在引擎那边。 */
 export type CareerMods = { energy: number; guests: number; poach: number };
