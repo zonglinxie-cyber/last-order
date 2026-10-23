@@ -7,6 +7,8 @@ import { ENDINGS, rank } from "../ending.ts";
 import { endingHint } from "../ending-hints.ts";
 import { heatStampWord } from "../heat.ts";
 import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWorldProgress, threadLandings, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
+import { CAREER_RANKS, RANK_LINE, RANK_NAME } from "../career.ts";
+import { YEAR_SCENES, YEAR_IDS } from "../years.ts";
 import { CLUES, CLUE_THREADS, PEOPLE, STORYLETS } from "../content/index.ts";
 import type { PersonId } from "../types.ts";
 import { opinionWord } from "./words.ts";
@@ -14,7 +16,7 @@ import "./archive-base.css";
 import "./world-archive.css";
 import { RivalHistoryList } from "./RivalHistory.tsx";
 
-type Tab = "people" | "arcs" | "book" | "endings" | "rival";
+type Tab = "people" | "arcs" | "book" | "endings" | "rival" | "career";
 
 const nameOf = (id: PersonId): string => PEOPLE.find(p => p.id === id)?.name ?? id;
 
@@ -45,6 +47,7 @@ export function WorldArchive({ onBack, initialTab = "people", currentRun }: { on
           : tab === "arcs" ? `几条线落过 ${landedCount} 处`
           : tab === "book" ? `本子上攒了 ${progress.clues.length} / ${CLUES.length} 条`
           : tab === "rival" ? `留下 ${progress.rivalSeasons.length} 季交锋`
+          : tab === "career" ? `到过 ${RANK_NAME[(progress.bestCareerRank ?? 1) as 1 | 2 | 3]}`
           : `散过场 ${achievedCount} / ${ENDINGS.length} 种`}</small>
       </div>
     </header>
@@ -54,6 +57,7 @@ export function WorldArchive({ onBack, initialTab = "people", currentRun }: { on
       <button type="button" className={tab === "book" ? "active" : ""} onClick={() => setTab("book")}>本子</button>
       <button type="button" className={tab === "endings" ? "active" : ""} onClick={() => setTab("endings")}>结局</button>
       <button type="button" className={tab === "rival" ? "active" : ""} onClick={() => setTab("rival")}>对手</button>
+      <button type="button" className={tab === "career" ? "active" : ""} onClick={() => setTab("career")}>职级</button>
     </div>
 
     <MobileScroll className="archive-scroll world-archive-scroll">
@@ -130,6 +134,32 @@ export function WorldArchive({ onBack, initialTab = "people", currentRun }: { on
           })}</div>
         </article>;
       })}</section>}
+
+      {tab === "career" && <section className="wa-arcs">
+        <p className="wa-line wa-secret">
+          <small>到过的最高一级</small>
+          <span>{RANK_NAME[(progress.bestCareerRank ?? 1) as 1 | 2 | 3]}</span>
+        </p>
+        <p className="wa-line wa-secret">
+          <small>怎么升</small>
+          <span>一年一次年终评估：柜位、台账、这一年赢过对面几季、客情四项都过线才升一级。只升不降。</span>
+        </p>
+        {CAREER_RANKS.map(rank => {
+          const reached = (progress.bestCareerRank ?? 1) >= rank;
+          return <article className="wa-arc" key={rank}>
+            <h3>{reached ? RANK_NAME[rank] : "？？？"}</h3>
+            <p className="wa-line wa-secret"><small>{reached ? "升上去以后" : "还没站到这一级"}</small>
+              <span>{reached ? RANK_LINE[rank] : "这一级的做法，你还没摸过。"}</span></p>
+          </article>;
+        })}
+        <article className="wa-arc">
+          <h3>年景</h3>
+          <p className="wa-line wa-secret"><small>第 1 年之后，一年一换</small>
+            <span>同一批人，换个场子：</span></p>
+          {YEAR_IDS.map(id => <p className="wa-line" key={id}><small>{YEAR_SCENES[id].knob}</small>
+            <span>{YEAR_SCENES[id].word}</span></p>)}
+        </article>
+      </section>}
 
       {tab === "endings" && <section className="archive-endings">{sortedEndings.map(ending => {
         const achieved = progress.endings.includes(ending.id);

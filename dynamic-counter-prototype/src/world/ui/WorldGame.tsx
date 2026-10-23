@@ -18,6 +18,7 @@ import type { Festival, Person, PersonId, Slot, Verb, World, Zone } from "../typ
 import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
 import { GoalStrip, LevelResult, RoutesSheet, SeasonLevels, weekGapWord } from "./Levels.tsx";
+import { YearStrip, CareerCard, careerWord } from "./YearStrip.tsx";
 import { CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, WEEK_EXCEED_RATE, weekDaysLeft, weekGuardedPeople, weekGoalWord, weekLevelWord, weekResultOf, weekStarsKey } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
 import { RivalSeasonRecap } from "./RivalHistory.tsx";
@@ -829,6 +830,7 @@ export default function WorldGame() {
         <h1 className="recap-ending">{ending.title}</h1>
         <p className="recap-ending-body">{ending.body}</p>
         <SeasonLevels world={world} prevBest={prevBest} />
+        <CareerCard world={world} />
         <RivalSeasonRecap world={world} records={readWorldProgress().rivalSeasons}
           onHistory={() => { setRivalArchive(true); setArchiveOpen(true); }} />
 
@@ -999,7 +1001,7 @@ export default function WorldGame() {
     <header className="world-bar">
       <div className="world-bar-info">
         <div className="world-bar-summary">
-          <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
+          <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]} · {careerWord(world)}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
           <div className="world-bar-score"><span className={lit.money ? "world-money is-hit" : "world-money"}>我方 {yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span></div>
         </div>
         <div className="world-bar-resources"><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span></div>
@@ -1010,6 +1012,7 @@ export default function WorldGame() {
       <button className="world-next" type="button" onClick={nextTurn}>下一时段{world.slot === 3 ? <small>收工</small> : null}</button>
     </header>
     <GoalStrip world={world} lit={lit.goal || !!bump} bump={bump} onOpen={() => { sfx("tap"); setRoutesOpen(true); }} />
+    <YearStrip world={world} />
     {rivalWord && rivalMarks.length > 0 && <section className="world-rival-plans" aria-label="陆遥的公开动作">
       {rivalMarks.length > 1 && <p className="world-rival-choice">同时盯上两位 · 精力 {Math.round(world.energy)} · 先顾谁？</p>}
       {rivalMarks.map(mark => {

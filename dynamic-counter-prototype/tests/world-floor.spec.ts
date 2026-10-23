@@ -356,6 +356,23 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       }
     });
 
+    test("季末看得到明年这一关：升到正式 BA 还差什么，写得出来", async ({ page }) => {
+      // 长线那一层只有一条目标清单 —— 季末这一屏得让人看得见差在哪儿。
+      await enter(page, envelope({
+        day: 29, money: 24_000, rivalMoney: 21_400, rivalWins: 9, standing: 66, compliance: 58,
+        opinion: { suman: 50, mei: 45 },
+      }, { screen: "season" }));
+      const card = page.locator(".career-card");
+      await expect(card).toBeVisible();
+      await expect(card).toContainText("新人 BA");
+      await expect(card).toContainText("明年这一关");
+      await expect(card).toContainText("升到正式 BA");
+      // 这一季赢了（¥24,000 比 ¥21,400），那一年赢过对面就该算 1 季 —— 早半拍说，别让人以为白赢。
+      await expect(card).toContainText("柜位 66 / 55");
+      await expect(card).toContainText("台账 58 / 55");
+      await expect(card).toContainText("这一年赢过对面 1 / 2 季");
+    });
+
     test("季末能进第 2 季：天数回到 1、看法收一半还在", async ({ page }) => {
       // 同事不是顾客，时段末没人把她带走；场上只留她一个人，免得闲聊改掉换季前那一刻的看法。
       await enter(page, envelope({ day: 28, slot: 3, present: { tangke: "counter" }, opinion: { suman: 40, tangke: -30 } }));

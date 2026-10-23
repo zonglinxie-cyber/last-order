@@ -4,7 +4,7 @@ import { ta } from "../pronoun.ts";
 import { clientNotes, TRAIT_LABEL } from "../consult.ts";
 import { purchaseCooldownOf } from "../purchases.ts";
 import { visitContext } from "../visits.ts";
-import { lifePerson } from "../life-sales.ts";
+import { lifeAwayOf, lifePerson } from "../life-sales.ts";
 import { currentArrival } from "../arrivals.ts";
 import { CARE_DAYS_MIN, CARE_TRUST_MIN, weekCareDaysOf, weekCarePeople, weekGuardedPeople } from "../target.ts";
 import { ageAtSeason } from "../content/people.ts";
@@ -43,6 +43,8 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
   const cared = customer && weekCarePeople(world).includes(person.id);
   const careDays = customer ? Math.min(CARE_DAYS_MIN, weekCareDaysOf(world, person.id)) : 0;
   const guarded = customer && weekGuardedPeople(world).includes(person.id);
+  // 被冷落了一整季的熟客：她来得少了，也不替你带人（引擎在换季时落旗）。
+  const away = customer && lifeAwayOf(world, person.id);
   const byId = useMemo(() => new Map<PersonId, Person>(people.map(p => [p.id, p])), [people]);
   const nameOf = (id: PersonId): string => (id === PLAYER ? PLAYER_NAME : byId.get(id)?.name ?? id);
 
@@ -94,6 +96,10 @@ export function PersonCard({ person, world, people, rival, feedback, booking, in
       </p>}
       {today && <section className="pc-section" aria-label="今天的来意">
         <h3>今天的来意 · {today.title}</h3><p>{today.line}</p>
+      </section>}
+      {away && <section className="pc-section pc-away" aria-label="被冷落的那一年">
+        <h3>她这一年没在你这儿开过单</h3>
+        <p>她来得比从前少，也不替你带人了。你再接住她一次，这一页还能翻回来。</p>
       </section>}
       {customer && <section className="pc-section" aria-label="这一关">
         <h3>这一关</h3>
