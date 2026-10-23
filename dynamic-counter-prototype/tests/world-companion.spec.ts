@@ -46,7 +46,10 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) test.describe(`
     const help = page.getByRole("button", { name: "请梁夏搭话 · 18 精力", exact: true });
     await expect(page.getByLabel("请熟人搭话")).toContainText("另算接待 12 精力");
     for (const p of await page.getByLabel("请熟人搭话").locator("p").all()) {
-      await p.scrollIntoViewIfNeeded(); await expect(p).toBeInViewport({ ratio: 1 });
+      // 滚到中间，不滚到「刚好露个边」—— scrollIntoViewIfNeeded 只要边缘进视口就算够，
+      // 后面那句 toBeInViewport({ratio:1}) 要的是整段都看得见（别被底栏盖住）。
+      await p.evaluate(el => el.scrollIntoView({ block: "center", inline: "nearest" }));
+      await expect(p).toBeInViewport({ ratio: 1 });
       expect(await p.evaluate(el => getComputedStyle(el).color)).toBe("rgb(242, 230, 216)");
     }
     await hittable(help); await shot(page, `choice-${width}`); await help.click();
