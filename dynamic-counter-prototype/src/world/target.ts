@@ -9,27 +9,26 @@
 import { WEEK_RULES, weekNoOf, weekRuleOf } from "./weeks.ts";
 import type { PersonId } from "./types.ts";
 
-/** 一季四关各要多少：第一关是新手那七天，往后一关比一关高。
- *  2026-10-21 按当前 20 种子盲策重定（旧 13k/16k/19k/22k 是 10-17 那版读数）：
- *  周进账 P25/中位/P75 = 17.6/18.8/19.4k、10.0/12.3/16.1k、10.0/12.4/17.1k、13.6/17.1/19.4k。
- *  旧第 3 关 19k 在 P75 之上，销售线 0/20 过；第 4 关 22k 只有 3/20。
- *  现在第 2–4 关取 14/16/18k：销售线分别约 7/8/9 过（20 副牌），第一关 13k 仍低于 P25，留作新手关。
+/** 一季四关各要多少。
+ *  2026-10-23 按「货架开始对她说话」之后的那版盲策重定（20 种子 × 2 季）。
+ *  旧档 13k/14k/16k/18k 是照 10-21 那版盲策量的，而那一版量的其实也不准 ——
+ *  它的注释写着「第 2–4 关约 7/8/9 过」，实测却是 3/20、0/20、13/20：第 2、3 关那条线是墙。
+ *  现在这一季按实测重定：
+ *  第 1 季（学徒档）**14k / 10k / 8k / 16k** —— 进账中位 ¥18,430 / ¥10,520 / ¥10,110 / ¥18,750，
+ *  销售线「过关/三星」= **20/11、10/6、17/2、16/6**（20 副牌）。
+ *  第 2 季（正式档）**24k / 18k / 8k / 20k** —— 进账中位 ¥28,615 / ¥21,820 / ¥8,250 / ¥22,270，
+ *  销售线 = **19/6、17/8、12/3、15/3**。
  *  目标值只改判星；来访、对手和结算不跟着变。 */
-export const WEEK_TARGETS = [13_000, 14_000, 16_000, 18_000] as const;
+export const WEEK_TARGETS = [14_000, 10_000, 8_000, 16_000] as const;
 export const SEASON_WEEKS = WEEK_TARGETS.length;
 
-/** 每季一档目标线。第 1 季是学徒档（第 1 关 13k 低于那一关的 P25 ¥17,620，留给新手那七天）；
+/** 每季一档目标线。第 1 季是学徒档（第 1 关 14k 低于那一关的 P25 ¥17,740，留给新手那七天）；
  *  第 2 季起是正式档：客人的池子到那一季就饱和了（第 3 季的供给与第 2 季差在一成上下），
  *  所以正式档只定一档，之后的季沿用它。
- *  正式档按那一季的供给节奏分档（20 种子盲策，第 2 季各周销售线「过关/三星」）：
- *  第 1 关开季客最多（进账 P25 ¥28,820）→ 26k（18/20 过，12 三星）；
- *  第 2 关 20k（20/20 过，8 三星）；第 4 关 20k（19/20 过，11 三星）；
- *  第 3 关是旱周（十天购买间隔把客人挡住，进账 P25 只有 ¥6,000）→ 压到 9k（6/20 过，3 三星），
- *  旱周不再是墙，但业绩这条路还在那儿。
- *  同一批线对「第 1 季没攒下微信网络」的打法也留得住业绩路（16/20、15/20、13/20）。 */
+ *  正式档每一关都不低于学徒档（24k/18k/8k/20k ≥ 14k/10k/8k/16k）—— 正式档只能更难，不能更松。 */
 export const SEASON_TARGETS: Record<number, readonly number[]> = {
   1: WEEK_TARGETS,
-  2: [26_000, 20_000, 9_000, 20_000],
+  2: [24_000, 18_000, 8_000, 20_000],
 };
 /** 第 2 季起沿用的正式档。 */
 export const SEASON_TARGETS_LATEST = SEASON_TARGETS[2]!;
@@ -42,6 +41,14 @@ export const weekTargetOfWeek = (season: number, week: number): number =>
 /** 第三颗星：到目标的这个倍数。 */
 export const WEEK_EXCEED_RATE = 1.3;
 export const WEEK_STARS_MAX = 3;
+/** 每一关的业绩线要落在哪个区间（比例）—— 这是「目标线没失效」的判据本身。
+ *  下限「不是墙」：至少四成的人过得去（客情与守客是另外两条路，业绩线自己成墙，这一关就变成死关）；
+ *  上限「不是白送」：不是人人都拿得到三星。
+ *  这条判据由盲策模拟器现读现量 —— 读的就是这里的目标线与这里的区间，
+ *  生产里改了线而量不过，模拟器退出码非零（tests/consult-sim.ts）。 */
+export const WEEK_PASS_MIN = 0.4;
+export const WEEK_STARS_MIN = 0.05;
+export const WEEK_STARS_MAX_RATE = 0.9;
 export const CARE_STEPS = [9, 12, 15] as const;
 /** 守客三星线从 8 落到 7：她一周最多撬七个（SHAKE_MAX_TOTAL），旱周抢客威胁中位只有 0，
  *  8 那条线在旱周根本够不着，守客这一格只能出两星。7 = 她撬满的名单刚好被你一格不落地守住。 */
@@ -91,14 +98,17 @@ type Books = { day: number; season?: number; money: number; rivalMoney: number; 
 
 export const weekTargetOf = (day: number, season: number): number => weekTargetOfWeek(season, weekNoOf(day));
 
-/** 旱周：这一关的线比上一关低。第 2 季起第 3 关是旱周 —— 前两周把能买的都买了一遍，
- *  十天购买间隔把客人挡住，地板上是空的，线要跟着这一周真有的客源走。 */
-export const isDryWeek = (season: number, day: number): boolean => {
-  const n = weekNoOf(day);
-  if (n <= 1) return false;
-  const targets = seasonTargetsOf(season);
-  return targets[n - 1]! < targets[n - 2]!;
-};
+/** 哪几关是旱周：十天购买间隔把客人挡住的那几周，地板上是空的。
+ *
+ *  这一张表是**供给的事实**，不是从目标线的高低推出来的 —— 两者会打架：
+ *  第 2 季第 2 关的线（18k）比第 1 关（24k）低，但那一周的进账中位还有 ¥21,820，不是旱周；
+ *  第 1 季第 2、3 关的线虽然低，可那是学徒档本来就低，供给上却是实打实的旱周
+ *  （进账中位 ¥10,520 / ¥10,110，只有第 1 关 ¥18,430 的六成）。
+ *  玩家看得见的是「这周来的人少、钱进不来」，不是目标线的高低 —— 所以这张表单独写。 */
+export const DRY_WEEKS: Record<number, readonly number[]> = { 1: [2, 3], 2: [3] };
+/** 某一季的旱周关号；没单独定过的季沿用正式档（第 2 季）。 */
+export const dryWeeksOf = (season: number): readonly number[] => DRY_WEEKS[season] ?? DRY_WEEKS[2]!;
+export const isDryWeek = (season: number, day: number): boolean => dryWeeksOf(season).includes(weekNoOf(day));
 /** 旱周早会上念的那一句；不是旱周就是空串。 */
 export const dryWeekNote = (season: number, day: number): string => {
   if (!isDryWeek(season, day)) return "";

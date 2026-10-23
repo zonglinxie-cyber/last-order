@@ -56,7 +56,7 @@
 /* 「对她」那一行：她说过的那几条，这一支管（✓）还是不管（✗）。
    格子只有四列宽，一行放不下就换行 —— 宁可格子高一点，也不省掉这条信息。 */
 .serve-covers-hint { margin:0 0 8px; color:#c6af99; font-size:12px; line-height:1.6; }
-.serve-products i { display:flex; flex-wrap:wrap; justify-content:center; gap:0 3px; font:11px/1.35 sans-serif; font-style:normal; }
+.serve-products i { display:flex; flex-wrap:wrap; justify-content:center; gap:0 3px; font:12px/1.3 sans-serif; font-style:normal; }
 .serve-products i span { white-space:nowrap; }
 .serve-products i .yes { color:#a8dcb0; }
 .serve-products i .no { color:#c19a9a; }

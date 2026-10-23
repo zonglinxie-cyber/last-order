@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { beginSlot, endDay, newWorld } from "../src/world/engine.ts";
 import {
   CARE_STEPS, CARE_TRUST_MIN, GUARD_STEPS, SEASON_WEEKS, WEEK_EXCEED_RATE, WEEK_HIT_ROMAN, WEEK_HIT_STANDING, WEEK_MISS_ROMAN, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS,
-  markWeekCare, markWeekGuard, markWeekThreat, dryWeekNote, isDryWeek, seasonStarsOf, seasonTargetsOf, weekCareOf, weekCareDayKey, weekCareNearOf, weekCareNearPeople, weekCareKey, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekMoneyOf,
+  markWeekCare, markWeekGuard, markWeekThreat, dryWeekNote, dryWeeksOf, isDryWeek, seasonStarsOf, seasonTargetsOf, weekCareOf, weekCareDayKey, weekCareNearOf, weekCareNearPeople, weekCareKey, weekGuardOf, weekGuardRateOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekMoneyOf,
   weekResultOf, weekRouteKey, weekStarsKey, weekStarsOf, weekTargetOf, weekTargetOfWeek, nextWeekHint,
 } from "../src/world/target.ts";
 import { worldMoments } from "../src/world/ui/cues.ts";
@@ -35,34 +35,62 @@ test("一季四关，目标数与天数对得上", () => {
   assert.equal(weekTargetOf(28, 1), WEEK_TARGETS[3]);
 });
 
-test("每季一档目标：第 2 季起按那一季的客流分档，第 3 关是旱周", () => {
+test("每季一档目标：第 2 季起按那一季的客流分档，旱周按供给单独标", () => {
   assert.equal(seasonTargetsOf(1).length, SEASON_WEEKS, "一季四关");
   assert.equal(seasonTargetsOf(2).length, SEASON_WEEKS, "正式档也是四关");
   assert.equal(weekTargetOfWeek(1, 1), WEEK_TARGETS[0], "第 1 季是学徒档");
   assert.ok(weekTargetOfWeek(2, 1) > weekTargetOfWeek(1, 1), "正式档比学徒档高");
   assert.ok(weekTargetOfWeek(2, 3) < weekTargetOfWeek(2, 2), "第 2 季第 3 关是旱周：线比上一关低");
   assert.ok(isDryWeek(2, 15), "旱周落在第 3 关那一周");
-  assert.ok(!isDryWeek(1, 15), "第 1 季没有旱周");
+  assert.ok(isDryWeek(1, 15), "第 1 季第 3 关也是旱周：进账只有第 1 关的六成");
+  assert.ok(isDryWeek(1, 9), "第 1 季第 2 关也是旱周");
+  assert.ok(!isDryWeek(1, 2), "第 1 关不是旱周");
   assert.ok(!isDryWeek(2, 1), "第 1 关不是旱周");
   assert.equal(weekTargetOfWeek(3, 3), weekTargetOfWeek(2, 3), "供给到第 2 季就饱和，第 3 季沿用同一档");
   assert.equal(weekTargetOfWeek(9, 1), weekTargetOfWeek(2, 1), "更后面的季也沿用");
+  assert.equal(isDryWeek(5, 15), isDryWeek(2, 15), "更后面的季沿用正式档的旱周");
+});
+
+test("旱周不是「线变低」：第 2 季第 2 关的线比上一关低，那一周却不是旱周", () => {
+  // 旱周是供给的事实（十天购买间隔把客人挡住），不是目标线的高低 ——
+  // 第 2 季第 2 关的线（18k）比第 1 关（24k）低，但那一周的进账中位还有 ¥21,820，不是旱周。
+  assert.ok(weekTargetOfWeek(2, 2) < weekTargetOfWeek(2, 1), "那一关的线确实更低");
+  assert.ok(!isDryWeek(2, 9), "但它不是旱周");
+  assert.equal(dryWeekNote(2, 9), "", "不是旱周就不念那句");
+  // 反过来：第 1 季第 2 关的线比第 1 关低（学徒档本来就低），那一周却是旱周。
+  assert.ok(weekTargetOfWeek(1, 2) < weekTargetOfWeek(1, 1), "线更低");
+  assert.ok(isDryWeek(1, 9), "但供给上就是旱周");
+});
+
+test("旱周那一关的线不高于上一关；正式档每一关都不低于学徒档", () => {
+  for (const season of [1, 2]) {
+    for (const week of dryWeeksOf(season)) {
+      assert.ok(weekTargetOfWeek(season, week) <= weekTargetOfWeek(season, week - 1),
+        `第 ${season} 季第 ${week} 关标着旱周，线却比上一关高：供给更少，线不该更高`);
+    }
+  }
+  for (let week = 1; week <= SEASON_WEEKS; week++) {
+    assert.ok(weekTargetOfWeek(2, week) >= weekTargetOfWeek(1, week),
+      `正式档第 ${week} 关比学徒档还松：正式档只能更难`);
+  }
 });
 
 test("旱周早会念的那句：说清楚这周为什么线低", () => {
   const note = dryWeekNote(2, 15);
   assert.match(note, /十天间隔/, "说清楚原因");
   assert.match(note, new RegExp(weekTargetOfWeek(2, 3).toLocaleString("zh-CN")), "报出这周实际的线");
-  assert.equal(dryWeekNote(1, 15), "", "第 1 季不是旱周，不说");
+  assert.ok(dryWeekNote(1, 15), "第 1 季第 3 关也是旱周，也念");
   assert.equal(dryWeekNote(2, 1), "", "第 1 关不是旱周，不说");
 });
 
-test("判星按那一季的线算：同一笔钱，第 1 季够不着、第 2 季够得着", () => {
-  const s1 = weekResultOf({ ...books(15, 9_000, 0, 0, 0), season: 1 });
-  const s2 = weekResultOf({ ...books(15, 9_000, 0, 0, 0), season: 2 });
-  assert.equal(s1.target, WEEK_TARGETS[2]);
-  assert.equal(s2.target, weekTargetOfWeek(2, 3));
-  assert.equal(s1.sales.hit, false, "第 1 季 9k 够不到 16k");
-  assert.equal(s2.sales.hit, true, "第 2 季旱周 9k 够得到");
+test("判星按那一季的线算：同一笔钱，第 1 季够得着、第 2 季够不着", () => {
+  // 正式档比学徒档高：第 1 关学徒 14k、正式 24k，同一笔 20k 在学徒档过关，在正式档过不了。
+  const s1 = weekResultOf({ ...books(1, 20_000, 0, 0, 0), season: 1 });
+  const s2 = weekResultOf({ ...books(1, 20_000, 0, 0, 0), season: 2 });
+  assert.equal(s1.target, WEEK_TARGETS[0]);
+  assert.equal(s2.target, weekTargetOfWeek(2, 1));
+  assert.equal(s1.sales.hit, true, "第 1 季 20k 够得到 14k");
+  assert.equal(s2.sales.hit, false, "第 2 季 20k 够不到 24k");
 });
 
 test("三颗星：过关 / 赢对面 / 超额；没过关一颗都不给", () => {
@@ -204,7 +232,7 @@ test("档案记最好的一季（四关星数加起来），只在收季那一�
 test("下一周先改什么：从这一周离门槛最近的一条里挑一句能做的事", () => {
   const nearSales = books(7, 11_800, 9_000);
   assert.match(nextWeekHint(nearSales), new RegExp(`下周目标 ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`), "第 2 关目标");
-  assert.match(nextWeekHint(nearSales), /先追业绩：还差 ¥1,200/);
+  assert.match(nextWeekHint(nearSales), new RegExp(`先追业绩：还差 ¥${(WEEK_TARGETS[0] - 11_800).toLocaleString("zh-CN")}`));
   assert.doesNotMatch(nextWeekHint(nearSales), /先补客情|先守客/);
 
   let care = books(7, 8_000, 9_000);

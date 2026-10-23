@@ -539,6 +539,27 @@ if (longRows.some(r => r.year >= 2)) {
     }
   }
   console.log(`  职级名字：${Object.entries(RANK_NAME).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
+
+  // 长线的经验判据（第 49 轮「下一刀」里留的账：「同一副牌连玩十年，最多升几级」）：
+  // 年终评估一年只做一次 ⇒ 第 n 季最多经过 floor((n-1)/4) 次评估 ⇒ 最多升那么多级；
+  // 而且这个梯子要爬得上去 —— 四种打法里至少要有一种能升到正式 BA（第 2 级）。
+  // 读数在上面那一段；量不过退出码非零（要跑到第 5 季以后才有评估，这一段才会出现）。
+  const careerBad: string[] = [];
+  for (const r of longRows) {
+    const evals = Math.floor((r.season - 1) / 4);
+    if (r.rank - 1 > evals) careerBad.push(`${r.style} 第 ${r.season} 季职级 ${r.rank}：只经过 ${evals} 次评估却升了 ${r.rank - 1} 级`);
+  }
+  const climbed = [...new Set(longRows.filter(r => r.rank >= 2).map(r => r.style))];
+  if (!climbed.length) careerBad.push("四种打法连玩到这儿没有一种升到正式 BA —— 这个梯子爬不上去");
+  console.log("\n  长线经验判据（同一副牌连玩十年，最多升几级）:");
+  if (!careerBad.length) {
+    const maxRank = Math.max(...longRows.map(r => r.rank));
+    console.log(`  最高第 ${maxRank} 级（评估一年一次 ⇒ 十年最多两次评估，最多升两级）；`
+      + `爬得上去的打法：${climbed.join("、")}`);
+  } else {
+    for (const line of careerBad) console.log(`  · ${line}`);
+    process.exitCode = 1;
+  }
 }
 
 // 自选加难：同一批种子按"勾前 N 条"各跑 honest 一季，看比分压力是不是真的一条比一条重。

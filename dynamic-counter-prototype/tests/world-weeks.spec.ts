@@ -4,6 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { beginSlot, endDay, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
 import { WEEK_IDS, WEEK_RULES, weekKey, weekRuleOf } from "../src/world/weeks.ts";
+import { weekTargetOfWeek } from "../src/world/target.ts";
 import type { World } from "../src/world/types.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
@@ -73,7 +74,7 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await openPlay(page, w);
       const texts = await page.evaluate(key => (JSON.parse(window.localStorage.getItem(key) ?? "{}") as { world: { log: { text: string }[] } }).world.log.map(l => l.text), SAVE_KEY);
       expect(texts.some(t => t.includes("十天间隔"))).toBe(true);
-      expect(texts.some(t => t.includes(`¥9,000`))).toBe(true);
+      expect(texts.some(t => t.includes(`¥${weekTargetOfWeek(2, 3).toLocaleString("zh-CN")}`))).toBe(true);
     });
 
     test("周日打烊之后：下一周换一条，旧的那句不留在周目标", async ({ page }) => {

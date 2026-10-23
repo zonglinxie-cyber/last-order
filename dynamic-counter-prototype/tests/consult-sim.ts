@@ -26,7 +26,7 @@ import {
 } from "../src/world/shelf.ts";
 import { isSunday, weekNoOf } from "../src/world/weeks.ts";
 import {
-  ROUTE_WORD, WEEK_TARGETS, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey,
+  ROUTE_WORD, WEEK_TARGETS, WEEK_PASS_MIN, WEEK_STARS_MIN, WEEK_STARS_MAX_RATE, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey,
   weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, weekTargetOfWeek, type WeekRoute,
 } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
@@ -754,6 +754,8 @@ for (const list of weeksByNo) {
   console.log(`${n}   ${band(list.map(x => x.care))}          ${band(list.map(x => x.guard))}          ${String(median(list.map(x => x.threats))).padStart(5)}      ${rates.length ? pct(median(rates), 1) : "—"}`);
 }
 
+/** 目标线守卫：现读生产的目标线与区间，量不过就记下来（末尾退出码非零）。 */
+const outOfBand: string[] = [];
 if (SEASONS > 1) {
   console.log("\n四之五、按季拆周（同一批种子；只读，不改决策）");
   for (let season = 1; season <= SEASONS; season++) {
@@ -767,6 +769,11 @@ if (SEASONS > 1) {
       const hit = made.filter(x => x >= target).length;
       const three = made.filter((x, i) => x >= Math.ceil(target * 1.3) && x > rival[i]!).length;
       console.log(`  第${xs[0]!.week}周 ¥${target.toLocaleString("zh-CN")} 进账 P25/中位/P75 ${yuan(quantile(made, .25))}/${yuan(median(made))}/${yuan(quantile(made, .75))} 销售线 ${hit}/${xs.length} 过 ${three} 三星`);
+      // 这条线还够不够得着：不是墙（至少四成过得去），也不是白送（不是人人都三星）。
+      const passRate = hit / xs.length, starRate = three / xs.length;
+      if (passRate < WEEK_PASS_MIN) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ¥${target.toLocaleString("zh-CN")}：过关率 ${(passRate * 100).toFixed(0)}% < ${WEEK_PASS_MIN * 100}%（这关的业绩线成了墙）`);
+      if (starRate < WEEK_STARS_MIN) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ¥${target.toLocaleString("zh-CN")}：三星率 ${(starRate * 100).toFixed(0)}% < ${WEEK_STARS_MIN * 100}%（这关的三星没人拿得到）`);
+      if (starRate > WEEK_STARS_MAX_RATE) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ¥${target.toLocaleString("zh-CN")}：三星率 ${(starRate * 100).toFixed(0)}% > ${WEEK_STARS_MAX_RATE * 100}%（这关的三星人人都拿得到）`);
     }
     // 这一季每一周在各候选目标下的销售线：定这一季那档线时对着这张表挑。
     console.log(`  —— 第 ${season} 季各候选目标的销售线（过关/三星）`);
@@ -808,4 +815,14 @@ console.log("\n六、核对");
   console.log(`全知顶 < 实际：${badOracle} 次 · 成交额 ≠ 单价 × 件数：${badAmount} 次 · 接待机会为 0：${attempts.length === 0 ? "是（模拟没跑起来）" : "否"}`);
   console.log(`一次没试就开单：${zeroTryOffers} 次（策略应恒为 0） · 试出点头却没成交：${positiveUnsold} 次 · 推错货：${outcomeCount("wrong")} 次`);
   console.log(`耐心花光且没成交：${attempts.filter(a => a.actions.startPatience > 0 && a.actions.patience >= a.actions.startPatience && a.actual === 0).length} 次；没花完耐心就成交：${attempts.filter(a => a.actual > 0 && a.actions.patience < a.actions.startPatience).length} 次`);
+}
+
+// 七、目标线守卫：读的是生产里的目标线与区间（src/world/target.ts）。
+// 生产里改了线而这一关量不过（成了墙 / 三星没人拿得到 / 三星人人都拿得到），这里退出码非零。
+console.log("\n七、目标线守卫（读生产的目标线与区间）");
+if (!outOfBand.length) console.log(`全部过关率 ≥ ${WEEK_PASS_MIN * 100}%、三星率在 ${WEEK_STARS_MIN * 100}%~${WEEK_STARS_MAX_RATE * 100}% 之间：目标线没有失效。`);
+else {
+  console.log("有目标线量不过：");
+  for (const line of outOfBand) console.log(`  · ${line}`);
+  process.exitCode = 1;
 }

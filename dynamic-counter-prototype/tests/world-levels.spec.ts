@@ -3,7 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { beginSlot, newWorld, SAVE_KEY, WORLD_SAVE_VERSION } from "../src/world/engine.ts";
-import { CARE_STEPS, CARE_TRUST_MIN, GUARD_RATE_STEPS, GUARD_STEPS, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS, weekCareDayKey, weekCareKey, weekGuardPersonKey, weekGuardStopKey, weekGuardThreatKey, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
+import { CARE_STEPS, CARE_TRUST_MIN, GUARD_RATE_STEPS, GUARD_STEPS, WEEK_START_MONEY, WEEK_START_RIVAL, WEEK_TARGETS, weekCareDayKey, weekCareKey, weekGuardPersonKey, weekGuardStopKey, weekGuardThreatKey, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, weekTargetOfWeek } from "../src/world/target.ts";
 import type { World } from "../src/world/types.ts";
 import { COACH_KEY, COACH_STEPS } from "../src/world/ui/coach.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
@@ -63,13 +63,15 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
     });
 
     test("第 2 季按那一季的档：第 1 关一条新线，旱周那周压到第三档", async ({ page }) => {
-      // 三条线写死：第 1 季第 1 关是学徒档 ¥13,000；第 2 季换正式档 ¥26,000；旱周那周压到 ¥9,000。
+      // 三条线从生产里读：第 1 季第 1 关学徒档、第 2 季第 1 关正式档、第 2 季第 3 关旱周。
+      // 写死数字的那一版（¥13,000 / ¥26,000 / ¥9,000）早就跟生产脱节了 —— 改档位不用改用例，用例却还在查旧数。
+      const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
       await open(page, lateInSeason(1, 3, 1_000, 500));
-      await expect(page.locator(".world-goal .wg-money")).toContainText("¥13,000");
+      await expect(page.locator(".world-goal .wg-money")).toContainText(yuan(weekTargetOfWeek(1, 1)));
       await open(page, lateInSeason(2, 3, 1_000, 500));
-      await expect(page.locator(".world-goal .wg-money")).toContainText("¥26,000");
+      await expect(page.locator(".world-goal .wg-money")).toContainText(yuan(weekTargetOfWeek(2, 1)));
       await open(page, lateInSeason(2, 17, 1_000, 500));
-      await expect(page.locator(".world-goal .wg-money")).toContainText("¥9,000");
+      await expect(page.locator(".world-goal .wg-money")).toContainText(yuan(weekTargetOfWeek(2, 3)));
     });
 
     test("过了这一关，页顶那条变色并亮星", async ({ page }) => {
