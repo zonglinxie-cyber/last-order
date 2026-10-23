@@ -23,6 +23,8 @@ import { WEEK_IDS, isMonday, isSunday, weekNoOf, weekRuleOf, type WeekId } from 
 import { batchStats, wordsOf } from "../src/world/content/batches.ts";
 import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
+import { yearScenesOf, yearOfSeason, YEAR_SCENES } from "../src/world/years.ts";
+import { careerRankOf, RANK_NAME } from "../src/world/career.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -412,6 +414,13 @@ const resultOf = (style: Style, seed: string, w: World): Result => {
   };
 };
 const results: Result[] = [];
+/** 长线那一层的读数：每季末尾的年景（哪几条）与职级（升到几级），外加那一季的比分。 */
+type LongRow = { style: Style; seed: string; season: number; year: number; scenes: string[]; rank: number; money: number; rival: number };
+const longRows: LongRow[] = [];
+const pushLong = (style: Style, seed: string, season: number, w: World) =>
+  longRows.push({ style, seed, season, year: yearOfSeason(season),
+    scenes: yearScenesOf(w).map(id => YEAR_SCENES[id].knob), rank: careerRankOf(w),
+    money: w.money, rival: w.rivalMoney });
 /** 主线本子（每种子一条）：幕号、本子上攒了几条、每条线收到哪种收法（0 = 一季过完还没弄清）。 */
 type Spine = { style: Style; seed: string; act: number; clues: number; ends: Record<string, number> };
 const spines: Spine[] = [];
@@ -458,6 +467,7 @@ for (const style of STYLES) {
     results.push(resultOf(style, seed, w));
     pushDayUnits(style, 1, w);
     pushLevels(style, 1, w);
+    pushLong(style, seed, 1, w);
     for (let k = 2; k <= SEASON_COUNT; k++) {
       w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed),
         week => weekRows.push({ style, seed, season: k, ...week }));
@@ -468,6 +478,7 @@ for (const style of STYLES) {
       bag.results.push(resultOf(style, seed, w));
       pushDayUnits(style, k, w);
       pushLevels(style, k, w);
+      pushLong(style, seed, k, w);
       bag.flips.push({
         style, seed,
         allyToEnemy: s.allies.filter(id => next.enemies.includes(id)),
@@ -504,6 +515,30 @@ console.log("\n比分（第 1 季，我 vs 对面维珞）:");
     console.log(`  ${style.padEnd(8)} 对面 ${dist(rs.map(r => r.rival))} · 成交 ${dist(rs.map(r => r.rivalWins))} 单`
       + ` · 领先 ${n(r => r.money > r.rival)}/打平 ${n(r => r.money === r.rival)}/落后 ${n(r => r.money < r.rival)}`);
   }
+}
+
+// 长线那一层：年景（每年换一个场子）与职业阶梯（年终评估升一级）。
+// 第 1 年是教学年，没有年景也没有评估；所以这一段只在跑到第 5 季以后才有东西可说。
+if (longRows.some(r => r.year >= 2)) {
+  console.log("\n年景与职级（长线那一层）:");
+  const years = [...new Set(longRows.map(r => r.year))].sort((a, b) => a - b);
+  for (const year of years) {
+    const rows = longRows.filter(r => r.year === year);
+    if (!rows.length) continue;
+    const sceneCount = new Map<string, number>();
+    for (const r of rows) for (const s of r.scenes) sceneCount.set(s, (sceneCount.get(s) ?? 0) + 1);
+    const sceneWord = [...sceneCount].map(([k, v]) => `${k}×${v}`).join("，") || "无";
+    console.log(`  第 ${year} 年  抽到：${sceneWord}`);
+    for (const style of STYLES) {
+      const rs = rows.filter(r => r.style === style);
+      if (!rs.length) continue;
+      const ranks = rs.map(r => r.rank);
+      const top = rs.filter(r => r.rank >= 3).length, mid = rs.filter(r => r.rank === 2).length;
+      console.log(`    ${style.padEnd(8)} 领先 ${rs.filter(r => r.money > r.rival).length}/${rs.length}`
+        + ` · 职级 ${dist(ranks)} · 升到正式 BA ${mid} 份 / 柜长 ${top} 份`);
+    }
+  }
+  console.log(`  职级名字：${Object.entries(RANK_NAME).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
 }
 
 // 自选加难：同一批种子按"勾前 N 条"各跑 honest 一季，看比分压力是不是真的一条比一条重。
