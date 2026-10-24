@@ -21,7 +21,7 @@ import type { Festival, Person, PersonId, RequestState, Slot, Storylet, World } 
 import { POSITIVE_FIT, SHELF, SHELF_IDS, fitOfPerson, shelfUnits } from "../src/world/shelf.ts";
 import { WEEK_IDS, isMonday, isSunday, weekNoOf, weekRuleOf, type WeekId } from "../src/world/weeks.ts";
 import { batchStats, wordsOf } from "../src/world/content/batches.ts";
-import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
+import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, weekTargetIn } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { yearScenesOf, yearOfSeason, YEAR_SCENES, SEASONS_PER_YEAR } from "../src/world/years.ts";
 import { careerRankOf, RANK_NAME, careerEvalsOf, careerMaxPromotionsIn, careerCeiling, careerCeilingYear, branchPending, careerBranchAuditsOf, careerEnded, careerDone } from "../src/world/career.ts";
@@ -454,10 +454,11 @@ const later: Array<{ season: number; results: Result[]; flips: Flip[] }> = [];
 const weekRows: Array<{ style: Style; seed: string; season: number; rule: WeekId; my: number; rival: number }> = [];
 const dayUnits: Array<{ style: Style; season: number; day: number; units: number }> = [];
 /** 每周一关（target.ts）：每季结束时从盘上读四关的钱、对面、星。 */
-const levelRows: Array<{ style: Style; season: number; week: number; made: number; rival: number; stars: number; route: string; care: number; guard: number; guardStops: number; guardThreats: number }> = [];
+const levelRows: Array<{ style: Style; season: number; week: number; made: number; rival: number; stars: number; route: string; care: number; guard: number; guardStops: number; guardThreats: number; target: number }> = [];
 const pushLevels = (style: Style, season: number, w: World) => {
   for (let n = 1; n <= SEASON_WEEKS; n++) levelRows.push({ style, season, week: n,
     made: w.qualities[weekMadeKey(n)] ?? 0, rival: w.qualities[weekRivalKey(n)] ?? 0,
+    target: weekTargetIn(w, n),
     stars: w.qualities[weekStarsKey(n)] ?? 0, route: ROUTE_WORD[routeFromCode(w.qualities[weekRouteKey(n)] ?? 1)],
     care: w.qualities[weekCareCountKey(n)] ?? 0,
     guard: Object.entries(w.qualities).filter(([k, v]) => k.startsWith(`week-guard-person:${n}:`) && v === 1).length,
@@ -625,7 +626,12 @@ if (longRows.some(r => r.year >= 2)) {
     const promoTen = careerMaxPromotionsIn(TEN_YEARS);
     const ceilYear = careerCeilingYear();
     // 撞顶以后，职级一格都不许再动 —— 这一段要是还动，读数里的「最高第 N 级」就不可信了。
-    const after = longRows.filter(r => r.year > (ceilYear ?? 0));
+    // 只看真的爬到顶的那几副牌：没爬上去的（pushy、random 一直在低位）职级当然不等于顶，
+    // 那不是「撞顶后又动了」，把它们算进来会年年误报 —— 上一版就是这么把 16 季读成「没错」，
+    // 一到 20 季（跑进第 5 年）才把没爬到顶的那些牌也报了上来。
+    const topKey = (r: { style: string; seed: string }) => `${r.style}/${r.seed}`;
+    const climbedTop = new Set(longRows.filter(r => r.rank >= careerCeiling()).map(topKey));
+    const after = longRows.filter(r => r.year > (ceilYear ?? 0) && climbedTop.has(topKey(r)));
     const afterMoved = after.filter(r => r.rank !== careerCeiling());
     if (afterMoved.length) careerBad.push(`撞顶（第 ${ceilYear} 年）以后职级又动了 ${afterMoved.length} 次 —— 撞顶年算错了`);
     // 推算和实测要对得上：按评估次数推的上限，不该比实测到的最高级低。
@@ -717,7 +723,8 @@ for (const rule of WEEK_IDS) {
 
 // 每周一关：目标按这张表定 —— 会做生意的那一路大多数关过得去、最后一关要拼，乱来的多半过不去；
 // 也看"赢对面"那颗星是不是谁都拿得到（拿得到 100% 就是对面太弱，0% 就是那颗星是摆设）。
-console.log("\n每周一关（每格：这一关过关率 · 钱 P25/中位/P75 · 平均星；目标 第 1 季 " + seasonTargetsOf(1).join(" / ") + " · 第 2 季起 " + seasonTargetsOf(2).join(" / ") + "）:");
+console.log("\n每周一关（每格：这一关过关率 · 钱 P25/中位/P75 · 平均星；目标 第 1 季 " + seasonTargetsOf(1).join(" / ") + " · 第 2 季起 " + seasonTargetsOf(2).join(" / ")
+  + "；旱周那一关的线按供给定，每一副牌各不相同 —— 过关率按各自那条线算）:");
 for (const [style, season] of STYLES.flatMap(st => Array.from({ length: SEASON_COUNT }, (_, k) => [st, k + 1] as const))) {
   const cells = Array.from({ length: SEASON_WEEKS }, (_, i) => {
     const rs = levelRows.filter(r => r.style === style && r.season === season && r.week === i + 1);
@@ -725,7 +732,8 @@ for (const [style, season] of STYLES.flatMap(st => Array.from({ length: SEASON_C
     const pass = rs.filter(r => r.stars > 0).length;
     const stars = rs.reduce((a, r) => a + r.stars, 0) / Math.max(1, rs.length);
     const q = (p: number) => made[Math.min(made.length - 1, Math.floor(made.length * p))] ?? 0;
-    return `${String(Math.round(pass * 100 / Math.max(1, rs.length))).padStart(3)}% ¥${q(0.25)}/${q(0.5)}/${q(0.75)} ${stars.toFixed(1)}★`;
+    const tMed = [...rs.map(r => r.target)].sort((a, b) => a - b)[Math.floor(rs.length / 2)] ?? 0;
+    return `${String(Math.round(pass * 100 / Math.max(1, rs.length))).padStart(3)}% ¥${q(0.25)}/${q(0.5)}/${q(0.75)} ${stars.toFixed(1)}★ 线${tMed}`;
   });
   console.log(`  ${style.padEnd(8)} 第${season}季 ${cells.join(" | ")}`);
 }
