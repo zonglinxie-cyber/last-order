@@ -16,6 +16,7 @@
     "person": "shen",
     "stage": "listen",
     "product": null,
+    "extra": null,
     "units": 1,
     "patience": 3,
     "begun": true,
