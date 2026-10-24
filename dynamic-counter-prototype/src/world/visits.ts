@@ -23,7 +23,10 @@ const hash = (id: string) => [...id].reduce((n, ch) => n * 31 + ch.codePointAt(0
 const budgetOf = (person: Person, kind: VisitContext["kind"]) =>
   kind === "event" ? Math.round(person.skin!.budget * 1.5 / 10) * 10 : person.skin!.budget;
 
-function variantPerson(person: Person, code: number): Person {
+/** 当天情境落在她身上的样子：今天的重点提到头等（want 2、权重 2），其余几条的分量压到 1。
+ *  她本来没有这一条，就添上（want 1）—— 于是她今天多了一件事要办。
+ *  导出是为了让探针与守卫读同一份，别各处抄一遍。 */
+export function variantPerson(person: Person, code: number): Person {
   if (!person.skin || code < 1 || code > VARIANTS.length) return person;
   const variant = VARIANTS[code - 1]!;
   const demands: Demand[] = person.skin.demands.filter(d => d.trait !== variant.focus)
@@ -32,6 +35,15 @@ function variantPerson(person: Person, code: number): Person {
   demands.push(old ? { ...old, want: 2, weight: 2 } : { trait: variant.focus, want: 1, weight: 2 });
   return { ...person, skin: { ...person.skin, demands, budget: budgetOf(person, variant.kind) } };
 }
+
+/** 这个情境给不给她：挑中的那一刻，她得还有一支买得起的对症货 —— 挑不出好答案的今天，就没这个今天。
+ *  选情境与货架守卫都读这一份，别各处抄一遍（抄的那份会跟改掉的那份漂掉）。 */
+export const variantViable = (person: Person, code: number): boolean => {
+  if (!person.skin || code < 1 || code > VARIANTS.length) return false;
+  const p = variantPerson(person, code);
+  const best = bestShelf(p);
+  return SHELF[best].price <= p.skin!.budget && fitOfPerson(p, best) >= POSITIVE_FIT;
+};
 
 /** 只从有买得起的对症货的情境中选；优先让旧首选不再是今天的首选。
  *  基线是"走到第几步的她"：人生那一步改过的诉求和预算，就是今天情境要对照的旧首选。 */

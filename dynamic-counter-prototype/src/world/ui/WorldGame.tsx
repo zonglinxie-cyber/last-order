@@ -25,7 +25,7 @@ import { RivalSeasonRecap } from "./RivalHistory.tsx";
 import { openConsult, rememberConsult, restoreConsults, saveConsults, type Consult } from "../consult.ts";
 import { BUY_INTERVAL_DAYS, purchaseCooldownOf } from "../purchases.ts";
 import { askCompanion, companionOptions } from "../companion.ts";
-import type { ShelfId } from "../shelf.ts";
+import { pairFits, type ShelfId } from "../shelf.ts";
 import { saleFeedback, type SaleFeedback } from "../sales-feedback.ts";
 import { visitPerson } from "../visits.ts";
 import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
@@ -387,7 +387,7 @@ export default function WorldGame() {
   const [serving, setServing] = useState(false);
   // 这一时段柜上谈到一半的接待：关掉抽屉再点回来接着谈，翻时段清空（她走了，话也就断了）。
   const [consults, setConsults] = useState<Record<PersonId, Consult>>(() => boot ? restoreConsults(boot.ui.consults, boot.world, PEOPLE) : {});
-  const [receipt, setReceipt] = useState<{ person: Person; product: ShelfId; feedback: SaleFeedback } | null>(null);
+  const [receipt, setReceipt] = useState<{ person: Person; product: ShelfId; extra?: ShelfId | null; feedback: SaleFeedback } | null>(null);
   const [webOpen, setWebOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [rivalArchive, setRivalArchive] = useState(false);
@@ -668,16 +668,23 @@ export default function WorldGame() {
   };
   const doServe = (force: boolean) => {
     if (!selected || !person || !salePerson || !consult?.product) return;
-    const serveProduct = consult.product, serveUnits = consult.units;
+    const serveProduct = consult.product;
+    // 搭的那支：她要两样才接得住时，主支之外还配了一支。
+    // 放不下（钱不够 / 件数只够一件）与硬推都不算配成 —— 跟结算那一条口径一致（shelf.ts 的 pairFits）。
+    const serveExtra = !force && consult.extra && consult.extra !== serveProduct
+      && pairFits(salePerson, serveProduct, consult.extra) ? consult.extra : null;
+    // 搭了一支就是两支：主支一件、搭支一件 —— 件数那一格这时不算主支几件。
+    const serveUnits = serveExtra ? 1 : consult.units;
     const c = consults[selected];
     const next = c?.begun
-      ? settleServe(world, PEOPLE, selected, serveProduct, serveUnits, force, c.mood)
-      : resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force);
+      ? settleServe(world, PEOPLE, selected, serveProduct, serveUnits, force, c.mood, serveExtra)
+      : resolveServe(world, PEOPLE, selected, serveProduct, serveUnits, force, serveExtra);
     if (next === world) return;
     setWorld(next); setServing(false);
     setConsults(m => { const { [selected]: _, ...rest } = m; return rest; });
     setResult(next.log.at(-1)?.text ?? null);
-    setReceipt({ person: salePerson, product: serveProduct, feedback: saleFeedback(world, next, salePerson, serveProduct, serveUnits, c?.mood ?? 0, c?.risked === true) });
+    setReceipt({ person: salePerson, product: serveProduct, extra: serveExtra,
+      feedback: saleFeedback(world, next, salePerson, serveProduct, serveUnits, c?.mood ?? 0, c?.risked === true, serveExtra) });
   };
   const stopServe = () => {
     if (!person || !consult) return;

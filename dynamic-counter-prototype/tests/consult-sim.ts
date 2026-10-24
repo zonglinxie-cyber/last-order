@@ -21,7 +21,8 @@ import {
   UNITS_QUESTION, type Consult,
 } from "../src/world/consult.ts";
 import {
-  SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, isPerfectMatch, shelfCovers, shelfFitTier, shelfUnits,
+  SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, isPerfectMatch, isPerfectPair, needsPair, pairFits, pairPartners, serveItemsOf,
+  shelfCovers, shelfFitTier, shelfUnits,
   type FitTier, type ShelfId,
 } from "../src/world/shelf.ts";
 import { isSunday, weekNoOf } from "../src/world/weeks.ts";
@@ -189,6 +190,19 @@ function pickOffer(live: Person, c: Consult, blind = false): ShelfId | null {
   return blind && !Object.keys(c.tried).length ? ranked[0] : null;
 }
 
+/** 搭的那一支：界面上「再搭一支」那一行会列出来的那些里挑一支。
+ *  盲策读得到那一行 —— 它是界面上的东西（主支底下标着「配它就齐了」）。
+ *  挑法跟挑主支一样：接住的多者先上，同分按便宜的挑 —— 于是它挑到的是**最省的那一对**，
+ *  也就是唯一拿得到「你懂她」那一笔的那一对。主支自己就正中时不搭：多花钱是白花的。 */
+function pickExtra(live: Person, c: Consult, product: ShelfId): ShelfId | null {
+  // 界面上「再搭一支」那一行只在「她的事一件货接不住」的那几位身上出现 —— 她一件货接得住的客人没有这一行。
+  if (!needsPair(live)) return null;
+  if (isPerfectMatch(live, product)) return null;
+  const partners = pairPartners(live, product);
+  if (!partners.length) return null;
+  return [...partners].sort((a, b) => SHELF[a].price - SHELF[b].price)[0]!;
+}
+
 /** 件数：问出来过就用上限，没问就按界面默认的 1 件。 */
 function unitsFor(live: Person, c: Consult, id: ShelfId): number {
   const affordable = Math.floor((live.skin?.budget ?? 0) / SHELF[id].price);
@@ -223,6 +237,16 @@ function ceilingOf(w: World, person: Person): { amount: number; product: ShelfId
   for (const id of SHELF_IDS) {
     const info = fitInfo(w, person, id, live.skin.maxUnits);
     if (info.amount > best.amount) best = { amount: info.amount, product: id, units: info.units };
+  }
+  // 全知的也能配两支：她的事一件货接不住时，两支一起才是最大的一单。
+  // 只在那一档客人身上算 —— 她一件货接得住的人，界面上没有「再搭一支」那一行。
+  if (!needsPair(live)) return best;
+  for (const a of SHELF_IDS) for (const b of SHELF_IDS) {
+    if (a === b || !pairFits(live, a, b)) continue;
+    const info = fitInfo(w, person, a, 1);
+    if (info.tier === "negative" || info.units < 1) continue;
+    const amount = info.units * SHELF[a].price + SHELF[b].price;
+    if (amount > best.amount) best = { amount, product: a, units: info.units + 1 };
   }
   return best;
 }
@@ -338,7 +362,7 @@ type Outcome = "sold" | "declined" | "wrong" | "price" | "blocked" | "no-sale";
 type Attempt = {
   seed: string; season: number; day: number; slot: number; person: PersonId;
   opinion: number;
-  actual: number; actualUnits: number; product: ShelfId | null;
+  actual: number; actualUnits: number; product: ShelfId | null; extra: ShelfId | null;
   freeGuess: number; freeProduct: ShelfId | null; freeUnits: number;
   oracle: number; oracleProduct: ShelfId | null; oracleUnits: number;
   freePerfect: boolean; actualPerfect: boolean; actualScore: number;
@@ -369,7 +393,7 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
 
   let cw = beginServe(w, people, person.id);
   if (cw === w) {
-    return { world: w, rec: { ...base, actual: 0, actualUnits: 0, product: null, actualPerfect: false,
+    return { world: w, rec: { ...base, actual: 0, actualUnits: 0, product: null, extra: null, actualPerfect: false,
       actualScore: 0, outcome: "blocked", actions: emptyActions(), paidKnown: free.known.length,
       paidUnitsKnown: free.unitsKnown, paidVetoKnown: free.vetoKnown, focusKnownAtEnd: free.focusKnown, log: "没能接手" } };
   }
@@ -380,12 +404,14 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
   const c = run.consult;
   const liveAfter = visitPerson(cw, person);
   const product = pickOffer(liveAfter, c);
-  const units = product ? unitsFor(liveAfter, c, product) : 0;
+  // 搭的那一支：她的事一件货接不住时，界面上「再搭一支」那一行会列出来 —— 盲策照着挑。
+  const extra = product ? pickExtra(liveAfter, c, product) : null;
+  const units = product ? (extra ? 1 : unitsFor(liveAfter, c, product)) : 0;
   let after = cw;
   let outcome: Outcome = product ? "sold" : Object.keys(c.tried).length ? "declined" : "no-sale";
   if (product && units > 0) {
     const expected = fitInfo(cw, person, product, units);
-    const next = settleServe(cw, people, person.id, product, units, false, c.mood);
+    const next = settleServe(cw, people, person.id, product, units, false, c.mood, extra);
     if (next !== cw) after = next;
     outcome = expected.blocked ? "blocked" : expected.tier === "negative" ? "wrong"
       : expected.units === 0 ? "price" : "sold";
@@ -394,14 +420,19 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
     if (next !== cw) after = next;
   }
   const actual = after.money - cw.money;
-  const actualUnits = product ? Math.round(actual / SHELF[product].price) : 0;
+  // 件数：配了两支是两件（主支一件、搭支一件），不能拿钱除单价算。
+  const actualUnits = product
+    ? (actual > 0
+      ? serveItemsOf(liveAfter, product, units, fitInfo(cw, person, product, units).tier, extra).reduce((s, i) => s + i.units, 0)
+      : 0)
+    : 0;
   const actualFit = product ? fitInfo(cw, person, product, units) : null;
   if (actual > 0) outcome = "sold";
   else if (outcome === "sold") outcome = "no-sale";
 
   return { world: after, rec: {
-    ...base, actual, actualUnits, product,
-    actualPerfect: actual > 0 && !!product && isPerfectMatch(liveAfter, product),
+    ...base, actual, actualUnits, product, extra,
+    actualPerfect: actual > 0 && !!product && (extra ? isPerfectPair(liveAfter, product, extra) : isPerfectMatch(liveAfter, product)),
     actualScore: actualFit?.score ?? 0,
     outcome, actions: stats,
     paidKnown: c.known.length, paidUnitsKnown: c.unitsKnown, paidVetoKnown: c.vetoKnown,
@@ -689,6 +720,13 @@ console.log(`看 ${stats.look} 次（${stats.blankLook} 次没带来新信息）
 console.log(`试 ${stats.try} 支（认准 ${stats.tryPerfect} / 点头 ${stats.tryPositive} / 犹豫 ${stats.tryMixed} / 摇头 ${stats.tryNegative}） · 每单平均花 ${(stats.patience / Math.max(1, attempts.length)).toFixed(2)} 次耐心`);
 console.log(`今天的重点：${focusAttempts.length} 次有 · 开局已知 ${focusAtStart}（手写线索覆盖不到的老写法） · 谈完知道 ${focusAttempts.length - focusMissed}（新揭开 ${focusDiscovered}） · 没摸清 ${focusMissed}`);
 console.log(`完美命中：实卖 ${perfect} 单 / 影子猜 ${freePerfect} 单；实际成交率 ${pct(sold.length, attempts.length)}`);
+{
+  // 配两支这一格单独量一笔：她要两样才接得住的那几位，盲策配没配、配成了没有。
+  const paired = attempts.filter(a => a.extra && a.actual > 0);
+  const pairPeople = [...new Set(attempts.filter(a => a.extra).map(a => a.person))];
+  console.log(`配两支：${paired.length} 单（客人 ${pairPeople.length} 位：${pairPeople.join("、")}）`
+    + ` · 其中正中 ${paired.filter(a => a.actualPerfect).length} 单 · 多收 ${yuan(sum(paired.map(a => a.actual)) - sum(paired.map(a => a.actual - SHELF[a.extra!].price)))}`);
+}
 console.log("关系        单数  开局已知  谈完已知  看/问/试        成交率  捕获   重点摸清");
 for (const b of buckets) {
   const xs = attempts.filter(b.test);

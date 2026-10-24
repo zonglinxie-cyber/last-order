@@ -168,16 +168,24 @@ export const SHELF_LINES: Array<{ word: string; ids: ShelfId[] }> = [
 
 export const SHELF_IDS = Object.keys(SHELF) as ShelfId[];
 
-/** 命中她某一条诉求：档位不到她要的水准就按比例打折，超出了不多给。 */
-export function shelfFitScore(demands: Demand[], veto: { trait: Trait; below: number } | undefined, id: ShelfId): number {
-  const traits = SHELF[id].traits;
+/** 命中她某一条诉求：档位不到她要的水准就按比例打折，超出了不多给。
+ *  几支一起看时，每条诉求取几支里给得最高的���档 —— 这才叫「两支合起来接住了她的事」。 */
+export function shelfFitScoreOf(demands: Demand[], veto: { trait: Trait; below: number } | undefined, ids: ShelfId[]): number {
+  const traits = ids.map(id => SHELF[id].traits);
   let got = 0, total = 0;
   for (const demand of demands) {
     total += demand.weight;
-    got += (Math.min(traits[demand.trait], demand.want) / demand.want) * demand.weight;
+    const best = Math.max(...traits.map(t => t[demand.trait]));
+    got += (Math.min(best, demand.want) / demand.want) * demand.weight;
   }
   const base = total ? got / total : 0;
-  return veto && traits[veto.trait] < veto.below ? base * 0.35 : base;
+  // 底线是她不能接受的那一条：几支里有一支破了就不行 —— 破底线的那支根本不卖。
+  return veto && traits.some(t => t[veto.trait] < veto.below) ? base * 0.35 : base;
+}
+
+/** 命中她某一条诉求：档位不到她要的水准就按比例打折，超出了不多给。 */
+export function shelfFitScore(demands: Demand[], veto: { trait: Trait; below: number } | undefined, id: ShelfId): number {
+  return shelfFitScoreOf(demands, veto, [id]);
 }
 
 export const shelfFitTier = (score: number): FitTier =>
@@ -186,12 +194,71 @@ export const shelfFitTier = (score: number): FitTier =>
 export const fitOfPerson = (person: Person, id: ShelfId): number =>
   person.skin ? shelfFitScore(person.skin.demands, person.skin.veto, id) : 0;
 
+/** 两支合起来的命中分：每条诉求取两支里给得更高的那一档。
+ *  她的事要两支才接得住时，单支再准也只是「差一口气」，这一支才是那个「合起来才正中」的答案。 */
+export const fitOfPair = (person: Person, a: ShelfId, b: ShelfId): number =>
+  person.skin ? shelfFitScoreOf(person.skin.demands, person.skin.veto, [a, b]) : 0;
+
+/** 搭得上这一支的那些货：这一支自己接不满她要的事，配上它才接得全，而且她买得起这两支。
+ *  这是「再搭一支」那行的候选 —— 只列真的能配成的那几支，不列配不成的。
+ *  单独就接得全的那支不在里头：她有单支正中时，搭什么都是多余的钱。 */
+export const pairPartners = (person: Person, a: ShelfId): ShelfId[] => {
+  const skin = person.skin;
+  if (!skin) return [];
+  if (skin.maxUnits < 2) return [];                   // 她一次只肯带走一件，配不成
+  if (affordableUnits(person, a) <= 0) return [];
+  if (fitOfPerson(person, a) >= PERFECT_MATCH) return [];
+  return SHELF_IDS.filter(b => b !== a && affordableUnits(person, b) > 0
+    && SHELF[a].price + SHELF[b].price <= skin.budget
+    && fitOfPair(person, a, b) >= PERFECT_MATCH);
+};
+
+/** 她的事是不是「一件货接不住、得配两支」：没有单支正中，却有配得成的两支。 */
+export const needsPair = (person: Person): boolean =>
+  !!person.skin && !perfectShelf(person) && SHELF_IDS.some(a => pairPartners(person, a).length > 0);
+
+/** 搭的那一支她放不放得下：件数上限够两支、钱够买这一对。
+ *  放不下就不算配成 —— 不拿「两支合起来」的分数，也不把它算进卖出的件数。
+ *  结算、界面报价、收据都读这一份，别各判一遍。 */
+export const pairFits = (person: Person, a: ShelfId, b: ShelfId): boolean =>
+  !!person.skin && person.skin.maxUnits >= 2
+  && person.skin.budget >= SHELF[a].price + SHELF[b].price;
+
 /** 她这一单的最高命中分。命中到这条线以上，她觉得你不只是"没推错"，而是懂她。 */
 export const PERFECT_MATCH = 0.95;
 /** 正中那支在 SERVE_GOOD_OPINION 之外多给的看法。
  *  货一多光看"正解/勉强"两档不够用：同一个人可能三支都过线，只差在命中多少。
  *  这一笔把"钱多的那支"和"最懂她那支"拉开成两个选择。 */
 export const PERFECT_MATCH_OPINION = 4;
+
+/** 她买得起的、最便宜的「两支合起来正中」那一对：她要的每一条都被接住，且没让她为不需要的东西多付。
+ *  比它贵的组合照样接得住她的每一条，但拿不到「你懂她」那一笔 —— 跟单支一个口径。
+ *  没有就是 null（她的事一件货就接得住，或者根本没有配得成的两支）。 */
+export const perfectPairOf = (person: Person): [ShelfId, ShelfId] | null => {
+  if (!person.skin) return null;
+  let best: [ShelfId, ShelfId] | null = null;
+  let bestPrice = Infinity;
+  for (const a of SHELF_IDS) for (const b of SHELF_IDS) {
+    if (a === b || !pairFits(person, a, b)) continue;
+    if (fitOfPair(person, a, b) < PERFECT_MATCH) continue;
+    const price = SHELF[a].price + SHELF[b].price;
+    // 同价时取货架上靠前的那一对 —— 跟 perfectShelf 的并列口径一样，不让读数自己飘。
+    const older = SHELF_IDS.indexOf(a) + SHELF_IDS.indexOf(b);
+    const bestOlder = best ? SHELF_IDS.indexOf(best[0]) + SHELF_IDS.indexOf(best[1]) : Infinity;
+    if (price < bestPrice || (price === bestPrice && older < bestOlder)) { best = [a, b]; bestPrice = price; }
+  }
+  return best;
+};
+
+/** 这一对是不是她那「最省的正中」：接住每一条、买得起，而且是最便宜的那一对。
+ *  贵的那一对接得住她的每一条，却只是「对症」—— 跟单支「贵的那支也接住，却不是正中」是同一个分法。
+ *  她一件货就接得住的话，这一对只是多卖了她一件：那是「对症」，不是「懂她」。 */
+export const isPerfectPair = (person: Person, a: ShelfId, b: ShelfId): boolean => {
+  const best = perfectPairOf(person);
+  if (!best || perfectShelf(person)) return false;
+  return fitOfPair(person, a, b) >= PERFECT_MATCH && pairFits(person, a, b)
+    && SHELF[a].price + SHELF[b].price === SHELF[best[0]].price + SHELF[best[1]].price;
+};
 
 /** 她最准的那一支：分数最高、并列时取货架上靠前的那支。对手与托单读它。 */
 export const bestShelf = (person: Person): ShelfId =>
@@ -218,3 +285,23 @@ export const shelfUnits = (person: Person, id: ShelfId, tier: FitTier, asked: nu
   const left = affordableUnits(person, id);
   return Math.max(0, Math.min(tier === "mixed" ? 1 : asked, left));
 };
+
+/** 这一单卖掉的货：主支几件，外加搭的那一支一件。
+ *  两支要一起买 —— 件数不能超她的上限，钱不能超她的预算，所以搭的那支先占一件，
+ *  主支能拿几件得给它留出位置。结算与收据都读这一份，别各算一遍。 */
+export function serveItemsOf(person: Person, main: ShelfId, units: number, tier: FitTier,
+  extra: ShelfId | null): Array<{ product: ShelfId; units: number }> {
+  const skin = person.skin;
+  if (!skin) return [];
+  const price = SHELF[main].price;
+  const extraPrice = extra ? SHELF[extra].price : 0;
+  const extraUnits = extra && skin.maxUnits >= 2 && skin.budget >= price + extraPrice ? 1 : 0;
+  const base = shelfUnits(person, main, tier, units);
+  const mainUnits = extraUnits
+    ? Math.max(0, Math.min(base, skin.maxUnits - 1, Math.floor((skin.budget - extraPrice) / price)))
+    : base;
+  const out: Array<{ product: ShelfId; units: number }> = [];
+  if (mainUnits > 0) out.push({ product: main, units: mainUnits });
+  if (extraUnits > 0) out.push({ product: extra!, units: 1 });
+  return out;
+}

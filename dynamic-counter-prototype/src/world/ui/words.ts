@@ -391,3 +391,32 @@ export const coversLine = (traits: readonly Trait[], covered: readonly boolean[]
  *  不解释「正中和过线的区别」—— 那是试用那一下的事；这里只说清楚怎么读格子。 */
 export const coversHintWord = (traits: readonly Trait[]): string =>
   `她说过的那 ${traits.length} 条，每支货底下标着管（✓）还是不管（✗）：全 ✓ 的那一支才是她那支。`;
+
+/* ── 配两支：她要的事一件货接不住的时候 ───────────────────────────── */
+
+/** 她的事得配两支时，挑货屏顶上那句话。
+ *  只在她已经说清自己要什么之后才说 —— 之前说就是剧透。 */
+export const pairHintWord = (she: string): string =>
+  `${she}要的那几样，没有哪一支能全接住 —— 配两支才接得全。`;
+
+/** 货架格子上那一行小字：这一支能跟别的配成。 */
+export const pairMarkWord = (): string => "配它就齐了";
+
+/** 搭支里那一支：跟主支合起来是最省的一对 —— 只有它拿得到「你懂她」那一笔。 */
+export const pairCheapestWord = (): string => "最省的一对";
+
+/** 选中主支之后多出来的那一行。 */
+export const pairRowWord = (): string => "再搭一支";
+
+/** 搭好了：两支的名字。 */
+export const pairDoneWord = (a: string, b: string): string => `${a} + ${b}`;
+
+/** 底栏那行报价：两支的合计。搭支只带走一件，所以主支也只走一件 —— 报价就是这两支的钱。 */
+export const pairTotalWord = (a: string, b: string, amount: number): string =>
+  `${pairDoneWord(a, b)} · 报价 ¥${amount.toLocaleString("zh-CN")}`;
+
+/** 搭了一支以后，件数那一格换成这句话：两支一起就是两件，不再多开口。 */
+export const pairUnitsWord = (): string => "配两支就是两支：一支一件，不再多要。";
+
+/** 搭的那一支买不起了（预算或者件数上限不够）—— 说出来，别让玩家以为白搭了。 */
+export const pairUnfitWord = (): string => "这一支她放不下了 —— 她的钱和件数只够那么多。";

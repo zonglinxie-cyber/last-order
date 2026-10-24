@@ -6,7 +6,7 @@
 // 这一层只管"你知道了她什么"和"她还肯听你说几句"，钱、看法、退货仍由 engine.ts 的
 // beginServe / settleServe 结账。界面只读这里的句子，不在 JSX 里拼。
 import { demandWords, serveTalk, SECRET_KNOWN_KEY } from "./serve-talk.ts";
-import { SHELF, PERFECT_MATCH, fitOfPerson, perfectShelf, shelfFitTier, type FitTier, type ShelfId } from "./shelf.ts";
+import { SHELF, PERFECT_MATCH, fitOfPerson, fitOfPair, isPerfectPair, needsPair, perfectPairOf, perfectShelf, shelfFitTier, type FitTier, type ShelfId } from "./shelf.ts";
 import type { Person, PersonId, Trait, World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { HAND_CONSULT, PLATE_CROP, PLATE_POINTS, PLATE_SIZE } from "./content/consult-lines.ts";
@@ -38,6 +38,8 @@ export type Consult = {
   person: PersonId;
   stage: "listen" | "offer";
   product: ShelfId | null;
+  /** 再搭的那一支：她要两样才接得住时，主支之外还要配一支。搭的那支只带走一件。 */
+  extra: ShelfId | null;
   units: number;
   /** 还肯听几句 */
   patience: number;
@@ -194,7 +196,7 @@ export function openConsult(world: World, person: Person): Consult {
   const notes = clientNotes(world, person);
   return {
     person: person.id,
-    stage: "listen", product: null, units: 1,
+    stage: "listen", product: null, extra: null, units: 1,
     patience: consultPatience(person, opinion),
     begun: false,
     looked: [], asked: [],
@@ -330,6 +332,14 @@ export function trialTierOf(person: Person, id: ShelfId): TrialTier {
   return perfect ? "perfect" : tier;
 }
 
+/** 两支合起来落在哪一档：她要的每一条都被接住了，就是正中。
+ *  只卖一支时按那一支算（`trialTierOf`）—— 她要的没接满，就不是正中，
+ *  「你懂她」那一笔也不会给。这就是「配两支」与「只卖一支」之间那个真的取舍。 */
+export function pairTierOf(person: Person, a: ShelfId, b: ShelfId): TrialTier {
+  const score = fitOfPair(person, a, b);
+  return score >= PERFECT_MATCH ? "perfect" : shelfFitTier(score);
+}
+
 /** 试一支在她手背上：她的反应把这一支落在哪一档说出来。碰到她的忌讳，忌讳也一起露出来。 */
 export function tryOn(c: Consult, person: Person, id: ShelfId): Consult {
   if (!person.skin || c.patience <= 0 || c.tried[id]) return c;
@@ -417,7 +427,7 @@ export function rememberConsult(world: World, person: Person, consult: Consult):
 }
 
 /** 开单前只对照玩家已经知道的事实；不调用完整适配分，不泄露隐藏诉求或未来退货抽签。 */
-export function offerEvidence(c: Consult, person: Person, id: ShelfId, units: number): string[] {
+export function offerEvidence(c: Consult, person: Person, id: ShelfId, units: number, extra?: ShelfId | null): string[] {
   if (!person.skin) return [];
   const item = SHELF[id], lines: string[] = [];
   const risk = secondTryRisk(c, person, id);
@@ -432,7 +442,17 @@ export function offerEvidence(c: Consult, person: Person, id: ShelfId, units: nu
   if (c.tried[id]) lines.push(`试用反应：${ta(person)}${TRIED_MARK[c.tried[id]!] }。`);
   else lines.push("这支还没试过，可以花 1 次耐心验证，也可以直接开口推荐。");
   if (c.focus && !c.focusKnown) lines.push("今天的重点还没摸清：看一处或问一句，可能就在她今天的状态里。");
-  if (!perfectShelf(person)) lines.push("她今天没有一支能全接住；最接近的一支也只能到「对症」，不会到「正中」。");
+  if (!perfectShelf(person)) lines.push(needsPair(person)
+    ? "她今天没有一支能全接住 —— 配两支才接得全。"
+    : "她今天没有一支能全接住；最接近的一支也只能到「对症」，不会到「正中」。");
+  if (extra && pairTierOf(person, id, extra) === "perfect") {
+    const cheapest = perfectPairOf(person);
+    lines.push(cheapest && isPerfectPair(person, id, extra)
+      ? "两支合起来接住了她要的每一条，而且是这里最省的一对。"
+      : cheapest
+        ? `两支合起来接住了她要的每一条，但不是最省的那一对 —— 更省的是${SHELF[cheapest[0]].short} + ${SHELF[cheapest[1]].short}。`
+        : "两支合起来接住了她要的每一条。");
+  }
   if (stillHolding(c, person)) lines.push("还有没说出的顾虑，已知线索对上也不保证成交。");
   return lines;
 }
@@ -470,8 +490,12 @@ export function restoreConsults(data: unknown, world: World, people: Person[]): 
     if (!record(v.tried) || !Object.entries(v.tried).every(([k, tier]) => Object.hasOwn(SHELF, k)
       && typeof tier === "string" && ["perfect", "positive", "mixed", "negative"].includes(tier))) continue;
     if (typeof v.mood !== "number" || !Number.isFinite(v.mood) || v.mood > 0 || v.mood < -30) continue;
+    // 旧存档没有 extra（搭的那支）：按「没搭」接上；有这一格就得是货架上真实存在的一支。
+    const extra = v.extra === undefined || v.extra === null ? null
+      : (typeof v.extra === "string" && Object.hasOwn(SHELF, v.extra) ? v.extra as ShelfId : null);
+    if (v.extra !== undefined && v.extra !== null && extra === null) continue;
     out[id] = { ...v, excluded, focus: (v.focus as Trait | null | undefined) ?? null,
-      focusKnown: v.focusKnown === true && !!v.focus, risked: v.risked === true } as Consult;
+      focusKnown: v.focusKnown === true && !!v.focus, risked: v.risked === true, extra } as Consult;
   }
   return out;
 }

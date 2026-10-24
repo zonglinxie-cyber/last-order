@@ -6,12 +6,12 @@ import {
   TRAIT_LABEL, TRIED_MARK, askHer, budgetWord, lookAt, offerEvidence, patienceWord, plateOf,
   priceWord, questionsOf, secondTryRisk, spotsOf, stillHolding, tryOn, type Consult,
 } from "../consult.ts";
-import { SHELF, SHELF_LINES, shelfCoversOf, type ShelfId } from "../shelf.ts";
+import { SHELF, SHELF_LINES, needsPair, pairFits, pairPartners, perfectPairOf, shelfCoversOf, type ShelfId } from "../shelf.ts";
 import type { Person, World } from "../types.ts";
 import type { SaleFeedback } from "../sales-feedback.ts";
 import { ta } from "../pronoun.ts";
 import { unsaidWord } from "../serve-talk.ts";
-import { coversHintWord, coversLine, coversMark, servePickWord } from "./words.ts";
+import { coversHintWord, coversLine, coversMark, pairCheapestWord, pairHintWord, pairMarkWord, pairRowWord, pairTotalWord, pairUnitsWord, pairUnfitWord, servePickWord } from "./words.ts";
 import { visitContext } from "../visits.ts";
 import type { ArrivalNote } from "../arrivals.ts";
 import { companionCost, companionUsed, COMPANION_ENERGY, type companionOptions } from "../companion.ts";
@@ -22,7 +22,7 @@ type Props = {
   arrival?: ArrivalNote | null;
   companions: ReturnType<typeof companionOptions>;
   onCompanion: (id: string) => void;
-  onChange: (patch: Partial<Pick<Consult, "stage" | "product" | "units">>) => void;
+  onChange: (patch: Partial<Pick<Consult, "stage" | "product" | "extra" | "units">>) => void;
   onAct: (step: (c: Consult) => Consult) => void;
   onCommit: (force: boolean) => void; onLeave: () => void; onClose: () => void;
 };
@@ -41,10 +41,25 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
     if (next !== v) setProbe({ kind, key, lines: next.lines.length });
     return next;
   });
-  const evidence = product ? offerEvidence(c, person, product, c.units) : [];
+  // 搭的那一支（选中主支之后才有意义）：她的事一件货接不住时，主支之外还要配一支。
+  const extra = c.extra && c.extra !== product ? c.extra : null;
+  // 搭的那一支她放不放得下：钱与件数上限说了算。放不下就不算配成 —— 不拿「两支合起来」的分数。
+  const pairFitsOk = !!extra && !!product && pairFits(person, product, extra);
+  const pair = extra && pairFitsOk ? extra : null;
+  // 搭了一支 = 主支一件 + 搭支一件：两支一起就是她的两件，再多开口就是「要多了」。
+  const units = pair ? 1 : c.units;
+  const pairAmount = pair && product ? SHELF[product].price + SHELF[pair].price : 0;
+  const evidence = product ? offerEvidence(c, person, product, units, pair) : [];
   const risk = product ? secondTryRisk(c, person, product) : null;
   // 她说过要的那几条（排除掉的那些不算）：货架每一格按这几条标出管 / 不管。
   const wants = c.known.filter(t => !c.excluded.includes(t));
+  // 她的事一件货接不住时：先挑主支，再从「再搭一支」里挑第二支 —— 配齐了才是正中。
+  // 提示只在她已经说清自己要什么之后才出（之前说就是剧透）。
+  const allTold = !!person.skin && wants.length >= person.skin.demands.length;
+  const pairHint = allTold && needsPair(person) ? pairHintWord(ta(person)) : null;
+  const partners = product && needsPair(person) ? pairPartners(person, product) : [];
+  // 最省的那一对：只有它拿得到「你懂她」那一笔 —— 别的组合照样接得住她的每一条，只是让她多付了。
+  const cheapestPair = perfectPairOf(person);
   // 最后一次探问后会追加「该开单了」，反应仍显示真正的回答。
   const lastReply = c.lines.at(c.patience === 0 && c.begun ? -2 : -1);
   useEffect(() => {
@@ -135,18 +150,31 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
           {c.begun && <p className="consult-reaction" aria-live="polite">{lastReply}</p>}
           {companion}
           {wants.length > 0 && <p className="serve-covers-hint">{coversHintWord(wants)}</p>}
+          {pairHint && <p className="serve-pair-hint">{pairHint}</p>}
           {SHELF_LINES.map(line => <div key={line.word} className="serve-line" role="group" aria-label={line.word}>
             <span className="serve-line-word">{line.word}</span><div className="serve-products">{line.ids.map(pid => {
               const tried = c.tried[pid];
               const covered = shelfCoversOf(pid, wants);
+              const canPair = needsPair(person) && pairPartners(person, pid).length > 0;
               return <button key={pid} type="button" aria-pressed={product === pid}
-                className={`${product === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => onChange({ product: pid })}>
+                className={`${product === pid ? "on" : ""}${tried ? ` tried-${tried}` : ""}`} onClick={() => onChange({ product: pid, extra: null })}>
                 <b>{SHELF[pid].short}</b><small>{tried ? `${ta(person)}${TRIED_MARK[tried]} · ${yuan(SHELF[pid].price)}` : yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em>
                 {wants.length > 0 && <i className="serve-covers">{wants.map((trait, i) =>
                   <span key={trait} className={covered[i] ? "yes" : "no"}>{coversMark(trait, covered[i]!)} </span>)}</i>}
+                {canPair && <i className="serve-pair-mark">{pairMarkWord()}</i>}
               </button>;
             })}</div>
           </div>)}
+          {partners.length > 0 && <div className="serve-pair" role="group" aria-label={pairRowWord()}>
+            <span className="serve-line-word">{pairRowWord()}</span>
+            <div className="serve-pair-items">{partners.map(pid => <button key={pid} type="button" aria-pressed={extra === pid}
+              className={extra === pid ? "on" : ""} onClick={() => onChange({ extra: extra === pid ? null : pid })}>
+              <b>{SHELF[pid].short}</b><small>{yuan(SHELF[pid].price)}</small><em>{SHELF[pid].tag}</em>
+              {cheapestPair && ((cheapestPair[0] === product && cheapestPair[1] === pid)
+                || (cheapestPair[0] === pid && cheapestPair[1] === product))
+                && <i className="serve-pair-mark">{pairCheapestWord()}</i>}
+            </button>)}</div>
+          </div>}
           <p className="serve-note">{product ? priceWord(person, product) : servePickWord(ta(person), !hasOpenedSale(world))}</p>
           {risk && <p className="offer-risk" role="status">{risk.line}</p>}
           {product && <ul className="offer-evidence" aria-label="开单前的判断">{evidence.map(line => <li key={line}>{line}</li>)}</ul>}
@@ -156,10 +184,16 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
       </MobileScroll>
       <div className="serve-foot">
         {offer ? <>
-          <p className="offer-total">{product ? `${SHELF[product].short} × ${c.units} · 报价 ${yuan(SHELF[product].price * c.units)}` : "先挑一支，再决定带几件"}</p>
+          <p className="offer-total">{product
+            ? (pair ? pairTotalWord(SHELF[product].short, SHELF[pair].short, pairAmount)
+              : `${SHELF[product].short} × ${c.units} · 报价 ${yuan(SHELF[product].price * c.units)}`)
+            : "先挑一支，再决定带几件"}</p>
+          {extra && !pairFitsOk && <p className="offer-risk" role="status">{pairUnfitWord()}</p>}
           {product && <p className={`offer-signal${risk ? " is-risk" : ""}`} role="status">{risk?.line ?? evidence[0]}</p>}
-          <div className="serve-units" role="group" aria-label="推荐件数">{[1, 2, 3, 4].map(u => <button key={u} type="button" aria-pressed={c.units === u}
-            className={c.units === u ? "on" : ""} onClick={() => onChange({ units: u })}>{u} 件</button>)}</div>
+          {pair
+            ? <p className="serve-units-note">{pairUnitsWord()}</p>
+            : <div className="serve-units" role="group" aria-label="推荐件数">{[1, 2, 3, 4].map(u => <button key={u} type="button" aria-pressed={c.units === u}
+              className={c.units === u ? "on" : ""} onClick={() => onChange({ units: u })}>{u} 件</button>)}</div>}
           <div className="serve-actions">
             <button className="serve-try" type="button" disabled={!product || c.patience <= 0 || !!c.tried[product]}
               onClick={() => product && onAct(v => tryOn(v, person, product))}>试一下</button>
@@ -173,11 +207,11 @@ export function ConsultPanel({ world, person, consult: c, arrival, companions, o
   </BottomSheet>;
 }
 
-export function SaleReceipt({ person, product, feedback: f, onClose }: {
-  person: Person; product: ShelfId; feedback: SaleFeedback; onClose: () => void;
+export function SaleReceipt({ person, product, extra, feedback: f, onClose }: {
+  person: Person; product: ShelfId; extra?: ShelfId | null; feedback: SaleFeedback; onClose: () => void;
 }) {
   const signed = (n: number) => n > 0 ? `+${n}` : `${n}`;
-  return <BottomSheet open title={f.title} description={`${person.name} · ${SHELF[product].name}`} snap={0.78}
+  return <BottomSheet open title={f.title} description={`${person.name} · ${extra ? `${SHELF[product].name} + ${SHELF[extra].name}` : SHELF[product].name}`} snap={0.78}
     onOpenChange={open => { if (!open) onClose(); }}>
     <div className={`sale-receipt ${f.tone}`}>
       <MobileScroll className="receipt-scroll">

@@ -799,7 +799,10 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     descriptor: "来听你把功效说满，包带里有录音",
     tempers: ["wary", "proud"],
     skin: {
-      demands: [{ trait: "soothe", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }],
+      // 「还想要一件」这一条（第 52 轮加的）：能给舒缓 2 档的那几支都不够轻薄，
+      // 能轻薄的那几支又撑不住她两颊的泛红 —— 她的事一件货接不住，得配两支。
+      // 单支最高 0.857（喷雾），配成「喷雾+精华 / 面膜+喷雾 / 喷雾+精粹水」才接满。
+      demands: [{ trait: "soothe", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }, { trait: "natural", want: 2, weight: 2 }],
       veto: { trait: "soothe", below: 2, note: "她要的是你说出备案以外的话" },
       budget: 3500, maxUnits: 2,
     },
@@ -842,7 +845,10 @@ const DRAFTS: Array<Omit<Person, "bonds">> = [
     descriptor: "女友在镜头外，T区出油",
     tempers: ["shy", "face"],
     skin: {
-      demands: [{ trait: "natural", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }],
+      // 「还想要一件」这一条（第 52 轮加的）：他自己 T 区出油，薄而不闷的那几支都不舒缓；
+      // 能舒缓的那几支又厚得不行，闷痘他受不住 —— 他的事一件货接不住，得配两支。
+      // 单支最高 0.857（喷雾），配成「喷雾+隔离 / 喷雾+粉底 / 粉霜+喷雾」才接满。
+      demands: [{ trait: "natural", want: 2, weight: 3 }, { trait: "steady", want: 2, weight: 2 }, { trait: "soothe", want: 2, weight: 2 }],
       veto: { trait: "natural", below: 2, note: "他自己出油，整脸持妆会闷" },
       budget: 2400, maxUnits: 2,
     },

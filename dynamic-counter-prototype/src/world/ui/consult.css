@@ -44,11 +44,11 @@
 .serve-face .face-spot i { width:7px; height:7px; border:1px solid #fff1cf; border-radius:50%; background:#e6b969; }
 .serve-face .face-spot span { position:absolute; top:38px; left:50%; transform:translateX(-50%); padding:0 6px; border-radius:999px; background:#1a0f0eee; color:#ffe8b6; font-size:12px; white-space:nowrap; }
 .serve-face .face-spot:disabled { opacity:.5; }
-.serve-products { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
-.serve-products button { min-width:0; min-height:68px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 2px; border:1px solid #bda16b44; border-radius:10px; background:#ffffff05; color:#ffe8b6; }
-.serve-products button.on { border-color:#f0c978; background:#f0c97826; box-shadow:inset 0 0 0 1px #f0c978; }
-.serve-products b { font:600 14px 'Noto Serif SC',serif; }
-.serve-products small,.serve-products em { font:12px/1.4 sans-serif; color:#d2b99a; }
+.serve-products,.serve-pair-items { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+.serve-products button,.serve-pair-items button { min-width:0; min-height:68px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 2px; border:1px solid #bda16b44; border-radius:10px; background:#ffffff05; color:#ffe8b6; }
+.serve-products button.on,.serve-pair-items button.on { border-color:#f0c978; background:#f0c97826; box-shadow:inset 0 0 0 1px #f0c978; }
+.serve-products b,.serve-pair-items b { font:600 14px 'Noto Serif SC',serif; }
+.serve-products small,.serve-products em,.serve-pair-items small,.serve-pair-items em { font:12px/1.4 sans-serif; color:#d2b99a; }
 .serve-products .tried-perfect small { color:#9adff0; }
 .serve-products .tried-positive small { color:#a8dcb0; }
 .serve-products .tried-mixed small { color:#e8cf8a; }
@@ -56,12 +56,17 @@
 /* 「对她」那一行：她说过的那几条，这一支管（✓）还是不管（✗）。
    格子只有四列宽，一行放不下就换行 —— 宁可格子高一点，也不省掉这条信息。 */
 .serve-covers-hint { margin:0 0 8px; color:#c6af99; font-size:12px; line-height:1.6; }
-.serve-products i { display:flex; flex-wrap:wrap; justify-content:center; gap:0 3px; font:12px/1.3 sans-serif; font-style:normal; }
+.serve-products i,.serve-pair-items i { display:flex; flex-wrap:wrap; justify-content:center; gap:0 3px; font:12px/1.3 sans-serif; font-style:normal; }
 .serve-products i span { white-space:nowrap; }
 .serve-products i .yes { color:#a8dcb0; }
 .serve-products i .no { color:#c19a9a; }
 .serve-line { margin:0 0 10px; }
 .serve-line-word { display:block; font-size:12px; color:#c6af99; margin-bottom:5px; }
+/* 配两支：她的事一件货接不住时，挑货屏顶上那句话 + 那一行「再搭一支」。 */
+.serve-pair-hint { margin:0 0 8px; color:#ffe1a3; font-size:12px; line-height:1.6; }
+.serve-pair { margin:0 0 10px; padding:8px 10px; border:1px solid #c2a27555; border-radius:12px; background:#f0c9780d; }
+.serve-pair .serve-line-word { color:#d8ad5d; }
+.serve-pair-items i.serve-pair-mark { display:block; margin-top:3px; color:#ffe1a3; font-size:12px; }
 .serve-note,.offer-evidence,.consult-reaction { font-size:13px; line-height:1.6; }
 .serve-note,.offer-evidence { color:#decbb4; }
 .offer-evidence { padding:10px 12px 10px 26px; background:#ffffff06; border-radius:10px; }
@@ -79,6 +84,7 @@
 .offer-signal { margin:0 0 6px; color:#dec1a0; font-size:12px; line-height:1.4; }
 .offer-signal.is-risk { color:#ffc9b5; }
 .serve-units,.serve-actions { display:flex; gap:6px; }
+.serve-units-note { margin:0 0 6px; color:#dec1a0; font-size:12px; line-height:1.4; }
 .serve-units button { flex:1; min-height:44px; border:1px solid #bda16b44; border-radius:10px; background:transparent; color:#ffe8b6; font-size:13px; }
 .serve-units button.on { border-color:#f0c978; background:#f0c97820; }
 .serve-actions { margin-top:6px; }

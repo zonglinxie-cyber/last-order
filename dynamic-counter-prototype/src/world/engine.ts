@@ -6,7 +6,7 @@
 // 但货不进旧五日版，旧版那些钉死的路线金额不受影响。
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
 import {
-  bestShelf, isPerfectMatch, PERFECT_MATCH_OPINION, SHELF, shelfFitTier, shelfUnits,
+  bestShelf, isPerfectMatch, isPerfectPair, PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, fitOfPair, pairFits, serveItemsOf, shelfFitTier, shelfUnits,
   fitOfPerson, type ShelfId,
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
@@ -1551,9 +1551,9 @@ export function poachSale(person: Person): { product: ShelfId; units: number; am
 /** 开口要的件数超过她自己说过的上限：每多一件扣这些看法。她照旧只拿她要的那几件。 */
 export const OVER_ASK_OPINION = -3;
 
-export function resolveServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false): World {
+export function resolveServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false, extra?: ShelfId | null): World {
   const begun = beginServe(world, people, personId);
-  return begun === world ? world : settleServe(begun, people, personId, productId, units, force);
+  return begun === world ? world : settleServe(begun, people, personId, productId, units, force, 0, extra);
 }
 
 /** 接待开头那一下：花掉接待的精力、把她记成"你接过手的"；邀客时能挡住陆遥，比货时还须对症成交。
@@ -1580,39 +1580,52 @@ export function leaveServe(world: World, people: Person[], personId: PersonId, m
 }
 
 /** 接待的结账：精力已经由 beginServe 花过。mood 是看 / 问 / 试那几句攒下的看法增减，开单这一刻一起结。 */
-export function settleServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false, mood = 0): World {
+export function settleServe(world: World, people: Person[], personId: PersonId, productId: ShelfId, units: number, force = false, mood = 0, extra?: ShelfId | null): World {
   const original = personOf(people, personId);
   const person = original && visitPerson(world, original);
   if (!person?.skin) return world;
   let w: World = mood ? addOpinion(world, personId, mood) : world;
-  const score = fitFor(person, productId);
+  // 搭的那支：她要两样才接得住时，主支之外还得配一支。
+  // 两支合起来才接得全 —— 只卖一支也卖得出去，只是她要的那一条还差着，
+  // 「你懂她」那一笔就不会给：多赚一份钱，还是更懂她，这是个真取舍。
+  // 硬推不看她的需求，搭支在这里没有意义（那不是懂她，是硬塞）。
+  // 搭支也得她放得下：钱与件数上限都够，它才算真的卖出去 ——
+  // 放不下就不能拿「两支合起来」的分数，白拿一笔「懂她」。
+  const pair = !force && extra && extra !== productId && pairFits(person, productId, extra) ? extra : null;
+  const score = pair ? fitOfPair(person, productId, pair) : fitFor(person, productId);
   const tier = shelfFitTier(score);
   const price = SHELF[productId].price;
-  // 复盘附在实际结算后，不改收入、关系、随机流；已结案的周末单不被之后的推荐覆盖。
-  const order = currentWeekendOrder(world);
-  const finish = (next: World, reason: WeekendAttemptReason): World => order?.person === personId && !order.outcome
-    ? { ...next, weekendOrder: { ...next.weekendOrder!, attempt: {
-      day: world.day, slot: world.slot, product: productId, requested: units,
-      sold: (next.money - world.money) / price, reason,
-    } } } : next;
   w = setQuality(w, `served:${personId}`, qualityOf(w, `served:${personId}`) + 1);
   // 接待过就把「她被冷落了一整季」那一旗清掉 —— 这一步还挽回得了。
   w = clearLifeAway(w, personId);
+  const recentlyBought = recentlyPurchased(w, personId);
+  // 这一单卖掉的货：主支几件 + 搭的那支一件（件数与钱都受她的上限管）。
+  const items = recentlyBought ? [] : serveItemsOf(person, productId, units, tier, pair);
+  const wanted = items.find(i => i.product === productId)?.units ?? 0;
+  const extraUnits = pair ? (items.find(i => i.product === pair)?.units ?? 0) : 0;
+  const soldTotal = wanted + extraUnits;
+  const amount = items.reduce((sum, i) => sum + SHELF[i.product].price * i.units, 0);
+  // 复盘附在实际结算后，不改收入、关系、随机流；已结案的周末单不被之后的推荐覆盖。
+  // sold 是「这一单真卖出去几件」：没成交的路径是 0，硬推按硬推卖出的算，正常按实际成交的算。
+  const order = currentWeekendOrder(world);
+  const finish = (next: World, reason: WeekendAttemptReason, soldCount: number): World => order?.person === personId && !order.outcome
+    ? { ...next, weekendOrder: { ...next.weekendOrder!, attempt: {
+      day: world.day, slot: world.slot, product: productId, requested: units + extraUnits,
+      sold: soldCount, reason,
+    } } } : next;
 
   // 看法坏到这份上，她连接待都不愿意：精力照花，单开不出来。
   if (opinionOf(w, personId) <= SERVE_REFUSE_OPINION && !force) {
     w = say(w, `${person.name}理都不理你，直接走了。`, [personId]);
-    return finish(w, "refused");
+    return finish(w, "refused", 0);
   }
 
-  const recentlyBought = recentlyPurchased(w, personId);
   // 她前不久才买过，正常推荐她不买（硬推不管这个）。
   if (recentlyBought && !force) {
     w = say(w, `${person.name}上次带的还没用完，今天只聊了聊。`, [personId]);
-    return finish(w, "recent");
+    return finish(w, "recent", 0);
   }
 
-  const wanted = recentlyBought ? 0 : shelfUnits(person, productId, tier, units);
   const sold = Math.min(Math.max(1, units), person.skin.maxUnits);
 
   if (force && sold > wanted) {
@@ -1641,7 +1654,7 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
     w = setQuality(w, `bought:${personId}`, w.day);
     w = recordWeekendOutcome(w, personId, "hard", { product: productId, units: sold, amount, via: "serve" });
     w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + sold);
-    return finish(witnessed(w, people, [personId], "hard-sell", -2), "hard");
+    return finish(witnessed(w, people, [personId], "hard-sell", -2), "hard", sold);
   }
 
   if (wanted <= 0) {
@@ -1651,20 +1664,20 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
       w = addOpinion(w, personId, PRICE_MISS_OPINION);
       w = remember(w, personId, "price-miss", -1);
       w = say(w, `${SHELF[productId].name}是对症的，${person.name}看了看价签没说话：${ta(person)}今天只留了 ¥${person.skin.budget}。`, [personId]);
-      return finish(witnessed(w, people, [personId], "price-miss", -1), "price");
+      return finish(witnessed(w, people, [personId], "price-miss", -1), "price", 0);
     }
     w = addOpinion(w, personId, SERVE_MISS_OPINION);
     w = remember(w, personId, "wrong-pick", -1);
     w = say(w, `你推荐的是${SHELF[productId].name}，${person.name}摇头：这解决不了我的事。`, [personId]);
-    return finish(witnessed(w, people, [personId], "wrong-pick", -1), "mismatch");
+    return finish(witnessed(w, people, [personId], "wrong-pick", -1), "mismatch", 0);
   }
-  const amount = price * wanted;
   w = { ...w, money: w.money + amount, standing: clamp(w.standing + 1, 0, 100) };
   w = setQuality(w, `bought:${personId}`, w.day);
-  w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + wanted);
+  w = setQuality(w, soldUnitsKey(w.day), qualityOf(w, soldUnitsKey(w.day)) + soldTotal);
   // 开口比她说过的上限多：她只拿她要的，多出来那几件记在脸上。
-  const overAsk = Math.max(0, units - person.skin.maxUnits);
-  w = recordWeekendOutcome(w, personId, tier === "positive" && !overAsk ? "good" : "mixed", { product: productId, units: wanted, amount, via: "serve" });
+  // 搭了一支也算在开口里 —— 她一共要几件，是主支加搭的那支。
+  const overAsk = Math.max(0, units + (pair ? 1 : 0) - person.skin.maxUnits);
+  w = recordWeekendOutcome(w, personId, tier === "positive" && !overAsk ? "good" : "mixed", { product: productId, units: soldTotal, amount, via: "serve" });
   if (overAsk) {
     w = addOpinion(w, personId, OVER_ASK_OPINION * overAsk);
     w = say(w, `你开口要 ${units} 件，${person.name}皱了下眉：「用不了那么多。」`, [personId]);
@@ -1672,7 +1685,9 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
   if (tier === "positive") {
     // 多支货里"过线"和"正中"是两件事：过线的那支也成交，但只有买得起、把她每一条诉求都接满、
     // 又没让她为不需要的东西多付的那一支，她才会觉得你懂她 —— 多给的这一笔看法决定她下次肯多说几条。
-    const perfect = isPerfectMatch(person, productId);
+    // 配了两支的也算，但按同一个分法：两支合起来接住她的每一条、而且是最省的那一对，才是「懂她」。
+    // 更贵的那一对照样接得住她的每一条，只是没让她多付 —— 那是对症，不是正中。
+    const perfect = pair ? isPerfectPair(person, productId, pair) : isPerfectMatch(person, productId);
     w = addOpinion(w, personId, SERVE_GOOD_OPINION + (perfect ? PERFECT_MATCH_OPINION : 0));
     w = trustedCare(w, people, personId);
     if (rivalTargets(w).includes(personId) && w.rivalPlan?.tactic === "compare") {
@@ -1680,13 +1695,15 @@ export function settleServe(world: World, people: Person[], personId: PersonId, 
       w = setQuality(w, RIVAL_COMPARE_NEXT, 0);
     }
     w = remember(w, personId, "honest-advice", 2);
-    w = say(w, `${person.name}试了${SHELF[productId].name}，${perfect ? `${ta(person)}要的每条都被接住了，` : ""}带走 ${wanted} 件，进账 ¥${amount}。`, [personId]);
-    return finish(witnessed(w, people, [personId], "honest-advice", 2), overAsk ? "over-ask" : "good");
+    const itemsWord = extraUnits > 0 ? `${SHELF[productId].name}和${SHELF[pair!].name}` : SHELF[productId].name;
+    w = say(w, `${person.name}试了${itemsWord}，${perfect ? `${ta(person)}要的每条都被接住了，` : ""}带走 ${soldTotal} 件，进账 ¥${amount}。`, [personId]);
+    return finish(witnessed(w, people, [personId], "honest-advice", 2), overAsk ? "over-ask" : "good", soldTotal);
   }
   w = addOpinion(w, personId, SERVE_MIXED_OPINION);
   w = remember(w, personId, "sold-anyway", 1);
-  w = say(w, `${person.name}勉强带走了 ${wanted} 件${SHELF[productId].name}，进账 ¥${amount}。`, [personId]);
-  return finish(witnessed(w, people, [personId], "sold-anyway", 1), overAsk ? "over-ask" : "mixed");
+  const itemsWord = extraUnits > 0 ? `${SHELF[productId].name}和${SHELF[pair!].name}` : SHELF[productId].name;
+  w = say(w, `${person.name}勉强带走了 ${soldTotal} 件${itemsWord}，进账 ¥${amount}。`, [personId]);
+  return finish(witnessed(w, people, [personId], "sold-anyway", 1), overAsk ? "over-ask" : "mixed", soldTotal);
 }
 
 // —— 夜里：微信群传话、加过微信的人约回来、精力重置 ——

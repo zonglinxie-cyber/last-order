@@ -9,10 +9,11 @@ import {
   ENERGY_PER_DAY, PRICE_MISS_OPINION, SERVE_GOOD_OPINION, newWorld, opinionOf, resolveServe,
 } from "../src/world/engine.ts";
 import {
-  PERFECT_MATCH_OPINION, SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPerson, perfectShelf, shelfFitTier,
-  type ShelfId,
+  PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, SHELF_IDS, TAG_WORD, affordableUnits, fitOfPair, fitOfPerson,
+  isPerfectPair, needsPair, pairFits, pairPartners, perfectPairOf, perfectShelf, shelfFitTier, type ShelfId,
 } from "../src/world/shelf.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
+import { variantPerson } from "../src/world/visits.ts";
 import type { Person, Trait, World } from "../src/world/types.ts";
 import { saleFeedback } from "../src/world/sales-feedback.ts";
 
@@ -32,17 +33,22 @@ test("32 位有诉求表的客人，每一个都有买得起的正解", () => {
 });
 
 test("货架不再只给一个答案：只有一支买得起的正解的人 28 → 9（八支）→ 1（十二支）；中位三支 → 四支", () => {
-  const one = skinned.filter(p => affordablePositives(p).length === 1).map(p => p.id);
+  // 要配两支的那几位（她的事一件货接不住）单支那条分布对她们不适用 ——
+  // 她的正解是「两支合起来那一支」，统计时剔掉；剩下的人面对的货架不能变窄。
+  const rest = skinned.filter(p => !needsPair(p));
+  const one = rest.filter(p => affordablePositives(p).length === 1).map(p => p.id);
   // 剩下的这一位是周姐：薄、见效、稳、撑妆四条都要，又不许厚 —— 只有粉底一支过线。
   assert.deepEqual(one, ["zhou"]);
-  const counts = skinned.map(p => affordablePositives(p).length).sort((a, b) => a - b);
+  const counts = rest.map(p => affordablePositives(p).length).sort((a, b) => a - b);
   assert.equal(counts[Math.floor(counts.length / 2)], 4, "中位数：一位客人面前摆出四支可选的正解");
   // 实测形状：1 支 1 人 / 2 支 5 人 / 3 支 6 人 / 4 支 14 人 / 5 支 3 人 / 6 支 2 人 / 9 支 1 人（预算高、诉求少的宋姐九支都行）。
   // 2026-10-21 重排档位后从 {1:1,2:9,3:15,4:2,5:1,6:1,7:2,9:1} 变成这个形状：喷雾、乳液、持妆重新能被翻出来，
   // 于是"面前有几支可选"整体往宽里挪了一格 —— 货架变宽不是稀释，是原来那几支被盖住的货重新露出来。
+  // 2026-10-24（第 52 轮「配两支」）：剔掉要配两支的那两位之后，4 支从 14 人变 13 人、5 支从 3 人变 2 人 ——
+  // 她俩各多了一条诉求，单支能过线的货就少一支。这是那两位自己的事，不该算进「其余人的货架」。
   const dist: Record<number, number> = {};
   for (const c of counts) dist[c] = (dist[c] ?? 0) + 1;
-  assert.deepEqual(dist, { 1: 1, 2: 5, 3: 6, 4: 14, 5: 3, 6: 2, 9: 1 });
+  assert.deepEqual(dist, { 1: 1, 2: 5, 3: 6, 4: 13, 5: 2, 6: 2, 9: 1 });
 });
 
 test("货架上没有死货：没有哪一支被更便宜的另一支全面盖住", () => {
@@ -63,10 +69,97 @@ test("货架尾部那三支各有人把她们当正中：喷雾、乳液、持�
   assert.deepEqual(owners("glow"), ["yenushi"], "叶女士：撑妆、见效、还不能闷，只有持妆给得起");
 });
 
-test("三十二位客人人人有正中：周姐与叶女士不再空着", () => {
-  const none = skinned.filter(p => !perfectShelf(p)).map(p => p.id);
-  assert.deepEqual(none, [], `这几位没有买得起的正中：${none.join("、")}`);
+test("三十二位客人人人有正解：三十位一支正中，两位两支合起来正中", () => {
+  // 2026-10-24（第 52 轮「配两支」）：正中有两样 —— 一支正中，或两支合起来正中。
+  // 那两位「一件货接不住」的客人没有单支正中，她们的正解在两支上；所以这条守卫不能只查单支。
+  const pairsOf = (p: Person): ShelfId[][] => {
+    const pairs: ShelfId[][] = [];
+    for (const a of SHELF_IDS) for (const b of pairPartners(p, a)) pairs.push([a, b]);
+    return pairs;
+  };
+  const none = skinned.filter(p => !perfectShelf(p) && pairsOf(p).length === 0).map(p => p.id);
+  assert.deepEqual(none, [], `这几位没有买得起的正解：${none.join("、")}`);
   assert.equal(skinned.length, 32, "有脸的人数变了，上面那批覆盖结论要重读");
+  // 没有单支正中的那几位，正是「一件货接不住」的那几位 —— 两边对不上，说明配两支那一刀没接上。
+  assert.deepEqual(skinned.filter(p => !perfectShelf(p)).map(p => p.id),
+    skinned.filter(needsPair).map(p => p.id),
+    "没有单支正中的客人 = 需要配两支的客人");
+});
+
+test("有些人的事一件货接不住：单支再准也差一口气，得两支合起来", () => {
+  const pairPeople = skinned.filter(needsPair);
+  assert.ok(pairPeople.length >= 1, "没有一位客人的事要配两支 —— 那一刀就白做了");
+  for (const p of pairPeople) {
+    assert.equal(perfectShelf(p), null, `${p.id} 有单支正中，不该算要配两支`);
+    // 单支接不满：她要的每一条，任何一支都接不满 —— 差的那一块正是搭支要补的。
+    const best = Math.max(...SHELF_IDS.map(id => fitOfPerson(p, id)));
+    assert.ok(best < PERFECT_MATCH, `${p.id} 单支就有正中，配两支这一格就多余了`);
+    // 配得上：至少有一对两支合起来是正中，而且她买得起这一对。
+    const pairs: ShelfId[][] = [];
+    for (const a of SHELF_IDS) for (const b of pairPartners(p, a)) pairs.push([a, b]);
+    assert.ok(pairs.length >= 1, `${p.id} 没有配得成的两支`);
+    for (const [a, b] of pairs) {
+      assert.ok(fitOfPair(p, a, b) >= PERFECT_MATCH, `${a}+${b} 配不成 ${p.id} 的事`);
+      assert.ok(SHELF[a].price + SHELF[b].price <= p.skin!.budget, `${a}+${b} 超 ${p.id} 的预算`);
+    }
+  }
+});
+
+test("配两支才是正中：只卖一支照样成交，但拿不到「你懂她」那一笔", () => {
+  const p = skinned.find(x => needsPair(x))!;
+  // 最省的那一对 —— 她要的正中就在这两支里
+  const [main, partner] = perfectPairOf(p)!;
+  const w: World = { ...newWorld("shelf-pair", PEOPLE), energy: ENERGY_PER_DAY, present: { [p.id]: "counter" } };
+  // 只卖一支：过线、成交、钱也照收 —— 但她要的那一条还差着，「你懂她」那一笔不给。
+  const one = resolveServe(w, PEOPLE, p.id, main, 1);
+  assert.equal(one.money, SHELF[main].price);
+  assert.equal(opinionOf(one, p.id), SERVE_GOOD_OPINION, "单支过线只拿基础那笔");
+  // 配两支：两支的钱一起收，「你懂她」那一笔也给上。
+  const two = resolveServe(w, PEOPLE, p.id, main, 1, false, partner);
+  assert.equal(two.money, SHELF[main].price + SHELF[partner].price);
+  assert.equal(opinionOf(two, p.id), SERVE_GOOD_OPINION + PERFECT_MATCH_OPINION);
+  assert.ok(two.log.some(l => l.text.includes(SHELF[main].name) && l.text.includes(SHELF[partner].name)),
+    "收账那句话要把两支都说出来");
+});
+
+test("配两支也讲「最省」：更贵的那一对照样接得住她的每一条，却不是正中", () => {
+  // 这一条是这一刀的要害：配两支若「无脑挑最贵」就成立，它就不是一个选择，是一条捷径。
+  // 正中跟单支一个口径 —— 接住每一条、买得起、而且是最便宜的那一对。
+  for (const p of skinned.filter(x => needsPair(x))) {
+    const best = perfectPairOf(p)!;
+    const bestPrice = SHELF[best[0]].price + SHELF[best[1]].price;
+    assert.ok(isPerfectPair(p, best[0], best[1]), `${p.id} 最省的那一对拿不到正中那一笔`);
+    // 找得到更贵的一对：接住她的每一条（fit 到线），却不是正中。
+    const pricier = SHELF_IDS.flatMap(a => pairPartners(p, a).map(b => ({ a, b, price: SHELF[a].price + SHELF[b].price })))
+      .filter(r => r.price > bestPrice);
+    assert.ok(pricier.length > 0, `${p.id} 没有更贵的组合 —— 「钱 vs 懂她」这一格不成立`);
+    const { a, b } = pricier[0]!;
+    assert.ok(fitOfPair(p, a, b) >= PERFECT_MATCH, `${a}+${b} 接不住 ${p.id} 的每一条`);
+    assert.equal(isPerfectPair(p, a, b), false, `${a}+${b} 比最省的那一对贵，却拿了正中 —— 口径乱了`);
+    const w: World = { ...newWorld("shelf-pair2", PEOPLE), energy: ENERGY_PER_DAY, present: { [p.id]: "counter" } };
+    const sold = resolveServe(w, PEOPLE, p.id, a, 1, false, b);
+    // 照样成交、照样是「对症」，但那一笔「你懂她」不给。
+    assert.equal(sold.money, SHELF[a].price + SHELF[b].price);
+    assert.equal(opinionOf(sold, p.id), SERVE_GOOD_OPINION, "贵的那一对接住了，却不是正中");
+  }
+});
+
+test("当天情境也会造出「没有哪一支能接全」：那一层不是死内容", () => {
+  // 来访情境会把今天的重点提到头等（要 2 档、权重 2），其余几条的分量压到 1 ——
+  // 她今天于是多出一件事要办，单支接不全（2026-10-24 实测：改需求表之前就有 6 处这样的情形，
+  // 第 49/50 轮那句「零场景」是只量本体需求表、漏了这一层量出来的）。
+  // 这一条钉的是「配两支」这一格在情境层也有戏份，不是只在改了需求表的那两位身上成立。
+  let cases = 0;
+  const who = new Set<string>();
+  for (const p of skinned) for (const code of [1, 2, 3, 4]) {
+    const v = variantPerson(p, code);
+    if (perfectShelf(v)) continue;
+    if (!SHELF_IDS.some(a => pairPartners(v, a).length > 0)) continue;
+    cases++; who.add(p.id);
+  }
+  // 实测 14 处 / 6 位客人（周姐、梁夏、陈道、叶女士、尹小姐、高远）。钉下限，不钉死名单。
+  assert.ok(cases >= 4, `情境层只造出 ${cases} 处「要两支」的情形 —— 那一层几乎是死内容`);
+  assert.ok(who.size >= 3, `只有 ${who.size} 位客人在情境里遇上这一格`);
 });
 
 test("十二支货没有死角也没有万能药", () => {
@@ -86,10 +179,12 @@ test("十二支货没有死角也没有万能药", () => {
   assert.equal(Math.max(...heat), 11, `首选挤位读数变了：${heat.join("/")}`);
 });
 
-test("钱与懂不是同一格：二十三位客人的正中那支不是最赚的那支", () => {
+test("钱与懂不是同一格：二十一位客人的正中那支不是最赚的那支", () => {
   // 看法是这个人情的货币（她肯不肯多讲一条、回不回来、会不会被对面请走），
   // 所以"多花一千块"和"她要的每条都被接住"必须真的能撞车，否则货架只是十二个体价签。
   // 正中按「买得起、全接住、最便宜」只留一支；贵的全接住仍是对症，但不拿正中那一笔。
+  // 2026-10-24（第 52 轮「配两支」）：要配两支的那两位没有单支正中 —— 她们的「正中」是两支合起来那一支，
+  // 这一格对她们不适用，单独归到 noPerfect 里数。
   const same: string[] = [], conflict: string[] = [], noPerfect: string[] = [];
   for (const p of skinned) {
     const aff = affordablePositives(p);
@@ -99,21 +194,24 @@ test("钱与懂不是同一格：二十三位客人的正中那支不是最赚�
     else if (per === money) same.push(p.id);
     else conflict.push(p.id);
   }
-  assert.deepEqual([same.length, conflict.length, noPerfect.length], [9, 23, 0]);
-  assert.deepEqual(conflict, ["xiaoyu", "zhao", "miduo", "tangtang", "liangxia", "baijie", "zhaoning", "heqing", "caiaiyi", "linyi", "wulaoshi", "dongayi", "guyan", "suxiao", "songjie", "hanlei", "chendao", "yinxiaojie", "qianjie", "gaoyuan", "cenning", "chenke", "tanwan"]);
-  assert.deepEqual(noPerfect, []);
+  assert.deepEqual([same.length, conflict.length, noPerfect.length], [9, 21, 2]);
+  assert.deepEqual(conflict, ["xiaoyu", "zhao", "miduo", "tangtang", "liangxia", "baijie", "zhaoning", "heqing", "caiaiyi", "linyi", "wulaoshi", "dongayi", "guyan", "suxiao", "songjie", "hanlei", "chendao", "qianjie", "cenning", "chenke", "tanwan"]);
+  // 没有单支正中的那两位，正是要配两支的那两位 —— 名单从生产里读，不在守卫里写死。
+  assert.deepEqual(noPerfect, skinned.filter(needsPair).map(p => p.id));
   // 撞得最狠的一位：米朵 —— 正中喷雾 ¥480，最赚的那支是精华 ¥1,680，同一单两个答案。
   assert.ok(conflict.includes("miduo") && conflict.includes("dongayi"));
 });
 
-test("越贵不等于越赚：件数被她的预算削，五位客人按最贵开反而少赚", () => {
+test("越贵不等于越赚：件数被她的预算削，四位客人按最贵开反而少赚", () => {
   const differ = skinned.filter(p => {
     const aff = affordablePositives(p);
     const priciest = [...aff].sort((a, b) => SHELF[b].price - SHELF[a].price)[0];
     const money = [...aff].sort((a, b) => revenue(p, b) - revenue(p, a))[0];
     return priciest !== undefined && priciest !== money;
   }).map(p => p.id);
-  assert.deepEqual(differ, ["shen", "liangxia", "guyan", "chendao", "yinxiaojie"]);
+  // 2026-10-24：尹小姐退出这一格 —— 她多了一条诉求以后，单支的正解只剩喷雾与面膜两支，
+  // 最贵那支与最赚那支成了同一支，不再撞车。她那一格现在是「单支接不满，得配两支」。
+  assert.deepEqual(differ, ["shen", "liangxia", "guyan", "chendao"]);
   const shen = PEOPLE.find(p => p.id === "shen")!;
   // 沈薇：妆前 ¥1,180 一支她只开得下 2 件，柔焦 ¥980 开得下 3 件 —— 便宜那支反而多 ¥580。
   assert.equal(revenue(shen, "base"), 2_360);

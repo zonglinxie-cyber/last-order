@@ -9,15 +9,26 @@ import {
 } from "../src/world/engine.ts";
 import { PEOPLE } from "../src/world/content/index.ts";
 import { lifePerson } from "../src/world/life-sales.ts";
-import { SHELF, SHELF_IDS, fitOfPerson, shelfFitTier } from "../src/world/shelf.ts";
+import { PERFECT_MATCH, SHELF, SHELF_IDS, fitOfPair, fitOfPerson, shelfFitTier } from "../src/world/shelf.ts";
 import {
   YEAR_IDS, YEAR_SCENES, applyYearScenes, drawYearScenes, isNewYear, yearKey, yearModsOf,
   yearOfSeason, yearScenesOf, yearWordOf,
 } from "../src/world/years.ts";
-import type { World } from "../src/world/types.ts";
+import type { Person, World } from "../src/world/types.ts";
 
 const withScene = (id: string, world: World): World =>
   ({ ...world, qualities: { ...world.qualities, [yearKey(id as never)]: 1 } });
+
+/** 她还买得到对症的货：单支过线就算；她的事一件货接不住的那几位走的是另一条 ——
+ *  两支合起来接得住（她买得起这一对、件数上限够两支）。2026-10-24（第 52 轮「配两支」）加的后半句：
+ *  尹小姐走到人生第 4 步以后单支没有一支过线了，但喷雾 + 面霜那一对仍然接得住她的事 —— 那条守卫得认这个。 */
+const canBuySomethingRight = (p: Person, budget: number): boolean => {
+  if (SHELF_IDS.some(id => shelfFitTier(fitOfPerson(p, id)) === "positive" && SHELF[id].price <= budget)) return true;
+  if (!p.skin || p.skin.maxUnits < 2) return false;
+  return SHELF_IDS.some(a => SHELF_IDS.some(b => a !== b
+    && SHELF[a].price + SHELF[b].price <= budget
+    && fitOfPair(p, a, b) >= PERFECT_MATCH));
+};
 
 test("第 1 年是教学年：一条年景都不抽，换季也不凭空多出年景", () => {
   assert.deepEqual(drawYearScenes("seed-a", 1), []);
@@ -113,7 +124,7 @@ test("年景不能把任何一位客人变成卖不出货的：预算乘完仍�
     for (let step = 0; step <= 5; step++) {
       const p = lifePerson({ qualities: { [`life:${person.id}`]: step } }, person);
       const budget = Math.round(p.skin!.budget * factor);
-      const ok = SHELF_IDS.some(id => shelfFitTier(fitOfPerson(p, id)) === "positive" && SHELF[id].price <= budget);
+      const ok = canBuySomethingRight(p, budget);
       assert.ok(ok, `${person.id} 走到第 ${step} 步、预算 ×${factor}（¥${budget}）以后买不到任何对症的货`);
     }
   }
@@ -124,7 +135,7 @@ test("上一条不是摆设：预算一压到 1 以下，真的会有人买不�
   const broken = PEOPLE.filter(p => p.role === "customer" && p.skin).some(person => {
     const p = lifePerson({ qualities: { [`life:${person.id}`]: 0 } }, person);
     const budget = Math.round(p.skin!.budget * 0.9);
-    return !SHELF_IDS.some(id => shelfFitTier(fitOfPerson(p, id)) === "positive" && SHELF[id].price <= budget);
+    return !canBuySomethingRight(p, budget);
   });
   assert.ok(broken, "预算压到 ×0.9 还有人选得到 —— 那这条守卫咬不住任何事");
 });
