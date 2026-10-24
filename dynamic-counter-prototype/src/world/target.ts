@@ -7,6 +7,7 @@
 // 纯数据纯函数，不 import 引擎（与 weeks.ts 同理，免得绕成环）。引擎在周一早会记下这周的起点、
 // 周日打烊结账；界面和模拟器只读这里。
 import { WEEK_RULES, weekNoOf, weekRuleOf } from "./weeks.ts";
+import { rivalNameOf } from "./branches.ts";
 import type { PersonId } from "./types.ts";
 
 /** 一季四关各要多少。
@@ -230,7 +231,7 @@ export function settleWeek<W extends Books & { standing: number; opinion: Record
     [weekRouteKey(n)]: ROUTE_CODE[s.route], [weekCareCountKey(n)]: s.care } };
   const yuan = (x: number) => `¥${x.toLocaleString("zh-CN")}`;
   const achievement = s.route === "sales" ? `${yuan(made)} / ${yuan(target)}`
-    : s.route === "care" ? `跨天照应 ${s.care} 位不同客人` : `从陆遥手里守住 ${s.guard} 位不同客人`;
+    : s.route === "care" ? `跨天照应 ${s.care} 位不同客人` : `从${rivalNameOf(w)}手里守住 ${s.guard} 位不同客人`;
   const line = passed
     ? `第 ${n} 关对账：${ROUTE_WORD[s.route]}线 ${achievement}，过关，${"★".repeat(s.stars)}${"☆".repeat(WEEK_STARS_MAX - s.stars)}。她在排班表上你那一栏打了个勾。`
     : `第 ${n} 关对账：业绩 ${yuan(made)} / ${yuan(target)}、客情 ${s.care} / ${CARE_STEPS[0]}、守客 ${s.guard} / ${GUARD_STEPS[0]}，都还没到线。罗曼没说话，把你的名字往后挪了一格。`;

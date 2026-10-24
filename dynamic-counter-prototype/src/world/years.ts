@@ -99,15 +99,17 @@ export type YearMods = {
 
 const NO_MODS: YearMods = { noAtrium: false, poach: 0, samples: 0, hardSell: 1, guests: 0, budget: 1 };
 
-/** 眼下这一年的旋钮。引擎各处读这一个函数，不各拼一份。 */
-export function yearModsOf(world: Pick<World, "qualities">): YearMods {
+/** 眼下这一年的旋钮。引擎各处读这一个函数，不各拼一份。
+ *  resist：第 4 级以后，年景里**跟你过不去**的那几条劲道减半（位置稳了，商场那些风浪对你的柜子影响小了）。
+ *  跟你有利的两条（多请一个人、顾客手里松）不打折 —— 打折的是麻烦，不是好事。 */
+export function yearModsOf(world: Pick<World, "qualities">, resist = 1): YearMods {
   const on = (id: YearId) => world.qualities[yearKey(id)] === 1;
   if (!YEAR_IDS.some(id => on(id))) return NO_MODS;
   return {
     noAtrium: on("atrium"),
-    poach: on("rivalHead") ? 0.05 : 0,
-    samples: on("strictSample") ? 2 : 0,
-    hardSell: on("strictLedger") ? 2 : 1,
+    poach: on("rivalHead") ? 0.05 * resist : 0,
+    samples: on("strictSample") ? Math.round(2 * resist) : 0,
+    hardSell: on("strictLedger") ? 1 + resist : 1,
     guests: on("bonus") ? 1 : 0,
     budget: on("bonusMoney") ? 1.15 : 1,
   };

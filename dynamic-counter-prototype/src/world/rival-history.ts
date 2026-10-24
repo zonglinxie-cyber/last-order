@@ -6,8 +6,9 @@ export type RivalSeason = { run: string; season: number; money: number; rivalMon
 export type RivalOutcome = "win" | "draw" | "loss";
 export const rivalOutcome = (r: Pick<RivalSeason, "money" | "rivalMoney">): RivalOutcome =>
   r.money > r.rivalMoney ? "win" : r.money < r.rivalMoney ? "loss" : "draw";
-export const rivalOutcomeWord = (r: Pick<RivalSeason, "money" | "rivalMoney">) =>
-  ({ win: "你赢了", loss: "陆遥赢了", draw: "打成平手" })[rivalOutcome(r)];
+/** 对手那一位的名字由界面传进来（跳去维珞以后是周敏）—— 战绩这一屏要跟着换名。 */
+export const rivalOutcomeWord = (r: Pick<RivalSeason, "money" | "rivalMoney">, name = "陆遥") =>
+  ({ win: "你赢了", loss: `${name}赢了`, draw: "打成平手" })[rivalOutcome(r)];
 export const rivalYear = (season: number) => Math.floor((season - 1) / 4) + 1;
 
 export function validRivalSeason(value: unknown): value is RivalSeason {
@@ -32,7 +33,7 @@ export function recordRivalSeason(records: RivalSeason[], next: RivalSeason | nu
   return [...records, { ...next }];
 }
 
-export function rivalYearResult(records: RivalSeason[], run: string, season: number) {
+export function rivalYearResult(records: RivalSeason[], run: string, season: number, name = "陆遥") {
   const year = rivalYear(season), first = (year - 1) * 4 + 1;
   const rows = records.filter(r => r.run === run && r.season >= first && r.season < first + 4).sort((a, b) => a.season - b.season);
   const wins = rows.filter(r => rivalOutcome(r) === "win").length;
@@ -45,7 +46,7 @@ export function rivalYearResult(records: RivalSeason[], run: string, season: num
   const contiguous = rows.length === playedThrough - first + 1;
   const remaining = first + 3 - playedThrough;
   const locked = contiguous && Math.abs(wins - losses) > remaining;
-  const verdict = complete || locked ? wins > losses ? "你赢下这一年" : wins < losses ? "陆遥赢下这一年" : "这一年打成平手" : null;
+  const verdict = complete || locked ? wins > losses ? "你赢下这一年" : wins < losses ? `${name}赢下这一年` : "这一年打成平手" : null;
   return { year, rows, wins, losses, draws, missing, complete, locked, verdict };
 }
 

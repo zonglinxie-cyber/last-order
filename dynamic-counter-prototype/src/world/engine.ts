@@ -6,7 +6,7 @@
 // 但货不进旧五日版，旧版那些钉死的路线金额不受影响。
 import { draw, drawIndex, drawInt, drawWeighted } from "./rng.ts";
 import {
-  bestShelf, isPerfectMatch, isPerfectPair, PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, fitOfPair, pairFits, serveItemsOf, shelfFitTier, shelfUnits,
+  bestShelf, isPerfectMatch, isPerfectPair, PERFECT_MATCH, PERFECT_MATCH_OPINION, SHELF, fitOfPair, pairFits, richestShelf, serveItemsOf, shelfFitTier, shelfUnits,
   fitOfPerson, type ShelfId,
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
@@ -22,8 +22,9 @@ import { PLAYER, SEASON_DAYS, THREAD_LANDED_SUFFIX } from "./types.ts";
 import { ta } from "./pronoun.ts";
 import { lifeArriveChance, lifeBringChance, clearLifeAway, lifePerson, lifeReferChance } from "./life-sales.ts";
 import { applyYearScenes, isNewYear, YEAR_PREFIX, yearModsOf, yearOfSeason, yearWordOf } from "./years.ts";
-import { applyCareerAudit, careerAudit, careerAuditLines, careerModsOf, careerRankOf, markSeasonWin,
-  CAREER_RANK_KEY, CAREER_WINS_KEY, CAREER_YEARS_KEY } from "./career.ts";
+import { applyCareerAudit, careerAudit, careerAuditLines, careerEnded, careerModsOf, careerRankOf, markSeasonWin,
+  CAREER_RANK_KEY, CAREER_REPLACED_WORD, CAREER_WINS_KEY, CAREER_YEARS_KEY } from "./career.ts";
+import { branchModsOf, poacherIdOf, rivalCounterWord, rivalNameOf, BRANCH_CHOICE_WORD, OWN_RENT_PER_WEEK, RENT_PAID_KEY } from "./branches.ts";
 import { assignVisitContexts, LAST_MET, markMet, visitPerson } from "./visits.ts";
 import { appointmentTime, arrivalFromAppointment, describeArrival, isArrival } from "./arrivals.ts";
 import { RIVAL_INVITE_ENERGY, RIVAL_INVITE_SAMPLES, rivalBookingNow, rivalBookingSlots, validRivalBooking } from "./rival-business.ts";
@@ -251,12 +252,13 @@ export const rivalGuarded = (world: World, person: PersonId): boolean =>
   && qualityOf(world, guardCommitKey(world.day, world.slot, person)) > 0;
 export function rivalPlanWord(world: World): { title: string; howTo: string } | null {
   // 抢客和撬客互斥：她抢得到能买的人就抢，抢不到才去撬熟客（beginSlot 里二选一）。
+  const who = rivalNameOf(world);
   if (rivalShakes(world).length)
-    return { title: "陆遥改去撬你的熟客", howTo: "本时段亲自接住她点名的这位；托单不算" };
+    return { title: `${who}改去撬你的熟客`, howTo: "本时段亲自接住她点名的这位；托单不算" };
   if (!rivalTargets(world).length) return null;
   return world.rivalPlan?.tactic === "compare"
-    ? { title: "陆遥拿货来比", howTo: "本时段亲自对症成交才挡得住；托单或只聊聊不够" }
-    : { title: "陆遥邀客去对面", howTo: "本时段接待或托同事照看；用托单守住后，下时段陆遥会比货" };
+    ? { title: `${who}拿货来比`, howTo: "本时段亲自对症成交才挡得住；托单或只聊聊不够" }
+    : { title: `${who}邀客去对面`, howTo: `本时段接待或托同事照看；用托单守住后，下时段${who}会比货` };
 }
 
 /** a 对 b 的冷暖：运行时改过的取 World.bonds，否则取 Person.bonds 的初始值，都没有是 0。 */
@@ -358,10 +360,13 @@ const heated = (heat: readonly HeatId[] | undefined, id: HeatId): boolean => hea
 export const startSamplesOf = (heat?: readonly HeatId[]): number => heated(heat, "thin-samples") ? START_SAMPLES / 2 : START_SAMPLES;
 /** 每晚品牌补几支。 */
 export const nightlySamplesOf = (heat?: readonly HeatId[]): number => heated(heat, "thin-samples") ? SAMPLES_PER_NIGHT / 2 : SAMPLES_PER_NIGHT;
+/** 眼下这一年的旋钮。第 4 级以后，年景里跟你过不去的那几条劲道减半（career.ts 的 yearResist）。 */
+const yearModsNow = (world: Pick<World, "qualities">) =>
+  yearModsOf(world, careerModsOf(world).yearResist);
 /** 这一刻起手有几支小样（年景「小样管得严」再少发一些）。 */
-export const startSamplesNow = (world: World): number => Math.max(0, startSamplesOf(world.heat) - yearModsOf(world).samples);
+export const startSamplesNow = (world: World): number => Math.max(0, startSamplesOf(world.heat) - yearModsNow(world).samples);
 /** 这一刻每晚补几支小样。 */
-export const nightlySamplesNow = (world: World): number => Math.max(0, nightlySamplesOf(world.heat) - yearModsOf(world).samples);
+export const nightlySamplesNow = (world: World): number => Math.max(0, nightlySamplesOf(world.heat) - yearModsNow(world).samples);
 /** 开局与换季往回折的那条基线台账。 */
 export const startComplianceOf = (heat?: readonly HeatId[]): number => heated(heat, "cold-ledger") ? COMPLIANCE_COLD_START : START_COMPLIANCE;
 /** 陆遥请走漏掉那一位的概率。 */
@@ -564,21 +569,27 @@ function clearWeekRule(world: World): World {
   for (const id of WEEK_IDS) delete qualities[weekKey(id)];
   return { ...world, qualities };
 }
-/** 这一刻的格值（培训周 15；升到正式 BA 以后每格多 5 点 —— 一格接一位客人，还能再照应一个人）。 */
-export const energySlotOf = (world: World): number => energyPerSlotOf(world.qualities, ENERGY_PER_SLOT) + careerModsOf(world).energy;
-/** 这一刻硬推一次的台账扣分（巡查周翻倍；年景「今年商场查得严」也是翻倍）。 */
-export const hardSellComplianceNow = (world: World): number => hardSellComplianceOf(world.qualities, HARD_SELL_COMPLIANCE) * yearModsOf(world).hardSell;
-/** 这一刻陆遥抢客的概率（自选加难那一档 + 年景「陆遥升柜长」+0.05 − 柜长以后你有人盯着 −0.05）。 */
+/** 这一刻的格值（培训周 15；升到正式 BA 以后每格多 5 点 —— 一格接一位客人，还能再照应一个人；
+ *  分支自己也可能再发一笔：区域督导的柜按人多人少给劲，维珞与自己的店多给 5 点）。 */
+export const energySlotOf = (world: World): number =>
+  energyPerSlotOf(world.qualities, ENERGY_PER_SLOT) + careerModsOf(world).energy + branchModsOf(world).energy;
+/** 这一刻硬推一次的台账扣分（巡查周翻倍；年景「今年商场查得严」也是翻倍；第 4 级以后那一条只翻一半）。 */
+export const hardSellComplianceNow = (world: World): number =>
+  hardSellComplianceOf(world.qualities, HARD_SELL_COMPLIANCE) * yearModsNow(world).hardSell;
+/** 这一刻对面抢客的概率（自选加难那一档 + 年景「陆遥升柜长」+0.05 − 柜长以后你有人盯着 −0.05
+ *  + 分支自己的那一笔：跳去维珞以后对面是周敏，他更狠）。 */
 export const poachChanceNow = (world: World): number =>
-  clamp(poachChanceOf(world.heat) + yearModsOf(world).poach - careerModsOf(world).poach, 0, 1);
-/** 这一刻同屏最多几位客人（周年庆多请了人 +1；柜长 +1）。 */
+  clamp(poachChanceOf(world.heat) + yearModsNow(world).poach - careerModsOf(world).poach
+    + branchModsOf(world).poach, 0, 1);
+/** 这一刻同屏最多几位客人（周年庆多请了人 +1；柜长 +1；分支与分区也各能加几个）。 */
 export const maxPresentCustomers = (world: World): number =>
-  MAX_PRESENT_CUSTOMERS + yearModsOf(world).guests + careerModsOf(world).guests;
+  MAX_PRESENT_CUSTOMERS + yearModsOf(world).guests + careerModsOf(world).guests + branchModsOf(world).guests;
 /** 这一刻她请走"看法低于多少"的人（对面忙碌周收到 20）。 */
 export const poachMaxOpinionNow = (world: World): number => poachMaxOpinionOf(world.qualities, POACH_MAX_OPINION);
 /** 这格的抢客意图在开场时公开；同分按人物表顺序，存档往返也不变。 */
 export function rivalCandidates(world: World, people: Person[]): Person[] {
-  if (!people.some(p => p.role === "rival" && p.id in world.present)) return [];
+  // 跟你抢客的那一位必须在场：默认陆遥，跳去维珞以后是老同事周敏。
+  if (!people.some(p => p.id === poacherIdOf(world) && p.id in world.present)) return [];
   // 两种招揽都必须留有正常成交窗口；在任一家刚买过都不能再算一笔。
   const comparing = qualityOf(world, RIVAL_COMPARE_NEXT) > 0;
   return people.filter(p => p.role === "customer" && POACH_ZONES.includes(world.present[p.id])
@@ -680,7 +691,13 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
   // 常驻：同事在柜台或员工通道，对面维珞的人在 rival 区，商场方在中庭。
   let staffAtCounter = 0;
   for (const person of people) {
-    if (person.role === "rival") { present[person.id] = "rival"; }
+    if (person.role === "rival") {
+      // 对面那一侧站着谁：默认维珞的陆遥；跳去维珞以后换成周敏（你带过的老同事），
+      // 陆遥改站你这一边 —— 她现在是你上司，不抢你的客。
+      if (person.id === poacherIdOf(w)) present[person.id] = "rival";
+      else if (person.id === "luyao") present[person.id] = "counter";
+      // 周敏在别的分支里不上场：他不是这一层的人。
+    }
     else if (person.role === "mall") { present[person.id] = "atrium"; }
     else if (person.role === "staff") {
       let r: number; [r, w] = roll(w);
@@ -750,7 +767,7 @@ export function beginSlot(world: World, people: Person[], festivals?: Festival[]
       product: quote.product, units: quote.units, amount: quote.amount, invited: prepared, ...(weekend ? { weekend: true } : {}) } };
     w = say(w, weekend
       ? `周末最后一单：${guest.name}到了${prepared ? "你的柜前，提前确认的时间派上了用场" : "对面，还能邀来比货"}。对面预计这单 ¥${quote.amount}，收工前才结账。`
-      : `陆遥约了${guest.name}在${appointmentTime(w, w)}来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
+      : `${rivalNameOf(w)}约了${guest.name}在${appointmentTime(w, w)}来试货，预计这单 ¥${quote.amount}。这时段结束才结账，你还有机会邀${ta(guest)}来比一比。`, [guest.id]);
     if (weekend && prepared && w.weekendOrder?.sponsor) {
       const arrival: Arrival = { person: guest.id, kind: "referral", source: w.weekendOrder.sponsor };
       w = say(w, describeArrival(arrival, people)!.scene, [guest.id, w.weekendOrder.sponsor], arrival);
@@ -913,7 +930,7 @@ export function ambient(world: World, people: Person[]): World {
   // 只结算开场公开的目标；没有预告的旧档等下一时段，不能突然抢走未公开的人。
   // 只从柜台和收银两个区里挑：在中庭闲逛、在休息区坐着的人本来就不是来买东西的，
   // 把她算成"你漏掉的一单"既说不通，也会让场上客人一多比分就必然输（名额是 7 位，精力只够接四五位）。
-  const rival = here.find(p => p.role === "rival");
+  const rival = here.find(p => p.id === poacherIdOf(w));
   if (rival) {
     for (const id of rivalTargets(w)) {
       const mark = personOf(people, id);
@@ -933,14 +950,14 @@ export function ambient(world: World, people: Person[]): World {
             w = addOpinion(w, mark.id, POACH_OPINION);
             w = remember(w, mark.id, "heard-rival-pitch", -1, PLAYER, rival.id);
             w = setQuality(w, `away:${mark.id}`, w.day);
-            // 被截走不是"今天她没来"那么轻：对面货全、不限精力，她在那边把单开满了。
+            // 被截走不是"今天她没来"那么轻：对面货全、不限精力，他在那边把单开满了。
             // 比分要有得输，玩家才知道自己漏掉的是钱，不是人次。
-            const sale = poachSale(visitPerson(w, mark));
+            const sale = poachSale(visitPerson(w, mark), branchModsOf(w).oldColleague);
             if (sale.units) w = setQuality({ ...w, rivalMoney: w.rivalMoney + sale.amount,
               rivalWins: w.rivalWins + 1 }, `rival-bought:${mark.id}`, w.day);
             if (sale.units) w = recordWeekendOutcome(w, mark.id, "rival", { product: sale.product, units: sale.units, amount: sale.amount, via: "poach" });
             const missed = w.rivalPlan?.tactic === "compare" ? `这次没给${mark.name}对症成交` : `你没顾上${mark.name}`;
-            w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面维珞：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
+            w = say(w, `${missed}，${rival.name}把${ta(mark)}请去了对面${rivalCounterWord(w)}：${sale.word}，今天不会再回来。`, [rival.id, mark.id]);
           }
         }
       }
@@ -1057,7 +1074,7 @@ function settleRivalBooking(world: World, people: Person[]): World {
     rivalMoney: world.rivalMoney + b.amount, rivalWins: world.rivalWins + 1,
     present: { ...world.present, [guest.id]: "rival" } }, `rival-bought:${guest.id}`, world.day);
   return say(recordWeekendOutcome(setQuality(w, `away:${guest.id}`, w.day), guest.id, "rival", { product: b.product, units: b.units, amount: b.amount, via: "booking", invited: b.invited }),
-    `${b.invited ? `${guest.name}比较后仍回到对面，` : ""}陆遥接完${b.weekend ? "周末那一单" : "自己的预约"}：${guest.name}带走 ${b.units} 件${SHELF[b.product].name}，对面进账 ¥${b.amount}。`, [guest.id]);
+    `${b.invited ? `${guest.name}比较后仍回到对面，` : ""}${rivalNameOf(w)}接完${b.weekend ? "周末那一单" : "自己的预约"}：${guest.name}带走 ${b.units} 件${SHELF[b.product].name}，对面进账 ¥${b.amount}。`, [guest.id]);
 }
 
 // —— 说书人 ——
@@ -1462,7 +1479,7 @@ export function doVerb(world: World, people: Person[], verb: Verb, targets: Pers
       if (rivalTargets(w).includes(bId!) && w.rivalPlan?.tactic !== "compare" && !rivalGuarded(w, bId!)) {
         w = setQuality(w, guardCommitKey(w.day, w.slot, bId!), 1);
         w = setQuality(w, RIVAL_COMPARE_NEXT, 1);
-        w = say(w, "陆遥看你托了单：下一时段会拿货来比，得亲自对症成交才能守住客人。", [bId!]);
+        w = say(w, `${rivalNameOf(w)}看你托了单：下一时段会拿货来比，得亲自对症成交才能守住客人。`, [bId!]);
       }
       // 托单先是照看；只有你此前问出过她的需求或卖过给她，同事才有足够信息替你开单。
       // 全柜一天最多一单，保守开一件，避免把陌生人随手交出去就自动得到正解。
@@ -1538,9 +1555,10 @@ export const bestFit = (person: Person): ShelfId => bestShelf(person);
 
 /** 对面那一单开多大：维珞不缺货、不限精力，按她自己的正解开单，件数仍受她的预算和用量上限约束。
  *  漏掉一位客人，账上少的就是这个数 —— 比分要算钱，不算人次。
- *  预算连一支都够不着的那几位，谁来都开不了单（units 为 0），人照样被请走。 */
-export function poachSale(person: Person): { product: ShelfId; units: number; amount: number; word: string } {
-  const product = bestFit(person);
+ *  预算连一支都够不着的那几位，谁来都开不了单（units 为 0），人照样被请走。
+ *  knowsHer：老同事那一档 —— 他知道你那几样要什么，开单往贵里走（richestShelf），比分因此更难看。 */
+export function poachSale(person: Person, knowsHer = false): { product: ShelfId; units: number; amount: number; word: string } {
+  const product = knowsHer ? richestShelf(person) : bestFit(person);
   // skin 是可选的（同事/对手没有诉求表）：没有这张表就没人能被说服，对面也开不了单。
   const units = shelfUnits(person, product, shelfFitTier(fitFor(person, product)), person.skin?.maxUnits ?? 0);
   const amount = units * SHELF[product].price;
@@ -1725,6 +1743,13 @@ export function endDay(world: World, people: Person[]): World {
     const settled = settleWeek(w);
     w = say(settled.world, settled.line, ["roman"]);
     w = clearWeekRule(w);
+    // 自己开店：每周日交一次房租。这是这一档的代价 —— 没人再报你的件数，房租照交。
+    // 放在结账之后：这一关的业绩是这一周赚到的，不能让房租把过关线拉走。
+    if (branchModsOf(w).rent > 0) {
+      w = { ...w, money: w.money - OWN_RENT_PER_WEEK,
+        qualities: { ...w.qualities, [RENT_PAID_KEY]: qualityOf(w, RENT_PAID_KEY) + OWN_RENT_PER_WEEK } };
+      w = say(w, `房租 ¥${OWN_RENT_PER_WEEK.toLocaleString("zh-CN")} 从柜上扣走了 —— 这铺面是你自己的，账也只你自己扛。`);
+    }
   }
   if (w.weekendOrder?.due === w.day && !w.weekendOrder.echoQueued) {
     const order = w.weekendOrder;
@@ -1876,6 +1901,10 @@ export function nextSeason(world: World, people: Person[], heat?: readonly HeatI
   if (freshYear && audit) {
     log.push({ day: 1, slot: 0, text: yearWordOf({ ...withYear, season }) });
     for (const line of careerAuditLines(audit)) log.push({ day: 1, slot: 0, text: line });
+    // 升到第 4 级：三条路摆出来（界面在这一屏上让玩家选一条）。
+    if (audit.passed && audit.next === 4) log.push({ day: 1, slot: 0, text: BRANCH_CHOICE_WORD });
+    // 第 4 级上没过：被换掉，这段职业生涯到此为止。
+    if (audit.replaced) log.push({ day: 1, slot: 0, text: CAREER_REPLACED_WORD });
   }
   const next: World = {
     seed: world.seed, season, day: 1, slot: 0, money: 0, rivalMoney: 0, rivalWins: 0,

@@ -24,7 +24,9 @@ import { batchStats, wordsOf } from "../src/world/content/batches.ts";
 import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { yearScenesOf, yearOfSeason, YEAR_SCENES, SEASONS_PER_YEAR } from "../src/world/years.ts";
-import { careerRankOf, RANK_NAME, careerEvalsOf, careerMaxPromotionsIn, careerCeiling, careerCeilingYear } from "../src/world/career.ts";
+import { careerRankOf, RANK_NAME, careerEvalsOf, careerMaxPromotionsIn, careerCeiling, careerCeilingYear, branchPending } from "../src/world/career.ts";
+import { BRANCHES, BRANCH_IDS, branchOf, chooseBranch, type CareerBranch } from "../src/world/branches.ts";
+import { DISTRICT_ZONES, chooseDistrict, type DistrictZone } from "../src/world/district.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
 
 type Style = "honest" | "pushy" | "social" | "random";
@@ -263,6 +265,9 @@ const burnOf = (style: Style, seed: string): RunBurn => {
   return b;
 };
 
+/** 这一副牌今天定在哪个柜（区域督导那一档）。null = 不在这一档。 */
+let simZone: DistrictZone | null = null;
+
 function playSeason(style: Style, w: World, people: Person[], storylets: Storylet[], festivals: Festival[], seasonNo: number, burn: RunBurn,
   onWeek?: (week: { rule: WeekId; my: number; rival: number }) => void): World {
   let weekBase = { money: w.money, rivalMoney: w.rivalMoney };
@@ -274,6 +279,8 @@ function playSeason(style: Style, w: World, people: Person[], storylets: Storyle
     if (isMonday(w.day)) weekBase = { money: w.money, rivalMoney: w.rivalMoney };
     for (let s = 0; s < 4; s++) {
       w = { ...w, slot: s as Slot };
+      // 区域督导：每天上午定一个柜，选完当天不再改。
+      if (s === 0 && simZone && branchOf(w) === "district") w = chooseDistrict(w, simZone);
       w = beginSlot(w, people, festivals);
       w = answerRequests(style, w, people); // 开门提的当场类委托，先答了再抽卡做动作
       // 节奏仪表（纯读）：进场这一刻手上有没有牌 —— 场上还点得到人、精力还够做最便宜的那件事。
@@ -415,12 +422,12 @@ const resultOf = (style: Style, seed: string, w: World): Result => {
 };
 const results: Result[] = [];
 /** 长线那一层的读数：每季末尾的年景（哪几条）与职级（升到几级），外加那一季的比分。 */
-type LongRow = { style: Style; seed: string; season: number; year: number; scenes: string[]; rank: number; money: number; rival: number };
+type LongRow = { style: Style; seed: string; season: number; year: number; scenes: string[]; rank: number; money: number; rival: number; branch: string };
 const longRows: LongRow[] = [];
 const pushLong = (style: Style, seed: string, season: number, w: World) =>
   longRows.push({ style, seed, season, year: yearOfSeason(season),
     scenes: yearScenesOf(w).map(id => YEAR_SCENES[id].knob), rank: careerRankOf(w),
-    money: w.money, rival: w.rivalMoney });
+    money: w.money, rival: w.rivalMoney, branch: branchOf(w) ?? "" });
 /** 主线本子（每种子一条）：幕号、本子上攒了几条、每条线收到哪种收法（0 = 一季过完还没弄清）。 */
 type Spine = { style: Style; seed: string; act: number; clues: number; ends: Record<string, number> };
 const spines: Spine[] = [];
@@ -456,9 +463,14 @@ const pushLevels = (style: Style, season: number, w: World) => {
 const pushDayUnits = (style: Style, season: number, w: World) => {
   for (let d = 1; d <= DAYS; d++) dayUnits.push({ style, season, day: d, units: w.qualities[soldUnitsKey(d)] ?? 0 });
 };
+/** 这副牌走哪条分支：按种子号轮着来 —— 三条都跑到，才看得出哪条更好。
+ *  区域督导每天定在哪个柜也按种子号轮：一天定一个，定完当天不再改。 */
+const branchFor = (i: number): CareerBranch => BRANCH_IDS[i % BRANCH_IDS.length];
+const zoneFor = (i: number): DistrictZone => DISTRICT_ZONES[i % DISTRICT_ZONES.length];
 for (const style of STYLES) {
   for (let i = 0; i < N; i++) {
     const seed = `sim-${i}`;
+    simZone = zoneFor(i);
     let w = playSeason(style, newWorld(seed, people), people, storylets, festivalsFor(1), 1, burnOf(style, seed),
       week => weekRows.push({ style, seed, season: 1, ...week }));
     exTallies.push({ style, tally: exchangeTally(w) });
@@ -469,7 +481,10 @@ for (const style of STYLES) {
     pushLevels(style, 1, w);
     pushLong(style, seed, 1, w);
     for (let k = 2; k <= SEASON_COUNT; k++) {
-      w = playSeason(style, nextSeason(w, people), people, storylets, festivalsFor(k), k, burnOf(style, seed),
+      w = nextSeason(w, people);
+      // 第 4 级到了就选一条分支（真人那一屏是三选一，模拟器按种子号轮着选）。
+      if (branchPending(w)) w = chooseBranch(w, branchFor(i));
+      w = playSeason(style, w, people, storylets, festivalsFor(k), k, burnOf(style, seed),
         week => weekRows.push({ style, seed, season: k, ...week }));
       exTallies.push({ style, tally: exchangeTally(w) });
       reqTallies.push({ style, ...tallyRequests(w) });
@@ -534,11 +549,30 @@ if (longRows.some(r => r.year >= 2)) {
       if (!rs.length) continue;
       const ranks = rs.map(r => r.rank);
       const top = rs.filter(r => r.rank >= 3).length, mid = rs.filter(r => r.rank === 2).length;
+      const branchCount = new Map<string, number>();
+      for (const r of rs) if (r.branch) branchCount.set(r.branch, (branchCount.get(r.branch) ?? 0) + 1);
+      const branchWord = [...branchCount].map(([k, v]) => `${BRANCHES[k as CareerBranch]?.name ?? k}×${v}`).join("，");
       console.log(`    ${style.padEnd(8)} 领先 ${rs.filter(r => r.money > r.rival).length}/${rs.length}`
-        + ` · 职级 ${dist(ranks)} · 升到正式 BA ${mid} 份 / 柜长 ${top} 份`);
+        + ` · 职级 ${dist(ranks)} · 升到正式 BA ${mid} 份 / 柜长 ${top} 份`
+        + (branchWord ? ` · 分支 ${branchWord}` : ""));
     }
   }
   console.log(`  职级名字：${Object.entries(RANK_NAME).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
+
+  // 第 4 级那三条路：走到分支以后那些季的读数 —— 钱、比分，以及有多少份走了它。
+  const branchRows = longRows.filter(r => r.branch);
+  if (branchRows.length) {
+    console.log("\n第 4 级的三条路（走到分支以后那些季）:");
+    for (const id of BRANCH_IDS) {
+      const rs = branchRows.filter(r => r.branch === id);
+      if (!rs.length) continue;
+      const ahead = rs.filter(r => r.money > r.rival).length;
+      const behind = rs.filter(r => r.money < r.rival).length;
+      const styles = [...new Set(rs.map(r => r.style))];
+      console.log(`  ${BRANCHES[id].name.padEnd(6)} ${String(rs.length).padStart(4)} 季 · 钱 ${dist(rs.map(r => r.money))}`
+        + ` · 领先 ${ahead} / 落后 ${behind} · 走它的打法：${styles.join("、")}`);
+    }
+  }
 
   // 长线的经验判据（第 49 轮「下一刀」里留的账：「同一副牌连玩十年，最多升几级」）：
   // 「十年」是 40 季，不是 10 季 —— 上一版读数把这两个数混成了一件事，
@@ -583,7 +617,8 @@ if (longRows.some(r => r.year >= 2)) {
       console.log(`  实测最高第 ${maxRank} 级；爬得上去的打法：${climbed.join("、")}`);
       const idle = evalsTen - (ceilYear ? careerEvalsOf(SEASONS_PER_YEAR * ceilYear) : 0);
       if (idle > 0) {
-        console.log(`  ⇒ 第 ${(ceilYear ?? 0) + 1}~${TEN_YEARS} 年还有 ${idle} 次评估，职级一格不会再动 —— 这 ${idle} 次评估是空转`);
+        console.log(`  ⇒ 第 ${(ceilYear ?? 0) + 1}~${TEN_YEARS} 年还有 ${idle} 次评估，职级一格不会再动 ——`
+          + ` 但那不是空转：考的是「守住这个位置」，过了接着走，没过被换掉`);
       }
     }
   } else {

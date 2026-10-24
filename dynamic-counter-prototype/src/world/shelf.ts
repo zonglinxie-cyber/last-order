@@ -264,6 +264,16 @@ export const isPerfectPair = (person: Person, a: ShelfId, b: ShelfId): boolean =
 export const bestShelf = (person: Person): ShelfId =>
   SHELF_IDS.reduce((x, y) => (fitOfPerson(person, y) > fitOfPerson(person, x) ? y : x));
 
+/** 她买得起、而且真的对症的那几支里，最贵的那一支。
+ *  老同事那一档用的：他自己知道她那几样要什么，开单就往贵里走 —— 不是坑她，是把她的钱袋打开。
+ *  没有对症的那支就退回她自己最准的那支 —— 他也得卖她能接受的东西。 */
+export const richestShelf = (person: Person): ShelfId => {
+  if (!person.skin) return bestShelf(person);
+  const fit = SHELF_IDS.filter(id => fitOfPerson(person, id) >= POSITIVE_FIT && affordableUnits(person, id) > 0);
+  if (!fit.length) return bestShelf(person);
+  return fit.reduce((x, y) => (SHELF[y].price > SHELF[x].price ? y : x));
+};
+
 /** 她的预算和用量上限允许她带走几件（不看适配，界面那句"这价最多开几件"读它）。 */
 export const affordableUnits = (person: Person, id: ShelfId): number =>
   person.skin ? Math.min(person.skin.maxUnits, Math.floor(person.skin.budget / SHELF[id].price)) : 0;

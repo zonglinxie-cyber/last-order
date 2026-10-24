@@ -333,7 +333,8 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(allies).toContainText("记着你替她保守了秘密");
 
       // 比分：三本账念完，对面那一行跟着念 —— 这一季赢了多少要说得出对比。
-      await expect(recap).toContainText("对面维珞这一季做成 9 单、进账 ¥21,400 —— 比对面多 ¥2,600");
+      // 对手那一栏念的是「对面那位」的名字：跳去维珞以后对面是老同事周敏，名字跟着换。
+      await expect(recap).toContainText("对面陆遥这一季做成 9 单、进账 ¥21,400 —— 比对面多 ¥2,600");
 
       // 回顾页不许横向溢出。
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

@@ -8,6 +8,7 @@ import { endingHint } from "../ending-hints.ts";
 import { heatStampWord } from "../heat.ts";
 import { ARC_PEOPLE, arcLandings, emptyWorldProgress, parseWorldProgress, readWorldProgress, threadLandings, WORLD_PROGRESS_KEY, type WorldProgress } from "../progress.ts";
 import { CAREER_RANKS, RANK_LINE, RANK_NAME } from "../career.ts";
+import { BRANCHES, BRANCH_IDS, isBranchId } from "../branches.ts";
 import { YEAR_SCENES, YEAR_IDS } from "../years.ts";
 import { CLUES, CLUE_THREADS, PEOPLE, STORYLETS } from "../content/index.ts";
 import type { PersonId } from "../types.ts";
@@ -29,8 +30,17 @@ function loadProgress(): WorldProgress {
   }
 }
 
-export function WorldArchive({ onBack, initialTab = "people", currentRun }: { onBack: () => void; initialTab?: Tab; currentRun?: string }) {
+export function WorldArchive({ onBack, initialTab = "people", currentRun, rivalName }: { onBack: () => void; initialTab?: Tab; currentRun?: string; rivalName?: string }) {
   const progress = useMemo(loadProgress, []);
+  const bestRank = Math.min(CAREER_RANKS.length, Math.max(1, progress.bestCareerRank ?? 1));
+  const bestBranch = progress.bestCareerBranch && isBranchId(progress.bestCareerBranch)
+    ? progress.bestCareerBranch : null;
+  // 第 4 级的名字与手感句按分支走 —— 到过哪条线，档案里就写哪条线。
+  const rankName = (rank: number): string =>
+    rank >= 4 ? (bestBranch ? BRANCHES[bestBranch].name : "第 4 级") : RANK_NAME[rank as 1 | 2 | 3];
+  const rankLine = (rank: number): string =>
+    rank >= 4 ? (bestBranch ? BRANCHES[bestBranch].line : RANK_LINE[4]) : RANK_LINE[rank as 1 | 2 | 3];
+  const bestRankName = bestRank >= 4 && bestBranch ? BRANCHES[bestBranch].name : RANK_NAME[bestRank as 1 | 2 | 3];
   const [tab, setTab] = useState<Tab>(initialTab);
   const metCount = progress.seen.length;
   const landedCount = ARC_PEOPLE.reduce((n, id) => n + (progress.arcEnds[id]?.length ?? 0), 0);
@@ -61,7 +71,7 @@ export function WorldArchive({ onBack, initialTab = "people", currentRun }: { on
     </div>
 
     <MobileScroll className="archive-scroll world-archive-scroll">
-      {tab === "rival" && <RivalHistoryList records={progress.rivalSeasons} currentRun={currentRun} />}
+      {tab === "rival" && <RivalHistoryList records={progress.rivalSeasons} currentRun={currentRun} name={rivalName} />}
       {tab === "people" && <section className="archive-list">{PEOPLE.map(person => {
         const seen = progress.seen.includes(person.id);
         return <article className={"archive-card" + (seen ? "" : " unmet")} key={person.id}>
@@ -138,20 +148,27 @@ export function WorldArchive({ onBack, initialTab = "people", currentRun }: { on
       {tab === "career" && <section className="wa-arcs">
         <p className="wa-line wa-secret">
           <small>到过的最高一级</small>
-          <span>{RANK_NAME[(progress.bestCareerRank ?? 1) as 1 | 2 | 3]}</span>
+          <span>{bestRankName}</span>
         </p>
         <p className="wa-line wa-secret">
           <small>怎么升</small>
-          <span>一年一次年终评估：柜位、台账、这一年赢过对面几季、客情四项都过线才升一级。只升不降。</span>
+          <span>一年一次年终评估：柜位、台账、这一年赢过对面几季、客情四项都过线才升一级。只升不降。到第 4 级以后不再往上升 —— 考的是"守住这个位置"，过了接着走，没过就被换掉。</span>
         </p>
         {CAREER_RANKS.map(rank => {
-          const reached = (progress.bestCareerRank ?? 1) >= rank;
+          const reached = bestRank >= rank;
           return <article className="wa-arc" key={rank}>
-            <h3>{reached ? RANK_NAME[rank] : "？？？"}</h3>
+            <h3>{reached ? rankName(rank) : "？？？"}</h3>
             <p className="wa-line wa-secret"><small>{reached ? "升上去以后" : "还没站到这一级"}</small>
-              <span>{reached ? RANK_LINE[rank] : "这一级的做法，你还没摸过。"}</span></p>
+              <span>{reached ? rankLine(rank) : "这一级的做法，你还没摸过。"}</span></p>
           </article>;
         })}
+        {bestRank >= 4 && <article className="wa-arc">
+          <h3>第 4 级 · 三条路</h3>
+          <p className="wa-line wa-secret"><small>选一条，往后的日子按那本账过</small>
+            <span>{BRANCH_IDS.map(id => BRANCHES[id].name).join(" / ")}</span></p>
+          {BRANCH_IDS.map(id => <p className="wa-line" key={id}><small>{BRANCHES[id].name}</small>
+            <span>{BRANCHES[id].line}</span></p>)}
+        </article>}
         <article className="wa-arc">
           <h3>年景</h3>
           <p className="wa-line wa-secret"><small>第 1 年之后，一年一换</small>

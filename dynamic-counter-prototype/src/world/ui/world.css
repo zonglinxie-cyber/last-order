@@ -490,3 +490,43 @@
 .handoff-choice small { color:#d9c3a6; font-size:12px; line-height:1.55; }
 .handoff-choice:disabled { opacity:.55; }
 .handoff-choice:focus-visible { outline:2px solid #ffe2a9; outline-offset:2px; }
+
+/* —— 第 4 级：三条路、职业终局、今天在哪个柜 —— */
+/* 三选一那一屏：路摆出来的时候别的事都做不成，所以整屏只放这三张卡。 */
+.world-branch-screen { align-items:center; justify-content:center; padding:16px; background:radial-gradient(120% 80% at 50% 0,#2a1a16,#120b0b 70%); }
+.world-branch-card { width:100%; max-width:420px; max-height:100%; overflow:auto; padding:18px 16px; border:1px solid #f0cf912e; border-radius:18px; background:linear-gradient(145deg,rgba(32,17,18,.94),rgba(16,9,9,.97)); box-shadow:0 18px 40px #0009; }
+.world-branch-eyebrow { margin:0; color:#8f7a66; font-size:12px; letter-spacing:.14em; }
+.world-branch-card h1 { margin:2px 0 6px; color:#ffe8b6; font:700 26px 'Noto Serif SC',serif; letter-spacing:.1em; }
+.world-branch-copy { margin:0 0 12px; color:#d8bfa6; font-size:13px; line-height:1.6; }
+.world-branch-options { display:flex; flex-direction:column; gap:10px; }
+.world-branch-option { display:flex; flex-direction:column; gap:4px; width:100%; min-height:44px; padding:11px 12px; border:1px solid #f0cf9133; border-radius:12px; background:#1e1412; color:#efd6b0; text-align:left; }
+.world-branch-option b { color:#f0c978; font:700 15px 'Noto Serif SC',serif; }
+.world-branch-option span { color:#e8d5bd; font-size:12px; line-height:1.6; }
+.world-branch-option small { color:#a8907a; font-size:11px; line-height:1.5; }
+.world-branch-option:active { background:#2a1c18; }
+.world-branch-note { margin:12px 0 0; color:#8f7a66; font-size:11px; line-height:1.5; }
+
+/* 职业终局：这一段职业生涯怎么收场。 */
+.world-career-screen { align-items:center; justify-content:center; padding:16px; background:radial-gradient(120% 80% at 50% 0,#241614,#100909 70%); }
+.world-career-card { width:100%; max-width:420px; padding:20px 18px; border:1px solid #f0cf912e; border-radius:18px; background:linear-gradient(145deg,rgba(32,17,18,.95),rgba(14,8,8,.97)); box-shadow:0 18px 40px #0009; }
+.world-career-eyebrow { margin:0; color:#8f7a66; font-size:12px; letter-spacing:.14em; }
+.world-career-card h1 { margin:4px 0 10px; color:#ffe8b6; font:700 24px 'Noto Serif SC',serif; }
+.world-career-body { margin:0 0 16px; color:#d8bfa6; font-size:13px; line-height:1.8; }
+.world-career-actions { display:flex; flex-direction:column; gap:8px; }
+.world-career-actions .world-ghost { margin-top:0; }
+
+/* 今天在哪个柜：每天早上定一个，定完当天不再改。 */
+.world-district { flex:0 0 auto; z-index:29; padding:5px 12px 7px; border-bottom:1px solid #f0cf9122; background:#1c1311f0; }
+.world-district-head { display:flex; align-items:baseline; gap:8px; }
+.world-district-head b { color:#f0c978; font:700 12px 'Noto Serif SC',serif; }
+.world-district-head span { color:#8f7a66; font-size:11px; }
+.world-district p { margin:2px 0 4px; color:#d8bfa6; font-size:12px; line-height:1.5; }
+.world-district-row { display:flex; gap:8px; }
+.world-district-btn { flex:1 1 0; min-height:44px; border:1px solid #f0cf9133; border-radius:10px; background:#241a17; color:#e8d5bd; font:600 13px 'Noto Serif SC',serif; }
+.world-district-btn.is-on { border-color:#f0c978; background:#3a2a1e; color:#ffe8b6; }
+.world-district-btn:disabled { opacity:.45; }
+
+/* 职级那一档：第 4 级走完一遍以后的一句提示。 */
+.career-done { margin-top:6px; color:#a8dcb0; font-size:12px; line-height:1.5; }
+/* 季末那本账：自己开店时多一行房租。 */
+.recap-rent { color:#e8b6c0; }

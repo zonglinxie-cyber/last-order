@@ -11,6 +11,7 @@ import {
 import { drawIndex, drawWeighted } from "./rng.ts";
 import { cleanWeightOf } from "./weeks.ts";
 import { ta, taOf } from "./pronoun.ts";
+import { branchModsOf, rivalNameOf } from "./branches.ts";
 import type { Person, PersonId, RequestKind, RequestState, Slot, World, WorldRequest } from "./types.ts";
 import { PLAYER } from "./types.ts";
 
@@ -114,6 +115,8 @@ const TEMPLATES: Template[] = [
     kind: "quota", weight: 3,
     drafts: (w) => {
       if (!reachableNow(w, "roman")) return [];
+      // 自己开店：罗曼那本件数账不再有人报给你 —— 这条分支的代价是房租，不是件数。
+      if (!branchModsOf(w).quota) return [];
       const n = quotaTarget(w);
       return [{
         by: "roman", kind: "quota", n,
@@ -137,7 +140,7 @@ const TEMPLATES: Template[] = [
           by: "suman" as PersonId, kind: "keep" as const, target: p.id,
           text: `看住${p.name}，别叫对面请走`,
           reward: "苏蔓记你一个人情",
-          log: `苏蔓把你拉到一边：${p.name}今天会来，帮我看住${ta(p)}，别叫陆遥请走。`,
+          log: `苏蔓把你拉到一边：${p.name}今天会来，帮我看住${ta(p)}，别叫${rivalNameOf(w)}请走。`,
         }));
     },
   },

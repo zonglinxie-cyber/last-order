@@ -4,7 +4,8 @@
 // 规则口径见 docs/人情场设计.md；读的是 engine 写进 World 的 quality 旗，不改引擎。
 import { ENDINGS } from "./ending.ts";
 import { HEAT_MAX } from "./heat.ts";
-import { careerRankOf } from "./career.ts";
+import { CAREER_RANKS, careerRankOf } from "./career.ts";
+import { branchOf, isBranchId } from "./branches.ts";
 import { SEASON_WEEKS, WEEK_STARS_MAX, seasonStarsOf } from "./target.ts";
 import { CLUE_PREFIX } from "./engine.ts";
 import { CLUE_THREADS, PEOPLE, isClueId, isThreadId, threadKey } from "./content/index.ts";
@@ -67,8 +68,10 @@ export type WorldProgress = {
   bestSeasonStars: number;
   /** 每段经历收季后的真实对局；缺失的旧季不推断、不补零。 */
   rivalSeasons: RivalSeason[];
-  /** 到过的最高职级（职业阶梯：1 新人 BA / 2 正式 BA / 3 柜长）。只升不降；旧档案缺这个键按 1 读。 */
+  /** 到过的最高职级（职业阶梯：1 新人 BA / 2 正式 BA / 3 柜长 / 4 分支）。只升不降；旧档案缺这个键按 1 读。 */
   bestCareerRank?: number;
+  /** 到过的第 4 级分支（区域督导／维珞／自己的店）—— 档案里那一格要写分支的名字。 */
+  bestCareerBranch?: string;
 };
 
 export const emptyWorldProgress = (): WorldProgress =>
@@ -149,6 +152,8 @@ export function observeWorldProgress(progress: WorldProgress, world: World, endi
     bestSeasonStars,
     rivalSeasons: recordRivalSeason(progress.rivalSeasons, endingId && ENDING_IDS.has(endingId) ? closedRivalSeason(world) : null),
     bestCareerRank: Math.max(progress.bestCareerRank ?? 1, careerRankOf(world)),
+    ...(branchOf(world) ? { bestCareerBranch: branchOf(world) as string }
+      : progress.bestCareerBranch ? { bestCareerBranch: progress.bestCareerBranch } : {}),
   };
 }
 
@@ -208,7 +213,10 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     && !(Number.isInteger(parsed.bestSeasonStars) && (parsed.bestSeasonStars as number) >= 0 && (parsed.bestSeasonStars as number) <= starsCap)) return null;
   // 职级：旧档案没有这一格，按 1 读；有这一格就得是目录里那一档。
   if (parsed.bestCareerRank !== undefined
-    && !(Number.isInteger(parsed.bestCareerRank) && (parsed.bestCareerRank as number) >= 1 && (parsed.bestCareerRank as number) <= 3)) return null;
+    && !(Number.isInteger(parsed.bestCareerRank) && (parsed.bestCareerRank as number) >= 1 && (parsed.bestCareerRank as number) <= CAREER_RANKS.length)) return null;
+  // 第 4 级的分支：旧档案没有这一格，按没有读；有这一格就必须是那三条之一。
+  if (parsed.bestCareerBranch !== undefined
+    && !(typeof parsed.bestCareerBranch === "string" && isBranchId(parsed.bestCareerBranch))) return null;
 
   const best = parsed.bestOpinion as Record<PersonId, number>;
   const worst = parsed.worstOpinion as Record<PersonId, number>;
@@ -230,6 +238,7 @@ export function parseWorldProgress(raw: string | null): WorldProgress | null {
     bestSeasonStars: (parsed.bestSeasonStars as number | undefined) ?? 0,
     rivalSeasons: ((parsed.rivalSeasons as RivalSeason[] | undefined) ?? []).map(r => ({ ...r })),
     bestCareerRank: (parsed.bestCareerRank as number | undefined) ?? 1,
+    ...(parsed.bestCareerBranch ? { bestCareerBranch: parsed.bestCareerBranch as string } : {}),
   };
 }
 

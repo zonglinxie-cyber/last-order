@@ -19,6 +19,7 @@ import { PEOPLE, STORYLETS, festivalsFor } from "../content/index.ts";
 import { ta } from "../pronoun.ts";
 import { GoalStrip, LevelResult, RoutesSheet, SeasonLevels, weekGapWord } from "./Levels.tsx";
 import { YearStrip, CareerCard, careerWord } from "./YearStrip.tsx";
+import { BranchChoice, CareerEndPanel, DistrictPicker } from "./BranchPanel.tsx";
 import { CARE_STEPS, GUARD_RATE_STEPS, GUARD_STEPS, ROUTE_WORD, WEEK_EXCEED_RATE, weekDaysLeft, weekGuardedPeople, weekGoalWord, weekLevelWord, weekResultOf, weekStarsKey } from "../target.ts";
 import { readWorldProgress } from "../progress.ts";
 import { RivalSeasonRecap } from "./RivalHistory.tsx";
@@ -32,6 +33,9 @@ import { ConsultPanel, SaleReceipt } from "./ConsultPanel.tsx";
 import { appointmentTime, currentArrival, publicAppointments } from "../arrivals.ts";
 import { CONTACT_INVITE_ENERGY, contactInviteBlock, inviteContact, planContactInvite } from "../engine.ts";
 import { rivalBookingNow } from "../rival-business.ts";
+import { branchBalanceOf, branchOf, chooseBranch, rivalNameOf, OWN_RENT_PER_SEASON } from "../branches.ts";
+import { chooseDistrict, type DistrictZone } from "../district.ts";
+import { branchPending, careerContinued, careerDone, careerEnded, keepGoing } from "../career.ts";
 import { currentWeekendOrder, WEEKEND_RESULT, WEEKEND_SPONSOR_RESPONSE } from "../weekend-orders.ts";
 import { WeekendOrderSheet, WeekendReview } from "./WeekendOrder.tsx";
 import { HandoffSheet } from "./HandoffSheet.tsx";
@@ -49,7 +53,7 @@ import {
 } from "./coach.ts";
 import { guestKindWord, momentWord, newGuestWord, opinionWord, scoreBrief, scoreWord, SLOT_WORD, verbsEmptyWord } from "./words.ts";
 import { byPriority, momentAnchor, momentSound, worldMoments, type Moment } from "./cues.ts";
-import { seasonEnding } from "../ending.ts";
+import { careerEndingOf, seasonEnding } from "../ending.ts";
 import { HEAT_MAX, HEAT_RULES, isHeatId, type HeatId } from "../heat.ts";
 import { weekNoOf } from "../weeks.ts";
 import { commitWorldProgress } from "../progress.ts";
@@ -158,7 +162,8 @@ const runPipeline = (w: World, deferStory = false): { world: World; drawn: Drawn
 const nameOf = (id: PersonId) => PEOPLE.find(p => p.id === id)?.name ?? id;
 const festivalName = (festivals: Festival[], id?: string) => festivals.find(f => f.id === id)?.name;
 const shorten = (text: string) => (text.length > 30 ? `${text.slice(0, 29)}…` : text);
-const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
+// 负数（退款、自己开店先垫的房租）写成「−¥2,250」，不是「¥-2,250」。
+const yuan = (n: number) => n < 0 ? `−¥${Math.abs(n).toLocaleString("zh-CN")}` : `¥${n.toLocaleString("zh-CN")}`;
 
 /** 站在哪一区的人各就各位：同事/对手/商场方站前段，顾客站后段，同区按 id 排稳定序。 */
 /** 员工通道里的同事、对手、商场方不画在地图上，收进那枚牌子（BACKROOM_CHIP）。 */
@@ -807,7 +812,7 @@ export default function WorldGame() {
           <button className="world-archive-entry" type="button" onClick={() => setArchiveOpen(true)}>档案</button>
         </div>
       </section>
-      {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} />}
+      {archiveOpen && <WorldArchive onBack={() => setArchiveOpen(false)} rivalName={rivalNameOf(world)} />}
     </div>;
   }
 
@@ -915,7 +920,8 @@ export default function WorldGame() {
             <span><small>柜位</small><b>{recap.stats.standing.value}</b><em>{recap.stats.standing.line}</em></span>
             <span><small>台账</small><b>{recap.stats.compliance.value}</b><em>{recap.stats.compliance.line}</em></span>
           </div>
-          <p className="recap-score">对面维珞这一季做成 {world.rivalWins} 单、进账 {yuan(world.rivalMoney)} —— {scoreWord(world.money, world.rivalMoney)}。</p>
+          <p className="recap-score">对面{rivalNameOf(world)}这一季做成 {world.rivalWins} 单、进账 {yuan(world.rivalMoney)} —— {scoreWord(world.money, world.rivalMoney)}。</p>
+          {branchOf(world) === "own" && <p className="recap-score recap-rent">这一季的房租 ¥{OWN_RENT_PER_SEASON.toLocaleString("zh-CN")} 已经从柜上扣走了 —— 结余 {yuan(branchBalanceOf(world))}。</p>}
         </section>
       </main></MobileScroll>
       <div className="report-foot recap-foot">
@@ -926,7 +932,7 @@ export default function WorldGame() {
           <button className="world-ghost" type="button" onClick={startNew}>重开一季</button>
         </div>
       </div>
-      {archiveOpen && <WorldArchive initialTab={rivalArchive ? "rival" : "people"} currentRun={world.seed}
+      {archiveOpen && <WorldArchive initialTab={rivalArchive ? "rival" : "people"} currentRun={world.seed} rivalName={rivalNameOf(world)}
         onBack={() => { setArchiveOpen(false); setRivalArchive(false); }} />}
     </div>;
   }
@@ -997,6 +1003,21 @@ export default function WorldGame() {
   });
   const rivalShakeIds = new Set(rivalShakes(world));
 
+  // 第 4 级：三条路摆出来的那一屏。选完才往下走 —— 这一屏挡着，玩不了别的。
+  if (branchPending(world)) {
+    return <BranchChoice world={world} onPick={id => { sfx("card"); setWorld(w => chooseBranch(w, id)); }} />;
+  }
+  // 被换掉：这段职业生涯到此为止，剩下一屏收场的话。
+  const careerEnd = careerEndingOf(world);
+  if (careerEnded(world) && careerEnd) {
+    return <CareerEndPanel title={careerEnd.title} body={careerEnd.body} onRestart={startNew} />;
+  }
+  // 走完了一遍：判词给出来，但这一趟还可以接着干下去（收摊开新局也行）。
+  if (careerDone(world) && careerEnd && !careerContinued(world)) {
+    return <CareerEndPanel title={careerEnd.title} body={careerEnd.body} onRestart={startNew}
+      canKeepGoing onKeepGoing={() => { sfx("tap"); setWorld(w => keepGoing(w)); }} />;
+  }
+
   const booking = rivalBookingNow(world);
   const bookingPerson = booking && !booking.outcome && booking.person in world.present ? PEOPLE.find(p => p.id === booking.person) : undefined;
   const bookingBlock = rivalInviteBlock(world);
@@ -1009,7 +1030,9 @@ export default function WorldGame() {
       <div className="world-bar-info">
         <div className="world-bar-summary">
           <b>第 {world.season} 季 · 第 {world.day} 天 · {SLOT_WORD[world.slot]} · {careerWord(world)}{world.festival ? ` · ${festivalName(festivalsFor(world.season), world.festival)}` : ""}</b>
-          <div className="world-bar-score"><span className={lit.money ? "world-money is-hit" : "world-money"}>我方 {yuan(world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span></div>
+          <div className="world-bar-score"><span className={lit.money ? "world-money is-hit" : "world-money"}
+            title={branchOf(world) === "own" ? `进账 ${yuan(world.money)} − 房租 ${yuan(world.money - branchBalanceOf(world))}` : undefined}
+            >{branchOf(world) === "own" ? "结余" : "我方"} {yuan(branchOf(world) === "own" ? branchBalanceOf(world) : world.money)}</span><span className={`world-score${lit.score ? ` ${lit.score}` : ""}`}>{scoreBrief(world.rivalMoney)}</span></div>
         </div>
         <div className="world-bar-resources"><span>精力 {Math.round(world.energy)}</span><span>小样 {world.samples}</span></div>
       </div>
@@ -1020,7 +1043,9 @@ export default function WorldGame() {
     </header>
     <GoalStrip world={world} lit={lit.goal || !!bump} bump={bump} onOpen={() => { sfx("tap"); setRoutesOpen(true); }} />
     <YearStrip world={world} />
-    {rivalWord && rivalMarks.length > 0 && <section className="world-rival-plans" aria-label="陆遥的公开动作">
+    {branchOf(world) === "district" && <DistrictPicker world={world}
+      onPick={(z: DistrictZone) => { sfx("tap"); setWorld(w => chooseDistrict(w, z)); }} />}
+    {rivalWord && rivalMarks.length > 0 && <section className="world-rival-plans" aria-label={`${rivalNameOf(world)}的公开动作`}>
       {rivalMarks.length > 1 && <p className="world-rival-choice">同时盯上两位 · 精力 {Math.round(world.energy)} · 先顾谁？</p>}
       {rivalMarks.map(mark => {
         const held = rivalGuarded(world, mark.id);
@@ -1164,7 +1189,7 @@ export default function WorldGame() {
       onClose={() => setReqSeenDay(world.day)} />}
     {routesOpen && <RoutesSheet world={world} onClose={() => setRoutesOpen(false)}
       onHistory={() => { setRoutesOpen(false); setRivalArchive(true); setArchiveOpen(true); }} />}
-    {archiveOpen && <WorldArchive initialTab="rival" currentRun={world.seed}
+    {archiveOpen && <WorldArchive initialTab="rival" currentRun={world.seed} rivalName={rivalNameOf(world)}
       onBack={() => { setArchiveOpen(false); setRivalArchive(false); }} />}
     {weekendOpen && weekendPerson && <WeekendOrderSheet world={world} person={weekendPerson} people={PEOPLE}
       onPrepare={sponsor => setWorld(prepareWeekendOrder(world, PEOPLE, sponsor))} onClose={() => setWeekendOpen(false)} />}

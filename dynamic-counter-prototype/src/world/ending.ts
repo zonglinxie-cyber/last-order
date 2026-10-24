@@ -3,6 +3,8 @@
 // 好坏由下标推出来，不写在每张上：手写 rank 在插一张卡时必然漏改后面每一位，而漏改是静默的。
 import { seasonSummary, type SeasonSummary } from "./engine.ts";
 import { MAINLINE_ACT_KEY, MAINLINE_THREAD, threadLandedSeason, threadLanding } from "./content/clues.ts";
+import { branchOf } from "./branches.ts";
+import { CAREER_DONE_KEY, CAREER_ENDED_KEY } from "./career.ts";
 import type { Person, PersonId, World } from "./types.ts";
 import { SEASON_DAYS } from "./types.ts";
 
@@ -282,6 +284,50 @@ const CATALOG: Array<SeasonEnding & { when: Gate }> = [
 ];
 
 export const ENDINGS: readonly SeasonEnding[] = CATALOG.map(({ id, title, body }) => ({ id, title, body }));
+
+// —— 职业终局 ——
+// 一段职业生涯怎么收场，跟一季的结局不是一回事：季末的判词判的是这一季，
+// 职业终局判的是这一整段。第 4 级以后有两种收法：
+//   被换掉：走分支以后某次年终评估没过 —— 你被撤了，这条线到此为止；
+//   走完：在分支下连着过了两关 —— 这条线你走完了一遍（可以收摊开新局，也可以接着干）。
+// 每条分支各有一句 —— 区域督导/维珞/自己的店，收场的话本来就不一样。
+export type CareerEnding = { id: string; title: string; body: string };
+
+export const CAREER_ENDINGS: Record<string, CareerEnding> = {
+  "district-replaced": {
+    id: "district-replaced", title: "三个柜都不归你了",
+    body: "楼里那三个柜，你轮了整整一轮，最后连排班表上都没有你的名字。罗曼把单子收回去的时候没抬头 —— 这一层照旧开着，只是柜后站的不是你。",
+  },
+  "district-done": {
+    id: "district-done", title: "三个柜都走了一遍",
+    body: "东柜、中庭、西柜 —— 每一排你都站过，知道哪一排的客人手里松，哪一排最耗你的力气。下一趟让你带哪一层，你已经知道该怎么排班。",
+  },
+  "weiluo-replaced": {
+    id: "weiluo-replaced", title: "维珞那边把你调走了",
+    body: "周敏那句「这批熟客我接」比你快了一步。你在维珞站了一年，柜位表上那一栏最后换成了别人的名字。走的时候陆遥说了句客气话，你没听进去。",
+  },
+  "weiluo-done": {
+    id: "weiluo-done", title: "维珞这一趟你走完了",
+    body: "你跟周敏抢了一年同一批客人，谁都没赢干净。收摊那晚陆遥把两份账摊在柜上 —— 你才知道自己那一年，其实比你自己以为的赢得多。",
+  },
+  "own-replaced": {
+    id: "own-replaced", title: "铺子黄了",
+    body: "房租按周交，柜上的人按月走。第四个周日的账对不上，你把那面镜子从墙上摘下来 —— 门头还挂着你的名字，只是再没有人推门进来。",
+  },
+  "own-done": {
+    id: "own-done", title: "这间铺子你开下来了",
+    body: "没有罗曼报的数，没有陆遥抢的人，只有一间铺子，和每个周日要交的房租。第一年交完最后一次，你把门锁上，发现自己还在算下一季该进多少货。",
+  },
+};
+
+/** 眼下这段职业生涯的收场（没有就是 null）。被换掉优先于走完 —— 被换掉才是真的结束。 */
+export function careerEndingOf(world: World): CareerEnding | null {
+  const branch = branchOf(world);
+  if (!branch) return null;
+  if (world.qualities[CAREER_ENDED_KEY] === 1) return CAREER_ENDINGS[`${branch}-replaced`] ?? null;
+  if (world.qualities[CAREER_DONE_KEY] === 1) return CAREER_ENDINGS[`${branch}-done`] ?? null;
+  return null;
+}
 
 /** 结局好坏：它在目录里的位置，数字越小越好。两两不同是全序结构给的，不需要另写一份数。 */
 export function rank(id: string): number {

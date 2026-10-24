@@ -30,7 +30,7 @@ const strongYear = (world: World): World => ({
 test("新人档时每一个读数与「以前」逐字节相同", () => {
   const world = newWorld("rank-blank", PEOPLE);
   assert.equal(careerRankOf(world), 1);
-  assert.deepEqual(careerModsOf(world), { energy: 0, guests: 0, poach: 0 });
+  assert.deepEqual(careerModsOf(world), { energy: 0, guests: 0, poach: 0, yearResist: 1 });
   assert.equal(energySlotOf(world), 20);
   assert.equal(maxPresentCustomers(world), 7);
   assert.equal(poachChanceNow(world), 0.5);
@@ -149,12 +149,19 @@ test("年/季的换算只有一处：尺子的增量只在新年份开季那一�
   }
 });
 
-test("撞顶以后不再列考核：那一年的评估要明说「到顶了」", () => {
+test("到顶以后不再往上考，但每年考的是「守住这个位置」：过了接着走，没过被换掉", () => {
   const base = newWorld("rank-top", PEOPLE);
-  const audit = careerAudit(withRank(careerCeiling(), base));
+  const top = withRank(careerCeiling(), base);
+  const audit = careerAudit(strongYear(top));
   assert.equal(audit.next, null, "到顶了就没有下一级");
-  assert.equal(audit.checks.length, 0, "到顶了不该再拿四项考核压人");
-  assert.ok(audit.gap.includes("到顶"), `要说清是到顶了，不是没过线：${audit.gap}`);
+  assert.equal(audit.goal, "守住这个位置");
+  assert.equal(audit.checks.length, 4, "第 4 级照样考四项 —— 考的是坐不坐得住");
+  assert.equal(audit.passed, true);
+  assert.equal(audit.replaced, false);
+  // 差一项就换人：这一段职业生涯到此为止（不是"原地不动"）。
+  const weak = careerAudit({ ...strongYear(top), standing: CAREER_GATE[4].standing - 1 });
+  assert.equal(weak.passed, false);
+  assert.equal(weak.replaced, true, "第 4 级上没过线就是被换掉");
 });
 
 test("撞顶落在第 2 年到第 10 年之间：不是一开局就满，也不是十年都爬不上去", () => {

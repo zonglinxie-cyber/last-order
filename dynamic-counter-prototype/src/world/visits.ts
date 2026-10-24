@@ -1,6 +1,7 @@
 // 熟客每次回来有眼下的用途。旧笔记仍是真的，但这次哪一条最要紧会变。
 // 来访情境在开时段时定下，当天不因一次问话/成交突然换口径；不额外消耗随机数。
 import { lifePerson } from "./life-sales.ts";
+import { branchModsOf } from "./branches.ts";
 import { yearBudgetOf } from "./years.ts";
 import { POSITIVE_FIT, SHELF, bestShelf, fitOfPerson } from "./shelf.ts";
 import { SEASON_DAYS, type Demand, type Person, type PersonId, type Trait, type World } from "./types.ts";
@@ -103,12 +104,19 @@ export function visitContext(world: World, person: Person): VisitContext | null 
 const yearBudgeted = (world: Pick<World, "qualities">, person: Person): Person =>
   person.skin ? { ...person, skin: { ...person.skin, budget: yearBudgetOf(world, person.skin.budget) } } : person;
 
-/** 今天进门的她：先叠「人生走到第几步」，再叠当天的来访情境，最后叠年景里那一条。
+/** 分支与柜那一层：客人的钱袋子还受你站的地方影响（区域督导换柜：东柜薄、西柜松）。 */
+const branchBudgeted = (world: Pick<World, "qualities" | "season" | "day">, person: Person): Person => {
+  const m = branchModsOf(world).budget;
+  if (m === 1 || !person.skin) return person;
+  return { ...person, skin: { ...person.skin, budget: Math.round(person.skin.budget * m) } };
+};
+
+/** 今天进门的她：先叠「人生走到第几步」，再叠当天的来访情境，然后是年景，最后是你这条分支与今天的柜。
  *  卖货侧所有读数（适配、预算、件数、诉求条数）都读这一层，不在界面拼句子。 */
 export const visitPerson = (world: World, person: Person): Person => {
   const code = world.qualities[CONTEXT_DAY(person.id)] === absoluteDay(world)
     ? world.qualities[CONTEXT_CODE(person.id)] ?? 0 : 0;
-  return yearBudgeted(world, variantPerson(lifePerson(world, person), code));
+  return branchBudgeted(world, yearBudgeted(world, variantPerson(lifePerson(world, person), code)));
 };
 
 /** 日志与接待只记玩家真的接触过的人。 */
