@@ -21,7 +21,7 @@ import {
   UNITS_QUESTION, type Consult,
 } from "../src/world/consult.ts";
 import {
-  SHELF, SHELF_IDS, TAG_WORD, fitOfPerson, isPerfectMatch, isPerfectPair, needsPair, pairFits, pairPartners, serveItemsOf,
+  SHELF, SHELF_IDS, TAG_WORD, fitOfPair, fitOfPerson, isPerfectMatch, isPerfectPair, needsPair, pairFits, pairPartners, serveItemsOf,
   shelfCovers, shelfFitTier, shelfUnits,
   type FitTier, type ShelfId,
 } from "../src/world/shelf.ts";
@@ -363,6 +363,9 @@ type Attempt = {
   seed: string; season: number; day: number; slot: number; person: PersonId;
   opinion: number;
   actual: number; actualUnits: number; product: ShelfId | null; extra: ShelfId | null;
+  /** 这一单真卖出去的几样（主支几件 + 搭的那支一件）。核对「成交额 = 单价 × 件数」要用它 ——
+   *  配了两支时钱是两笔加起来，拿主支单价乘总件数必然对不上（第 52 轮起这条自检一直误报）。 */
+  sold: Array<{ product: ShelfId; units: number }>;
   freeGuess: number; freeProduct: ShelfId | null; freeUnits: number;
   oracle: number; oracleProduct: ShelfId | null; oracleUnits: number;
   freePerfect: boolean; actualPerfect: boolean; actualScore: number;
@@ -393,7 +396,7 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
 
   let cw = beginServe(w, people, person.id);
   if (cw === w) {
-    return { world: w, rec: { ...base, actual: 0, actualUnits: 0, product: null, extra: null, actualPerfect: false,
+    return { world: w, rec: { ...base, actual: 0, actualUnits: 0, product: null, extra: null, sold: [], actualPerfect: false,
       actualScore: 0, outcome: "blocked", actions: emptyActions(), paidKnown: free.known.length,
       paidUnitsKnown: free.unitsKnown, paidVetoKnown: free.vetoKnown, focusKnownAtEnd: free.focusKnown, log: "没能接手" } };
   }
@@ -421,17 +424,23 @@ function attempt(w: World, people: Person[], person: Person, seed: string, seaso
   }
   const actual = after.money - cw.money;
   // 件数：配了两支是两件（主支一件、搭支一件），不能拿钱除单价算。
-  const actualUnits = product
-    ? (actual > 0
-      ? serveItemsOf(liveAfter, product, units, fitInfo(cw, person, product, units).tier, extra).reduce((s, i) => s + i.units, 0)
-      : 0)
-    : 0;
+  // 卖出去的到底是哪几样，单独记下来 —— 核对成交额时按「每样 单价 × 件数」加总，
+  // 别拿主支单价乘总件数（配支那一笔会被算丢，第 52 轮起这条自检一直误报 127 次）。
+  // 档次跟引擎那一处同口径：搭支成立时分数按「两支合起来」算。
+  const pair = product && extra && extra !== product && pairFits(liveAfter, product, extra) ? extra : null;
+  const soldTier = product
+    ? shelfFitTier(pair ? fitOfPair(liveAfter, product, pair) : fitOfPerson(liveAfter, product))
+    : "negative" as FitTier;
+  const sold = product && actual > 0
+    ? serveItemsOf(liveAfter, product, units, soldTier, pair)
+    : [];
+  const actualUnits = sold.reduce((s, i) => s + i.units, 0);
   const actualFit = product ? fitInfo(cw, person, product, units) : null;
   if (actual > 0) outcome = "sold";
   else if (outcome === "sold") outcome = "no-sale";
 
   return { world: after, rec: {
-    ...base, actual, actualUnits, product, extra,
+    ...base, actual, actualUnits, product, extra, sold,
     actualPerfect: actual > 0 && !!product && (extra ? isPerfectPair(liveAfter, product, extra) : isPerfectMatch(liveAfter, product)),
     actualScore: actualFit?.score ?? 0,
     outcome, actions: stats,
@@ -849,7 +858,8 @@ for (const p of productRows) {
 console.log("\n六、核对");
 {
   const badOracle = attempts.filter(a => a.oracle + 0.5 < a.actual).length;
-  const badAmount = attempts.filter(a => a.actual > 0 && a.product && a.actual !== a.actualUnits * SHELF[a.product].price).length;
+  const badAmount = attempts.filter(a => a.actual > 0 && a.product
+    && a.actual !== a.sold.reduce((s, i) => s + SHELF[i.product].price * i.units, 0)).length;
   console.log(`全知顶 < 实际：${badOracle} 次 · 成交额 ≠ 单价 × 件数：${badAmount} 次 · 接待机会为 0：${attempts.length === 0 ? "是（模拟没跑起来）" : "否"}`);
   console.log(`一次没试就开单：${zeroTryOffers} 次（策略应恒为 0） · 试出点头却没成交：${positiveUnsold} 次 · 推错货：${outcomeCount("wrong")} 次`);
   console.log(`耐心花光且没成交：${attempts.filter(a => a.actions.startPatience > 0 && a.actions.patience >= a.actions.startPatience && a.actual === 0).length} 次；没花完耐心就成交：${attempts.filter(a => a.actual > 0 && a.actions.patience < a.actions.startPatience).length} 次`);
