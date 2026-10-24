@@ -69,12 +69,36 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       expect(overflow).toBeLessThanOrEqual(1);
     });
 
-    test("第 2 季第 3 周是旱周：早会把这周为什么线低念出来", async ({ page }) => {
+    test("第 2 季第 3 周是旱周：早会把这周为什么线低念出来，念的还是这一周真正在用的那条线", async ({ page }) => {
       const w = midweek(2, 3);
       await openPlay(page, w);
-      const texts = await page.evaluate(key => (JSON.parse(window.localStorage.getItem(key) ?? "{}") as { world: { log: { text: string }[] } }).world.log.map(l => l.text), SAVE_KEY);
-      expect(texts.some(t => t.includes("十天间隔"))).toBe(true);
-      expect(texts.some(t => t.includes(`¥${weekTargetOfWeek(2, 3).toLocaleString("zh-CN")}`))).toBe(true);
+      // 旱周那一关的线是周一早会按「还有多少人能来」定的 —— 落在存档里，早会念的就是它。
+      const seen = await page.evaluate(key => {
+        const world = (JSON.parse(window.localStorage.getItem(key) ?? "{}") as
+          { world: { log: { text: string }[]; qualities: Record<string, number> } }).world;
+        return { texts: world.log.map(l => l.text), target: world.qualities["week-target:3"] ?? 0 };
+      }, SAVE_KEY);
+      expect(seen.texts.some(t => t.includes("十天间隔"))).toBe(true);
+      expect(seen.target).toBeGreaterThan(0);
+      expect(seen.texts.some(t => t.includes(`¥${seen.target.toLocaleString("zh-CN")}`))).toBe(true);
+    });
+
+    test("旱周那一关的线按客人数定：客人被锁在十天间隔里大半，线就压下来", async ({ page }) => {
+      const customers = PEOPLE.filter(p => p.role === "customer");
+      // 周一早会那一刻的线：锁住的人越多，能来的越少，线压得越低。
+      const lineOf = (lockedCount: number): number => {
+        const seed = `dry-ui-${lockedCount}`;
+        const base = newWorld(seed, PEOPLE);
+        const w = beginSlot({ ...base, season: 2, day: 15, slot: 0 as const, energy: 0,
+          qualities: { ...base.qualities,
+            ...Object.fromEntries(customers.slice(0, lockedCount).map(p => [`bought:${p.id}`, 12])) } }, PEOPLE);
+        return w.qualities["week-target:3"] ?? 0;
+      };
+      const many = lineOf(0);
+      const fewer = lineOf(Math.floor(customers.length * 0.8));
+      expect(many).toBeGreaterThan(0);
+      expect(fewer).toBeGreaterThan(0);
+      expect(fewer).toBeLessThan(many);
     });
 
     test("周日打烊之后：下一周换一条，旧的那句不留在周目标", async ({ page }) => {

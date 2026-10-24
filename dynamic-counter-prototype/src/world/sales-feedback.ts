@@ -2,7 +2,8 @@
 import { SERVE_REFUSE_OPINION } from "./engine.ts";
 import { recentlyPurchased } from "./purchases.ts";
 import { PERFECT_MATCH, SHELF, fitOfPair, fitOfPerson, isPerfectMatch, isPerfectPair, perfectPairOf, serveItemsOf, shelfFitTier, type ShelfId } from "./shelf.ts";
-import { ROUTE_WORD, weekMoneyOf, weekResultOf, weekTargetOf } from "./target.ts";
+import { ROUTE_WORD, weekMoneyOf, weekResultOf, weekTargetIn } from "./target.ts";
+import { weekNoOf } from "./weeks.ts";
 import { PLAYER, type Person, type World } from "./types.ts";
 import { ta } from "./pronoun.ts";
 
@@ -52,7 +53,7 @@ export function saleFeedback(before: World, after: World, person: Person, produc
     : recent ? "招呼、帮忙或经营关系，也是在为以后留生意。"
     : amount <= 0 ? "把已知需求与货架标签对照，再用试用验证不确定的那支。"
     : "记住今天问出的需求，下一次把有限的耐心用在新的判断上。";
-  const made = weekMoneyOf(after), target = weekTargetOf(after.day, after.season);
+  const made = weekMoneyOf(after), target = weekTargetIn(after, weekNoOf(after.day));
   const result = weekResultOf(after);
   return { title: title.replaceAll("她", ta(person)), tone: amount <= 0 ? "bad" : hard || overAsk || tier === "mixed" ? "mixed" : "good", amount,
     units: soldUnits, opinion: (after.opinion[person.id] ?? 0) - (before.opinion[person.id] ?? 0),

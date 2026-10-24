@@ -51,6 +51,8 @@ export const isWeekId = (x: unknown): x is WeekId => typeof x === "string" && WE
 
 /** 第几天是这一季的第几周（1..4）。 */
 export const weekNoOf = (day: number): number => Math.floor((day - 1) / WEEK_DAYS) + 1;
+/** 这一周的最后一天（周一到周日）。算「这一周整周」的事用它，别拿当天那一天充数。 */
+export const weekEndOf = (day: number): number => Math.floor((day - 1) / WEEK_DAYS) * WEEK_DAYS + WEEK_DAYS;
 export const isMonday = (day: number): boolean => (day - 1) % WEEK_DAYS === 0;
 export const isSunday = (day: number): boolean => (day - 1) % WEEK_DAYS === WEEK_DAYS - 1;
 

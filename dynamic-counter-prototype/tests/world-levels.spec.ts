@@ -89,8 +89,18 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       await expect(level.locator(".rl-stamp")).toHaveText("过关");
       await expect(level.locator(".rl-stars")).toHaveText("★★☆");
       await expect(level.locator(".rl-checks li.ok")).toHaveCount(2);
-      await expect(level).toContainText(`下一关业绩线 ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`);
+      // 第 1 季第 2 关是旱周：它的线周一早会才定，提前念一个数就是骗人 —— 只说它到时候才定。
+      await expect(level).toContainText("下一关是旱周，线周一早会按客人数定");
+      await expect(level).not.toContainText("下一关业绩线");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+    });
+
+    test("下一关不是旱周：那一关的线提前念出来，不说「到时候才定」", async ({ page }) => {
+      await open(page, lateIn(21, 2_000, 9_000));
+      await page.locator(".world-next").click();
+      const level = page.locator(".report-level");
+      await expect(level).toContainText(`下一关业绩线 ¥${WEEK_TARGETS[3].toLocaleString("zh-CN")}`);
+      await expect(level).not.toContainText("线周一早会按客人数定");
     });
 
     test("钱没达标也能凭客情过关，结算写明获胜路线", async ({ page }) => {
@@ -157,7 +167,9 @@ for (const [width, height] of [[390, 844], [320, 568]] as const) {
       const next = page.locator(".rl-next");
       await expect(next).toContainText("下一周先改什么");
       await expect(next).toContainText("先追业绩");
-      await expect(next).toContainText(`下周目标 ¥${WEEK_TARGETS[2].toLocaleString("zh-CN")}`);
+      // 第 1 季第 3 关也是旱周：线到时候才定，这一句就不念数。
+      await expect(next).toContainText("下周是旱周，线周一早会按客人数定");
+      await expect(next).not.toContainText("下周目标");
       await expect(next).toContainText("下周商场巡查周");
     });
 

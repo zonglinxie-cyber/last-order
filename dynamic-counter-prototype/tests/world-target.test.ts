@@ -231,7 +231,8 @@ test("档案记最好的一季（四关星数加起来），只在收季那一�
 
 test("下一周先改什么：从这一周离门槛最近的一条里挑一句能做的事", () => {
   const nearSales = books(7, 11_800, 9_000);
-  assert.match(nextWeekHint(nearSales), new RegExp(`下周目标 ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`), "第 2 关目标");
+  // 下一关的线有两种说法：不是旱周就提前给个数，是旱周就说明它周一早会才定 —— 不许含混过去。
+  assert.match(nextWeekHint(nearSales), /下周(目标 ¥[\d,]+|是旱周，线周一早会按客人数定)/, "下一关的线得说清楚");
   assert.match(nextWeekHint(nearSales), new RegExp(`先追业绩：还差 ¥${(WEEK_TARGETS[0] - 11_800).toLocaleString("zh-CN")}`));
   assert.doesNotMatch(nextWeekHint(nearSales), /先补客情|先守客/);
 
@@ -246,7 +247,7 @@ test("下一周先改什么：从这一周离门槛最近的一条里挑一句�
 
   const passed = books(7, WEEK_TARGETS[0] + 500, 1_000);
   const hint = nextWeekHint(passed);
-  assert.match(hint, new RegExp(`下周目标 ¥${WEEK_TARGETS[1].toLocaleString("zh-CN")}`));
+  assert.match(hint, /下周(目标 ¥[\d,]+|是旱周，线周一早会按客人数定)/);
   assert.match(hint, /凭业绩过关/);
   assert.match(hint, /下周品牌培训周/, "下一周的规矩提前进复盘");
 

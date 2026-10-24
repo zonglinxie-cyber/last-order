@@ -11,7 +11,7 @@ import {
 } from "./shelf.ts";
 import { clearQuarrel, exchanges } from "./exchanges.ts";
 import { isHeatId, type HeatId } from "./heat.ts";
-import { CARE_DAYS_MIN, CARE_TRUST_MIN, dryWeekNote, guardCommitKey, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf, weekShakeCountOf, weekShakeKey, weekShakeTotalKey, weekShakeTotalOf, weekTargetOfWeek } from "./target.ts";
+import { CARE_DAYS_MIN, CARE_TRUST_MIN, dryPoolOf, drySupplyOf, dryWeekNote, dryWeekTargetOf, guardCommitKey, isDryWeek, markWeekCare, markWeekGuard, markWeekStart, markWeekThreat, settleWeek, weekCareDayKey, weekCareDaysOf, weekShakeCountOf, weekShakeKey, weekShakeTotalKey, weekShakeTotalOf, weekTargetKey, weekTargetOfWeek } from "./target.ts";
 import { WEEK_IDS, WEEK_RULES, energyPerSlotOf, hardSellComplianceOf, isMonday, isSunday, poachMaxOpinionOf, weekKey, weekNoOf, weekRuleOf, wechatEnergyOf } from "./weeks.ts";
 import { openDay, seenKey, settleRequests, soldUnitsKey } from "./requests.ts";
 import type {
@@ -550,17 +550,23 @@ const visitChance = (v: Visits, festival: string | undefined): number =>
 export const energyCeiling = (slot: Slot, perSlot: number = ENERGY_PER_SLOT): number =>
   Math.min(ENERGY_PER_DAY, perSlot * (slot + 1));
 /** 这一周该轮到的那条规矩落在 qualities 上（周一早会那一刻），其余三条清掉。 */
-function setWeekRule(world: World): World {
+function setWeekRule(world: World, people: Person[]): World {
   const id = weekRuleOf(world.season, world.day);
   const qualities = { ...world.qualities };
   for (const other of WEEK_IDS) {
     if (other === id) qualities[weekKey(other)] = 1;
     else delete qualities[weekKey(other)];
   }
+  // 旱周那一关的线：周一早会按「这一周还有多少人能来」定下来，落在存档里。
+  // 别的关不碰这一格 —— 它们的线按季节的档定，一直是那一条。
+  const dryHead = isDryWeek(world.season, world.day) ? drySupplyOf(world, people) : 0;
+  const dryTarget = isDryWeek(world.season, world.day) ? dryWeekTargetOf(world, people) : null;
+  if (dryTarget !== null) qualities[weekTargetKey(weekNoOf(world.day))] = dryTarget;
   // 这一关的起点也在这一刻记下：本周挣了多少 = 现在 − 起点（target.ts）。
   const rule = WEEK_RULES.find(r => r.id === id)!.line;
   // 旱周（这关的线比上一关低）把原因一起念出来：玩家不用等开单失败才发现这周客少。
-  const note = dryWeekNote(world.season, world.day);
+  const note = dryWeekNote(world.season, world.day,
+    dryTarget !== null ? { head: dryHead, pool: dryPoolOf(people), target: dryTarget } : undefined);
   return say(markWeekStart({ ...world, qualities }), note ? `${rule} ${note}` : rule, ["roman"]);
 }
 /** 周日打烊把这一周的规矩清掉：留着它，下一周的早会就变成"改口"而不是"新一周"。 */
@@ -653,7 +659,7 @@ export function inviteContact(world: World, people: Person[], id: PersonId): Wor
 export function beginSlot(world: World, people: Person[], festivals?: Festival[]): World {
   // 周一上午那一格先开早会：罗曼念这一周的规矩，那一条落进 `week:<id>`（周日打烊清掉）。
   // 先落规矩再发这一格的精力 —— 培训周从上午这一格起就少 5 点，不是下午才补扣。
-  const morning = isMonday(world.day) && world.slot === 0 ? setWeekRule(world) : world;
+  const morning = isMonday(world.day) && world.slot === 0 ? setWeekRule(world, people) : world;
   let w: World = { ...morning, present: {}, touched: [], energy: Math.min(ENERGY_PER_DAY, morning.energy + energySlotOf(morning)) };
   if (festivals) w = { ...w, festival: festivalOn(w.day, festivals) };
   const dayOfWeek = ((w.day - 1) % 7) + 1;

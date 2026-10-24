@@ -27,8 +27,8 @@ import {
 } from "../src/world/shelf.ts";
 import { isSunday, weekNoOf } from "../src/world/weeks.ts";
 import {
-  ROUTE_WORD, WEEK_TARGETS, WEEK_PASS_MIN, WEEK_STARS_MIN, WEEK_STARS_MAX_RATE, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey,
-  weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, weekTargetOfWeek, type WeekRoute,
+  ROUTE_WORD, WEEK_TARGETS, WEEK_PASS_MIN, WEEK_STARS_MIN, WEEK_STARS_MAX_RATE, drySupplyOf, routeFromCode, weekCareCountKey, weekCareDaysOf, weekCareKey,
+  weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey, weekTargetIn, type WeekRoute,
 } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { rivalBookingNow, RIVAL_INVITE_ENERGY } from "../src/world/rival-business.ts";
@@ -518,18 +518,18 @@ function socialTurn(w: World, people: Person[]): { world: World; verb: string } 
 // —— 一周 ——
 
 type WeekRow = { seed: string; season: number; week: number; made: number; serve: number; rival: number; target: number;
-  stars: number; route: WeekRoute; care: number; guard: number; threats: number; stops: number };
-function weekRowOf(w: World, closingDay: number, seed: string, season: number, serve: number): WeekRow {
+  stars: number; route: WeekRoute; care: number; guard: number; threats: number; stops: number; supply: number };
+function weekRowOf(w: World, closingDay: number, seed: string, season: number, serve: number, supply: number): WeekRow {
   const week = Math.ceil(closingDay / 7);
   const guardAt = (kind: string) => Object.entries(w.qualities)
     .filter(([k, v]) => k.startsWith(`week-${kind}:${week}:`) && v === 1).length;
   return {
     seed, season, week, serve,
     made: qualityOf(w, weekMadeKey(week)), rival: qualityOf(w, weekRivalKey(week)),
-    target: weekTargetOfWeek(season, week), stars: qualityOf(w, weekStarsKey(week)),
+    target: weekTargetIn(w, week), stars: qualityOf(w, weekStarsKey(week)),
     route: routeFromCode(qualityOf(w, weekRouteKey(week))),
     care: qualityOf(w, weekCareCountKey(week)),
-    guard: guardAt("guard-person"), threats: guardAt("guard-threat"), stops: guardAt("guard-stop"),
+    guard: guardAt("guard-person"), threats: guardAt("guard-threat"), stops: guardAt("guard-stop"), supply,
   };
 }
 
@@ -549,7 +549,10 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
   let failedDay = -1;
   const failed = new Set<PersonId>();
   let weekServe = 0;
+  let weekSupply = 0;
   while (w.day <= DAYS) {
+    // 周一：这一关的线按「这一周还能买多少人」定 —— 把那个数记下来，定系数时对着它看。
+    if ((w.day - 1) % 7 === 0) weekSupply = drySupplyOf(w, people);
     if (w.day !== failedDay) { failed.clear(); failedDay = w.day; }
     for (let slot = 0; slot < 4; slot++) {
       w = { ...w, slot: slot as 0 | 1 | 2 | 3 };
@@ -614,7 +617,7 @@ function playSeason(seed: string, season: number, world: World, people: Person[]
       social[key] = (social[key] ?? 0) + 1;
     }
     if (isSunday(closingDay)) {
-      weeks.push(weekRowOf(w, closingDay, seed, season, weekServe));
+      weeks.push(weekRowOf(w, closingDay, seed, season, weekServe, weekSupply));
       weekServe = 0;
     }
   }
@@ -759,10 +762,11 @@ console.log(`全知顶与影子猜之间还隔着 ${yuan(oracle - freeGuess)}：
 console.log(`非接待进账（托单 / 回访等）中位 ${yuan(median(nonServe))}；每周目标按总进账算，接待单独看。`);
 
 console.log("\n四、每周（实际打出来的账）");
-console.log(`周  目标(第1季/第2季起)      总进账中位  接待中位    对面中位    星 0/1/2/3 计 ${N * SEASONS} 组        过关   路线`);
+console.log(`周  目标中位(实际那条)      总进账中位  接待中位    对面中位    星 0/1/2/3 计 ${N * SEASONS} 组        过关   路线`);
 for (const list of weeksByNo) {
   const n = list[0]?.week ?? 0;
-  console.log(`${n}   ${`${yuan(WEEK_TARGETS[n - 1])}/${yuan(weekTargetOfWeek(2, n))}`.padStart(15)}  ${yuan(median(list.map(x => x.made))).padStart(9)}  ${yuan(median(list.map(x => x.serve))).padStart(9)}  ${yuan(median(list.map(x => x.rival))).padStart(9)}   ${stars(list).padEnd(18)} ${String(list.filter(x => x.stars > 0).length).padStart(3)}/${list.length}  ${routes(list)}`);
+  // 旱周那一关的线按供给定，每一副牌各不相同 —— 这里念的是各副牌自己那条线的中位。
+  console.log(`${n}   ${yuan(median(list.map(x => x.target))).padStart(15)}  ${yuan(median(list.map(x => x.made))).padStart(9)}  ${yuan(median(list.map(x => x.serve))).padStart(9)}  ${yuan(median(list.map(x => x.rival))).padStart(9)}   ${stars(list).padEnd(18)} ${String(list.filter(x => x.stars > 0).length).padStart(3)}/${list.length}  ${routes(list)}`);
 }
 console.log(`合计星 ${sum(weeks.map(x => x.stars))} / 满星 ${weeks.filter(x => x.stars === 3).length} / 过关 ${weeks.filter(x => x.stars > 0).length}（共 ${weeks.length} 周）`);
 console.log(`比分：领先 ${runs.filter(r => r.money > r.rival).length} / 打平 ${runs.filter(r => r.money === r.rival).length} / 落后 ${runs.filter(r => r.money < r.rival).length}；对面每季成交中位 ${median(runs.map(r => r.rivalWins))} 单`);
@@ -811,16 +815,19 @@ if (SEASONS > 1) {
     for (const list of weeksByNo) {
       const xs = list.filter(x => x.season === season);
       if (!xs.length) continue;
-      const target = weekTargetOfWeek(season, xs[0]!.week);
+      // 旱周那一关的线按供给定：每一副牌那条线都不一样，判定要按各自那条线算。
+      const targets = xs.map(x => x.target);
       const made = xs.map(x => x.made), rival = xs.map(x => x.rival);
-      const hit = made.filter(x => x >= target).length;
-      const three = made.filter((x, i) => x >= Math.ceil(target * 1.3) && x > rival[i]!).length;
-      console.log(`  第${xs[0]!.week}周 ¥${target.toLocaleString("zh-CN")} 进账 P25/中位/P75 ${yuan(quantile(made, .25))}/${yuan(median(made))}/${yuan(quantile(made, .75))} 销售线 ${hit}/${xs.length} 过 ${three} 三星`);
+      const hit = made.filter((x, i) => x >= targets[i]!).length;
+      const three = made.filter((x, i) => x >= Math.ceil(targets[i]! * 1.3) && x > rival[i]!).length;
+      const target = median(targets);
+      const targetWord = `¥${target.toLocaleString("zh-CN")}`;
+      console.log(`  第${xs[0]!.week}周 ${targetWord}（能买的人中位 ${median(xs.map(x => x.supply))}） 进账 P25/中位/P75 ${yuan(quantile(made, .25))}/${yuan(median(made))}/${yuan(quantile(made, .75))} 销售线 ${hit}/${xs.length} 过 ${three} 三星`);
       // 这条线还够不够得着：不是墙（至少四成过得去），也不是白送（不是人人都三星）。
       const passRate = hit / xs.length, starRate = three / xs.length;
-      if (passRate < WEEK_PASS_MIN) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ¥${target.toLocaleString("zh-CN")}：过关率 ${(passRate * 100).toFixed(0)}% < ${WEEK_PASS_MIN * 100}%（这关的业绩线成了墙）`);
-      if (starRate < WEEK_STARS_MIN) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ¥${target.toLocaleString("zh-CN")}：三星率 ${(starRate * 100).toFixed(0)}% < ${WEEK_STARS_MIN * 100}%（这关的三星没人拿得到）`);
-      if (starRate > WEEK_STARS_MAX_RATE) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ¥${target.toLocaleString("zh-CN")}：三星率 ${(starRate * 100).toFixed(0)}% > ${WEEK_STARS_MAX_RATE * 100}%（这关的三星人人都拿得到）`);
+      if (passRate < WEEK_PASS_MIN) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ${targetWord}：过关率 ${(passRate * 100).toFixed(0)}% < ${WEEK_PASS_MIN * 100}%（这关的业绩线成了墙）`);
+      if (starRate < WEEK_STARS_MIN) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ${targetWord}：三星率 ${(starRate * 100).toFixed(0)}% < ${WEEK_STARS_MIN * 100}%（这关的三星没人拿得到）`);
+      if (starRate > WEEK_STARS_MAX_RATE) outOfBand.push(`第 ${season} 季第 ${xs[0]!.week} 关 ${targetWord}：三星率 ${(starRate * 100).toFixed(0)}% > ${WEEK_STARS_MAX_RATE * 100}%（这关的三星人人都拿得到）`);
     }
     // 这一季每一周在各候选目标下的销售线：定这一季那档线时对着这张表挑。
     console.log(`  —— 第 ${season} 季各候选目标的销售线（过关/三星）`);
