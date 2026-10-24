@@ -24,7 +24,7 @@ import { batchStats, wordsOf } from "../src/world/content/batches.ts";
 import { CARE_STEPS, ROUTE_WORD, SEASON_WEEKS, WEEK_STARS_MAX, routeFromCode, seasonTargetsOf, weekCareCountKey, weekCareDaysOf, weekCareKey, weekCareOf, weekGuardStopsOf, weekGuardThreatsOf, weekMadeKey, weekRivalKey, weekRouteKey, weekStarsKey } from "../src/world/target.ts";
 import { visitPerson } from "../src/world/visits.ts";
 import { yearScenesOf, yearOfSeason, YEAR_SCENES, SEASONS_PER_YEAR } from "../src/world/years.ts";
-import { careerRankOf, RANK_NAME, careerEvalsOf, careerMaxPromotionsIn, careerCeiling, careerCeilingYear, branchPending } from "../src/world/career.ts";
+import { careerRankOf, RANK_NAME, careerEvalsOf, careerMaxPromotionsIn, careerCeiling, careerCeilingYear, branchPending, careerBranchAuditsOf, careerEnded, careerDone } from "../src/world/career.ts";
 import { BRANCHES, BRANCH_IDS, branchOf, chooseBranch, type CareerBranch } from "../src/world/branches.ts";
 import { DISTRICT_ZONES, chooseDistrict, type DistrictZone } from "../src/world/district.ts";
 import { FIXTURE_PEOPLE, FIXTURE_STORYLETS } from "./fixtures/world-fixture.ts";
@@ -428,9 +428,12 @@ const pushLong = (style: Style, seed: string, season: number, w: World) =>
   longRows.push({ style, seed, season, year: yearOfSeason(season),
     scenes: yearScenesOf(w).map(id => YEAR_SCENES[id].knob), rank: careerRankOf(w),
     money: w.money, rival: w.rivalMoney, branch: branchOf(w) ?? "" });
+/** 分支上的年终评估（每副牌一条）：考了几次、被换掉没有、走完没有。
+ *  第 4 级的评估在第 4 年开局做，「守住这个位置」那一次在第 5 年 —— 所以要跑到第 5 年才有数。 */
+type CareerTally = { style: Style; seed: string; branch: string; audits: number; ended: boolean; done: boolean };
+const careerTallies: CareerTally[] = [];
 /** 主线本子（每种子一条）：幕号、本子上攒了几条、每条线收到哪种收法（0 = 一季过完还没弄清）。 */
-type Spine = { style: Style; seed: string; act: number; clues: number; ends: Record<string, number> };
-const spines: Spine[] = [];
+type Spine = { style: Style; seed: string; act: number; clues: number; ends: Record<string, number> };const spines: Spine[] = [];
 /** 自主社交动作的发生次数：每跑完一季记一行（exn: 计数换季自动清零，一行就是一季）。 */
 const exTallies: Array<{ style: Style; tally: Record<string, number> }> = [];
 /** 委托结算：每季一行（状态 -> 次数），再加每模板的明细。 */
@@ -506,6 +509,11 @@ for (const style of STYLES) {
       style, seed, act: w.qualities[MAINLINE_ACT_KEY] ?? 0, clues: clueIds(w).length,
       ends: Object.fromEntries(CLUE_THREADS.map(t => [t.id, threadLanding(w.qualities, t.id)])),
     });
+    // 分支上的年终评估记在存档里（考了几次、被换掉没有、走完没有）—— 长线要读它。
+    careerTallies.push({
+      style, seed, branch: branchOf(w) ?? "", audits: careerBranchAuditsOf(w),
+      ended: careerEnded(w), done: careerDone(w),
+    });
   }
 }
 
@@ -571,6 +579,21 @@ if (longRows.some(r => r.year >= 2)) {
       const styles = [...new Set(rs.map(r => r.style))];
       console.log(`  ${BRANCHES[id].name.padEnd(6)} ${String(rs.length).padStart(4)} 季 · 钱 ${dist(rs.map(r => r.money))}`
         + ` · 领先 ${ahead} / 落后 ${behind} · 走它的打法：${styles.join("、")}`);
+    }
+    // 分支上的年终评估（考的是「守住这个位置」）：过了接着走，没过被换掉。
+    // 这一段要跑到第 5 年才有 —— 第 4 级的评估在第 4 年开局做，「守住」那一次在第 5 年。
+    console.log("\n分支上的年终评估（守住这个位置）:");
+    for (const id of BRANCH_IDS) {
+      const rs = careerTallies.filter(t => t.branch === id);
+      if (!rs.length) continue;
+      const held = rs.filter(t => !t.ended && !t.done).length;
+      const done = rs.filter(t => t.done).length;
+      const out = rs.filter(t => t.ended).length;
+      console.log(`  ${BRANCHES[id].name.padEnd(6)} ${String(rs.length).padStart(3)} 份 · 还在守 ${held} · 走完 ${done} · 被换掉 ${out}`
+        + ` · 考过 ${rs.reduce((s, t) => s + t.audits, 0)} 次`);
+    }
+    if (!careerTallies.some(t => t.audits > 0)) {
+      console.log("  （还没考到「守住这个位置」那一次 —— 要跑到第 5 年才有：第 4 级的评估在第 4 年开局做。）");
     }
   }
 
