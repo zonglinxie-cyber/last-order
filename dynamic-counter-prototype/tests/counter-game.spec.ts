@@ -226,6 +226,42 @@ function finalOrderFixture(): Run {
   throw new Error("Real-engine fixture search found no winnable final order in 20 seeds");
 }
 
+function returningFixture(kind: "sold" | "listened") {
+  const plans: Action[][] = [["ask-budget", "listen", "trial"], ["listen", "trial"], ["listen"], []];
+  for (let seed = 0; seed < 20; seed++) {
+    let run = startRun(`counter-ui-return-${kind}-${seed}`, 0, "reader");
+    const first = bestCustomer(run, plans);
+    if (kind === "sold") {
+      if (first.offer.settled.receipt!.outcome !== "sold") continue;
+      run = first.offer.settled;
+    } else {
+      // A genuine listened-but-failed quote, with a productId: the UI must not call it a purchase.
+      const unsuitable = PRODUCTS.find((p) => p.traits[first.op.primary] === 0)!;
+      run = closeDeal(act(selectProduct(pickCustomer(run, first.op.id), unsuitable.id), "listen"));
+      expect(run.receipt!.outcome).toBe("lost");
+      expect(run.receipt!.relationDelta).toBe(1);
+    }
+    const previous = run.receipt!;
+    for (let step = 0; step < 60 && run.phase !== "result"; step++) {
+      if (run.phase === "select" && run.turn === 0) {
+        const op = run.board.find((candidate) => candidate.customerId === previous.customerId && candidate.returning);
+        if (op) {
+          expect(run.day).toBeGreaterThanOrEqual(3);
+          expect(op.sceneId).not.toBe(first.op.sceneId);
+          expect(op.story).not.toBe(first.op.story);
+          expect(parseRun(serializeRun(run))).toEqual(run);
+          return { run, op, previous };
+        }
+      }
+      if (run.phase === "select") run = bestCustomer(run, plans).offer.settled;
+      else if (run.phase === "receipt") run = continueRun(run);
+      else if (run.phase === "draft") run = choosePerk(run, run.draft[0]!);
+      else throw new Error(`Unexpected return-fixture phase: ${run.phase}`);
+    }
+  }
+  throw new Error(`No reachable ${kind} return in 20 seeds; do not forge history or relations to make this pass`);
+}
+
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 test.describe.configure({ timeout: 60_000 });
 test.beforeEach(async ({ page, baseURL }) => {
@@ -329,6 +365,96 @@ test("reload resumes the same negotiation and conversation count; receipts never
   await tap(primary(page), true);
   await expectRun(page, continueRun(run));
 });
+
+for (const kind of ["sold", "listened"] as const) {
+  test(`mobile ${kind} return shows its scene and real receipt memory; ${kind === "sold" ? "new" : "old v1"} save refresh is stable`, async ({ page }) => {
+    if (kind === "listened") await page.setViewportSize({ width: 320, height: 568 });
+    const fixture = returningFixture(kind);
+    let run = fixture.run;
+    const { op, previous } = fixture;
+    console.log(`Return fixture: ${run.seed}, day ${run.day}, ${op.customerId}/${op.sceneId}, previous ${previous.outcome}`);
+    await seedRun(page, run);
+    await resume(page, run);
+    const card = page.getByRole("button", { name: `选择${customerName(op.customerId)}`, exact: true });
+    const occasion = card.locator(".c-occasion");
+    const memory = card.locator(".c-return-memory");
+    for (let refresh = 0; refresh < 2; refresh++) {
+      await occasion.scrollIntoViewIfNeeded();
+      await expect(occasion).toBeVisible();
+      await expect(occasion).toBeInViewport();
+      await expect(occasion).toHaveText(op.occasion);
+      await memory.scrollIntoViewIfNeeded();
+      await expect(memory).toBeVisible();
+      await expect(memory).toBeInViewport();
+      await expect(memory).toContainText(`第 ${previous.day} 天`);
+      await expect(memory).toContainText("上次");
+      if (kind === "sold") {
+        expect(previous.outcome).toBe("sold");
+        await expect(memory).toContainText(productName(previous.productId!));
+      } else {
+        expect(previous.outcome).toBe("lost");
+        expect(previous.productId).not.toBeNull();
+        await expect(memory).toContainText("只聊过");
+        for (const product of PRODUCTS) await expect(memory).not.toContainText(product.name);
+      }
+      for (const fresh of run.board.filter((candidate) => !candidate.returning)) {
+        const freshCard = page.getByRole("button", { name: `选择${customerName(fresh.customerId)}`, exact: true });
+        await expect(freshCard.locator(".c-return-memory")).toHaveCount(0);
+        await expect(freshCard.locator(".c-occasion")).toHaveText(fresh.occasion);
+      }
+      await noHorizontalOverflow(page);
+      await page.reload();
+      await resume(page, run);
+    }
+    run = await pickInUI(page, run, op.id);
+    expect(run.active!.known).toEqual([op.primary]);
+    await expect(page.locator(".c-occasion")).toHaveText(op.occasion);
+    await expect(page.locator(".c-occasion")).toBeVisible();
+
+    if (kind === "listened") {
+      const { visitLog: _visits, ...legacy } = structuredClone(run);
+      for (const old of [...legacy.board, legacy.active!.opportunity]) {
+        delete old.sceneId;
+        delete old.story;
+      }
+      const raw = JSON.stringify(legacy);
+      const migrated = parseRun(raw);
+      expect(migrated, "old v1 deal must remain resumable").not.toBeNull();
+      const { visitLog, ...unchanged } = migrated!;
+      expect(unchanged).toEqual(legacy);
+      expect(visitLog[op.customerId]).toMatchObject({ count: 2, lastDay: run.day });
+      await page.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: SAVE_KEY, value: raw });
+      await page.reload();
+      run = migrated!;
+      await resume(page, run);
+      await expect(page.locator(".c-occasion")).toHaveText(op.occasion);
+      expect(run.active!.opportunity).not.toHaveProperty("sceneId");
+      expect(run.active!.opportunity).not.toHaveProperty("story");
+    }
+
+    const expectedStory = run.active!.opportunity.story ?? "我今天还有几件事要办，先把这一样挑好。";
+    const before = structuredClone(run);
+    await tap(page.getByRole("button", { name: /聊近况/ }));
+    run = act(run, "listen");
+    await expectRun(page, run);
+    expect(run.active!.patience).toBe(before.active!.patience - 1);
+    expect(run.history).toEqual(before.history);
+    expect(run.money).toBe(before.money);
+    expect(run.rng).toBe(before.rng);
+    expect(run.visitLog).toEqual(before.visitLog);
+    await expect(page.locator(".c-live-reply")).toContainText(expectedStory);
+    await expect(page.getByRole("button", { name: /聊近况/ })).toBeDisabled();
+    for (let refresh = 0; refresh < 2; refresh++) {
+      await page.reload();
+      await resume(page, run);
+      await expect(page.locator(".c-occasion")).toHaveText(op.occasion);
+      await expect(page.locator(".c-live-reply")).toContainText(expectedStory);
+      await expect(page.getByRole("button", { name: /聊近况/ })).toBeDisabled();
+      expect(await readProfile(page)).toEqual(emptyProfile());
+      await noHorizontalOverflow(page);
+    }
+  });
+}
 
 test("real-engine final order wins through UI, unlocks next league and rewards exactly once", async ({ page }) => {
   let run = finalOrderFixture();

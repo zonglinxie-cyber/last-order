@@ -1,5 +1,8 @@
 import { CUSTOMERS, LEAGUES, PERKS, PRODUCTS, STYLES, TRAIT_LABELS } from "./content.ts";
-import type { Action, Deal, Discount, Opportunity, Profile, Receipt, Run, RunResult, StyleId, Trait } from "./types.ts";
+import type { Action, CustomerScene, Deal, DealSupport, Discount, Experiment, Opportunity, Profile, Receipt, Run, RunResult, StyleId, Trait } from "./types.ts";
+import { SUBSIDY_DAYS, SUBSIDY_EXPERIMENT, actualSubsidyEligibility, subsidyForDay } from "./subsidy.ts";
+import { budgetReply, needReply, receiptReply, trialReply } from "./voices.ts";
+import { advanceChapter, createChapter, openInventory, supportKind, validChapter } from "./chapter.ts";
 
 export const SAVE_KEY = "last-order.counter.run.v1";
 export const META_KEY = "last-order.counter.profile.v1";
@@ -11,7 +14,8 @@ const productOf = (id: string | null) => PRODUCTS.find((p) => p.id === id);
 const customerOf = (id: string) => CUSTOMERS.find((c) => c.id === id)!;
 // Rival's existing walk-in trade is separate from the three contested leads.
 const baseRival = (day: number, rank: number) => 220 + day * 20 + rank * 15;
-const maxPatience = (run: Run) => (run.rank >= 3 ? 2 : 3) + Number(has(run, "patient"));
+const maxPatience = (run: Run) => (run.rank >= 3 ? 2 : 3) + Number(has(run, "patient")) +
+  Number(Boolean(!run.experiment && run.day >= 6 && run.chapter?.award?.won && run.chapter.format === "consult"));
 const price = (id: string, discount: Discount) => Math.round(productOf(id)!.price * (100 - discount) / 100);
 const fitOf = (op: Opportunity, id: string) => {
   const traits = productOf(id)!.traits;
@@ -39,21 +43,24 @@ function shuffle<T>(run: Run, values: T[]): T[] {
   return result;
 }
 const CLUES: Record<Trait, string> = {
-  light: "今天最怕厚重，想像没涂一样轻薄。",
-  wear: "今天要撑很久，没空补妆，持妆得靠得住。",
-  calm: "最近动不动泛红刺痛，先让我舒服一点。",
-  repair: "这几天干燥起皮，想把皮肤状态养回来。",
+  light: "希望肤感轻薄，别像厚厚一层。",
+  wear: "需要长时间持妆，不能频繁补妆。",
+  calm: "容易泛红刺痛，用着舒服更要紧。",
+  repair: "干燥起皮的地方，想慢慢养回来。",
 };
 function opportunity(run: Run, customerId: string): Opportunity {
   const customer = customerOf(customerId);
   const returning = (run.relations[customerId] ?? 0) > 0;
-  const primary = returning && random(run, 3) === 0 ? customer.secondary : customer.primary;
-  const choices = TRAITS.filter((trait) => trait !== primary);
-  const secondary = random(run, 3) === 0 ? choices[random(run, choices.length)]! :
-    (primary === customer.primary ? customer.secondary : customer.primary);
+  const scenes: CustomerScene[] = [{
+    id: "daily", label: "日常补给", primary: customer.primary, secondary: customer.secondary,
+    budget: customer.budget, opening: customer.opening, story: customer.story,
+  }, ...customer.scenes];
+  const choices = scenes.filter(scene => scene.id !== run.visitLog[customerId]?.sceneId);
+  const scene = choices[random(run, choices.length)]!;
+  const { primary, secondary } = scene;
   const ideal = [...PRODUCTS].sort((a, b) =>
     (b.traits[primary] * 2 + b.traits[secondary]) - (a.traits[primary] * 2 + a.traits[secondary]) || a.price - b.price)[0]!;
-  const budget = Math.max(180, Math.round((ideal.price + customer.budget) / 2) + random(run, 141) - 75);
+  const budget = Math.max(180, Math.round((ideal.price + scene.budget) / 2) + random(run, 141) - 75);
   const budgetLow = Math.max(120, Math.floor(budget / 80) * 80 - 20);
   // wanted is need intensity (2 or 3), NEVER a unit count: every deal sells one product.
   const wanted = random(run, 3) === 0 ? 3 : 2;
@@ -61,16 +68,28 @@ function opportunity(run: Run, customerId: string): Opportunity {
   return {
     id: `d${run.day}:${customerId}`, customerId, primary, secondary, budget,
     budgetLow, budgetHigh: budgetLow + 120, wanted, rivalValue, returning,
-    occasion: `${returning ? "熟客回来换个场景" : "初次到柜"} · ${wanted === 3 ? "这次不能将就" : "日常实用"}`,
-    opening: `${returning ? customer.returnLine : customer.opening} “${CLUES[primary]}”`,
+    occasion: scene.label, sceneId: scene.id, story: scene.story,
+    opening: `${returning ? customer.returnLine : ""}${scene.opening} “${CLUES[primary]}”`,
   };
 }
 function newDay(run: Run): void {
-  const related = CUSTOMERS.filter((c) => (run.relations[c.id] ?? 0) > 0);
-  const first = related.length ? related[random(run, related.length)]!.id : null;
-  const others = shuffle(run, CUSTOMERS.filter((c) => c.id !== first).map((c) => c.id));
-  const ids = first ? [first, ...others.slice(0, 2)] : others.slice(0, 3);
-  run.board = ids.map((id) => opportunity(run, id));
+  if (run.experiment === SUBSIDY_EXPERIMENT) {
+    const subsidy = subsidyForDay(run.seed, run.day);
+    if (subsidy) run.subsidy = subsidy;
+    else delete run.subsidy;
+  }
+  // Count every appearance, even a lead left to the rival. Familiarity must not crowd out discovery.
+  const related = CUSTOMERS.filter(c => {
+    const visit = run.visitLog[c.id];
+    return (run.relations[c.id] ?? 0) > 0 && visit && visit.lastDay < run.day - 1 && visit.count < 2;
+  });
+  const returning = related.length ? related[random(run, related.length)]!.id : null;
+  const newcomers = shuffle(run, CUSTOMERS.filter(c => !run.visitLog[c.id]).map(c => c.id));
+  const ids = shuffle(run, returning ? [returning, ...newcomers.slice(0, 2)] : newcomers.slice(0, 3));
+  run.board = ids.map(id => opportunity(run, id));
+  for (const op of run.board) {
+    run.visitLog[op.customerId] = { count: (run.visitLog[op.customerId]?.count ?? 0) + 1, lastDay: run.day, sceneId: op.sceneId! };
+  }
   run.dayRival = baseRival(run.day, run.rank);
   // Public baseline is actual net income, credited once at day start. Unpicked/failed leads add to it.
   run.rivalMoney += run.dayRival;
@@ -79,21 +98,25 @@ function newDay(run: Run): void {
   run.active = null;
   run.receipt = null;
   run.draft = [];
+  advanceChapter(run);
 }
 function newDraft(run: Run): void {
   run.draft = shuffle(run, PERKS.filter((p) => !has(run, p.id)).map((p) => p.id)).slice(0, 3);
   run.phase = "draft";
+  openInventory(run);
 }
 
-export function startRun(seed: string, rank: number = 0, style: StyleId = "reader"): Run {
+export function startRun(seed: string, rank: number = 0, style: StyleId = "reader", experiment?: Experiment): Run {
   const safeSeed = typeof seed === "string" && seed.length ? seed.slice(0, 160) : "counter";
   const safeStyle = STYLES.find((s) => s.id === style) ?? STYLES[0]!;
   const run: Run = {
     version: 1, seed: safeSeed, rng: hash(safeSeed), rank: LEAGUES.some((l) => l.id === rank) ? rank : 0,
     style: safeStyle.id, phase: "select", day: 1, turn: 0, money: 0, rivalMoney: 0,
-    reputation: 5, samples: 3, perks: [safeStyle.perk], relations: {}, board: [],
+    reputation: 5, samples: 3, perks: [safeStyle.perk], relations: {}, visitLog: {}, board: [],
     active: null, receipt: null, draft: [], history: [], dayRival: 0,
   };
+  if (experiment === SUBSIDY_EXPERIMENT) run.experiment = experiment;
+  else run.chapter = createChapter(safeSeed);
   newDay(run);
   return run;
 }
@@ -112,7 +135,17 @@ export function pickCustomer(run: Run, id: string): Run {
     known: op.returning ? [op.primary] : [], budgetKnown: false, listened: false,
     tried: [], trialNotes: {}, product: null, discount: 0,
     lines: [op.opening, ...(op.returning ? [`记得这段关系：本次优先需求是${TRAIT_LABELS[op.primary]}，但预算与次需求要重新确认。`] : [])],
+    conversation: [{ speaker: "customer", text: op.opening }],
   };
+  const booking = !next.experiment && next.chapter?.bookings.find(b => b.day === next.day && b.opportunityId === id);
+  if (booking) {
+    // A completed appointment is a paid preparation snapshot, not a fresh peek at hidden state.
+    next.active.opportunity.budget = booking.budget;
+    next.active.budgetKnown = true;
+    next.active.lines.push(`开柜前预约问价：预算 ${booking.budget} 元，未询问需求。`);
+    next.active.conversation!.push({ speaker: "you", text: "刚才约的时候说的预算，我记好了。" },
+      { speaker: "customer", text: budgetReply(op.customerId, booking.budget) + (has(next, "budget-room") ? "真合适的话，最多还能添30元。" : "") });
+  }
   next.receipt = null;
   next.phase = "deal";
   return next;
@@ -134,7 +167,10 @@ function trialNote(run: Run, deal: Deal, id: string): string {
   const fit = fitOf(deal.opportunity, id);
   const primaryAbility = productOf(id)!.traits[deal.opportunity.primary];
   const feedback = primaryAbility === 0 ? "缺失（这支解决不了首要需求）" : primaryAbility >= deal.opportunity.wanted ? "够用" : "偏弱";
-  return `真实试用：主需求${feedback}，原始匹配 ${fit}/9；报价这支可获试用说服 +${has(run, "trial-expert") ? 2 : 1}。不是预算承诺。`;
+  const evidence = deal.subsidyEvidence?.[id];
+  const subsidyNote = run.experiment === SUBSIDY_EXPERIMENT && typeof evidence === "boolean" ?
+    `适配补贴试用结论：主次需求商品能力${evidence ? "达到" : "未同时达到"}补贴标准（主需求能力须达到需求强度、次需求能力至少为 1）；不保证预算或成交。` : "";
+  return `真实试用：主需求${feedback}，原始匹配 ${fit}/9；报价这支可获试用说服 +${has(run, "trial-expert") ? 2 : 1}。不是预算承诺。${subsidyNote}`;
 }
 export function act(run: Run, action: Action): Run {
   const deal = run.active;
@@ -147,27 +183,63 @@ export function act(run: Run, action: Action): Run {
   const next = structuredClone(run);
   const d = next.active!;
   d.patience--;
+  const customerId = d.opportunity.customerId;
+  d.conversation ??= [];
+  const ask = (text: string) => d.conversation?.push({ speaker: "you", text });
+  const reply = (text: string) => d.conversation?.push({ speaker: "customer", text });
+  // Legacy logs remain in lines; only this paid action starts a new speech snapshot.
   if (action === "ask-need") {
+    ask(d.known.length === 0 ? "这次最想解决什么？" : "除了刚才说的，还有什么在意的？");
     const unknown = [d.opportunity.primary, d.opportunity.secondary].filter((t) => !d.known.includes(t));
     for (const trait of unknown.slice(0, has(next, "double-question") ? 2 : 1)) {
       d.known.push(trait);
       d.lines.push(`问到需求：${d.known.length === 1 ? "最看重" : "其次需要"}${TRAIT_LABELS[trait]}。`);
+      reply(needReply(customerId, trait, d.known.length > 1));
     }
   } else if (action === "ask-budget") {
     d.budgetKnown = true;
     d.lines.push(`“我实际能拿出 ${d.opportunity.budget} 元。”${has(next, "budget-room") ? "说明价值后最多可再加 30 元。" : "别替我擅自加预算。"}`);
+    ask("大概想花多少？我按这个帮你挑。");
+    reply(budgetReply(customerId, d.opportunity.budget) + (has(next, "budget-room") ? "真合适的话，最多还能添30元。" : ""));
   } else if (action === "listen") {
     d.listened = true;
-    d.lines.push(`“${customerOf(d.opportunity.customerId).story}”`);
+    // Early v1 needs could differ from today's character defaults; do not invent a new need through fallback prose.
+    const story = d.opportunity.story ?? "我今天还有几件事要办，先把这一样挑好。";
+    d.lines.push(`“${story}”`);
     d.lines.push(`倾听建立关系 +1（本单结算时记入）；匹配说服 +${has(next, "deep-listen") ? 2 : 1}，不改变预算。`);
+    ask("今天忙不忙？我听你说。");
+    reply(story);
   } else {
     next.samples--;
     d.tried.push(d.product!);
+    if (next.experiment === SUBSIDY_EXPERIMENT) {
+      d.subsidyEvidence ??= {};
+      d.subsidyEvidence[d.product!] = actualSubsidyEligibility(d.opportunity, d.product!).eligible;
+    }
     d.trialNotes[d.product!] = trialNote(next, d, d.product!);
     d.lines.push(d.trialNotes[d.product!]!);
+    ask(`先试试这支${productOf(d.product)!.name}，看看你最在意的那一点。`);
+    const ability = productOf(d.product)!.traits[d.opportunity.primary];
+    reply(trialReply(customerId, ability === 0 ? "missing" : ability < d.opportunity.wanted ? "weak" : "enough"));
   }
   return next;
 }
+export function supportTrial(run: Run): Run {
+  const kind = supportKind(run);
+  if (!kind) return run;
+  const next = structuredClone(run), d = next.active!, id = d.product!;
+  next.samples--;
+  next.chapter!.supportDays.push(next.day);
+  d.support = { kind, productId: id };
+  d.tried.push(id);
+  d.trialNotes[id] = trialNote(next, d, id);
+  d.lines.push(`${kind === "team" ? "唐可协助" : "主理演示台"}：试用${productOf(id)!.name}，消耗 1 小样，不消耗你的交谈。`, d.trialNotes[id]!);
+  d.conversation ??= [];
+  d.conversation.push({ speaker: "you", text: kind === "team" ? `唐可，帮我拿这支${productOf(id)!.name}给客人试试。` : `我们去演示台试试${productOf(id)!.name}。` },
+    { speaker: "customer", text: trialReply(d.opportunity.customerId, productOf(id)!.traits[d.opportunity.primary] === 0 ? "missing" : productOf(id)!.traits[d.opportunity.primary] < d.opportunity.wanted ? "weak" : "enough") });
+  return next;
+}
+
 export function quote(run: Run): number {
   return run.active?.product ? price(run.active.product, run.active.discount) : 0;
 }
@@ -197,8 +269,25 @@ function settle(run: Run, leaving: boolean): Run {
     if (d.listened && has(run, "care-bonus")) bonuses.push(["倾听服务奖金", 25]);
   }
   const bonus = bonuses.reduce((sum, [, amount]) => sum + amount, 0);
-  const profit = sold ? quoted - product!.cost + bonus : 0;
-  const relationDelta = Number(sold) + Number(d.listened);
+  const experimental = run.experiment === SUBSIDY_EXPERIMENT;
+  let subsidy = 0, subsidyReason = "";
+  if (experimental) {
+    const offer = run.subsidy?.day === run.day ? run.subsidy : undefined;
+    if (!offer) subsidyReason = "今日无补贴，不累计或补发。";
+    else if (offer.claimedBy !== null) subsidyReason = "今日这一份已领取，商品仍可正常成交。";
+    else if (!sold) subsidyReason = leaving ? "主动送客，没有正常成交；补贴未消耗。" : "本单未正常成交；补贴未消耗。";
+    else if (product!.id !== offer.productId) subsidyReason = "最终成交商品不是今日补贴商品；补贴未消耗。";
+    else {
+      const eligibility = actualSubsidyEligibility(op, product!.id);
+      subsidy = eligibility.eligible ? offer.amount : 0;
+      subsidyReason = eligibility.reason + (eligibility.eligible ? "正常成交，领取本日一份。" : "普通成交不等于达到补贴标准；补贴未消耗。");
+    }
+  }
+  const grossProfit = sold ? quoted - product!.cost + bonus + subsidy : 0;
+  const partnerShare = d.support?.kind === "team" ? Math.floor(grossProfit / 4) : 0;
+  const profit = grossProfit - partnerShare;
+  const gifted = Boolean(sold && d.gift && !run.experiment && run.day >= 4 && run.chapter && run.chapter.gifts.stock > 0);
+  const relationDelta = Number(sold) + Number(d.listened) + Number(gifted);
   const repRecovery = Number(d.listened || fit >= 8) + Number(has(run, "good-name"));
   const reputationDelta = sold ? Math.min(7 - run.reputation, repRecovery) : -1;
   const rivalGain = sold ? 0 : op.rivalValue;
@@ -214,21 +303,30 @@ function settle(run: Run, leaving: boolean): Run {
     fit, discount: d.discount, relationDelta, reputationDelta, rivalGain,
     headline: sold ? `${customerOf(op.customerId).name}成交 · 净赚 ${profit}` : leaving ? "主动送客，把这次留作经验" : "没成交，但知道差在哪里了",
     explanation: leaving ? "你停止了本次谈单，没有收入或产品成本。这个机会转给对手。" : sold ?
-      `匹配、预算与${LEAGUES[run.rank]!.name}规则都满足；没有随机掷骰。` : failures.join("；"),
+      (experimental ? `普通成交的匹配说服、预算与${LEAGUES[run.rank]!.name}规则都满足；成交不代表主次需求商品能力都达到补贴标准。` :
+        `匹配、预算与${LEAGUES[run.rank]!.name}规则都满足；没有随机掷骰。`) : failures.join("；"),
     lesson: sold ? (discountLoss > 0 ? `折扣少赚 ${discountLoss} 元；若下次预算够，试用证明价值可保住原价利润。` : "原价守住了毛利；别忘记还要选择谁留给对手。") :
       leaving ? "送客也会扣 1 信誉；下次挑人时同时看预算区间和留给对手的机会。" : failures.join("；"),
     breakdown: [
       `匹配 ${fit}/9 + 试用 ${trialBoost} + 倾听 ${listenBoost} = ${fit + trialBoost + listenBoost}；门槛 ${required}（需求强度 ${op.wanted}）；首要需求${TRAIT_LABELS[op.primary]}能力 ${primaryAbility}/3，至少须为 1`,
       `真实预算 ${op.budget}${budgetBoost ? ` + 价值说明 ${budgetBoost}` : ""}；报价 ${quoted}；${budgetOK ? "预算满足" : "超预算"}`,
       `折扣 ${d.discount}%；比原价少收 ${discountLoss}；${requiresProof(run) ? `九折或试用规则：${proofOK ? "满足" : "未满足"}` : "本级不强制折扣"}`,
-      `收入 ${sold ? quoted : 0} − 产品成本 ${sold ? product!.cost : 0} + 能力奖金 ${bonus} = 净收益 ${profit}`,
+      `收入 ${sold ? quoted : 0} − 产品成本 ${sold ? product!.cost : 0} + 能力奖金 ${bonus}${experimental ? ` + 供货补贴 ${subsidy}` : ""} = ${d.support?.kind === "team" ? "全单" : ""}净收益 ${grossProfit}`,
+            ...(d.support ? [d.support.kind === "team" ? `唐可试用${productOf(d.support.productId)!.name}；按约分全单净收益的25%（向下取整）${partnerShare}；你留下 ${profit}。换货不取消已完成的分工。` : `演示台试用${productOf(d.support.productId)!.name}，无同事分成；你留下 ${profit}。`] : []),
+            ...(gifted ? ["成交送出预留赠品 1 份，额外关系 +1；不增加匹配、预算或收入。"] : []),
       ...bonuses.map(([name, value]) => `${name} +${value}`),
+      ...(experimental ? [`供货补贴 +${subsidy}：${subsidyReason}`] : []),
       `信誉 ${reputationDelta >= 0 ? "+" : ""}${reputationDelta}；关系 +${relationDelta}；对手机会净收益 +${rivalGain}`,
       ...(!sold ? [`恢复机会：补回 ${has(run, "second-wind") ? 3 : 1} 小样（上限 12），已倾听的关系不会白费。`] : []),
     ],
-    quote: sold ? "这次是适合我，不是你运气好。我记得你。" : leaving ? "今天先这样，下次再看看。" : "这次没有买，但你听到的事我会记得。",
+    quote: receiptReply({ customerId: op.customerId, outcome: sold ? "sold" : leaving ? "leave" : "lost", productName: product?.name ?? null,
+      discount: d.discount, returning: op.returning, fitOK, budgetOK, proofOK }),
     returning: op.returning,
   };
+  if (experimental) receipt.subsidy = subsidy;
+  if (d.support) receipt.support = { ...d.support, grossProfit, partnerShare };
+  if (gifted) { receipt.gift = true; next.chapter!.gifts.stock--; }
+  if (subsidy > 0) next.subsidy!.claimedBy = receipt.id;
   next.money += profit;
   next.rivalMoney += rivalGain;
   next.reputation += reputationDelta;
@@ -289,39 +387,79 @@ const integer = (v: unknown, low: number, high: number): v is number => typeof v
 const text = (v: unknown, max = 1000): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
 const bool = (v: unknown): v is boolean => typeof v === "boolean";
 const unique = (v: unknown[]): boolean => new Set(v).size === v.length;
-const keys = (v: Obj, expected: string): boolean => Object.keys(v).sort().join(",") === expected.split(" ").sort().join(",");
+const keys = (v: Obj, expected: string, optional = ""): boolean => {
+  const required = expected.split(" "), allowed = new Set([...required, ...optional.split(" ").filter(Boolean)]);
+  return required.every(key => Object.hasOwn(v, key)) && Object.keys(v).every(key => allowed.has(key));
+};
 const isTrait = (v: unknown): v is Trait => TRAITS.includes(v as Trait);
 const isProduct = (v: unknown): v is string => typeof v === "string" && PRODUCTS.some((p) => p.id === v);
 const isCustomer = (v: unknown): v is string => typeof v === "string" && CUSTOMERS.some((c) => c.id === v);
 const isPerk = (v: unknown): v is string => typeof v === "string" && PERKS.some((p) => p.id === v);
 const isDiscount = (v: unknown): v is Discount => v === 0 || v === 10 || v === 20;
 function validOpportunity(v: unknown): v is Opportunity {
-  if (!object(v) || !keys(v, "id customerId primary secondary budget budgetLow budgetHigh wanted rivalValue returning occasion opening")) return false;
+  if (!object(v) || !keys(v, "id customerId primary secondary budget budgetLow budgetHigh wanted rivalValue returning occasion opening", "sceneId story")) return false;
   return text(v.id, 160) && isCustomer(v.customerId) && isTrait(v.primary) && isTrait(v.secondary) && v.primary !== v.secondary &&
     integer(v.budget, 0, 10000) && integer(v.budgetLow, 0, 10000) && integer(v.budgetHigh, 0, 10000) &&
     v.budgetLow <= v.budget && v.budget <= v.budgetHigh &&
-    (v.wanted === 2 || v.wanted === 3) && integer(v.rivalValue, 0, 10000) && bool(v.returning) && text(v.occasion) && text(v.opening);
+    (v.wanted === 2 || v.wanted === 3) && integer(v.rivalValue, 0, 10000) && bool(v.returning) && text(v.occasion) && text(v.opening) &&
+        (!Object.hasOwn(v, "sceneId") || text(v.sceneId, 160)) && (!Object.hasOwn(v, "story") || text(v.story));
+}
+function validSupport(v: unknown): v is Obj & DealSupport {
+  return object(v) && (v.kind === "team" || v.kind === "demo") && isProduct(v.productId);
 }
 function validReceipt(v: unknown): v is Receipt {
-  if (!object(v) || !keys(v, "id day customerId productId outcome profit revenue fit discount relationDelta reputationDelta rivalGain headline explanation lesson breakdown quote returning")) return false;
+  if (!object(v) || !keys(v, "id day customerId productId outcome profit revenue fit discount relationDelta reputationDelta rivalGain headline explanation lesson breakdown quote returning", "subsidy support gift")) return false;
   return text(v.id, 160) && integer(v.day, 1, TOTAL_DAYS) && isCustomer(v.customerId) &&
     (v.productId === null ? v.outcome === "leave" : isProduct(v.productId)) && ["sold", "lost", "leave"].includes(v.outcome as string) &&
     integer(v.profit, 0, 10000) && integer(v.revenue, 0, 10000) && integer(v.fit, 0, 9) && isDiscount(v.discount) &&
     integer(v.relationDelta, -100, 100) && integer(v.reputationDelta, -100, 100) && integer(v.rivalGain, 0, 10000) && bool(v.returning) &&
     [v.headline, v.explanation, v.lesson, v.quote].every((s) => text(s)) && Array.isArray(v.breakdown) &&
-    v.breakdown.length >= 1 && v.breakdown.length <= 50 && v.breakdown.every((s) => text(s));
+    v.breakdown.length >= 1 && v.breakdown.length <= 50 && v.breakdown.every((s) => text(s)) &&
+    (!Object.hasOwn(v, "subsidy") || (integer(v.subsidy, 0, 1000) && (v.subsidy === 0 || (v.outcome === "sold" && v.subsidy <= v.profit)))) &&
+    (!Object.hasOwn(v, "support") || (object(v.support) && validSupport(v.support) && keys(v.support, "kind productId grossProfit partnerShare") &&
+      integer(v.support.grossProfit, 0, 10000) && integer(v.support.partnerShare, 0, v.support.grossProfit) &&
+      v.profit + v.support.partnerShare === v.support.grossProfit && (v.support.kind !== "demo" || v.support.partnerShare === 0) &&
+      (v.outcome === "sold" || v.support.grossProfit === 0))) &&
+    (!Object.hasOwn(v, "gift") || (v.gift === true && v.outcome === "sold"));
 }
 function validDeal(v: unknown): v is Deal {
-  if (!object(v) || !keys(v, "opportunity patience maxPatience known budgetKnown listened tried trialNotes product discount lines") || !validOpportunity(v.opportunity)) return false;
+  if (!object(v) || !keys(v, "opportunity patience maxPatience known budgetKnown listened tried trialNotes product discount lines", "subsidyEvidence conversation support gift") || !validOpportunity(v.opportunity)) return false;
   return integer(v.maxPatience, 1, 20) && integer(v.patience, 0, v.maxPatience) &&
     Array.isArray(v.known) && v.known.length <= 2 && unique(v.known) && v.known.every(isTrait) &&
     bool(v.budgetKnown) && bool(v.listened) && Array.isArray(v.tried) && v.tried.length <= PRODUCTS.length && unique(v.tried) && v.tried.every(isProduct) &&
     object(v.trialNotes) && Object.keys(v.trialNotes).length === v.tried.length && v.tried.every((id) => text((v.trialNotes as Obj)[id])) &&
+    (!Object.hasOwn(v, "subsidyEvidence") || (object(v.subsidyEvidence) && Object.entries(v.subsidyEvidence).every(([id, eligible]) =>
+      isProduct(id) && (v.tried as string[]).includes(id) && bool(eligible)))) &&
     (v.product === null || isProduct(v.product)) && isDiscount(v.discount) && Array.isArray(v.lines) &&
-    v.lines.length >= 1 && v.lines.length <= 100 && v.lines.every((s) => text(s));
+    v.lines.length >= 1 && v.lines.length <= 100 && v.lines.every((s) => text(s)) &&
+    (!Object.hasOwn(v, "support") || (object(v.support) && keys(v.support, "kind productId") && validSupport(v.support) && v.tried.includes(v.support.productId))) &&
+    (!Object.hasOwn(v, "gift") || bool(v.gift)) &&
+    (!Object.hasOwn(v, "conversation") || (Array.isArray(v.conversation) && v.conversation.length >= 1 && v.conversation.length <= 100 &&
+      v.conversation.every(line => object(line) && keys(line, "speaker text") && ["you", "customer"].includes(line.speaker as string) && text(line.text))));
+}
+function validSubsidyState(run: Run): boolean {
+  if (!Object.hasOwn(run, "experiment")) {
+    return !Object.hasOwn(run, "subsidy") && !run.history.some(r => Object.hasOwn(r, "subsidy")) &&
+      !(run.receipt && Object.hasOwn(run.receipt, "subsidy")) && !(run.active && Object.hasOwn(run.active, "subsidyEvidence"));
+  }
+  if (run.experiment !== SUBSIDY_EXPERIMENT) return false;
+  const subsidyDay = SUBSIDY_DAYS.some(day => day === run.day);
+  if (Object.hasOwn(run, "subsidy") !== subsidyDay) return false;
+  const offer = run.subsidy;
+  if (subsidyDay && (!object(offer) || !keys(offer, "day productId amount claimedBy") || offer.day !== run.day ||
+    !isProduct(offer.productId) || !integer(offer.amount, 1, 1000) || !(offer.claimedBy === null || text(offer.claimedBy, 160)))) return false;
+  const claims = run.history.filter(r => (r.subsidy ?? 0) > 0);
+  if (!unique(claims.map(r => r.day)) || claims.some(r => !SUBSIDY_DAYS.some(day => day === r.day))) return false;
+  // Only reconcile the stored claim and receipts; never regenerate targets or replay past deals.
+  const today = claims.find(r => r.day === run.day);
+  if (offer && (today ? offer.claimedBy !== today.id || offer.productId !== today.productId || offer.amount !== today.subsidy : offer.claimedBy !== null)) return false;
+  const last = run.history.at(-1);
+  if (run.receipt && last && (run.receipt.subsidy !== last.subsidy || run.receipt.productId !== last.productId ||
+    run.receipt.outcome !== last.outcome || run.receipt.profit !== last.profit)) return false;
+  return true;
 }
 function validRun(v: unknown): v is Run {
-  if (!object(v) || !keys(v, "version seed rng rank style phase day turn money rivalMoney reputation samples perks relations board active receipt draft history dayRival")) return false;
+  if (!object(v) || !keys(v, "version seed rng rank style phase day turn money rivalMoney reputation samples perks relations board active receipt draft history dayRival", "visitLog experiment subsidy colleagueChat chapter")) return false;
   if (v.version !== 1 || !text(v.seed, 160) || !integer(v.rng, 0, 4294967295) || !integer(v.rank, 0, 4) || !STYLES.some((s) => s.id === v.style) ||
     !["select", "deal", "receipt", "draft", "result"].includes(v.phase as string) || !integer(v.day, 1, TOTAL_DAYS) || !integer(v.turn, 0, ORDERS_PER_DAY) ||
     !integer(v.money, 0, 1000000) || !integer(v.rivalMoney, 0, 1000000) || !integer(v.reputation, -100, 100) || !integer(v.samples, 0, 100) ||
@@ -331,13 +469,21 @@ function validRun(v: unknown): v is Run {
     !Array.isArray(v.draft) || !unique(v.draft) || !v.draft.every((id) => isPerk(id) && !(v.perks as unknown[]).includes(id)) ||
     !Array.isArray(v.history) || v.history.length !== (v.day - 1) * 2 + v.turn || !v.history.every(validReceipt) || !unique(v.history.map((r) => r.id)) ||
     !integer(v.dayRival, 0, 10000)) return false;
+  if (Object.hasOwn(v, "visitLog") && (!object(v.visitLog) || !Object.entries(v.visitLog).every(([id, visit]) =>
+    isCustomer(id) && object(visit) && keys(visit, "count lastDay sceneId") && integer(visit.count, 1, TOTAL_DAYS) &&
+    integer(visit.lastDay, 1, v.day as number) && text(visit.sceneId, 160)))) return false;
+  if (Object.hasOwn(v, "colleagueChat") && (!object(v.colleagueChat) || !keys(v.colleagueChat, "choice reply nextMorning") ||
+    !["review", "own"].includes(v.colleagueChat.choice as string) || !text(v.colleagueChat.reply) || !text(v.colleagueChat.nextMorning))) return false;
+  if (Object.hasOwn(v, "chapter") && (Object.hasOwn(v, "experiment") || !validChapter(v.chapter))) return false;
   const run = v as unknown as Run;
+  if (!run.chapter && (run.active?.support || run.active?.gift !== undefined || run.history.some(r => r.support || r.gift !== undefined))) return false;
   if (run.history.some((r, i) => r.day !== Math.floor(i / ORDERS_PER_DAY) + 1)) return false;
   if ((run.phase === "deal") !== (run.active !== null) || (run.active !== null && !validDeal(run.active))) return false;
   const receiptPhase = ["receipt", "draft", "result"].includes(run.phase);
   if (receiptPhase ? !validReceipt(run.receipt) : run.receipt !== null) return false;
   const last = run.history.at(-1);
   if (receiptPhase && (!last || run.receipt!.id !== last.id || run.receipt!.day !== run.day || run.receipt!.customerId !== last.customerId)) return false;
+  if (!validSubsidyState(run)) return false;
   const finished = run.reputation <= 0 || (run.day === 7 && run.turn === 2);
   if (run.phase === "result" && !finished) return false;
   if (finished && run.phase !== "receipt" && run.phase !== "result") return false;
@@ -352,11 +498,28 @@ function validRun(v: unknown): v is Run {
   if (run.active && resolved.has(run.active.opportunity.id)) return false;
   return run.board.every((o) => !resolved.has(o.id) && o.id !== run.active?.opportunity.id);
 }
+function restoreVisitLog(run: Run): Run["visitLog"] {
+  // Older saves did not retain unpicked leads. Recover only known appearances; never replay a run.
+  const log: Run["visitLog"] = {};
+  const seen = new Set<string>();
+  const remember = (id: string, day: number, sceneId = "daily") => {
+    const key = `${day}:${id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      log[id] = { count: (log[id]?.count ?? 0) + 1, lastDay: day, sceneId };
+    }
+  };
+  for (const receipt of run.history) remember(receipt.customerId, receipt.day);
+  for (const op of [...run.board, ...(run.active ? [run.active.opportunity] : [])]) remember(op.customerId, run.day, op.sceneId);
+  return log;
+}
 export function parseRun(raw: string | null): Run | null {
   if (typeof raw !== "string" || raw.length > 150000) return null;
   try {
     const value: unknown = JSON.parse(raw);
-    return validRun(value) ? value : null;
+    if (!validRun(value)) return null;
+    value.visitLog ??= restoreVisitLog(value);
+    return value;
   } catch { return null; }
 }
 export const serializeRun = (run: Run): string => JSON.stringify(run);

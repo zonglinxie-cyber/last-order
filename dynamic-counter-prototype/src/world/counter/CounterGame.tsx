@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { BottomSheet, MobileScroll, useKeyboard, useKeyboardInsets } from "../../mobile";
 import { asset } from "../../base.ts";
 import { sfx, sfxMute, sfxMuted } from "../../sfx.ts";
@@ -8,6 +8,12 @@ import {
   parseProfile, parseRun, pickCustomer, quote, recordResult, resultOf, SAVE_KEY,
   selectDiscount, selectProduct, serializeRun, startRun, TOTAL_DAYS,
 } from "./engine.ts";
+import { publicSubsidyPreview, SUBSIDY_AMOUNT, SUBSIDY_DAYS, SUBSIDY_EXPERIMENT, SUBSIDY_META_KEY, SUBSIDY_SAVE_KEY } from "./subsidy.ts";
+import { receiptAchievement, talkToSuman } from "./colleague.ts";
+import {
+  ChapterAward, ChapterBooking, ChapterGift, ChapterGoal, ChapterInventory,
+  ChapterPlanPanel, ChapterReceipt, ChapterRecap, ChapterSupport,
+} from "./ChapterPanels.tsx";
 import type { Action, Customer, Product, Profile, Run, StyleId } from "./types.ts";
 import "./counter.css";
 
@@ -43,7 +49,42 @@ function Score({ run }: { run: Run }) {
   </section>;
 }
 
+function SubsidyIntro() {
+  return <section className="c-subsidy" data-testid="subsidy-intro" aria-label="适配补贴实验说明">
+    <span className="c-eyebrow">本地玩法实验 · 非正式难度</span><b>多一份补贴，会让选择更有趣吗？</b>
+    <p>第 {SUBSIDY_DAYS.join("、")} 天，各有一份 {money(SUBSIDY_AMOUNT)} 的指定商品补贴，当天未领不累计。不追补贴，也能正常做生意。</p>
+    <p>须正常成交，且商品首要需求能力达到客人的要求、次要需求至少 1 格。倾听和试用加分不能代替商品能力。</p>
+    <small>独立存档、独立联赛纪录，不影响普通版进度。这个规则仍在验证，不代表更好玩。</small>
+  </section>;
+}
+function SubsidyOffer({ run }: { run: Run }) {
+  if (run.experiment !== SUBSIDY_EXPERIMENT) return null;
+  const preview = publicSubsidyPreview(run);
+  const product = PRODUCTS.find(p => p.id === run.subsidy?.productId);
+  const labels = { inactive: "今日无补贴", used: "今日已领完", choose: "选品后判断", unknown: "信息不足", eligible: "商品能力达标", ineligible: "不符合补贴条件" };
+  return <section className="c-subsidy" data-testid="subsidy-offer" data-status={preview.status} aria-label="今日适配补贴">
+    <span className="c-eyebrow">适配补贴 · 实验</span>
+    <b>{product ? `${product.name} · ${money(preview.amount)} · 仅一单` : "今天照常做生意"}</b>
+    <p role="status"><strong>{labels[preview.status]}</strong> · <span>{preview.reason}</span></p>
+    {product && preview.status !== "used" && <small>首要需求能力达到客人要求，次要至少 1 格；须正常成交。不追补贴也能开单，当天未领不累计。</small>}
+  </section>;
+}
+
 type StageProps = { run: Run; update: (fn: (r: Run) => Run) => void };
+function ColleagueMoment({ run, update }: StageProps) {
+  if (run.experiment) return null;
+  const evening = run.day === 1 && run.phase === "draft";
+  const morning = run.day === 2 && run.turn === 0 && run.phase === "select" && run.colleagueChat;
+  if (!evening && !morning) return null;
+  return <section className="c-staff" data-testid="counter-staff" aria-label="和苏蔓聊两句">
+    <div className="c-staff-heading"><img src={asset("/assets/game/staff-portraits/suman.png")} alt="" /><div><span className="c-eyebrow">{evening ? "收柜了 · 聊两句也行" : "开柜前"}</span><b>苏蔓</b></div></div>
+    {run.colleagueChat ? <p data-testid="counter-staff-reply">{evening ? run.colleagueChat.reply : run.colleagueChat.nextMorning}</p> : <>
+      <p>鞋都没换，你还在看那几张单？说说，今天什么感觉。</p>
+      <div className="c-staff-choices"><button type="button" onClick={() => update(r => talkToSuman(r, "review"))}>你看我今天接得怎么样？</button><button type="button" onClick={() => update(r => talkToSuman(r, "own"))}>明天我想自己试试</button></div>
+      <small>也可以直接选好明天的能力，下班。</small>
+    </>}
+  </section>;
+}
 function CustomerQueue({ run, update }: StageProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const candidate = run.board.find(o => o.id === selected);
@@ -53,19 +94,30 @@ function CustomerQueue({ run, update }: StageProps) {
         每天接待两位。剩下的那位，生意归对手。
       </SectionTitle>
       <div className="c-day-strip" aria-label={`第 ${run.day} 天，共 7 天`}>{Array.from({ length: TOTAL_DAYS }, (_, i) => <span key={i} className={i + 1 === run.day ? "current" : i + 1 < run.day ? "done" : ""}>{i + 1 < run.day ? "✓" : i + 1}</span>)}</div>
+      <ChapterGoal run={run} />
+      <SubsidyOffer run={run} />
+      <ColleagueMoment run={run} update={update} />
+      <ChapterInventory run={run} update={update} />
+      <ChapterAward run={run} update={update} />
       <div className="c-customers" aria-label="今天的顾客">
         {run.board.map(op => {
           const customer = customerOf(op.customerId);
-          return <button type="button" className={`c-customer ${selected === op.id ? "selected" : ""}`} key={op.id} aria-pressed={selected === op.id} aria-label={`选择${customer.name}`} onClick={() => setSelected(op.id)}>
+          const previous = op.returning ? run.history.filter(r => r.customerId === op.customerId).at(-1) : undefined;
+          const booking = !run.experiment ? run.chapter?.bookings.find(b => b.day === run.day && b.opportunityId === op.id) : undefined;
+          return <Fragment key={op.id}><button type="button" className={`c-customer ${selected === op.id ? "selected" : ""}`} aria-pressed={selected === op.id} aria-label={`选择${customer.name}`} onClick={() => setSelected(op.id)}>
             <div className="c-portrait-frame"><Portrait customer={customer} /><span>{op.returning ? "熟客" : "新面孔"}</span></div>
             <div className="c-customer-info"><div className="c-customer-title"><h2>{customer.name}</h2><span>{op.wanted === 3 ? "不想将就" : "日常实用"}</span></div><small>{customer.role}</small>
-              <p>{op.opening}</p><div className="c-customer-price"><b>{money(op.budgetLow)}–{op.budgetHigh}</b><span>若留给对手 +{money(op.rivalValue)}</span></div>
+              <span className="c-occasion">{op.occasion}</span><p>{op.opening}</p>
+              {previous && <div className="c-return-memory">第 {previous.day} 天 · 上次{previous.outcome === "sold" ? `买了${PRODUCTS.find(p => p.id === previous.productId)!.name}` : "只聊过，还没买"}</div>}
+              <div className="c-customer-price"><b>{booking ? `已问预算 ${money(booking.budget)}` : `${money(op.budgetLow)}–${op.budgetHigh}`}</b><span>若留给对手 +{money(op.rivalValue)}</span></div>
             </div><span className="c-choice-check" aria-hidden="true">{selected === op.id ? "✓" : "+"}</span>
-          </button>;
+          </button>{selected === op.id && <ChapterBooking run={run} candidate={op} update={update} />}</Fragment>;
         })}
       </div>
+      {!candidate && <ChapterBooking run={run} update={update} />}
+      <p className="c-soft-note">{run.turn === 0 ? `今天 ${run.board.filter(op => !op.returning).length} 位新面孔，${run.board.filter(op => op.returning).length} 位熟客。` : "老面孔也有新来意，别照着上次机械选货。"} 本轮已记录 {Object.keys(run.visitLog).length} 位不同客人。</p>
       <div className="c-rival-note"><span>↗</span><p>对手今天的自有客源已进账 <b>{money(run.dayRival)}</b>。你没接住的机会，还会让对手多赚。</p></div>
-      {run.day === 1 && run.turn === 0 && <p className="c-soft-note">先读她的话，再看预算。不是预算最高的，就一定最值得接。</p>}
+      {run.day === 1 && run.turn === 0 && <p className="c-soft-note">先读客人的话，再看预算。不是预算最高的，就一定最值得接。</p>}
     </Scroll>
     <Footer><div className="c-foot-note">{candidate ? `这次接待${customerOf(candidate.customerId).name} · 今天剩 ${2 - run.turn} 个名额` : "点一位客人，看看这笔生意值不值得争"}</div><button className="c-primary" type="button" disabled={!candidate} onClick={() => candidate && update(r => pickCustomer(r, candidate.id))}>{candidate ? `接待${customerOf(candidate.customerId).name}` : "先选一位客人"}<span>→</span></button></Footer>
   </>;
@@ -85,20 +137,26 @@ function Negotiation({ run, update }: StageProps) {
   const knownFit = product ? d.known.reduce((sum, trait, i) => sum + product.traits[trait] * (i === 0 ? 2 : 1), 0) : 0;
   const threshold = d.opportunity.wanted * 2 + 2 + Number(run.rank === 2 || run.rank === 4);
   const preview = !d.known.length ? "需求还没问清，先别只看价格。" : product && product.traits[d.known[0]!] === 0 ? "这支解决不了已知的首要需求，倾听和试用也不能替代。" : d.known.length < 2 ? `已知部分匹配 ${knownFit} 分，另一个需求还没确认。` : `已知匹配 ${knownFit}/9 · 这单说服门槛 ${threshold} 分`;
+  const conversation = d.conversation;
+  const lastQuestion = conversation?.map(line => line.speaker).lastIndexOf("you") ?? -1;
+  const exchange = conversation?.slice(Math.max(0, lastQuestion));
   const doAct = (action: Action) => update(r => act(r, action));
   useEffect(() => { if (tab === "talk" && d.lines.length > 1) replyRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [d.lines.length, tab]);
   return <>
-    <div className="c-deal-top"><div><b>{customer.name}</b><span>{d.opportunity.returning ? "她又回来了" : customer.role}</span></div><div className="c-patience" aria-label={`剩余 ${d.patience} 次交谈`}><span>{noTime ? "该做决定了" : `还能聊 ${d.patience} 次`}</span><div aria-hidden="true">{Array.from({ length: d.maxPatience }, (_, i) => <i key={i} className={i < d.patience ? "on" : ""} />)}</div></div></div>
+    <div className="c-deal-top"><div><b>{customer.name}</b><span>{d.opportunity.returning ? "熟客回来了 · 新的来意" : customer.role}</span></div><div className="c-patience" aria-label={`剩余 ${d.patience} 次交谈`}><span>{noTime ? "该做决定了" : `还能聊 ${d.patience} 次`}</span><div aria-hidden="true">{Array.from({ length: d.maxPatience }, (_, i) => <i key={i} className={i < d.patience ? "on" : ""} />)}</div></div></div>
     <div className="c-tabs" role="tablist" aria-label="接待步骤">
-      <button type="button" role="tab" id="c-talk-tab" aria-controls="c-talk-panel" aria-selected={tab === "talk"} onClick={() => setTab("talk")}>01 听她说</button>
+      <button type="button" role="tab" id="c-talk-tab" aria-controls="c-talk-panel" aria-selected={tab === "talk"} onClick={() => setTab("talk")}>01 听客人说</button>
       <button type="button" role="tab" id="c-shelf-tab" aria-controls="c-shelf-panel" aria-selected={tab === "shelf"} onClick={() => setTab("shelf")}>02 挑货报价</button>
     </div>
     <Scroll reset={tab}>
       <div className="c-evidence" aria-label="已掌握的信息"><span>{d.budgetKnown ? `预算 ${money(d.opportunity.budget)}${run.perks.includes("budget-room") ? "（可说明价值 +30）" : ""}` : `预算约 ${money(d.opportunity.budgetLow)}–${d.opportunity.budgetHigh}`}</span>
         {d.known.map((t, i) => <b key={t}>{i === 0 ? "首要" : "其次"} · {TRAIT_LABELS[t]}</b>)}{d.known.length < 2 && <small>{2 - d.known.length} 条需求待确认</small>}</div>
       {tab === "talk" ? <section id="c-talk-panel" role="tabpanel" aria-labelledby="c-talk-tab">
-        <div className="c-conversation"><Portrait customer={customer} /><div className="c-speech"><span>{d.opportunity.returning ? "这次，她有新的打算" : "客人开口了"}</span><p>{d.opportunity.opening}</p></div></div>
-        {d.lines.length > 1 && <div className="c-live-reply" role="status" ref={replyRef}><span>刚刚听到的</span>{d.lines.slice(-2).filter(line => line !== d.opportunity.opening).map((line, i) => <p key={`${i}:${line}`}>{line}</p>)}</div>}
+        <div className="c-conversation"><Portrait customer={customer} /><div className="c-speech"><span className="c-occasion">{d.opportunity.occasion}</span><p>{d.opportunity.opening}</p></div></div>
+        {lastQuestion >= 0 && exchange && <div className="c-live-reply" role="status" ref={replyRef} data-testid="counter-conversation">
+          {exchange.map((line, i) => <div key={i} className={`c-spoken c-spoken-${line.speaker}`}><small>{line.speaker === "you" ? "你" : customer.name}</small><p>{line.text}</p></div>)}
+        </div>}
+        {!conversation && d.lines.length > 1 && <p className="c-soft-note">这段接待从旧存档继续，之前的记录留在销售笔记里。</p>}
         <div className="c-action-heading"><b>你想怎么接这句话？</b><span>每次消耗 1 交谈</span></div>
         <div className="c-talk-actions">
           <button type="button" disabled={noTime || d.known.length === 2} onClick={() => doAct("ask-need")}><span>◎</span><b>{actionLabels["ask-need"]}</b><small>{d.known.length === 2 ? "需求已确认" : "最在意什么？"}</small></button>
@@ -108,6 +166,7 @@ function Negotiation({ run, update }: StageProps) {
         </div>
         <p className="c-soft-note">不用把问题问完。留一次试用，或凭线索直接判断，都由你决定。</p>
       </section> : <section id="c-shelf-panel" role="tabpanel" aria-labelledby="c-shelf-tab">
+        <SubsidyOffer run={run} />
         <div className="c-action-heading"><b>六支货，没有万能答案</b><span>特性 0–3 格</span></div>
         <div className="c-products" aria-label="货架">{PRODUCTS.map(p => <button type="button" key={p.id} className={`c-product ${p.id === d.product ? "selected" : ""}`} aria-pressed={p.id === d.product} aria-label={`选择${p.name}`} onClick={() => update(r => selectProduct(r, p.id))}>
           <div className="c-product-top"><Bottle product={p} /><span><b>{money(p.price)}</b><small>成本 {money(p.cost)}</small>{d.tried.includes(p.id) && <em>已试用</em>}</span></div>
@@ -117,14 +176,17 @@ function Negotiation({ run, update }: StageProps) {
           {d.trialNotes[product.id] && <p role="status" className="c-trial-result">{d.trialNotes[product.id]}</p>}
           {(run.rank === 1 || run.rank === 4) && <p className="c-caution">本场须至少九折，或试用最终报价的产品。</p>}
         </section>}
+        <ChapterSupport run={run} update={update} />
+        <ChapterGift run={run} update={update} />
       </section>}
-      <details className="c-details"><summary>这次谈话的记录</summary>{d.lines.map((line, i) => <p key={i}>{line}</p>)}</details>
+      {conversation && <details className="c-details"><summary>这次谈话的记录</summary>{conversation.map((line, i) => <div className={`c-spoken c-spoken-${line.speaker}`} key={i}><small>{line.speaker === "you" ? "你" : customer.name}</small><p>{line.text}</p></div>)}</details>}
+      <details className="c-details" data-testid="counter-notes"><summary>销售笔记 · 数字与依据</summary>{d.lines.map((line, i) => <p key={i}>{line}</p>)}</details>
       <button type="button" className="c-text-button c-leave" onClick={() => setLeaveConfirm(true)}>这笔先不争了</button>
     </Scroll>
     <Footer>{tab === "talk" ? <><div className="c-foot-note">{noTime ? "交谈次数用完了，仍可挑货和报价" : `还剩 ${d.patience} 次交谈 · 小样 ${run.samples} 份`}</div><button type="button" className="c-primary" onClick={() => setTab("shelf")}>去挑货，做判断<span>→</span></button></> : <>
       <div className="c-price-options" role="group" aria-label="报价折扣">{([0, 10, 20] as const).map(discount => <button type="button" key={discount} aria-pressed={d.discount === discount} onClick={() => update(r => selectDiscount(r, discount))}>{discount === 0 ? "原价" : discount === 10 ? "九折" : "八折"}</button>)}</div>
       <div className="c-quote-row"><div><small>{product ? `单品毛利 ${money(paid - product.cost)} · 奖金另计` : "选好商品，再决定是否让价"}</small><b>{product ? `报价 ${money(paid)}` : "还没选货"}</b></div><button type="button" className="c-trial-button" disabled={trialDisabled} onClick={() => doAct("trial")}>{product && d.tried.includes(product.id) ? "这支已试过" : "试这支"}<small>{run.samples <= 0 ? "没有小样了" : noTime ? "交谈已用完" : "1 交谈 · 1 小样"}</small></button></div>
-      {product && d.trialNotes[product.id] && <p className="c-footer-feedback" role="status">{d.trialNotes[product.id]}</p>}
+      {product && d.trialNotes[product.id] && <p className="c-footer-feedback" role="status">{run.experiment ? "试用已记录，完整反馈见上方商品说明。" : d.trialNotes[product.id]}</p>}
       <button type="button" className="c-primary" disabled={!product} onClick={() => update(closeDeal)}>就这样报价<span>→</span></button>
     </>}</Footer>
     <BottomSheet open={leaveConfirm} title="放下这笔生意？" description="没有产品成本；信誉 −1，机会转给对手。已聊出的关系保留，并补回小样。" snap={0.45} onOpenChange={setLeaveConfirm}>
@@ -138,13 +200,17 @@ function ReceiptScreen({ run, update }: StageProps) {
   const customer = customerOf(r.customerId);
   const sold = r.outcome === "sold";
   const ended = run.reputation <= 0 || (run.day === TOTAL_DAYS && run.turn === 2);
+  const achievement = receiptAchievement(run);
   return <>
     <Scroll><div className={`c-receipt ${sold ? "sold" : "lost"}`}>
       <span className="c-eyebrow">{sold ? "DEAL CLOSED · 成交" : "NOT THIS TIME · 留个教训"}</span><h1>{sold ? "这单，接住了。" : r.outcome === "leave" ? "有些生意，先放下。" : "这次，没接住。"}</h1>
       <div className="c-receipt-amount">{sold ? `+${money(r.profit)}` : "没有进账"}<small>{sold ? "真正留下的净收益" : `对手接下机会 +${money(r.rivalGain)}`}</small></div>
+      {run.experiment === SUBSIDY_EXPERIMENT && <p className="c-subsidy-account" data-testid="subsidy-receipt">本单补贴 <b>{money(r.subsidy ?? 0)}</b> · 已包含在净收益中，不重复加钱。</p>}
+      <ChapterReceipt run={run} />
       <div className="c-receipt-person"><Portrait customer={customer} /><div><b>{customer.name}</b><p>“{r.quote}”</p></div></div>
+      {achievement && <section className="c-achievement" data-testid="counter-achievement"><b>{achievement.title}</b><p>{achievement.detail}</p></section>}
       <div className="c-receipt-stats"><span>关系<b>+{r.relationDelta}</b></span><span>信誉<b>{r.reputationDelta > 0 ? "+" : ""}{r.reputationDelta}</b></span><span>实际收入<b>{money(r.revenue)}</b></span></div>
-      <section className="c-lesson"><span>下次，我可以这样做</span><p>{r.lesson}</p></section>
+      <section className="c-lesson"><span>{sold ? "这单留下的经验" : "下次，我可以这样做"}</span><p>{r.lesson}</p></section>
       <details className="c-details" open={!sold}><summary>为什么是这个结果？</summary><p>{r.explanation}</p>{r.breakdown.map(line => <p key={line}>{line}</p>)}</details>
     </div></Scroll>
     <Footer><button type="button" className="c-primary" onClick={() => update(continueRun)}>{ended ? "看这轮战绩" : run.turn === 2 ? "收柜，选明天的能力" : "还有一位，继续接客"}<span>→</span></button></Footer>
@@ -154,13 +220,18 @@ function ReceiptScreen({ run, update }: StageProps) {
 function DraftScreen({ run, update }: StageProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const today = run.history.filter(r => r.day === run.day);
+  const giftExpense = !run.experiment && run.day === 3 ? run.chapter?.gifts.expense ?? 0 : 0;
   return <>
     <Scroll><SectionTitle eyebrow={`DAY ${String(run.day).padStart(2, "0")} · 收柜之后`} title="明天，用什么赢？">三选一，整轮生效。把小优势连成你的打法。</SectionTitle>
-      <div className="c-day-recap"><span>今天成交 <b>{today.filter(r => r.outcome === "sold").length} / 2</b></span><span>今天净赚 <b>{money(today.reduce((sum, r) => sum + r.profit, 0))}</b></span></div>
+      <div className="c-day-recap"><span>今天成交 <b>{today.filter(r => r.outcome === "sold").length} / 2</b></span><span>今天净赚 <b>{money(today.reduce((sum, r) => sum + r.profit, 0) - giftExpense)}</b></span></div>
+      <ChapterPlanPanel run={run} update={update} />
+      <ChapterInventory run={run} update={update} />
       <div className="c-perk-options">{run.draft.map(id => {
         const p = perkOf(id), same = run.perks.filter(key => perkOf(key).category === p.category).length;
         return <button type="button" className={`c-perk-card ${selected === id ? "selected" : ""}`} key={id} aria-pressed={selected === id} aria-label={`选择能力${p.name}`} onClick={() => setSelected(id)}><span className="c-perk-icon">{p.icon}</span><div><span className="c-eyebrow">{p.category}{same > 0 ? ` · 已有 ${same} 项同系能力` : " · 开拓新打法"}</span><h2>{p.name}</h2><p>{p.description}</p></div><span className="c-choice-check" aria-hidden="true">{selected === id ? "✓" : "+"}</span></button>;
       })}</div>
+      <ColleagueMoment run={run} update={update} />
+      <ChapterRecap run={run} />
       <div className="c-kit"><h2>你已经练成的</h2><div>{run.perks.map(id => <span key={id}>{perkOf(id).icon} {perkOf(id).name}</span>)}</div></div>
     </Scroll>
     <Footer><div className="c-foot-note">明天补给小样 +2，关系和净收益继续保留</div><button type="button" className="c-primary" disabled={!selected} onClick={() => selected && update(r => choosePerk(r, selected))}>{selected ? `带上「${perkOf(selected).name}」` : "选一项经营能力"}<span>→</span></button></Footer>
@@ -170,11 +241,19 @@ function DraftScreen({ run, update }: StageProps) {
 function ResultScreen({ run, profile, onHome }: { run: Run; profile: Profile; onHome: () => void }) {
   const result = resultOf(run);
   const next = LEAGUES[run.rank + 1];
+  const subsidyTotal = run.history.reduce((sum, receipt) => sum + (receipt.subsidy ?? 0), 0);
   return <>
     <Scroll><div className={`c-finish ${result.won ? "won" : ""}`}><span className="c-finish-symbol" aria-hidden="true">{result.won ? "✦" : "↻"}</span><span className="c-eyebrow">{LEAGUES[run.rank]!.name} · 本轮结算</span><h1>{result.won ? "这一柜，赢得漂亮。" : "差一点，换个办法。"}</h1><p>{result.reason}</p></div>
       <div className="c-result-stats"><span><b>{result.sales}</b>笔成交</span><span><b>{result.returningSales}</b>笔熟客生意</span><span><b>{result.perfectSales}</b>笔高匹配</span></div>
+      <p className="c-soft-note">这一轮，记录了 {Object.keys(run.visitLog).length} 位不同客人的到访。还有新面孔和不同来意，等下一次开柜。</p>
+      {run.experiment === SUBSIDY_EXPERIMENT && <section className="c-subsidy" data-testid="subsidy-result" aria-label="实验收益分账">
+        <span className="c-eyebrow">实验收益分账</span><b>赚得更多，不一定是判断更好</b>
+        <dl><div><dt>本轮补贴</dt><dd>{money(subsidyTotal)}</dd></div><div><dt>扣除补贴净收益</dt><dd>{money(run.money - subsidyTotal)}</dd></div></dl>
+        <p>这只是本轮账目扣除补贴，不是重新跑一局普通版。战绩与联赛解锁仅保存在实验档。</p>
+      </section>}
+      <ChapterRecap run={run} total />
       <section className="c-lesson"><span>不是熬更久，是换一种赢法</span><p>{result.lesson}</p></section>
-      {result.won && next && <div className="c-next-league"><span>下一场已解锁</span><h2>{next.name}</h2><p>{leagueBrief[next.id]}</p></div>}
+      {result.won && next && <div className="c-next-league"><span>{run.experiment ? "实验档下一场已解锁" : "下一场已解锁"}</span><h2>{next.name}</h2><p>{leagueBrief[next.id]}</p></div>}
       {result.won && !next && <div className="c-next-league"><span>五级联赛已完成</span><h2>换个流派，再赢一次？</h2><p>当前原型的联赛到这里。可换风格、换新客局挑战纪录，不用重复读旧剧情。</p></div>}
       <div className="c-kit"><h2>这轮的经营手感</h2><div>{run.perks.map(id => <span key={id}>{perkOf(id).icon} {perkOf(id).name}</span>)}</div><p>已完成 {profile.runs} 轮 · 胜出 {profile.wins} 轮</p></div>
     </Scroll>
@@ -185,9 +264,16 @@ function ResultScreen({ run, profile, onHome }: { run: Run; profile: Profile; on
 export default function CounterGame() {
   const keyboard = useKeyboard();
   const { bottomInset } = useKeyboardInsets();
-  const [boot] = useState(() => { const raw = read(SAVE_KEY); const saved = parseRun(raw); return { run: saved, corrupt: !!raw && !saved }; });
+  const [boot] = useState(() => {
+    const experiment = new URLSearchParams(window.location.search).get("experiment") === SUBSIDY_EXPERIMENT ? SUBSIDY_EXPERIMENT : undefined;
+    const saveKey = experiment ? SUBSIDY_SAVE_KEY : SAVE_KEY;
+    const metaKey = experiment ? SUBSIDY_META_KEY : META_KEY;
+    const raw = read(saveKey), parsed = parseRun(raw);
+    const saved = parsed?.experiment === experiment ? parsed : null;
+    return { run: saved, corrupt: !!raw && !saved, experiment, saveKey, metaKey } as const;
+  });
   const [run, setRun] = useState<Run | null>(boot.run);
-  const [profile, setProfile] = useState(() => parseProfile(read(META_KEY)));
+  const [profile, setProfile] = useState(() => parseProfile(read(boot.metaKey)));
   const [playing, setPlaying] = useState(false);
   const [style, setStyle] = useState<StyleId>(boot.run?.style ?? "reader");
   const [rank, setRank] = useState(() => Math.min(boot.run?.rank ?? profile.unlocked, profile.unlocked));
@@ -201,25 +287,26 @@ export default function CounterGame() {
   const launch = () => {
     keyboard.hide();
     const seed = `${Date.now().toString(36)}-${crypto.getRandomValues(new Uint32Array(1))[0]!.toString(36)}`;
-    setRun(startRun(seed, Math.min(rank, profile.unlocked), style)); setPlaying(true); setReplace(false); sfx("up");
+    setRun(startRun(seed, Math.min(rank, profile.unlocked), style, boot.experiment)); setPlaying(true); setReplace(false); sfx("up");
   };
   useEffect(() => {
     if (!run || !playing) return;
-    try { localStorage.setItem(SAVE_KEY, serializeRun(run)); setStorageError(false); } catch { setStorageError(true); }
+    try { localStorage.setItem(boot.saveKey, serializeRun(run)); setStorageError(false); } catch { setStorageError(true); }
     if (run.phase === "result") setProfile(p => recordResult(p, run));
-  }, [run, playing]);
+  }, [run, playing, boot.saveKey]);
   useEffect(() => {
-    try { localStorage.setItem(META_KEY, JSON.stringify(profile)); } catch { setStorageError(true); }
-  }, [profile]);
+    try { localStorage.setItem(boot.metaKey, JSON.stringify(profile)); } catch { setStorageError(true); }
+  }, [profile, boot.metaKey]);
   const home = () => { keyboard.hide(); setPlaying(false); setMenu(false); setRank(p => Math.max(p, profile.unlocked)); };
   const shownRun = playing ? run : null;
-  return <main className="counter-app" style={{ paddingBottom: bottomInset }} data-testid="counter-game" data-phase={shownRun?.phase ?? "lobby"}>
-    <header className="c-header"><button type="button" className="c-brand" onClick={() => { keyboard.hide(); if (playing) setMenu(true); }} aria-label="人情场 · 赛程菜单"><span>人情场<i>LAST ORDER</i></span><b>七天争柜</b></button><button className="c-menu-button" type="button" aria-label="查看玩法与经营能力" onClick={() => { keyboard.hide(); setMenu(true); }}>☷</button></header>
+  return <main className="counter-app" style={{ paddingBottom: bottomInset }} data-testid="counter-game" data-experiment={boot.experiment ?? "standard"} data-phase={shownRun?.phase ?? "lobby"}>
+    <header className="c-header"><button type="button" className="c-brand" onClick={() => { keyboard.hide(); if (playing) setMenu(true); }} aria-label="人情场 · 赛程菜单"><span>人情场<i>LAST ORDER</i></span><b>{boot.experiment ? "争柜 · 实验" : "七天争柜"}</b></button><button className="c-menu-button" type="button" aria-label="查看玩法与经营能力" onClick={() => { keyboard.hide(); setMenu(true); }}>☷</button></header>
     {storageError && <p className="c-storage-warning" role="alert">浏览器暂时无法保存，关闭页面可能丢失这轮进度。</p>}
     {shownRun && <><div className="c-run-status"><span>第 {shownRun.day} / 7 天 · {LEAGUES[shownRun.rank]!.name}</span><span aria-label={`信誉 ${shownRun.reputation}，小样 ${shownRun.samples}`}>♡ {shownRun.reputation} <i /> ◇ {shownRun.samples}</span></div><Score run={shownRun} /></>}
     {!shownRun ? <>
       <Scroll>
-        <section className="c-hero"><span className="c-eyebrow">一场生意，一段人情。</span><h1>卖得漂亮，<br />不如赢得漂亮。</h1><p>七天，十四次选择。<br />把陌生人变成熟客，把你的打法练成招牌。</p><div className="c-hero-shelf">{[PRODUCTS[0]!, PRODUCTS[3]!, PRODUCTS[5]!].map(p => <Bottle key={p.id} product={p} />)}</div><span className="c-hero-number" aria-hidden="true">07</span><div className="c-hero-tag">有限交谈 · 真实利润 · 每局新打法</div></section>
+        {boot.experiment && <SubsidyIntro />}
+        <section className="c-hero"><span className="c-eyebrow">一场生意，一段人情。</span><h1>卖得漂亮，<br />不如赢得漂亮。</h1><p>七天，十四次选择。<br />把陌生人变成熟客，把你的打法练成招牌。</p><div className="c-hero-shelf">{[PRODUCTS[0]!, PRODUCTS[3]!, PRODUCTS[5]!].map(p => <Bottle key={p.id} product={p} />)}</div><span className="c-hero-number" aria-hidden="true">07</span><div className="c-hero-tag">{CUSTOMERS.length} 位客人 · {CUSTOMERS.reduce((sum, c) => sum + 1 + c.scenes.length, 0)} 种来意 · 每局新相遇</div></section>
         {boot.corrupt && !run && <p className="c-storage-warning" role="status">上次新版进度无法读取。原数据未删除，开始新局才会覆盖；旧版存档不受影响。</p>}
         {hasLiveRun && <button type="button" className="c-resume" onClick={() => { keyboard.hide(); setPlaying(true); }}><span><b>继续第 {run.day} 天</b><small>{phaseWord(run)} · {LEAGUES[run.rank]!.name}</small></span><span>→</span></button>}
         <div className="c-action-heading"><h2>先选你的销售风格</h2><span>不是职业限制</span></div>
@@ -227,7 +314,7 @@ export default function CounterGame() {
         <p className="c-style-note">{STYLES.find(s => s.id === style)!.description}</p>
         <div className="c-action-heading"><h2>这次，争哪一柜？</h2><span>胜出才晋级</span></div>
         <div className="c-leagues" role="group" aria-label="联赛选择">{LEAGUES.map(l => <button type="button" key={l.id} disabled={l.id > profile.unlocked} aria-pressed={rank === l.id} aria-label={`${l.name}${l.id > profile.unlocked ? "，尚未解锁" : ""}`} className={rank === l.id ? "selected" : ""} onClick={() => setRank(l.id)}><span>{l.id > profile.unlocked ? "·" : `0${l.id + 1}`}</span><b>{l.name}</b><small>{l.id > profile.unlocked ? "赢下前一场解锁" : leagueBrief[l.id]}</small></button>)}</div>
-        <p className="c-prototype-note">全新玩法试玩版 · 独立保存，不覆盖旧版进度。<br />一轮不是全通关，五场联赛的规则会改变。</p>
+        <p className="c-prototype-note">{boot.experiment ? "补贴实验版 · 不覆盖普通版或旧版进度。" : "全新玩法试玩版 · 独立保存，不覆盖旧版进度。"}<br />一轮不是全通关，五场联赛的规则会改变。</p>
       </Scroll>
       <Footer><div className="c-foot-note">{league.name} · 7 天净收益超过对手，且信誉不能归零</div><button type="button" className="c-primary" onClick={() => hasLiveRun ? setReplace(true) : launch()}>{hasLiveRun ? "换打法，开始新一轮" : "开柜，迎接第一位客人"}<span>→</span></button></Footer>
     </> : <div className="c-stage" key={`${shownRun.day}:${shownRun.turn}:${shownRun.phase}`}>
@@ -238,8 +325,9 @@ export default function CounterGame() {
       {shownRun.phase === "result" && <ResultScreen run={shownRun} profile={profile} onHome={home} />}
     </div>}
     <BottomSheet open={menu} title="这一柜，怎么赢？" description="少做机械操作，多做值得的决定。" snap={0.83} onOpenChange={setMenu}>
-      <div className="c-menu-content"><MobileScroll><div className="c-menu-pad"><ol className="c-rules"><li><b>挑人</b>每天三位机会，只接两位；剩下的归对手。</li><li><b>谈单</b>用有限交谈确认需求、预算，或留一次试用。倾听能建立关系。</li><li><b>报价</b>收入减成本，才是利润。折扣能救单，也会吃掉利润；能力奖金单独列明。</li><li><b>成长</b>每天收柜三选一能力。真实熟客会带着新需求回来。</li><li><b>争柜</b>信誉耗尽提前出局；七天后净收益严格超过对手才赢，平局不算。</li></ol>
+      <div className="c-menu-content"><MobileScroll><div className="c-menu-pad"><ol className="c-rules"><li><b>挑人</b>每天三位机会，只接两位；剩下的归对手。</li><li><b>谈单</b>用有限交谈确认需求、预算，或留一次试用。倾听能建立关系。</li><li><b>报价</b>收入减成本，才是利润。折扣能救单，也会吃掉利润；能力奖金单独列明。</li><li><b>成长</b>每天收柜三选一能力。新开的一轮每天至少两位新面孔；熟客隔天才回访，每人一轮最多出现两次，带着不同来意回来。</li><li><b>争柜</b>信誉耗尽提前出局；七天后净收益严格超过对手才赢，平局不算。</li></ol>
         <details className="c-details"><summary>本场的完整规则与匹配算法</summary><p>{LEAGUES[shownRun?.rank ?? rank]!.rule}</p><p>商品特性为 0–3 格。首要需求至少 1 格才有资格成交，不能靠加成弥补完全不对应。首要需求算两倍，次要算一倍；试用和倾听增加说服分，但不能替代预算。日常顾客门槛 6，不能将就的顾客门槛 8；高要求联赛再加 1。只有问出的需求和真实试用结果会在报价前显示。</p><p>每日基础客源收入为 220 + 天数×20 + 级别×15；已计入对手账。剩余和失败机会再单独计入，对手不会凭空加隐藏分。</p></details>
+        {boot.experiment && <SubsidyIntro />}
         {run && <div className="c-kit"><h2>你的经营能力</h2>{run.perks.map(id => <section key={id}><b>{perkOf(id).icon} {perkOf(id).name}</b><p>{perkOf(id).description}</p></section>)}</div>}
         <button type="button" className="c-secondary" onClick={() => { const next = !muted; sfxMute(next); setMuted(next); }}>{muted ? "打开音效" : "关闭音效"}</button>
         {playing && <button type="button" className="c-secondary" onClick={home}>保存并回到开柜页</button>}

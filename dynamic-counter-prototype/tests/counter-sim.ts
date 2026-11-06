@@ -1,7 +1,7 @@
 // Reproduce: node --experimental-strip-types tests/counter-sim.ts 40
 // Policies receive a redacted view. Only the explicitly labelled oracle reads hidden needs/budget.
 import { pathToFileURL } from "node:url";
-import { PERKS, PRODUCTS, STYLES } from "../src/world/counter/content.ts";
+import { CUSTOMERS, PERKS, PRODUCTS, STYLES } from "../src/world/counter/content.ts";
 import { act, choosePerk, closeDeal, continueRun, leaveDeal, pickCustomer, resultOf, selectDiscount, selectProduct, startRun } from "../src/world/counter/engine.ts";
 import type { Action, Discount, Run, StyleId, Trait } from "../src/world/counter/types.ts";
 
@@ -143,13 +143,17 @@ export function simulate(seed: string, style: StyleId, rank = 0, strategy: Strat
 function report(count: number, ranks: number[], strategies: Strategy[]): void {
   const rows: Record<string, string | number>[] = [];
   for (const rank of ranks) for (const strategy of strategies) for (const style of STYLES) {
-    let wins = 0, money = 0, rival = 0, sales = 0, days = 0, returning = 0;
+    let wins = 0, money = 0, rival = 0, sales = 0, days = 0, returning = 0, faces = 0;
+        const scenes = new Set<string>();
     for (let i = 0; i < count; i++) {
-      const run = simulate(`counter-bench-${i}`, style.id, rank, strategy);
+      const run = simulate(`counter-bench-${i}`, style.id, rank, strategy, state => {
+              if (state.phase === "select" && state.turn === 0) for (const op of state.board) scenes.add(`${op.customerId}/${op.sceneId}`);
+            });
+            faces += Object.keys(run.visitLog).length;
       const result = resultOf(run);
       wins += Number(result.won); money += run.money; rival += run.rivalMoney; sales += result.sales; days += run.day; returning += result.returningSales;
     }
-    rows.push({ rank, strategy, style: style.id, runs: count, win: `${(wins / count * 100).toFixed(1)}%`, net: Math.round(money / count), rivalNet: Math.round(rival / count), sold: (sales / count).toFixed(2), returnSold: (returning / count).toFixed(2), days: (days / count).toFixed(2) });
+    rows.push({ rank, strategy, style: style.id, runs: count, win: `${(wins / count * 100).toFixed(1)}%`, net: Math.round(money / count), rivalNet: Math.round(rival / count), sold: (sales / count).toFixed(2), returnSold: (returning / count).toFixed(2), days: (days / count).toFixed(2), faces: (faces / count).toFixed(2), scenesSeen: scenes.size });
   }
   console.table(rows);
 }
@@ -162,5 +166,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log("Omniscient feasibility probe (single-deal enumeration, NOT global optimality or player win rate):");
     report(count, [1, 2, 3, 4], ["oracle"]);
   }
-  console.log(`Content: ${PRODUCTS.length} products, ${PERKS.length} real perks. Each style uses identical benchmark seeds.`);
+  console.log(`Content: ${CUSTOMERS.length} customers, ${CUSTOMERS.reduce((sum, c) => sum + 1 + c.scenes.length, 0)} scenes, ${PRODUCTS.length} products, ${PERKS.length} real perks. Faces is per run; scenesSeen is across all seeds in a row. Each style uses identical benchmark seeds.`);
 }

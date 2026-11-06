@@ -8,7 +8,7 @@ import {
   emptyProfile, parseProfile, recordResult,
 } from "../src/world/counter/engine.ts";
 import { oracleDeal, preferredPerk, publicView, simulate } from "./counter-sim.ts";
-import type { Action, Discount, Run, StyleId } from "../src/world/counter/types.ts";
+import type { Action, Customer, CustomerScene, Discount, Opportunity, Run, StyleId } from "../src/world/counter/types.ts";
 
 function open(seed = "unit", style: StyleId = "reader", rank = 0): Run {
   const run = startRun(seed, rank, style);
@@ -26,6 +26,41 @@ function addPerks(run: Run, ...perks: string[]): Run {
 function roundTrip(run: Run): void {
   assert.deepEqual(parseRun(serializeRun(run)), run, `save rejected ${run.seed}/${run.day}/${run.turn}/${run.phase}`);
 }
+function scenesOf(customer: Customer): CustomerScene[] {
+  return [{ id: "daily", label: "日常补给", primary: customer.primary, secondary: customer.secondary,
+    budget: customer.budget, opening: customer.opening, story: customer.story }, ...customer.scenes];
+}
+function assertScene(op: Opportunity): void {
+  const customer = CUSTOMERS.find((c) => c.id === op.customerId)!;
+  const scene = scenesOf(customer).find((s) => s.id === op.sceneId);
+  assert.ok(scene, `${op.customerId}: unknown generated scene ${op.sceneId}`);
+  assert.equal(op.occasion, scene.label);
+  assert.equal(op.primary, scene.primary);
+  assert.equal(op.secondary, scene.secondary);
+  assert.equal(op.story, scene.story);
+  assert.ok(op.opening.includes(scene.opening), `${op.id}: opening must describe its scene`);
+  assert.ok(op.budgetLow <= op.budget && op.budget <= op.budgetHigh);
+}
+function legacySave(run: Run) {
+  const { visitLog: _visits, ...legacy } = structuredClone(run);
+  for (const op of [...legacy.board, ...(legacy.active ? [legacy.active.opportunity] : [])]) {
+    delete op.sceneId;
+    delete op.story;
+  }
+  return legacy;
+}
+function assertKnownVisits(run: Run): void {
+  const days = new Map<string, Set<number>>();
+  const note = (id: string, day: number) => days.set(id, new Set([...(days.get(id) ?? []), day]));
+  for (const receipt of run.history) note(receipt.customerId, receipt.day);
+  for (const op of [...run.board, ...(run.active ? [run.active.opportunity] : [])]) note(op.customerId, run.day);
+  assert.deepEqual(Object.keys(run.visitLog).sort(), [...days.keys()].sort(), "migration must not invent unseen leads");
+  for (const [id, seenDays] of days) {
+    assert.equal(run.visitLog[id]!.count, seenDays.size, `${id}: count each known appearance once`);
+    assert.equal(run.visitLog[id]!.lastDay, Math.max(...seenDays));
+    assert.ok(run.visitLog[id]!.sceneId.length > 0);
+  }
+}
 function freeze<T>(value: T): T {
   if (typeof value === "object" && value !== null) {
     Object.freeze(value);
@@ -36,16 +71,36 @@ function freeze<T>(value: T): T {
 
 test("content is isolated, unique, complete and uses existing portraits", () => {
   assert.equal(PRODUCTS.length, 6);
-  assert.equal(CUSTOMERS.length, 8);
+  assert.equal(CUSTOMERS.length, 24);
   assert.equal(PERKS.length, 12);
   assert.equal(LEAGUES.length, 5);
   assert.equal(STYLES.length, 3);
   for (const collection of [PRODUCTS, CUSTOMERS, PERKS, LEAGUES, STYLES]) assert.equal(new Set(collection.map((v) => v.id)).size, collection.length);
+  const originalIds = ["shen", "mei", "zhou", "xiaoyu", "anjie", "duan", "zhao", "miduo"];
+  assert.ok(originalIds.every((id) => CUSTOMERS.some((c) => c.id === id)), "retain all original customers");
+  const sceneKeys = new Set<string>(), stories = new Set<string>();
   for (const customer of CUSTOMERS) {
     assert.ok(existsSync(new URL(`../public${customer.portrait}`, import.meta.url)), customer.portrait);
-    assert.ok(customer.opening && customer.story && customer.returnLine && customer.role);
-    assert.equal(customer.portrait, customer.id === "miduo" ? "/assets/game/people/miduo.webp" : `/assets/game/customer-${customer.id}-consultation.webp`);
+    assert.ok(customer.name && customer.returnLine && customer.role);
+    assert.equal(customer.portrait, originalIds.includes(customer.id) && customer.id !== "miduo"
+      ? `/assets/game/customer-${customer.id}-consultation.webp` : `/assets/game/people/${customer.id}.webp`);
+    assert.equal(customer.scenes.length, 2, `${customer.id}: two additional scenes plus daily`);
+    const scenes = scenesOf(customer);
+    assert.equal(new Set(scenes.map((s) => s.id)).size, 3);
+    assert.equal(new Set(scenes.map((s) => s.label)).size, 3);
+    assert.equal(new Set(scenes.map((s) => s.opening)).size, 3);
+    assert.ok(new Set(scenes.map((s) => `${s.primary}/${s.secondary}`)).size >= 2, `${customer.id}: needs must vary by scene`);
+    for (const scene of scenes) {
+      assert.ok([scene.id, scene.label, scene.opening, scene.story].every((s) => typeof s === "string" && s.trim().length > 0));
+      assert.ok(scene.primary in TRAIT_LABELS && scene.secondary in TRAIT_LABELS);
+      assert.notEqual(scene.primary, scene.secondary);
+      assert.ok(Number.isSafeInteger(scene.budget) && scene.budget >= 180 && scene.budget <= 10000);
+      sceneKeys.add(`${customer.id}/${scene.id}`);
+      stories.add(scene.story);
+    }
   }
+  assert.equal(sceneKeys.size, 72);
+  assert.equal(stories.size, 72, "each scene needs its own story, not copied filler");
   assert.equal(CUSTOMERS.find((c) => c.id === "zhou")!.name, "周姐");
   assert.equal(CUSTOMERS.find((c) => c.id === "duan")!.name, "段小姐");
   for (const p of PRODUCTS) {
@@ -67,6 +122,11 @@ test("start is playable, seeded, rank-zero by default, three candidates for two 
   assert.equal(run.rivalMoney, run.dayRival); assert.equal(run.dayRival, 240);
   assert.equal(new Set(run.board.map((o) => o.customerId)).size, 3);
   assert.ok(run.board.every((o) => !o.returning && o.budgetLow <= o.budget && o.budgetHigh >= o.budget));
+  assert.equal(Object.keys(run.visitLog).length, 3);
+  for (const op of run.board) {
+    assertScene(op);
+    assert.deepEqual(run.visitLog[op.customerId], { count: 1, lastDay: 1, sceneId: op.sceneId });
+  }
   assert.notDeepEqual(run.board, startRun("different").board);
   for (const style of STYLES) assert.deepEqual(startRun("s", 0, style.id).perks, [style.perk]);
   roundTrip(run);
@@ -134,7 +194,7 @@ test("listen is once per deal, tells this person's story and preserves a real re
   const id = run.active!.opportunity.customerId;
   run = act(run, "listen");
   assert.equal(run.active!.patience, 2);
-  assert.ok(run.active!.lines.some((line) => line.includes(CUSTOMERS.find((c) => c.id === id)!.story)));
+  assert.ok(run.active!.lines.some((line) => line.includes(run.active!.opportunity.story!)));
   assert.strictEqual(act(run, "listen"), run);
   assert.equal(run.relations[id], undefined);
   run = leaveDeal(run);
@@ -175,20 +235,14 @@ test("zero patience blocks conversation but allows product, discount and determi
   assert.strictEqual(closeDeal(receipt), receipt);
 });
 
-test("reachable day-four deal cannot use social bonuses to sell zero primary ability", () => {
-  const checkpoints: Run[] = [];
-  simulate("counter-bench-0", "reader", 0, "finite", (run) => {
-    if (run.day === 4 && run.turn === 0 && run.phase === "select") checkpoints.push(run);
-  });
-  assert.equal(checkpoints.length, 1);
-  const checkpoint = checkpoints[0]!;
-  assert.ok(checkpoint.perks.includes("deep-listen"));
-  const op = checkpoint.board.find((o) => o.customerId === "zhao")!;
-  assert.ok(op);
-  assert.equal(op.primary, "calm"); assert.equal(op.secondary, "light"); assert.equal(op.wanted, 2);
+test("social bonuses reaching the exact threshold cannot sell zero primary ability", () => {
+  const boundary = fixture();
+  let run = { ...boundary, perks: ["deep-listen"] };
+  const op = run.active!.opportunity;
+  Object.assign(op, { primary: "calm", secondary: "light", wanted: 2 });
   const product = PRODUCTS.find((p) => p.id === "breeze")!;
   assert.equal(product.traits[op.primary], 0); assert.equal(product.traits[op.secondary], 3);
-  let run = selectDiscount(selectProduct(pickCustomer(checkpoint, op.id), product.id), 20);
+  run = selectDiscount(selectProduct(run, product.id), 20);
   run = act(act(run, "trial"), "listen");
   assert.ok(quote(run) <= op.budget);
   assert.match(run.active!.trialNotes.breeze!, /原始匹配 3\/9/);
@@ -295,38 +349,110 @@ test("second receipt becomes three distinct unowned perks; reward and continue c
   roundTrip(next);
 });
 
-test("returns come from this run's actual sold/listened history and receive one known, current need", () => {
-  const seen = new Set<string>();
-  let returns = 0;
-  let changedOccasions = 0;
-  const previous = new Map<string, string>();
-  simulate("real-returns", "friend", 0, "finite", (run) => {
-    for (const op of run.board) {
-      assert.equal(op.returning, (run.relations[op.customerId] ?? 0) > 0);
-      if (op.returning && !seen.has(op.id)) {
-        returns++;
-        assert.ok(run.history.some((r) => r.customerId === op.customerId && r.relationDelta > 0));
-        const signature = `${op.primary}/${op.secondary}/${op.budget}/${op.rivalValue}`;
-        if (previous.has(op.customerId) && previous.get(op.customerId) !== signature) changedOccasions++;
-        previous.set(op.customerId, signature);
+test("rotation tracks all appearances: six fresh faces first, two fresh daily, no consecutive or third visits", () => {
+  const returnPositions = new Set<number>();
+  let completed = 0, returns = 0;
+  for (let seed = 0; seed < 20; seed++) for (const style of STYLES) {
+    const visits: Run["visitLog"] = {};
+    const lastOp = new Map<string, Opportunity>();
+    const days = new Set<number>();
+    const end = simulate(`rotation-${seed}`, style.id, 0, "finite", (run) => {
+      if (run.phase === "select" && run.turn === 0 && !days.has(run.day)) {
+        days.add(run.day);
+        assert.equal(run.board.length, 3);
+        assert.equal(new Set(run.board.map((o) => o.customerId)).size, 3);
+        const eligible = Object.entries(visits).filter(([id, visit]) =>
+          (run.relations[id] ?? 0) > 0 && visit.lastDay < run.day - 1 && visit.count < 2);
+        const expectedReturns = run.day >= 3 && eligible.length > 0 ? 1 : 0;
+        assert.equal(run.board.filter((op) => op.returning).length, expectedReturns, `${run.seed}/day ${run.day}`);
+        assert.ok(run.board.filter((op) => !visits[op.customerId]).length >= (run.day <= 2 ? 3 : 2));
+        for (const [index, op] of run.board.entries()) {
+          assertScene(op);
+          const previous = visits[op.customerId];
+          assert.equal(op.returning, !!previous, "a repeat must be a real related customer, never a recycled stranger");
+          if (previous) {
+            returns++;
+            returnPositions.add(index);
+            assert.equal(previous.count, 1);
+            assert.ok(previous.lastDay < run.day - 1, `${op.customerId}: no consecutive days`);
+            assert.ok((run.relations[op.customerId] ?? 0) > 0);
+            assert.ok(run.history.some((r) => r.customerId === op.customerId && r.relationDelta > 0));
+            assert.notEqual(op.sceneId, previous.sceneId);
+            assert.notEqual(op.story, lastOp.get(op.customerId)!.story);
+            assert.notEqual(op.occasion, lastOp.get(op.customerId)!.occasion);
+            const deal = pickCustomer(run, op.id);
+            assert.deepEqual(deal.active!.known, [op.primary]);
+            assert.equal(deal.active!.budgetKnown, false);
+            const lines = act(deal, "listen").active!.lines.slice(deal.active!.lines.length);
+            assert.ok(lines.some((line) => line.includes(op.story!)));
+            assert.ok(lines.every((line) => !line.includes(lastOp.get(op.customerId)!.story!)), "do not replay last visit's story");
+          }
+          visits[op.customerId] = { count: (previous?.count ?? 0) + 1, lastDay: run.day, sceneId: op.sceneId! };
+          lastOp.set(op.customerId, op);
+        }
+        if (run.day === 2) assert.equal(Object.keys(visits).length, 6);
       }
-      seen.add(op.id);
+      assert.deepEqual(run.visitLog, visits, `${run.seed}/${run.day}/${run.phase}: picking or settling must not recount appearances`);
+    });
+    assert.ok(Object.values(end.visitLog).every((v) => v.count <= 2));
+    if (days.size === TOTAL_DAYS) {
+      completed++;
+      assert.ok(Object.keys(end.visitLog).length >= 16, `${end.seed}: at least sixteen distinct faces`);
+      assert.equal(Object.values(end.visitLog).reduce((n, v) => n + v.count, 0), 21);
     }
-    if (run.phase === "deal" && run.active!.opportunity.returning) assert.equal(run.active!.known[0], run.active!.opportunity.primary);
-  });
-  assert.ok(returns >= 6); assert.ok(changedOccasions > 0);
-  const fresh = startRun("real-returns", 0, "friend");
-  assert.ok(fresh.board.every((o) => !o.returning));
+  }
+  assert.ok(completed > 0, "rotation must be exercised across full seven-day runs");
+  assert.ok(returns > 0, "do not vacuously pass by never scheduling a returning customer");
+  assert.deepEqual([...returnPositions].sort(), [0, 1, 2], "shuffle the final queue; familiar faces must not always lead");
+});
+
+test("day three without a real relationship schedules three new faces, not a fabricated return", () => {
+  let run = startRun("no-relations");
+  for (let day = 1; day <= 2; day++) {
+    for (let order = 0; order < ORDERS_PER_DAY; order++) run = continueRun(leaveDeal(pickCustomer(run, run.board[0]!.id)));
+    assert.equal(run.phase, "draft");
+    run = choosePerk(run, run.draft[0]!);
+  }
+  assert.equal(run.day, 3);
+  assert.deepEqual(run.relations, {});
+  assert.equal(Object.keys(run.visitLog).length, 9);
+  assert.ok(run.board.every((op) => !op.returning && run.visitLog[op.customerId]!.count === 1));
+  roundTrip(run);
+});
+
+test("unselected leads stay in visitLog without becoming customers or earning invented relationships", () => {
+  let run = startRun("unselected-visits");
+  const initial = structuredClone(run.visitLog);
+  const skipped = run.board[2]!;
+  run = continueRun(oracleDeal(pickCustomer(run, run.board[0]!.id)));
+  run = oracleDeal(pickCustomer(run, run.board.find((op) => op.id !== skipped.id)!.id));
+  assert.deepEqual(run.visitLog, initial);
+  assert.ok(!run.history.some((r) => r.customerId === skipped.customerId));
+  assert.equal(run.relations[skipped.customerId], undefined);
+  run = continueRun(run);
+  assert.equal(run.phase, "draft");
+  run = choosePerk(run, run.draft[0]!);
+  assert.ok(run.board.every((op) => !initial[op.customerId] && !op.returning));
+  assert.deepEqual(run.visitLog[skipped.customerId], initial[skipped.customerId]);
+  roundTrip(run);
 });
 
 test("full seven-day progression has fourteen receipts, six drafts, daily income, and round-trips every phase", () => {
   const draftDays = new Set<number>();
   const phases = new Set<string>();
-  const run = simulate("counter-bench-0", "reader", 0, "finite", (state) => {
+  const checkpoints: Run[] = [];
+  for (let seed = 0; seed < 20 && checkpoints.length === 0; seed++) {
+    const candidate: Run[] = [];
+    const end = simulate(`counter-bench-${seed}`, "reader", 0, "finite", (state) => candidate.push(state));
+    if (end.day === TOTAL_DAYS && end.turn === ORDERS_PER_DAY) checkpoints.push(...candidate);
+  }
+  assert.ok(checkpoints.length > 0, "no full seven-day route found in 20 seeds");
+  for (const state of checkpoints) {
     phases.add(state.phase);
     if (state.phase === "draft") draftDays.add(state.day);
     roundTrip(state);
-  });
+  }
+  const run = checkpoints.at(-1)!;
   assert.equal(run.day, 7); assert.equal(run.turn, 2); assert.equal(run.history.length, 14);
   assert.equal(run.perks.length, 7); assert.equal(run.draft.length, 0);
   assert.equal(draftDays.size, 6);
@@ -486,6 +612,128 @@ test("parser rejects malformed nested data, unsafe numbers, unknown ids and brok
   assert.equal(parseRun(JSON.stringify(start).replace('"samples":3', '"samples":1e999')), null);
 });
 
+test("new scene snapshots survive content changes; legacy opportunities without a story use neutral small talk", () => {
+  const snapshot = open("scene-snapshot", "closer");
+  const op = snapshot.active!.opportunity;
+  Object.assign(op, { sceneId: "retired-scene-v1", occasion: "旧版来意标签", story: "这段旧近况只存于机会快照，不能被新版内容替换。",
+    opening: "旧版的开场文字。", primary: "repair", secondary: "wear", budget: 450, budgetLow: 400, budgetHigh: 520 });
+  snapshot.visitLog[op.customerId]!.sceneId = op.sceneId!;
+  roundTrip(snapshot);
+  const loaded = parseRun(serializeRun(snapshot))!;
+  assert.deepEqual(loaded.active!.opportunity, op);
+  assert.ok(act(loaded, "listen").active!.lines.some((line) => line.includes(op.story!)));
+  assert.deepEqual(closeDeal(selectProduct(loaded, "anchor")), closeDeal(selectProduct(snapshot, "anchor")));
+
+  for (const missing of ["sceneId", "story", "both"] as const) {
+    const compatible = structuredClone(snapshot);
+    if (missing !== "story") delete compatible.active!.opportunity.sceneId;
+    if (missing !== "sceneId") delete compatible.active!.opportunity.story;
+    roundTrip(compatible);
+    const expectedStory = missing === "sceneId" ? op.story! : "我今天还有几件事要办，先把这一样挑好。";
+    assert.ok(act(parseRun(serializeRun(compatible))!, "listen").active!.lines.some((line) => line.includes(expectedStory)));
+  }
+});
+
+test("old v1 saves reconstruct only known visits in every phase without replaying history or rewriting snapshots", () => {
+  const phases = new Set<string>();
+  simulate("legacy-migration", "reader", 0, "finite", (run) => {
+    phases.add(run.phase);
+    const legacy = legacySave(run);
+    // Tuning and RNG are historical state, not a request to replay the seed under today's content.
+    legacy.rng = 123456;
+    legacy.money += 13;
+    const raw = JSON.stringify(legacy);
+    const loaded = parseRun(raw);
+    assert.ok(loaded, `${run.day}/${run.turn}/${run.phase}: accept a v1 save without new fields`);
+    const { visitLog: _visits, ...unchanged } = loaded;
+    assert.deepEqual(unchanged, legacy);
+    assertKnownVisits(loaded);
+    assert.deepEqual(parseRun(raw), loaded, "migration is deterministic");
+    roundTrip(loaded);
+    if (loaded.active && loaded.active.patience > 0 && !loaded.active.listened) {
+      const story = "我今天还有几件事要办，先把这一样挑好。";
+      assert.ok(act(loaded, "listen").active!.lines.some((line) => line.includes(story)));
+    }
+    if (loaded.phase === "draft") assert.deepEqual(choosePerk(parseRun(serializeRun(loaded))!, loaded.draft[0]!), choosePerk(loaded, loaded.draft[0]!));
+  });
+  assert.deepEqual([...phases].sort(), ["deal", "draft", "receipt", "result", "select"]);
+
+  const partial = open("migration-preserves-scene");
+  const { visitLog: _visits, ...withoutLog } = partial;
+  const migrated = parseRun(JSON.stringify(withoutLog));
+  assert.ok(migrated);
+  assertKnownVisits(migrated);
+  for (const op of [...partial.board, partial.active!.opportunity]) {
+    assert.deepEqual(migrated.visitLog[op.customerId], { count: 1, lastDay: 1, sceneId: op.sceneId });
+  }
+  assert.deepEqual(migrated.board, partial.board);
+  assert.deepEqual(migrated.active, partial.active);
+});
+
+test("migration accepts the old scheduler's consecutive and more-than-two visits without rewriting receipts", () => {
+  const drafts: Run[] = [];
+  for (let seed = 0; seed < 20 && drafts.length === 0; seed++) simulate(`legacy-repeat-${seed}`, "reader", 0, "finite", (run) => {
+    if (run.phase === "draft" && run.day === 3) drafts.push(run);
+  });
+  assert.ok(drafts.length > 0, "need a real day-three draft shape");
+  const legacy = legacySave(drafts[0]!);
+  // A fixed historical schedule, legal before rotation limits; no new-game policy may be applied retroactively.
+  legacy.history = legacy.history.map((receipt, i) => {
+    const customerId = i % 2 === 0 ? "shen" : "mei";
+    return { ...receipt, id: `d${receipt.day}:${customerId}`, customerId, returning: receipt.day > 1 };
+  });
+  legacy.receipt = structuredClone(legacy.history.at(-1)!);
+  legacy.relations = { shen: 3, mei: 3 };
+  const loaded = parseRun(JSON.stringify(legacy));
+  assert.ok(loaded);
+  assertKnownVisits(loaded);
+  for (const id of ["shen", "mei"]) {
+    assert.equal(loaded.visitLog[id]!.count, 3);
+    assert.equal(loaded.visitLog[id]!.lastDay, 3);
+  }
+  assert.deepEqual(loaded.history, legacy.history);
+  assert.deepEqual(loaded.receipt, legacy.receipt);
+  assert.equal(loaded.money, legacy.money);
+  assert.equal(loaded.rng, legacy.rng);
+  roundTrip(loaded);
+  const next = choosePerk(loaded, loaded.draft[0]!);
+  assert.equal(next.day, 4);
+  assert.ok(next.board.every((op) => !["shen", "mei"].includes(op.customerId)), "saturated legacy customers cannot return again");
+});
+
+test("parser rejects malformed visit logs and new optional fields instead of silently migrating them", () => {
+  const start = startRun("invalid-new-fields");
+  const deal = pickCustomer(start, start.board[0]!.id);
+  const id = start.board[0]!.customerId;
+  const corrupt = (base: Run, change: (v: any) => void, label: string) => {
+    const value = structuredClone(base);
+    change(value);
+    assert.equal(parseRun(JSON.stringify(value)), null, label);
+  };
+  for (const bad of [null, [], "visits", 1]) corrupt(start, (v) => v.visitLog = bad, `visitLog ${JSON.stringify(bad)}`);
+  for (const bad of [null, [], "visit", {}, { count: 1, lastDay: 1 }, { count: 1, sceneId: "daily" }, { lastDay: 1, sceneId: "daily" }]) {
+    corrupt(start, (v) => v.visitLog[id] = bad, `entry ${JSON.stringify(bad)}`);
+  }
+  for (const bad of [0, -1, 1.5, "1", null, Number.MAX_SAFE_INTEGER, Infinity]) {
+    corrupt(start, (v) => v.visitLog[id].count = bad, `count ${bad}`);
+  }
+  for (const bad of [0, -1, 1.5, "1", null, start.day + 1, Number.MAX_SAFE_INTEGER]) {
+    corrupt(start, (v) => v.visitLog[id].lastDay = bad, `lastDay ${bad}`);
+  }
+  for (const bad of [null, 42, [], {}, "", "x".repeat(10001)]) {
+    corrupt(start, (v) => v.visitLog[id].sceneId = bad, "invalid visit sceneId");
+    for (const field of ["sceneId", "story"]) {
+      corrupt(start, (v) => v.board[0][field] = bad, `invalid board ${field}`);
+      corrupt(deal, (v) => v.active.opportunity[field] = bad, `invalid active ${field}`);
+    }
+  }
+  corrupt(deal, (v) => { delete v.visitLog; v.active.opportunity.story = null; }, "migration must reject malformed present story");
+  corrupt(start, (v) => { delete v.visitLog; v.board[0].sceneId = 42; }, "migration must reject malformed present sceneId");
+  for (const key of ["unknown-person", "__proto__", "constructor"]) {
+    corrupt(start, (v) => Object.defineProperty(v.visitLog, key, { value: v.visitLog[id], enumerable: true }), `unknown key ${key}`);
+  }
+});
+
 test("all phases round-trip, and reasonable historical text/tuning survive content updates", () => {
   const legacyDeal = act(selectProduct(open("legacy-trial"), "dew"), "trial");
   legacyDeal.active!.trialNotes.dew = "旧版试用反馈：这支用着舒服，下次再问预算。";
@@ -520,6 +768,12 @@ test("all phases round-trip, and reasonable historical text/tuning survive conte
     for (const strategy of ["finite", "random"] as const) simulate(`reload-${rank}`, style.id, rank, strategy, (run) => {
       roundTrip(run);
       const loaded = parseRun(serializeRun(run))!;
+      if (run.phase === "select") for (const op of run.board) assert.deepEqual(pickCustomer(loaded, op.id), pickCustomer(run, op.id));
+      if (run.phase === "deal") {
+        for (const action of ["ask-need", "ask-budget", "listen", "trial"] as Action[]) assert.deepEqual(act(loaded, action), act(run, action));
+        assert.deepEqual(closeDeal(selectProduct(loaded, "dew")), closeDeal(selectProduct(run, "dew")));
+        assert.deepEqual(leaveDeal(loaded), leaveDeal(run));
+      }
       if (run.phase === "receipt") assert.deepEqual(continueRun(loaded), continueRun(run));
       if (run.phase === "draft") assert.deepEqual(choosePerk(loaded, run.draft[0]!), choosePerk(run, run.draft[0]!));
     });
@@ -568,8 +822,13 @@ test("profile parser is independent and rejects malformed nested best/recorded d
 test("each advanced league has a reproducible legal winning route; progression caps at five levels", () => {
   let profile = emptyProfile();
   for (const rank of [0, 1, 2, 3, 4]) {
-    const run = simulate("counter-bench-0", "friend", rank, "oracle");
-    assert.ok(resultOf(run).won, `rank ${rank}`);
+    let winner: Run | undefined;
+    for (let seed = 0; seed < 20 && !winner; seed++) {
+      const candidate = simulate(`counter-bench-${seed}`, "friend", rank, "oracle");
+      if (resultOf(candidate).won) winner = candidate;
+    }
+    assert.ok(winner, `rank ${rank}: no legal oracle winning route in 20 seeds`);
+    const run = winner;
     roundTrip(run);
     profile = recordResult(profile, run);
     assert.equal(profile.unlocked, Math.min(4, rank + 1));
@@ -590,6 +849,6 @@ test("finite-information play has both wins/losses and beats random across 20 se
   }
   assert.ok(finiteWins > 0 && finiteWins < 60, `finite wins ${finiteWins}/60`);
   assert.ok(finiteWins > randomWins + 15, `${finiteWins} versus ${randomWins}`);
-  assert.ok(finiteMoney > randomMoney * 2);
-  assert.ok(finiteSales > randomSales * 2);
+  assert.ok(finiteMoney > randomMoney * 2, `finite net ${finiteMoney}, random net ${randomMoney}`);
+  assert.ok(finiteSales > randomSales * 2, `finite sales ${finiteSales}, random sales ${randomSales}`);
 });
